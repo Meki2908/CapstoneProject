@@ -1,0 +1,80 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bdf6b86034031a44aa467e8b9190697b, type: 3}
+  m_Name: AxeSO
+  m_EditorClassIdentifier: 
+  weaponType: 2
+  weaponName: Axe
+  weaponPrefab: {fileID: 6640937691796024091, guid: d2a4ffc4311ba5e4c81b0fc76531c362, type: 3}
+  abilities:
+  - {fileID: 11400000, guid: f599b51aaf5f7304baff6c01f9842756, type: 2}
+  - {fileID: 11400000, guid: 255ebc085391be54cac52fe8945709e0, type: 2}
+  - {fileID: 11400000, guid: b92ee6ab387bee547b3f4c22e35bdcaf, type: 2}
+  - {fileID: 11400000, guid: 1d2e5c31b92cfe84a986ea3948aaccea, type: 2}
+  hitTimings:
+  - windowStart: 0.35
+    vfxTime: 0.35
+    windowEnd: 0.35
+    spawnRule:
+      localOffset: {x: 0.05, y: 1.1, z: 0.5}
+      yawOffset: 0
+      pitchOffset: 0
+      rollOffset: 10
+      scale: 0
+      extraEulerOffset: {x: 356.0036, y: 23.42088, z: 189.1401}
+  - windowStart: 0.44
+    vfxTime: 0.44
+    windowEnd: 0.38
+    spawnRule:
+      localOffset: {x: 0.1099854, y: 1.3, z: 0.5}
+      yawOffset: 0
+      pitchOffset: 0
+      rollOffset: 0
+      scale: 0
+      extraEulerOffset: {x: 0, y: 0, z: 16.03067}
+  - windowStart: 0.52
+    vfxTime: 0.52
+    windowEnd: 0.45
+    spawnRule:
+      localOffset: {x: 0, y: 1.3, z: 0.5}
+      yawOffset: 0
+      pitchOffset: 0
+      rollOffset: 0
+      scale: 0
+      extraEulerOffset: {x: 20.19606, y: 0.000002729116, z: 90}
+  - windowStart: 0.48
+    vfxTime: 0.48
+    windowEnd: 0.41
+    spawnRule:
+      localOffset: {x: 0, y: 1, z: 0.6}
+      yawOffset: 0
+      pitchOffset: 0
+      rollOffset: 0
+      scale: 1.159289
+      extraEulerOffset: {x: 0, y: 270, z: 0}
+  normalHitVfx:
+  - {fileID: 9013367118183487456, guid: 1622877d39785d9469e411f774ae3adb, type: 3}
+  - {fileID: 9013367118183487456, guid: 1622877d39785d9469e411f774ae3adb, type: 3}
+  - {fileID: 9013367118183487456, guid: 1622877d39785d9469e411f774ae3adb, type: 3}
+  - {fileID: 3453980818360656077, guid: 01fda85d00e11e04babeaf2df59aec89, type: 3}
+  normalVfxSpawnMode: 1
+  handSocket:
+    localPosition: {x: -0.079999, y: 0.2500049, z: -0.1100013}
+    localEuler: {x: 345.3344, y: 353.8374, z: 23.09717}
+    localScale: {x: 1.144422, y: 1.750969, z: 1}
+  sheathSocket:
+    localPosition: {x: -0.509, y: 0.055, z: 0.138}
+    localEuler: {x: 308.4572, y: 218.5703, z: 52.73004}
+    localScale: {x: 1.144421, y: 1.750969, z: 1}
+  summonPosition: {x: 0, y: 2, z: -5}
+  summonSpeed: 10
+  sheathSpeed: 8

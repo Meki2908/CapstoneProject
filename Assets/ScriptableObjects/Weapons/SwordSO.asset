@@ -1,0 +1,69 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bdf6b86034031a44aa467e8b9190697b, type: 3}
+  m_Name: SwordSO
+  m_EditorClassIdentifier: 
+  weaponType: 1
+  weaponName: Sword
+  weaponPrefab: {fileID: 1645786095522272344, guid: 949ce1035604bd64996ff12112f19191, type: 3}
+  abilities:
+  - {fileID: 11400000, guid: 853550d744b9f6640b92fee4a9f42a4d, type: 2}
+  - {fileID: 11400000, guid: 7d4e6ed737b01fa40b8e2195cc752869, type: 2}
+  - {fileID: 11400000, guid: 2a760c69b3e1cf548bcd519c2eeb3d86, type: 2}
+  - {fileID: 11400000, guid: 76b61f0a1f49d2e4ab37fa438c684bbe, type: 2}
+  hitTimings:
+  - windowStart: 0.35
+    vfxTime: 0.35
+    windowEnd: 0.42
+    spawnRule:
+      localOffset: {x: 0, y: 1, z: 0.4}
+      yawOffset: 0
+      pitchOffset: 0
+      rollOffset: 0
+      scale: 0
+      extraEulerOffset: {x: 0, y: 0, z: 0}
+  - windowStart: 0.35
+    vfxTime: 0.34
+    windowEnd: 0.49
+    spawnRule:
+      localOffset: {x: 0, y: 1, z: -0.5}
+      yawOffset: 0
+      pitchOffset: 0
+      rollOffset: 0
+      scale: 0
+      extraEulerOffset: {x: 0, y: 0, z: 0}
+  - windowStart: 0.67
+    vfxTime: 0.67
+    windowEnd: 0.88
+    spawnRule:
+      localOffset: {x: 0.3, y: 0.5, z: 0}
+      yawOffset: -90
+      pitchOffset: 0
+      rollOffset: 0
+      scale: 0
+      extraEulerOffset: {x: 0, y: 0, z: 0}
+  normalHitVfx:
+  - {fileID: 6154107462232030626, guid: 7c4632facfc3bb54693dc7b1c397faf1, type: 3}
+  - {fileID: 8714473049727869241, guid: b784e9e10b137de499ce20c8998ccf15, type: 3}
+  - {fileID: 2989031647040681275, guid: 85edd7b24d6a1c64ebf3e3e108a16829, type: 3}
+  normalVfxSpawnMode: 1
+  handSocket:
+    localPosition: {x: 0, y: 0, z: 0}
+    localEuler: {x: 0, y: 0, z: 0}
+    localScale: {x: 1, y: 1, z: 1}
+  sheathSocket:
+    localPosition: {x: -0.089, y: -0.234, z: 0.197}
+    localEuler: {x: 317.0334, y: 344.9369, z: 346.414}
+    localScale: {x: 1, y: 1, z: 1}
+  summonPosition: {x: 0, y: 2, z: -5}
+  summonSpeed: 10
+  sheathSpeed: 8
