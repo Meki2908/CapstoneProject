@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 771428621fc3a254f95c84c1b8d45139, type: 3}
+  m_Name: Mage 2nd Skill fx
+  m_EditorClassIdentifier: 
+  abilityName: Skill
+  description: 
+  abilityIcon: {fileID: 21300000, guid: 2c5d7653130803e4395dff8379356811, type: 3}
+  input: 2
+  cooldown: 7
+  vfxDuration: 5
+  hitVfx: {fileID: 0}
+  isFollowPlayer: 0
+  skillEvents:
+  - vfxPrefab: {fileID: 3648584573685626632, guid: 645f0fc01730ee343884c21a3358e181, type: 3}
+    spawnRule:
+      localOffset: {x: 0, y: 1, z: 0}
+      yawOffset: 0
+      pitchOffset: 0
+      rollOffset: 0
+      scale: 0
+      extraEulerOffset: {x: 0, y: 0, z: 0}
+    moveAfterSpawn: 0
+    moveSpeed: 0
+    moveLifetime: 0
+    alignToDirection: 1
