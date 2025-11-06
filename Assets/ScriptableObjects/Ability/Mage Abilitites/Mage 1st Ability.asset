@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 771428621fc3a254f95c84c1b8d45139, type: 3}
+  m_Name: Mage 1st Ability
+  m_EditorClassIdentifier: 
+  abilityName: Shield
+  description: 
+  abilityIcon: {fileID: 21300000, guid: da7a4ff3d13174147bfd65aadd183d25, type: 3}
+  input: 1
+  cooldown: 20
+  vfxDuration: 10
+  hitVfx: {fileID: 0}
+  isFollowPlayer: 0
+  skillEvents:
+  - vfxPrefab: {fileID: 6787449431793788900, guid: d562383596ed5784b95d28bb63d92610, type: 3}
+    spawnRule:
+      localOffset: {x: 0, y: 0, z: 0}
+      yawOffset: 0
+      pitchOffset: 0
+      rollOffset: 0
+      scale: 0
+      extraEulerOffset: {x: 0, y: 0, z: 0}
+    moveAfterSpawn: 0
+    moveSpeed: 0
+    moveLifetime: 0
+    alignToDirection: 0
