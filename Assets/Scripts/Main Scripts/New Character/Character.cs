@@ -12,6 +12,12 @@ public class Character : MonoBehaviour
     public float rotationSpeed = 5f;
     public float crouchColliderHeight = 1.35f;
 
+    [Header("Dash Settings")]
+    [SerializeField] public float dashDuration = 0.2f; // Duration of the dash
+    [SerializeField] public int maxConsecutiveDashes = 2; // Maximum consecutive dashes allowed
+    [SerializeField] public float dashCooldown = 1f; // Cooldown between consecutive dashes (seconds)
+    [SerializeField] public float dashChainCooldown = 2.5f; // Cooldown after max consecutive dashes (seconds)
+
     [Header("Animation Smoothing")]
     [Range(0, 1)]
     public float speedDampTime = 0.1f;
@@ -98,6 +104,9 @@ public class Character : MonoBehaviour
 
         // Store original layer for dash invincibility
         originalLayer = gameObject.layer;
+
+        // Reset dash cooldown when game starts (important for Editor play/stop/play)
+        DashState.ResetDashCooldown();
     }
 
     private void Update()
@@ -112,7 +121,32 @@ public class Character : MonoBehaviour
         movementSM.currentState.PhysicsUpdate();
     }
 
-    #region Animation Events - Dash Invincibility
+    #region Animation Events - Dash
+
+    /// <summary>
+    /// Animation Event: Start dash movement
+    /// Call this from dash animation at the frame where dash movement should begin
+    /// </summary>
+    public void AE_StartDashMovement()
+    {
+        if (dashing != null)
+        {
+            dashing.AE_StartDashMovement();
+        }
+    }
+
+    /// <summary>
+    /// Animation Event: Stop dash movement
+    /// Call this from dash animation at the frame where dash movement should end
+    /// </summary>
+    public void AE_StopDashMovement()
+    {
+        if (dashing != null)
+        {
+            dashing.AE_StopDashMovement();
+        }
+    }
+
     /// <summary>
     /// Animation Event: Enable dash invincibility frame
     /// Sets player layer to "Nothing" to prevent raycast detection and damage

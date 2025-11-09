@@ -50,7 +50,7 @@ PlayableDirector:
   - key: {fileID: -1466167924760253248, guid: 2cce3f9ddb9ce1844a6ec1b203f4af95, type: 2}
     value: {fileID: 0}
   - key: {fileID: 1944370587613962811, guid: 2cce3f9ddb9ce1844a6ec1b203f4af95, type: 2}
-    value: {fileID: 7874427661108067183}
+    value: {fileID: 0}
   m_ExposedReferences:
     m_References:
     - 04fa866ae29760b4f84084b4a8d0df71: {fileID: 876148997489349884}
@@ -537,6 +537,10 @@ MonoBehaviour:
   gravityMultiplier: 2
   rotationSpeed: 5
   crouchColliderHeight: 1.35
+  dashDuration: 0.5
+  maxConsecutiveDashes: 2
+  dashCooldown: 1.3
+  dashChainCooldown: 2.5
   speedDampTime: 0.1
   velocityDampTime: 0.1
   rotationDampTime: 0.2
@@ -776,7 +780,7 @@ MonoBehaviour:
   animator: {fileID: 1615355346235205293}
   enemyLayerMask:
     serializedVersion: 2
-    m_Bits: 4096
+    m_Bits: 0
   autoAimRange: 15
   comboParam: attack
   comboResetTime: 1.5
@@ -795,7 +799,7 @@ MonoBehaviour:
   detectionRadius: 10
   enemyLayer:
     serializedVersion: 2
-    m_Bits: 4096
+    m_Bits: 0
   autoTargetRadius: 6
   cnCamera: {fileID: 811330980643423685}
   combatCameraDistance: 9
