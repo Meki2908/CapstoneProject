@@ -5959,7 +5959,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2761361919466825409, guid: d132d38ddd16e4948bd8e4537a2de1d5, type: 3}
       propertyPath: enemyLayer.m_Bits
-      value: 0
+      value: 64
       objectReference: {fileID: 0}
     - target: {fileID: 3595849456573107112, guid: d132d38ddd16e4948bd8e4537a2de1d5, type: 3}
       propertyPath: m_Name
@@ -6088,9 +6088,17 @@ PrefabInstance:
       propertyPath: showDetectionGizmos
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 1009673114714196649, guid: 3b0b846bca8107c4999233bc2eb5b33e, type: 3}
+      propertyPath: playerLayerMask.m_Bits
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 1608862970104602813, guid: 3b0b846bca8107c4999233bc2eb5b33e, type: 3}
       propertyPath: m_Name
       value: Capsule
+      objectReference: {fileID: 0}
+    - target: {fileID: 1608862970104602813, guid: 3b0b846bca8107c4999233bc2eb5b33e, type: 3}
+      propertyPath: m_Layer
+      value: 6
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
