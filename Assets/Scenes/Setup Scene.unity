@@ -2708,7 +2708,7 @@ GameObject:
   - component: {fileID: 1024719053}
   - component: {fileID: 1024719052}
   - component: {fileID: 1024719051}
-  m_Layer: 3
+  m_Layer: 0
   m_Name: Terrain
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -5961,9 +5961,21 @@ PrefabInstance:
       propertyPath: enemyLayer.m_Bits
       value: 64
       objectReference: {fileID: 0}
+    - target: {fileID: 3092682887435320141, guid: d132d38ddd16e4948bd8e4537a2de1d5, type: 3}
+      propertyPath: m_Layer
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3595849456573107112, guid: d132d38ddd16e4948bd8e4537a2de1d5, type: 3}
       propertyPath: m_Name
       value: PlayerRoot
+      objectReference: {fileID: 0}
+    - target: {fileID: 4515222076069093231, guid: d132d38ddd16e4948bd8e4537a2de1d5, type: 3}
+      propertyPath: m_Layer
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5017994651918755152, guid: d132d38ddd16e4948bd8e4537a2de1d5, type: 3}
+      propertyPath: CollideAgainst.m_Bits
+      value: 64
       objectReference: {fileID: 0}
     - target: {fileID: 5028239838648978406, guid: d132d38ddd16e4948bd8e4537a2de1d5, type: 3}
       propertyPath: m_SceneBindings.Array.data[1].value
@@ -5973,6 +5985,10 @@ PrefabInstance:
       propertyPath: equipmentSystem
       value: 
       objectReference: {fileID: 1744602892}
+    - target: {fileID: 6843221101480495229, guid: d132d38ddd16e4948bd8e4537a2de1d5, type: 3}
+      propertyPath: m_Layer
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6880785095850228265, guid: d132d38ddd16e4948bd8e4537a2de1d5, type: 3}
       propertyPath: m_SceneBindings.Array.data[0].value
       value: 
