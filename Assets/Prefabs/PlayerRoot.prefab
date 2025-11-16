@@ -457,7 +457,7 @@ GameObject:
   - component: {fileID: 8150910059316048328}
   - component: {fileID: 2761361919466825409}
   - component: {fileID: 7916883861217948907}
-  m_Layer: 7
+  m_Layer: 0
   m_Name: Player
   m_TagString: Player
   m_Icon: {fileID: 0}
@@ -799,7 +799,7 @@ MonoBehaviour:
   detectionRadius: 10
   enemyLayer:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 64
   autoTargetRadius: 6
   cnCamera: {fileID: 811330980643423685}
   combatCameraDistance: 9
@@ -1377,7 +1377,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3015030134451667885}
-  m_Layer: 7
+  m_Layer: 0
   m_Name: Projectiles VFX SpawnPoint
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1658,7 +1658,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2659442175106404960}
-  m_Layer: 7
+  m_Layer: 0
   m_Name: LookPoint
   m_TagString: Untagged
   m_Icon: {fileID: 2488908585195742037, guid: 0000000000000000d000000000000000, type: 0}
@@ -2343,7 +2343,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachineDeoccluder
   CollideAgainst:
     serializedVersion: 2
-    m_Bits: 72
+    m_Bits: 8
   IgnoreTag: Player
   TransparentLayers:
     serializedVersion: 2
