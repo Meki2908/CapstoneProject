@@ -114,6 +114,16 @@ public class MageSkills : MonoBehaviour
         if (!abilityMap.TryGetValue(input, out var ability) || ability == null)
             return;
 
+        // Check if skill is unlocked
+        if (WeaponMasteryManager.Instance != null)
+        {
+            if (!WeaponMasteryManager.Instance.IsSkillUnlocked(WeaponType.Mage, input))
+            {
+                Debug.Log($"[MageSkills.TryUse] {input} is locked! Mastery level required.");
+                return;
+            }
+        }
+
         // Check cooldown
         var abilityIconManager = FindObjectOfType<AbilityIconManager>();
         if (abilityIconManager != null && abilityIconManager.IsOnCooldown(input))

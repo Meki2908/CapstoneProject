@@ -10,12 +10,11 @@ public class WeaponController : MonoBehaviour
     [SerializeField] private EquipmentSystem equipmentSystem; // chỉ dùng cho damage hooks nếu cần
 
     [Header("Animator Layers (indices)")]
-    [Tooltip("Base=0, Sword=1, Axe=2, Mage=3, Gun=4, Arms=5 (adjust to your Animator)")]
+    [Tooltip("Base=0, Sword=1, Axe=2, Mage=3, Arms=5 (adjust to your Animator)")]
     [SerializeField] private int baseLayer = 0;
     [SerializeField] private int swordLayer = 1;
     [SerializeField] private int axeLayer = 2;
     [SerializeField] private int mageLayer = 3;
-    [SerializeField] private int gunLayer = 4;
     [SerializeField] private int armsLayer = 5;
 
     [Header("Animator Parameters")]
@@ -193,7 +192,6 @@ public class WeaponController : MonoBehaviour
         bool isSword = currentWeapon != null && currentWeapon.weaponType == WeaponType.Sword;
         bool isAxe = currentWeapon != null && currentWeapon.weaponType == WeaponType.Axe;
         bool isMage = currentWeapon != null && currentWeapon.weaponType == WeaponType.Mage;
-        bool isGun = currentWeapon != null && currentWeapon.weaponType == WeaponType.Gun;
 
         // Enable/disable across entire character hierarchy (not just this GameObject)
         var swordAll = GetComponentsInChildren<SwordSkills>(true);
@@ -204,10 +202,6 @@ public class WeaponController : MonoBehaviour
 
         var mageAll = GetComponentsInChildren<MageSkills>(true);
         foreach (var m in mageAll) if (m) m.enabled = isMage;
-
-        // Giữ nguyên Gun tạm thời vô hiệu hoá nếu bạn chưa dùng
-        // var gunAll = GetComponentsInChildren<GunSkills>(true);
-        // foreach (var g in gunAll) if (g) g.enabled = isGun;
     }
 
     private void ApplySocket(Transform instance, SocketOffset s)
@@ -250,7 +244,6 @@ public class WeaponController : MonoBehaviour
         SetLayerWeightSafe(swordLayer, (typeInt == (int)WeaponType.Sword) ? 1f : 0f);
         SetLayerWeightSafe(axeLayer, (typeInt == (int)WeaponType.Axe) ? 1f : 0f);
         SetLayerWeightSafe(mageLayer, (typeInt == (int)WeaponType.Mage) ? 1f : 0f);
-        SetLayerWeightSafe(gunLayer, (typeInt == (int)WeaponType.Gun) ? 1f : 0f);
     }
 
     private void SetLayerWeightSafe(int layer, float weight)
@@ -416,7 +409,7 @@ public class WeaponController : MonoBehaviour
     }
 
     // ========== Animation Event: Active weapon script by type ==========
-    // Gọi từ clip Draw: AE_ActiveWeaponScript((int)WeaponType.Axe | Sword | Mage | Gun)
+    // Gọi từ clip Draw: AE_ActiveWeaponScript((int)WeaponType.Axe | Sword | Mage)
     public void AE_ActiveWeaponScript(int weaponTypeIndex)
     {
         var type = (WeaponType)weaponTypeIndex;
@@ -424,7 +417,6 @@ public class WeaponController : MonoBehaviour
         bool isSword = type == WeaponType.Sword;
         bool isAxe = type == WeaponType.Axe;
         bool isMage = type == WeaponType.Mage;
-        bool isGun = type == WeaponType.Gun;
 
         var swordAll = GetComponentsInChildren<SwordSkills>(true);
         foreach (var s in swordAll)
@@ -459,9 +451,6 @@ public class WeaponController : MonoBehaviour
             }
         }
 
-        // Giữ nguyên Gun nếu chưa sử dụng
-        // var gunAll = GetComponentsInChildren<GunSkills>(true);
-        // foreach (var g in gunAll) if (g) g.enabled = isGun;
 
         // Với Wand: đảm bảo instance dưới handHolder được bật khi kích hoạt bằng AE
         if (isMage)

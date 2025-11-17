@@ -36,10 +36,20 @@ public class TakeDamageTest : MonoBehaviour
     [SerializeField] private float damageInterval = 2f; // Damage every 2 seconds
     [SerializeField] private bool enableRaycastDamage = true;
 
+    [Header("Enemy Health Settings")]
+    [SerializeField] private float maxHealth = 100f;
+    [SerializeField] private float currentHealth;
+    [SerializeField] private bool isAlive = true;
+
+    [Header("EXP Reward Settings")]
+    [Tooltip("Amount of EXP granted when this enemy is defeated")]
+    [SerializeField] private float expReward = 1000f;
+
     // Detection state
     private Transform player;
     private Character playerCharacter;
     private PlayerHealth playerHealth;
+    private WeaponController playerWeaponController;
     private bool hasDetectedPlayer = false;
     private float lastDetectionTime = 0f;
     private float detectionCooldown = 0.5f; // Minimum time between detection checks
@@ -49,6 +59,10 @@ public class TakeDamageTest : MonoBehaviour
 
     void Start()
     {
+        // Initialize health
+        currentHealth = maxHealth;
+        isAlive = true;
+
         // Ensure we have a damage number prefab
         if (damageNumberPrefab == null)
         {
@@ -63,6 +77,7 @@ public class TakeDamageTest : MonoBehaviour
             {
                 player = playerCharacter.transform;
                 playerHealth = playerCharacter.GetComponent<PlayerHealth>();
+                playerWeaponController = playerCharacter.GetComponent<WeaponController>();
 
                 if (playerHealth == null)
                 {
@@ -80,6 +95,9 @@ public class TakeDamageTest : MonoBehaviour
 
     void Update()
     {
+        // Don't process if dead
+        if (!isAlive) return;
+
         if (enableDetection && player != null)
         {
             CheckForPlayer();
@@ -363,6 +381,15 @@ public class TakeDamageTest : MonoBehaviour
     // Simple damage method for testing normal attacks
     public void TakeDamage(float damage)
     {
+        if (!isAlive)
+        {
+            return; // Already dead, don't process damage
+        }
+
+        // Apply damage
+        currentHealth -= damage;
+        currentHealth = Mathf.Max(0f, currentHealth);
+
         // Visual feedback
         if (hitEffect != null)
         {
@@ -390,6 +417,63 @@ public class TakeDamageTest : MonoBehaviour
         {
             Debug.LogWarning("[TakeDamageTest] Cannot spawn damage number - no prefab assigned!");
         }
+
+        // Check for death
+        if (currentHealth <= 0f && isAlive)
+        {
+            Die();
+        }
+        else if (showDebugInfo)
+        {
+            Debug.Log($"[TakeDamageTest] {gameObject.name} took {damage} damage. HP: {currentHealth}/{maxHealth}");
+        }
+    }
+
+    private void Die()
+    {
+        if (!isAlive) return; // Already dead
+
+        isAlive = false;
+        currentHealth = 0f;
+
+        if (showDebugInfo)
+        {
+            Debug.Log($"[TakeDamageTest] {gameObject.name} has been defeated!");
+        }
+
+        // Grant EXP to player's current weapon
+        if (WeaponMasteryManager.Instance != null && playerWeaponController != null)
+        {
+            WeaponSO currentWeapon = playerWeaponController.GetCurrentWeapon();
+            if (currentWeapon != null)
+            {
+                WeaponMasteryManager.Instance.AddExp(currentWeapon.weaponType, expReward, currentWeapon);
+
+                if (showDebugInfo)
+                {
+                    Debug.Log($"[TakeDamageTest] Granted {expReward} EXP to {currentWeapon.weaponType} weapon!");
+                }
+            }
+            else
+            {
+                // If no weapon equipped, grant EXP to all weapons (or you can choose a default)
+                if (showDebugInfo)
+                {
+                    Debug.LogWarning("[TakeDamageTest] No weapon equipped, cannot grant EXP!");
+                }
+            }
+        }
+
+        // Disable enemy behavior
+        if (enableDetection)
+        {
+            SetDetectionEnabled(false);
+        }
+        enableRaycastDamage = false;
+
+        // You can add death animation, effects, or destroy the object here
+        // For now, we'll just disable the enemy
+        // Destroy(gameObject, 2f); // Destroy after 2 seconds (optional)
     }
 
 
@@ -426,6 +510,20 @@ public class TakeDamageTest : MonoBehaviour
             OnPlayerLost();
         }
     }
+
+    // Health API
+    public float GetCurrentHealth() => currentHealth;
+    public float GetMaxHealth() => maxHealth;
+    public bool IsAlive() => isAlive;
+    public float GetHealthPercentage() => maxHealth > 0 ? currentHealth / maxHealth : 0f;
+
+    // EXP API
+    public void SetExpReward(float exp)
+    {
+        expReward = exp;
+    }
+
+    public float GetExpReward() => expReward;
     #endregion
 
     #region Visual Debug

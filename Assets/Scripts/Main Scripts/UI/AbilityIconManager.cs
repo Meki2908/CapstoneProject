@@ -29,9 +29,19 @@ public class AbilityIconManager : MonoBehaviour
     [Header("Ultimate Icon Shader")]
     [SerializeField] private UltimateIconShaderController ultimateShaderController;
 
+    [Header("Skill Lock Overlays")]
+    [Tooltip("Overlay images that appear when skills are locked (user can customize these)")]
+    [SerializeField] private Image eLockOverlay;
+    [SerializeField] private Image rLockOverlay;
+    [SerializeField] private Image tLockOverlay;
+    [SerializeField] private Image ultimateLockOverlay;
+
     // Cooldown tracking
     private Dictionary<AbilityInput, float> cooldownEndTimes = new Dictionary<AbilityInput, float>();
     private Dictionary<AbilityInput, float> cooldownDurations = new Dictionary<AbilityInput, float>();
+
+    // Current weapon type for mastery checking
+    private WeaponType currentWeaponType = WeaponType.None;
 
     private void Awake()
     {
@@ -49,6 +59,7 @@ public class AbilityIconManager : MonoBehaviour
     private void Update()
     {
         UpdateCooldownUI();
+        UpdateSkillLockOverlays();
     }
 
     private void SetDefaultIcons()
@@ -72,6 +83,9 @@ public class AbilityIconManager : MonoBehaviour
         if (rCDRemain != null) rCDRemain.gameObject.SetActive(false);
         if (tCDRemain != null) tCDRemain.gameObject.SetActive(false);
         if (ultimateCDRemain != null) ultimateCDRemain.gameObject.SetActive(false);
+
+        // Initialize lock overlays
+        UpdateSkillLockOverlays();
     }
 
     private void UpdateCooldownUI()
@@ -188,6 +202,40 @@ public class AbilityIconManager : MonoBehaviour
 
         // Store cooldown durations for each ability
         StoreCooldownDurations(abilities);
+
+        // Update skill lock overlays
+        UpdateSkillLockOverlays();
+    }
+
+    // Set current weapon type for mastery checking
+    public void SetCurrentWeaponType(WeaponType weaponType)
+    {
+        currentWeaponType = weaponType;
+        UpdateSkillLockOverlays();
+    }
+
+    private void UpdateSkillLockOverlays()
+    {
+        if (WeaponMasteryManager.Instance == null || currentWeaponType == WeaponType.None)
+        {
+            // Hide all lock overlays if no mastery manager or weapon
+            if (eLockOverlay != null) eLockOverlay.gameObject.SetActive(false);
+            if (rLockOverlay != null) rLockOverlay.gameObject.SetActive(false);
+            if (tLockOverlay != null) tLockOverlay.gameObject.SetActive(false);
+            if (ultimateLockOverlay != null) ultimateLockOverlay.gameObject.SetActive(false);
+            return;
+        }
+
+        // Show/hide lock overlays based on mastery level
+        bool eUnlocked = WeaponMasteryManager.Instance.IsSkillUnlocked(currentWeaponType, AbilityInput.E);
+        bool rUnlocked = WeaponMasteryManager.Instance.IsSkillUnlocked(currentWeaponType, AbilityInput.R);
+        bool tUnlocked = WeaponMasteryManager.Instance.IsSkillUnlocked(currentWeaponType, AbilityInput.T);
+        bool qUnlocked = WeaponMasteryManager.Instance.IsSkillUnlocked(currentWeaponType, AbilityInput.Q_Ultimate);
+
+        if (eLockOverlay != null) eLockOverlay.gameObject.SetActive(!eUnlocked);
+        if (rLockOverlay != null) rLockOverlay.gameObject.SetActive(!rUnlocked);
+        if (tLockOverlay != null) tLockOverlay.gameObject.SetActive(!tUnlocked);
+        if (ultimateLockOverlay != null) ultimateLockOverlay.gameObject.SetActive(!qUnlocked);
     }
 
     private void StoreCooldownDurations(AbilitySO[] abilities)

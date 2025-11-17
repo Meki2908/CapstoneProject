@@ -127,6 +127,16 @@ public class SwordSkills : MonoBehaviour
             return;
         if (!abilityMap.TryGetValue(input, out var ability)) return;
 
+        // Check if skill is unlocked
+        if (WeaponMasteryManager.Instance != null)
+        {
+            if (!WeaponMasteryManager.Instance.IsSkillUnlocked(WeaponType.Sword, input))
+            {
+                Debug.Log($"[SwordSkills] {input} is locked! Mastery level required.");
+                return;
+            }
+        }
+
         // Check cooldown
         var abilityIconManager = FindObjectOfType<AbilityIconManager>();
         if (abilityIconManager != null && abilityIconManager.IsOnCooldown(input))

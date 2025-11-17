@@ -75,13 +75,11 @@ public class DieState : State
         int swordLayer = 1;
         int axeLayer = 2;
         int mageLayer = 3;
-        int gunLayer = 4;
 
         // Disable all weapon layers
         SetLayerWeightSafe(swordLayer, 0f);
         SetLayerWeightSafe(axeLayer, 0f);
         SetLayerWeightSafe(mageLayer, 0f);
-        SetLayerWeightSafe(gunLayer, 0f);
 
         // Ensure base layer is active
         SetLayerWeightSafe(baseLayer, 1f);

@@ -8,6 +8,9 @@ public class WeaponAbilityManager : MonoBehaviour
     [Header("GUI Manager")]
     [SerializeField] private AbilityIconManager iconManager;
 
+    [Header("Weapon Reference")]
+    [SerializeField] private WeaponSO weaponSO;
+
     private void Awake()
     {
         // Find icon manager if not assigned
@@ -33,12 +36,33 @@ public class WeaponAbilityManager : MonoBehaviour
         if (iconManager != null && weaponAbilities != null)
         {
             iconManager.AE_SetAbilityIcons(weaponAbilities);
+
+            // Set weapon type for mastery checking
+            if (weaponSO != null)
+            {
+                iconManager.SetCurrentWeaponType(weaponSO.weaponType);
+            }
+            else
+            {
+                // Try to get weapon from parent WeaponController
+                var weaponController = GetComponentInParent<WeaponController>();
+                if (weaponController != null && weaponController.GetCurrentWeapon() != null)
+                {
+                    iconManager.SetCurrentWeaponType(weaponController.GetCurrentWeapon().weaponType);
+                }
+            }
+
             Debug.Log("[WeaponAbilityManager] Successfully called iconManager.AE_SetAbilityIcons");
         }
         else
         {
             Debug.LogWarning($"[WeaponAbilityManager] IconManager or Abilities not found - iconManager: {iconManager != null}, abilities: {weaponAbilities != null}");
         }
+    }
+
+    public void SetWeaponSO(WeaponSO weapon)
+    {
+        weaponSO = weapon;
     }
 
     // Animation Event: Clear ability icons when weapon is sheathed

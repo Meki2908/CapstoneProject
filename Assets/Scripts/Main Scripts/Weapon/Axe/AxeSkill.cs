@@ -118,6 +118,16 @@ public class AxeSkill : MonoBehaviour
         if (!abilityMap.TryGetValue(input, out var ability) || ability == null)
             return;
 
+        // Check if skill is unlocked
+        if (WeaponMasteryManager.Instance != null)
+        {
+            if (!WeaponMasteryManager.Instance.IsSkillUnlocked(WeaponType.Axe, input))
+            {
+                Debug.Log($"[AxeSkill.TryUse] {input} is locked! Mastery level required.");
+                return;
+            }
+        }
+
         // Check cooldown
         var abilityIconManager = FindObjectOfType<AbilityIconManager>();
         if (abilityIconManager != null && abilityIconManager.IsOnCooldown(input))

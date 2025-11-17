@@ -78,3 +78,27 @@ MonoBehaviour:
   summonPosition: {x: 0, y: 2, z: -5}
   summonSpeed: 10
   sheathSpeed: 8
+  expRequirementCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 1
+      value: 100
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 60
+      value: 99999
+      inSlope: 100
+      outSlope: 100
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4

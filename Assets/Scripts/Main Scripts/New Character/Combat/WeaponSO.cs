@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public enum WeaponType { None = 0, Sword = 1, Axe = 2, Mage = 3, Gun = 4 }
+public enum WeaponType { None = 0, Sword = 1, Axe = 2, Mage = 3 }
 
 [System.Serializable]
 public struct VfxSpawnRule
@@ -76,4 +76,29 @@ public class WeaponSO : ScriptableObject
     public float summonSpeed = 10f;
     [Tooltip("For Mage: weapon sheath speed (thrown away)")]
     public float sheathSpeed = 8f;
+
+    [Header("Mastery System")]
+    [Tooltip("Animation Curve for EXP requirement per level. X-axis = level (1-100), Y-axis = EXP required for that level.")]
+    public AnimationCurve expRequirementCurve = AnimationCurve.Linear(1f, 100f, 100f, 10000f);
+
+    /// <summary>
+    /// Get the EXP required to reach the specified level.
+    /// </summary>
+    public float GetExpRequiredForLevel(int level)
+    {
+        if (expRequirementCurve == null || expRequirementCurve.length == 0)
+        {
+            // Default linear curve if not set
+            return 100f * level;
+        }
+        return expRequirementCurve.Evaluate(Mathf.Clamp(level, 1, 100));
+    }
+
+    /// <summary>
+    /// Get the EXP required to level up from current level to next level.
+    /// </summary>
+    public float GetExpRequiredForNextLevel(int currentLevel)
+    {
+        return GetExpRequiredForLevel(currentLevel + 1);
+    }
 }
