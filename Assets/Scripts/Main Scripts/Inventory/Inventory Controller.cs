@@ -154,27 +154,62 @@ public class InventoryController : MonoBehaviour
 
     private void DisablePlayerInput()
     {
-        if (playerInput != null)
+        // Instead of disabling entire PlayerInput component, disable specific action maps
+        // This allows UI to still work while blocking player movement/combat actions
+        PlayerInput targetPlayerInput = playerInput;
+        if (targetPlayerInput == null && character != null)
         {
-            playerInput.enabled = false;
-            return;
+            targetPlayerInput = character.playerInput;
         }
-        if (character != null && character.playerInput != null)
+
+        if (targetPlayerInput != null && targetPlayerInput.actions != null)
         {
-            character.playerInput.enabled = false;
+            // Disable Player action map (movement, combat, etc.)
+            var playerMap = targetPlayerInput.actions.FindActionMap("Player");
+            if (playerMap != null)
+            {
+                playerMap.Disable();
+                Debug.Log("[InventoryController] Disabled Player action map");
+            }
+
+            // Disable Skill action map
+            var skillMap = targetPlayerInput.actions.FindActionMap("Skill");
+            if (skillMap != null)
+            {
+                skillMap.Disable();
+                Debug.Log("[InventoryController] Disabled Skill action map");
+            }
+
+            // Note: UI action map (if exists) will remain enabled for button clicks
         }
     }
 
     private void EnablePlayerInput()
     {
-        if (playerInput != null)
+        // Re-enable the action maps that were disabled
+        PlayerInput targetPlayerInput = playerInput;
+        if (targetPlayerInput == null && character != null)
         {
-            playerInput.enabled = true;
-            return;
+            targetPlayerInput = character.playerInput;
         }
-        if (character != null && character.playerInput != null)
+
+        if (targetPlayerInput != null && targetPlayerInput.actions != null)
         {
-            character.playerInput.enabled = true;
+            // Enable Player action map
+            var playerMap = targetPlayerInput.actions.FindActionMap("Player");
+            if (playerMap != null)
+            {
+                playerMap.Enable();
+                Debug.Log("[InventoryController] Enabled Player action map");
+            }
+
+            // Enable Skill action map
+            var skillMap = targetPlayerInput.actions.FindActionMap("Skill");
+            if (skillMap != null)
+            {
+                skillMap.Enable();
+                Debug.Log("[InventoryController] Enabled Skill action map");
+            }
         }
     }
 }
