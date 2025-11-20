@@ -1,6 +1,9 @@
 using UnityEngine;
 using Unity.Cinemachine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
+using TMPro;
+using System.Collections.Generic;
 
 public class InventoryController : MonoBehaviour
 {
@@ -15,17 +18,35 @@ public class InventoryController : MonoBehaviour
     [SerializeField] private Character character;
     [SerializeField] private PlayerInput playerInput;
 
+    [Header("Remove Mode")]
+    [SerializeField] private Button removeModeButton; // The "Remove Button" in inventory
+    [SerializeField] private TextMeshProUGUI removeModeButtonText; // Text component of the button
+    [SerializeField] private Transform itemsContentContainer; // Content container that holds all item UI elements
+
+    private bool isRemoveModeActive = false;
+    private List<ItemUI> currentItemUIs = new List<ItemUI>();
+
     public bool isInventoryOpen = false;
 
     void Start()
     {
         inventory.SetActive(false);
         isInventoryOpen = false;
+        isRemoveModeActive = false;
 
         if (character == null)
             character = FindObjectOfType<Character>();
         if (playerInput == null && character != null)
             playerInput = character.GetComponent<PlayerInput>();
+
+        // Setup remove mode button
+        if (removeModeButton != null)
+        {
+            removeModeButton.onClick.AddListener(ToggleRemoveMode);
+        }
+
+        // Initialize remove mode button text
+        UpdateRemoveModeButtonText();
     }
 
     void Update()
@@ -69,6 +90,12 @@ public class InventoryController : MonoBehaviour
 
     private void CloseInventory()
     {
+        // Exit remove mode if active
+        if (isRemoveModeActive)
+        {
+            SetRemoveMode(false);
+        }
+
         // Hide cursor and lock
         Cursor.visible = false;
         Cursor.lockState = CursorLockMode.Locked;
@@ -212,4 +239,107 @@ public class InventoryController : MonoBehaviour
             }
         }
     }
+
+    #region Remove Mode
+
+    /// <summary>
+    /// Toggle remove mode on/off
+    /// </summary>
+    public void ToggleRemoveMode()
+    {
+        SetRemoveMode(!isRemoveModeActive);
+    }
+
+    /// <summary>
+    /// Set remove mode state
+    /// </summary>
+    private void SetRemoveMode(bool active)
+    {
+        isRemoveModeActive = active;
+        UpdateRemoveModeButtonText();
+        UpdateItemRemoveButtons();
+    }
+
+    /// <summary>
+    /// Update the text of the remove mode button
+    /// </summary>
+    private void UpdateRemoveModeButtonText()
+    {
+        if (removeModeButtonText != null)
+        {
+            removeModeButtonText.text = isRemoveModeActive ? "Back" : "Remove Button";
+        }
+    }
+
+    /// <summary>
+    /// Show or hide remove buttons on all items
+    /// </summary>
+    private void UpdateItemRemoveButtons()
+    {
+        // Refresh the list of item UIs
+        RefreshItemUIList();
+
+        // Update visibility of remove buttons
+        foreach (ItemUI itemUI in currentItemUIs)
+        {
+            if (itemUI != null)
+            {
+                itemUI.SetRemoveButtonVisible(isRemoveModeActive);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Refresh the list of ItemUI components in the content container
+    /// </summary>
+    private void RefreshItemUIList()
+    {
+        currentItemUIs.Clear();
+
+        if (itemsContentContainer != null)
+        {
+            // Get all ItemUI components from children
+            ItemUI[] itemUIs = itemsContentContainer.GetComponentsInChildren<ItemUI>(true);
+            currentItemUIs.AddRange(itemUIs);
+        }
+    }
+
+    /// <summary>
+    /// Remove an item from the inventory
+    /// Called by ItemUI when the X button is clicked
+    /// </summary>
+    public void RemoveItem(ItemUI itemUI, Item itemData, int amount)
+    {
+        if (itemUI == null || itemData == null) return;
+
+        // Remove the item UI from the list
+        if (currentItemUIs.Contains(itemUI))
+        {
+            currentItemUIs.Remove(itemUI);
+        }
+
+        // Destroy the item UI GameObject
+        if (itemUI.gameObject != null)
+        {
+            Destroy(itemUI.gameObject);
+        }
+
+        // TODO: Here you can add logic to actually remove the item from your inventory data structure
+        // For example: inventoryData.RemoveItem(itemData, amount);
+
+        Debug.Log($"[InventoryController] Removed item: {itemData.itemName} (Amount: {amount})");
+    }
+
+    /// <summary>
+    /// Call this method when items are added to the inventory to refresh the UI
+    /// </summary>
+    public void OnItemsUpdated()
+    {
+        if (isRemoveModeActive)
+        {
+            UpdateItemRemoveButtons();
+        }
+    }
+
+    #endregion
 }

@@ -164,7 +164,7 @@ MonoBehaviour:
   detectionAngle: 120
   playerLayerMask:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 256
   obstacleLayerMask:
     serializedVersion: 2
     m_Bits: 0
@@ -174,3 +174,7 @@ MonoBehaviour:
   damagePerHit: 1
   damageInterval: 3
   enableRaycastDamage: 0
+  maxHealth: 100
+  currentHealth: 0
+  isAlive: 1
+  expReward: 1000
