@@ -34,7 +34,15 @@ public class DamageDealer : MonoBehaviour
                 if (hit.transform.TryGetComponent(out TakeDamageTest enemy)
                     && !hasDealtDamage.Contains(hit.transform.gameObject))
                 {
-                    enemy.TakeDamage(weaponDamage);
+                    float finalDamage = weaponDamage;
+                    // Apply damage multiplier from equipped gems (based on current weapon)
+                    var wc = GetComponentInParent<WeaponController>();
+                    if (wc != null && wc.GetCurrentWeapon() != null && WeaponGemManager.Instance != null)
+                    {
+                        float dmgMult = WeaponGemManager.Instance.GetDamageMultiplier(wc.GetCurrentWeapon().weaponType);
+                        finalDamage *= dmgMult;
+                    }
+                    enemy.TakeDamage(finalDamage);
                     hasDealtDamage.Add(hit.transform.gameObject);
                 }
             }

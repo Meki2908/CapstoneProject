@@ -279,6 +279,12 @@ public class AbilityIconManager : MonoBehaviour
         }
 
         float duration = cooldownDurations[input];
+        // Apply cooldown reduction multiplier from equipped gems
+        if (currentWeaponType != WeaponType.None && WeaponGemManager.Instance != null)
+        {
+            float cdMultiplier = WeaponGemManager.Instance.GetCooldownMultiplier(currentWeaponType);
+            duration *= cdMultiplier;
+        }
         float endTime = Time.time + duration;
 
         cooldownEndTimes[input] = endTime;

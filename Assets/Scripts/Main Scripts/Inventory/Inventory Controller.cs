@@ -23,6 +23,12 @@ public class InventoryController : MonoBehaviour
     [SerializeField] private TextMeshProUGUI removeModeButtonText; // Text component of the button
     [SerializeField] private Transform itemsContentContainer; // Content container that holds all item UI elements
 
+    [Header("Inventory UI")]
+    [SerializeField] private GameObject itemUIPrefab; // Prefab for item UI element
+
+    // Public property to access itemUIPrefab (for WeaponForgeUI)
+    public GameObject ItemUIPrefab => itemUIPrefab;
+
     private bool isRemoveModeActive = false;
     private List<ItemUI> currentItemUIs = new List<ItemUI>();
 
@@ -47,6 +53,15 @@ public class InventoryController : MonoBehaviour
 
         // Initialize remove mode button text
         UpdateRemoveModeButtonText();
+
+        // Subscribe to InventoryManager events
+        if (InventoryManager.Instance != null)
+        {
+            InventoryManager.Instance.OnInventoryChanged += OnInventoryChanged;
+        }
+
+        // Initial UI refresh
+        RefreshInventoryUI();
     }
 
     void Update()
@@ -81,6 +96,9 @@ public class InventoryController : MonoBehaviour
         // Disable player input
         DisablePlayerInput();
 
+        // Refresh inventory UI before showing
+        RefreshInventoryUI();
+
         // Show inventory
         inventory.SetActive(true);
         isInventoryOpen = true;
@@ -94,6 +112,13 @@ public class InventoryController : MonoBehaviour
         if (isRemoveModeActive)
         {
             SetRemoveMode(false);
+        }
+
+        // Close Weapon Forge panel if open
+        WeaponForgeUI weaponForgeUI = FindObjectOfType<WeaponForgeUI>();
+        if (weaponForgeUI != null)
+        {
+            weaponForgeUI.CloseForge();
         }
 
         // Hide cursor and lock
@@ -312,6 +337,12 @@ public class InventoryController : MonoBehaviour
     {
         if (itemUI == null || itemData == null) return;
 
+        // Remove from InventoryManager
+        if (InventoryManager.Instance != null)
+        {
+            InventoryManager.Instance.RemoveItem(itemData.id, amount);
+        }
+
         // Remove the item UI from the list
         if (currentItemUIs.Contains(itemUI))
         {
@@ -324,9 +355,6 @@ public class InventoryController : MonoBehaviour
             Destroy(itemUI.gameObject);
         }
 
-        // TODO: Here you can add logic to actually remove the item from your inventory data structure
-        // For example: inventoryData.RemoveItem(itemData, amount);
-
         Debug.Log($"[InventoryController] Removed item: {itemData.itemName} (Amount: {amount})");
     }
 
@@ -338,6 +366,79 @@ public class InventoryController : MonoBehaviour
         if (isRemoveModeActive)
         {
             UpdateItemRemoveButtons();
+        }
+    }
+
+    /// <summary>
+    /// Called when inventory changes (from InventoryManager event)
+    /// </summary>
+    private void OnInventoryChanged()
+    {
+        RefreshInventoryUI();
+    }
+
+    /// <summary>
+    /// Refresh the inventory UI by loading items from InventoryManager
+    /// </summary>
+    public void RefreshInventoryUI()
+    {
+        if (itemsContentContainer == null || itemUIPrefab == null)
+        {
+            Debug.LogWarning("[InventoryController] Cannot refresh UI: itemsContentContainer or itemUIPrefab is null!");
+            return;
+        }
+
+        if (InventoryManager.Instance == null)
+        {
+            Debug.LogWarning("[InventoryController] InventoryManager.Instance is null!");
+            return;
+        }
+
+        // Clear existing UI items
+        foreach (Transform child in itemsContentContainer)
+        {
+            Destroy(child.gameObject);
+        }
+        currentItemUIs.Clear();
+
+        // Get all items from InventoryManager
+        var allItems = InventoryManager.Instance.GetAllItems();
+
+        // Create UI for each item
+        foreach (var (item, amount) in allItems)
+        {
+            if (item == null) continue;
+
+            GameObject itemUIObject = Instantiate(itemUIPrefab, itemsContentContainer);
+            ItemUI itemUI = itemUIObject.GetComponent<ItemUI>();
+
+            if (itemUI != null)
+            {
+                itemUI.Initialize(item, amount, this);
+                currentItemUIs.Add(itemUI);
+            }
+            else
+            {
+                Debug.LogWarning($"[InventoryController] ItemUI component not found on prefab for {item.itemName}!");
+                Destroy(itemUIObject);
+            }
+        }
+
+        // Update remove buttons if in remove mode
+        if (isRemoveModeActive)
+        {
+            UpdateItemRemoveButtons();
+        }
+
+        Debug.Log($"[InventoryController] Refreshed inventory UI - {allItems.Count} item types displayed");
+    }
+
+    private void OnDestroy()
+    {
+        // Unsubscribe from InventoryManager events
+        if (InventoryManager.Instance != null)
+        {
+            InventoryManager.Instance.OnInventoryChanged -= OnInventoryChanged;
         }
     }
 

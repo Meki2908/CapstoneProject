@@ -9,6 +9,12 @@ public class WeaponSwapper : MonoBehaviour
     [SerializeField] private Button axeButton;
     [SerializeField] private Button mageButton;
 
+    [Header("Upgrade Buttons (Weapon Forge)")]
+    [SerializeField] private Button swordUpgradeButton;
+    [SerializeField] private Button axeUpgradeButton;
+    [SerializeField] private Button mageUpgradeButton;
+    [SerializeField] private WeaponForgeUI weaponForgeUI;
+
     [Header("Confirmation Dialog")]
     [SerializeField] private GameObject confirmationDialog;
     [SerializeField] private Button yesButton;
@@ -48,6 +54,42 @@ public class WeaponSwapper : MonoBehaviour
     {
         SetupButtons();
         SetupConfirmationDialog();
+        SetupUpgradeButtons();
+    }
+
+    private void SetupUpgradeButtons()
+    {
+        if (weaponForgeUI == null)
+            weaponForgeUI = FindObjectOfType<WeaponForgeUI>();
+
+        if (swordUpgradeButton != null)
+            swordUpgradeButton.onClick.AddListener(() => OnUpgradeButtonClicked(WeaponType.Sword));
+
+        if (axeUpgradeButton != null)
+            axeUpgradeButton.onClick.AddListener(() => OnUpgradeButtonClicked(WeaponType.Axe));
+
+        if (mageUpgradeButton != null)
+            mageUpgradeButton.onClick.AddListener(() => OnUpgradeButtonClicked(WeaponType.Mage));
+    }
+
+    private void OnUpgradeButtonClicked(WeaponType weaponType)
+    {
+        if (weaponForgeUI == null)
+        {
+            Debug.LogWarning("[WeaponSwapper] WeaponForgeUI not found!");
+            return;
+        }
+
+        // Get the weapon SO for this type
+        WeaponSO weapon = GetWeaponSO(weaponType);
+        if (weapon != null)
+        {
+            weaponForgeUI.OpenForge(weapon);
+        }
+        else
+        {
+            Debug.LogWarning($"[WeaponSwapper] No weapon found for {weaponType}");
+        }
     }
 
     private void SetupButtons()

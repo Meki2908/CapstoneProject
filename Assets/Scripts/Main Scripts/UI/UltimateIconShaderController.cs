@@ -27,6 +27,7 @@ public class UltimateIconShaderController : MonoBehaviour
     [SerializeField] private AnimationCurve readyPulseCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
 
     private AbilityIconManager abilityIconManager;
+    private WeaponController weaponController;
     private Material materialInstance;
     private bool isInitialized = false;
 
@@ -44,9 +45,14 @@ public class UltimateIconShaderController : MonoBehaviour
     private void Start()
     {
         abilityIconManager = FindObjectOfType<AbilityIconManager>();
+        weaponController = FindObjectOfType<WeaponController>();
         if (abilityIconManager == null)
         {
             Debug.LogError("[UltimateIconShaderController] AbilityIconManager not found!");
+        }
+        if (weaponController == null)
+        {
+            Debug.LogError("[UltimateIconShaderController] WeaponController not found!");
         }
     }
 
@@ -85,7 +91,21 @@ public class UltimateIconShaderController : MonoBehaviour
         if (abilityIconManager == null) return;
 
         bool wasReady = isReady;
-        isReady = !abilityIconManager.IsOnCooldown(AbilityInput.Q_Ultimate);
+        bool isOnCooldown = abilityIconManager.IsOnCooldown(AbilityInput.Q_Ultimate);
+
+        // Check if Ultimate is unlocked (level 60)
+        bool isUltimateUnlocked = false;
+        if (WeaponMasteryManager.Instance != null && weaponController != null)
+        {
+            WeaponSO currentWeapon = weaponController.GetCurrentWeapon();
+            if (currentWeapon != null)
+            {
+                isUltimateUnlocked = WeaponMasteryManager.Instance.IsSkillUnlocked(currentWeapon.weaponType, AbilityInput.Q_Ultimate);
+            }
+        }
+
+        // Ultimate is ready when: not on cooldown AND Ultimate is unlocked
+        isReady = !isOnCooldown && isUltimateUnlocked;
 
         // Update target glow intensity based on state
         if (isReady)

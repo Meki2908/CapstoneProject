@@ -47,6 +47,8 @@ public class WeaponSO : ScriptableObject
     [Header("Weapon Identity")]
     public WeaponType weaponType = WeaponType.Sword;
     public string weaponName = "Sword";
+    [Tooltip("Icon sprite for UI display (e.g., in Weapon Forge)")]
+    public Sprite icon;
 
     [Header("Model/Prefab")]
     public GameObject weaponPrefab;

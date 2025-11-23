@@ -103,7 +103,14 @@ public class SprintState : State
         }
         currentVelocity = Vector3.SmoothDamp(currentVelocity, velocity, ref cVelocity, character.velocityDampTime);
 
-        character.controller.Move(currentVelocity * Time.deltaTime * playerSpeed + gravityVelocity * Time.deltaTime);
+        // Apply movement speed multiplier from equipped gems
+        float speedMultiplier = 1f;
+        var wc = character.GetComponent<WeaponController>();
+        if (wc != null && wc.GetCurrentWeapon() != null && WeaponGemManager.Instance != null)
+        {
+            speedMultiplier = WeaponGemManager.Instance.GetMovementSpeedMultiplier(wc.GetCurrentWeapon().weaponType);
+        }
+        character.controller.Move(currentVelocity * Time.deltaTime * (playerSpeed * speedMultiplier) + gravityVelocity * Time.deltaTime);
 
 
         if (velocity.sqrMagnitude > 0)

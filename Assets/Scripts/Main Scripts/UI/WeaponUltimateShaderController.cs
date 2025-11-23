@@ -157,8 +157,15 @@ public class WeaponUltimateShaderController : MonoBehaviour
         bool wasReady = isReady;
         bool isOnCooldown = abilityIconManager.IsOnCooldown(AbilityInput.Q_Ultimate);
 
-        // Ultimate is ready when: not on cooldown AND weapon is drawn
-        isReady = !isOnCooldown && isWeaponDrawn;
+        // Check if Ultimate is unlocked (level 60)
+        bool isUltimateUnlocked = false;
+        if (WeaponMasteryManager.Instance != null && currentWeaponType != WeaponType.None)
+        {
+            isUltimateUnlocked = WeaponMasteryManager.Instance.IsSkillUnlocked(currentWeaponType, AbilityInput.Q_Ultimate);
+        }
+
+        // Ultimate is ready when: not on cooldown AND weapon is drawn AND Ultimate is unlocked
+        isReady = !isOnCooldown && isWeaponDrawn && isUltimateUnlocked;
 
         // Update target glow intensity based on state
         if (isReady)
