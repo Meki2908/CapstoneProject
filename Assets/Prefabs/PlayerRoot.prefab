@@ -49,8 +49,8 @@ PlayableDirector:
   m_SceneBindings:
   - key: {fileID: -1466167924760253248, guid: 2cce3f9ddb9ce1844a6ec1b203f4af95, type: 2}
     value: {fileID: 0}
-  - key: {fileID: 1944370587613962811, guid: 2cce3f9ddb9ce1844a6ec1b203f4af95, type: 2}
-    value: {fileID: 0}
+  - key: {fileID: 6242039378761063300, guid: 2cce3f9ddb9ce1844a6ec1b203f4af95, type: 2}
+    value: {fileID: 7874427661108067183}
   m_ExposedReferences:
     m_References:
     - 04fa866ae29760b4f84084b4a8d0df71: {fileID: 876148997489349884}
@@ -1426,7 +1426,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5137984097556398373}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.0000000031884018, y: 0.99287707, z: -0.11914331, w: 0.000000026570449}
+  m_LocalRotation: {x: 0, y: 0.96997297, z: -0.24321282, w: 0}
   m_LocalPosition: {x: -0.000008583069, y: 0.24589014, z: 1.0097952}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -1446,16 +1446,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Priority:
-    Enabled: 0
-    m_Value: 0
+    Enabled: 1
+    m_Value: 1
   OutputChannel: 1
   StandbyUpdate: 2
   m_StreamingVersion: 20241001
   m_LegacyPriority: 0
   Target:
     TrackingTarget: {fileID: 876148998446249754}
-    LookAtTarget: {fileID: 0}
-    CustomLookAtTarget: 0
+    LookAtTarget: {fileID: 876148998446249754}
+    CustomLookAtTarget: 1
   Lens:
     FieldOfView: 60.000004
     OrthographicSize: 5
@@ -1493,13 +1493,13 @@ MonoBehaviour:
     Position: 0
     Units: 1
   SplineOffset: {x: 0, y: 0, z: 0}
-  CameraRotation: 0
+  CameraRotation: 3
   Damping:
     Enabled: 0
     Position: {x: 0, y: 0, z: 0}
     Angular: 0
   AutomaticDolly:
-    Enabled: 0
+    Enabled: 1
     Method:
       rid: -2
   m_LegacyPosition: -1
@@ -1523,7 +1523,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Composition:
-    ScreenPosition: {x: 0, y: 0}
+    ScreenPosition: {x: 0, y: -0.61}
     DeadZone:
       Enabled: 0
       Size: {x: 0.2, y: 0.2}
@@ -1532,7 +1532,7 @@ MonoBehaviour:
       Size: {x: 0.8, y: 0.8}
       Offset: {x: 0, y: 0}
   CenterOnActivate: 1
-  TargetOffset: {x: 0, y: 0, z: 0}
+  TargetOffset: {x: 0, y: 0.37, z: 0}
   Damping: {x: 0.5, y: 0.5}
   Lookahead:
     Enabled: 0
