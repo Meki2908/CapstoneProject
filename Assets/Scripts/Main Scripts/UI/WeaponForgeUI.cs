@@ -18,7 +18,6 @@ public class WeaponForgeUI : MonoBehaviour
 
     [Header("Gem Slots (any gem type can go into any slot)")]
     [SerializeField] private GemSlotDropZone[] gemSlotDropZones = new GemSlotDropZone[3];
-    [SerializeField] private TextMeshProUGUI[] gemSlotStatTexts = new TextMeshProUGUI[3]; // Stat display for each slot
 
     [Header("Texts")]
     [SerializeField] private TextMeshProUGUI masteryText;
@@ -240,10 +239,6 @@ public class WeaponForgeUI : MonoBehaviour
                 {
                     gemSlotDropZones[i].SetSlotIcon(null);
                 }
-                if (gemSlotStatTexts != null && i < gemSlotStatTexts.Length && gemSlotStatTexts[i] != null)
-                {
-                    gemSlotStatTexts[i].text = "";
-                }
             }
             return;
         }
@@ -256,10 +251,6 @@ public class WeaponForgeUI : MonoBehaviour
                 Sprite gemIcon = gem != null && gem.icon != null ? gem.icon : null;
                 gemSlotDropZones[i].SetSlotIcon(gemIcon);
                 Debug.Log($"[WeaponForgeUI] Slot {i}: {(gem != null ? gem.itemName : "empty")}, Icon: {(gemIcon != null ? "set" : "null")}");
-            }
-            if (gemSlotStatTexts != null && i < gemSlotStatTexts.Length && gemSlotStatTexts[i] != null)
-            {
-                gemSlotStatTexts[i].text = gem != null ? gem.GetGemStatText() : "";
             }
         }
     }

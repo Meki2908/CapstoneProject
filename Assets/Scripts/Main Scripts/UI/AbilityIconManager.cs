@@ -43,6 +43,9 @@ public class AbilityIconManager : MonoBehaviour
     // Current weapon type for mastery checking
     private WeaponType currentWeaponType = WeaponType.None;
 
+    // Store current abilities to refresh cooldown when gems change
+    private AbilitySO[] currentAbilities;
+
     private void Awake()
     {
         // Initialize with default icons
@@ -53,6 +56,31 @@ public class AbilityIconManager : MonoBehaviour
         if (ultimateShaderController == null && ultimateIcon != null)
         {
             ultimateShaderController = ultimateIcon.GetComponent<UltimateIconShaderController>();
+        }
+
+        // Subscribe to gem changes to refresh cooldown durations
+        if (WeaponGemManager.Instance != null)
+        {
+            WeaponGemManager.Instance.OnGemsChanged += OnGemsChanged;
+        }
+    }
+
+    private void OnDestroy()
+    {
+        // Unsubscribe from gem changes
+        if (WeaponGemManager.Instance != null)
+        {
+            WeaponGemManager.Instance.OnGemsChanged -= OnGemsChanged;
+        }
+    }
+
+    private void OnGemsChanged(WeaponType weaponType)
+    {
+        // Refresh cooldown durations if current weapon matches
+        if (weaponType == currentWeaponType && currentAbilities != null)
+        {
+            StoreCooldownDurations(currentAbilities);
+            Debug.Log($"[AbilityIconManager] Refreshed cooldown durations for {weaponType} after gem change");
         }
     }
 
@@ -145,6 +173,9 @@ public class AbilityIconManager : MonoBehaviour
             return;
         }
 
+        // Store current abilities for gem change refresh
+        currentAbilities = abilities;
+
         // Reset all icons to default first
         SetDefaultIcons();
         Debug.Log("[AbilityIconManager] Reset to default icons");
@@ -200,11 +231,11 @@ public class AbilityIconManager : MonoBehaviour
 
         Debug.Log($"[AbilityIconManager] Successfully set {iconsSet} ability icons out of {abilities.Length} abilities");
 
-        // Store cooldown durations for each ability
-        StoreCooldownDurations(abilities);
-
-        // Update skill lock overlays
+        // Update skill lock overlays first (to ensure currentWeaponType is set)
         UpdateSkillLockOverlays();
+
+        // Store cooldown durations for each ability (with gem multipliers applied)
+        StoreCooldownDurations(abilities);
     }
 
     // Set current weapon type for mastery checking
@@ -245,8 +276,15 @@ public class AbilityIconManager : MonoBehaviour
         {
             if (ability != null)
             {
-                cooldownDurations[ability.input] = ability.cooldown;
-                Debug.Log($"[AbilityIconManager] Stored cooldown for {ability.input}: {ability.cooldown}s");
+                // Use modified cooldown from AbilitySO if weapon type is available
+                float cooldownValue = ability.cooldown;
+                if (currentWeaponType != WeaponType.None)
+                {
+                    cooldownValue = ability.GetModifiedCooldown(currentWeaponType);
+                }
+
+                cooldownDurations[ability.input] = cooldownValue;
+                Debug.Log($"[AbilityIconManager] Stored cooldown for {ability.input}: {cooldownValue}s (base: {ability.cooldown}s)");
             }
         }
     }
@@ -278,13 +316,8 @@ public class AbilityIconManager : MonoBehaviour
             return;
         }
 
+        // Duration already includes gem multipliers from StoreCooldownDurations()
         float duration = cooldownDurations[input];
-        // Apply cooldown reduction multiplier from equipped gems
-        if (currentWeaponType != WeaponType.None && WeaponGemManager.Instance != null)
-        {
-            float cdMultiplier = WeaponGemManager.Instance.GetCooldownMultiplier(currentWeaponType);
-            duration *= cdMultiplier;
-        }
         float endTime = Time.time + duration;
 
         cooldownEndTimes[input] = endTime;

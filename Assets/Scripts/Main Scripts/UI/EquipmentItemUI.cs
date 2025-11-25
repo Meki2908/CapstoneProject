@@ -3,21 +3,21 @@ using UnityEngine.UI;
 using UnityEngine.EventSystems;
 
 /// <summary>
-/// UI component for a gem item in the forge viewport, supports drag & drop
+/// UI component for an equipment item in the equipment panel viewport, supports drag & drop
 /// Uses the same prefab structure as ItemUI (inventory item)
 /// </summary>
-public class GemItemUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerEnterHandler, IPointerExitHandler
+public class EquipmentItemUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerEnterHandler, IPointerExitHandler
 {
-    private Item gemItem;
-    private int gemAmount;
+    private Item equipmentItem;
+    private int equipmentAmount;
     private Transform originalParent;
     private Canvas canvas;
     private RectTransform rectTransform;
     private CanvasGroup canvasGroup;
     private ItemUI itemUI; // Reference to ItemUI component (if exists on same GameObject)
 
-    public Item GemItem => gemItem;
-    public int GemAmount => gemAmount;
+    public Item EquipmentItem => equipmentItem;
+    public int EquipmentAmount => equipmentAmount;
 
     private void Awake()
     {
@@ -41,14 +41,14 @@ public class GemItemUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDra
 
     public void Initialize(Item item, int amount)
     {
-        gemItem = item;
-        gemAmount = amount;
+        equipmentItem = item;
+        equipmentAmount = amount;
         originalParent = transform.parent;
 
         // If ItemUI exists, initialize it (it will handle UI display)
         if (itemUI != null)
         {
-            // ItemUI needs InventoryController, but we don't need it for forge
+            // ItemUI needs InventoryController, but we don't need it for equipment panel
             // So we'll just set the item data manually
             var itemIcon = transform.Find("Item Icon")?.GetComponent<Image>();
             var itemNameText = transform.Find("Item name")?.GetComponent<TMPro.TextMeshProUGUI>();
@@ -72,7 +72,7 @@ public class GemItemUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDra
 
     public void OnBeginDrag(PointerEventData eventData)
     {
-        if (gemItem == null || gemItem.itemType != ItemType.Gems) return;
+        if (equipmentItem == null || equipmentItem.itemType != ItemType.Equipment) return;
 
         originalParent = transform.parent;
         canvasGroup.alpha = 0.6f;
@@ -84,7 +84,7 @@ public class GemItemUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDra
 
     public void OnDrag(PointerEventData eventData)
     {
-        if (gemItem == null || gemItem.itemType != ItemType.Gems) return;
+        if (equipmentItem == null || equipmentItem.itemType != ItemType.Equipment) return;
 
         rectTransform.anchoredPosition += eventData.delta / canvas.scaleFactor;
     }
@@ -94,18 +94,17 @@ public class GemItemUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDra
         canvasGroup.alpha = 1f;
         canvasGroup.blocksRaycasts = true;
 
-        // Check if dropped on a gem slot
-        GemSlotDropZone dropZone = null;
+        // Check if dropped on an equipment slot
+        EquipmentSlotDropZone dropZone = null;
         if (eventData.pointerCurrentRaycast.gameObject != null)
         {
-            dropZone = eventData.pointerCurrentRaycast.gameObject.GetComponent<GemSlotDropZone>();
+            dropZone = eventData.pointerCurrentRaycast.gameObject.GetComponent<EquipmentSlotDropZone>();
         }
 
-        if (dropZone != null && dropZone.CanAcceptGem(gemItem))
+        if (dropZone != null && dropZone.CanAcceptEquipment(equipmentItem))
         {
-            // Drop successful - OnDrop in GemSlotDropZone will handle equip and inventory removal
-            // Note: RefreshGemSlots() will be called by RefreshAfterGemEquip() which will update the icon
-            // Return to original position (the gem will be removed from viewport by refresh)
+            // Drop successful - OnDrop in EquipmentSlotDropZone will handle equip and inventory removal
+            // Return to original position (the equipment will be removed from viewport by refresh)
             transform.SetParent(originalParent);
             rectTransform.anchoredPosition = Vector2.zero;
         }
@@ -118,18 +117,18 @@ public class GemItemUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDra
     }
 
     /// <summary>
-    /// Show tooltip when mouse enters gem
+    /// Show tooltip when mouse enters equipment
     /// </summary>
     public void OnPointerEnter(PointerEventData eventData)
     {
-        if (ItemTooltipManager.Instance != null && gemItem != null)
+        if (ItemTooltipManager.Instance != null && equipmentItem != null)
         {
-            ItemTooltipManager.Instance.ShowTooltip(gemItem);
+            ItemTooltipManager.Instance.ShowTooltip(equipmentItem);
         }
     }
 
     /// <summary>
-    /// Hide tooltip when mouse exits gem
+    /// Hide tooltip when mouse exits equipment
     /// </summary>
     public void OnPointerExit(PointerEventData eventData)
     {

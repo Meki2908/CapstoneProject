@@ -35,6 +35,7 @@ public class DamageDealer : MonoBehaviour
                     && !hasDealtDamage.Contains(hit.transform.gameObject))
                 {
                     float finalDamage = weaponDamage;
+
                     // Apply damage multiplier from equipped gems (based on current weapon)
                     var wc = GetComponentInParent<WeaponController>();
                     if (wc != null && wc.GetCurrentWeapon() != null && WeaponGemManager.Instance != null)
@@ -42,8 +43,30 @@ public class DamageDealer : MonoBehaviour
                         float dmgMult = WeaponGemManager.Instance.GetDamageMultiplier(wc.GetCurrentWeapon().weaponType);
                         finalDamage *= dmgMult;
                     }
+
+                    // Check for critical hit from equipment
+                    bool isCrit = false;
+                    float critDamageMultiplier = 1f;
+                    if (EquipmentManager.Instance != null)
+                    {
+                        float critRate = EquipmentManager.Instance.GetTotalCritRateBonus();
+                        float randomValue = Random.Range(0f, 1f);
+                        isCrit = randomValue < critRate;
+
+                        if (isCrit)
+                        {
+                            critDamageMultiplier = EquipmentManager.Instance.GetTotalCritDamageMultiplier();
+                            finalDamage *= critDamageMultiplier;
+                        }
+                    }
+
                     enemy.TakeDamage(finalDamage);
                     hasDealtDamage.Add(hit.transform.gameObject);
+
+                    if (isCrit)
+                    {
+                        Debug.Log($"[DamageDealer] Critical hit! Damage: {finalDamage} (multiplier: {critDamageMultiplier:F2}x)");
+                    }
                 }
             }
         }

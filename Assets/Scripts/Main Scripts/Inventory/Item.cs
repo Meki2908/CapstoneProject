@@ -1,8 +1,9 @@
 using UnityEngine;
 
-public enum ItemType { Armor, Consumable, Material, Gems }
+public enum ItemType { Equipment, Consumable, Material, Gems }
 public enum Rarity { Common, Epic, Legendary }
 public enum GemType { MovementSpeed, CooldownReduction, Damage }
+public enum EquipmentSlotType { Head, Body, Legs, Accessory }
 
 [CreateAssetMenu(fileName = "Item", menuName = "Scriptable Objects/Item")]
 public class Item : ScriptableObject
@@ -21,6 +22,33 @@ public class Item : ScriptableObject
     [Tooltip("Gem stat value (0.0-1.0). For MovementSpeed/Damage: percentage increase. For CooldownReduction: percentage decrease.")]
     [Range(0f, 1f)]
     public float gemValuePercent;
+
+    [Header("Equipment Settings (used when ItemType = Equipment)")]
+    [Tooltip("Which equipment slot this item can be equipped to")]
+    public EquipmentSlotType equipmentSlot;
+
+    [Header("Equipment Stats")]
+    [Tooltip("HP bonus (flat value)")]
+    public float hpBonus = 0f;
+    [Tooltip("Defense bonus (flat value, reduces incoming damage)")]
+    public float defenseBonus = 0f;
+    [Tooltip("Critical Rate bonus (0.0-1.0, e.g., 0.15 = 15%)")]
+    [Range(0f, 1f)]
+    public float critRateBonus = 0f;
+    [Tooltip("Critical Damage multiplier (1.0 = 100%, 1.5 = 150%, etc.)")]
+    [Range(1f, 5f)]
+    public float critDamageMultiplier = 1f;
+    [Tooltip("Movement Speed bonus (0.0-1.0, e.g., 0.1 = 10%)")]
+    [Range(0f, 1f)]
+    public float movementSpeedBonus = 0f;
+    [Tooltip("Attack Speed bonus (0.0-1.0, e.g., 0.15 = 15%)")]
+    [Range(0f, 1f)]
+    public float attackSpeedBonus = 0f;
+
+    [Header("Equipment Passive")]
+    [Tooltip("Passive ability description (e.g., 'Gain 10% damage reduction when below 30% HP')")]
+    [TextArea(2, 4)]
+    public string passiveDescription = "";
 
     /// <summary>
     /// Get gem stat value based on rarity and gem type

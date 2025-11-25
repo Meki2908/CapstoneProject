@@ -38,4 +38,28 @@ public class AbilitySO : ScriptableObject
     [Header("Multi-hit Skill (optional, for weapons like Axe)")]
     [Tooltip("Define multiple damage/VFX windows for a single skill.")]
     public SkillEvent[] skillEvents; // if provided, AxeSkill can run data-driven windows
+
+    /// <summary>
+    /// Get modified cooldown based on equipped gems: CD = baseCD - (baseCD × %)
+    /// </summary>
+    public float GetModifiedCooldown(WeaponType weaponType)
+    {
+        if (WeaponGemManager.Instance == null)
+        {
+            return cooldown; // No gems, return base cooldown
+        }
+
+        // Get cooldown multiplier from gems (returns 1.0 - total %)
+        float cdMultiplier = WeaponGemManager.Instance.GetCooldownMultiplier(weaponType);
+
+        // Calculate: baseCD - (baseCD × %)
+        // cdMultiplier = 1.0 - totalPercent, so we need to extract the percent part
+        float cdPercent = 1f - cdMultiplier; // Extract the % part (e.g., 0.85 -> 0.15)
+
+        // Calculate: baseCD - (baseCD × %)
+        float modifiedCooldown = cooldown - (cooldown * cdPercent);
+
+        // Ensure cooldown is not negative or too low
+        return Mathf.Max(0.1f, modifiedCooldown);
+    }
 }

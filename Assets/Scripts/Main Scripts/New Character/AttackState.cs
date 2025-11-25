@@ -68,6 +68,19 @@ public class AttackState : State
             hitHandler.Bind(currentWeapon, equipment, vfxSpawn, handRef, character.transform);
         }
 
+        // Apply attack speed multiplier from equipment
+        float attackSpeedMultiplier = 1f;
+        if (EquipmentManager.Instance != null)
+        {
+            float attackSpeedBonus = EquipmentManager.Instance.GetTotalAttackSpeedBonus();
+            attackSpeedMultiplier = 1f + attackSpeedBonus; // e.g., 0.15 bonus = 1.15 multiplier
+        }
+
+        // Set animator speed for attack layer (layer 1)
+        character.animator.SetLayerWeight(1, 1f); // Ensure attack layer is active
+        // Note: Animator speed is set per-state, so we need to set it via AnimatorController or use a parameter
+        // For now, we'll store the multiplier and use it in LogicUpdate to calculate clip duration
+
         // Start first hit
         character.animator.SetTrigger("attack");
         character.playerVelocity = Vector3.zero;
@@ -107,7 +120,17 @@ public class AttackState : State
         clipLength = character.animator.GetCurrentAnimatorClipInfo(1)[0].clip.length;
         clipSpeed = character.animator.GetCurrentAnimatorStateInfo(1).speed;
 
-        float clipDuration = clipLength / Mathf.Max(clipSpeed, 0.0001f);
+        // Apply attack speed multiplier from equipment
+        float attackSpeedMultiplier = 1f;
+        if (EquipmentManager.Instance != null)
+        {
+            float attackSpeedBonus = EquipmentManager.Instance.GetTotalAttackSpeedBonus();
+            attackSpeedMultiplier = 1f + attackSpeedBonus; // e.g., 0.15 bonus = 1.15 multiplier
+        }
+
+        // Calculate clip duration with attack speed multiplier
+        float baseClipDuration = clipLength / Mathf.Max(clipSpeed, 0.0001f);
+        float clipDuration = baseClipDuration / attackSpeedMultiplier; // Faster attack = shorter duration
         float normalized = timePassed / clipDuration;
 
         if (!nextAttackBuffered && normalized >= commitPoint)

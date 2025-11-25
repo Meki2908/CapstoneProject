@@ -14,12 +14,16 @@ public class PlayerHealth : MonoBehaviour
     public System.Action<float> OnHealthChanged;
     public System.Action OnPlayerDied;
 
+    private float baseMaxHealth; // Store base health for equipment bonus calculation
+
     public float CurrentHealth => currentHealth;
     public float MaxHealth => maxHealth;
     public bool IsAlive => currentHealth > 0f;
 
     void Start()
     {
+        baseMaxHealth = maxHealth;
+        UpdateMaxHealthWithEquipment();
         currentHealth = maxHealth;
         character = GetComponent<Character>();
         animator = GetComponent<Animator>();
@@ -29,7 +33,55 @@ public class PlayerHealth : MonoBehaviour
             Debug.LogWarning("[PlayerHealth] Animator not found!");
         }
 
+        // Subscribe to equipment changes
+        if (EquipmentManager.Instance != null)
+        {
+            EquipmentManager.Instance.OnEquipmentChanged += OnEquipmentChanged;
+        }
+
         Debug.Log($"[PlayerHealth] Player initialized with {maxHealth} HP");
+    }
+
+    private void OnDestroy()
+    {
+        if (EquipmentManager.Instance != null)
+        {
+            EquipmentManager.Instance.OnEquipmentChanged -= OnEquipmentChanged;
+        }
+    }
+
+    private void OnEquipmentChanged()
+    {
+        float oldMaxHealth = maxHealth;
+        UpdateMaxHealthWithEquipment();
+
+        // Adjust current health proportionally
+        if (oldMaxHealth > 0f)
+        {
+            float healthRatio = currentHealth / oldMaxHealth;
+            currentHealth = maxHealth * healthRatio;
+            currentHealth = Mathf.Clamp(currentHealth, 0f, maxHealth);
+        }
+        else
+        {
+            currentHealth = maxHealth;
+        }
+
+        OnHealthChanged?.Invoke(currentHealth);
+    }
+
+    /// <summary>
+    /// Update max health based on equipped items: maxHealth = baseMaxHealth + totalHPBonus
+    /// </summary>
+    private void UpdateMaxHealthWithEquipment()
+    {
+        float hpBonus = 0f;
+        if (EquipmentManager.Instance != null)
+        {
+            hpBonus = EquipmentManager.Instance.GetTotalHPBonus();
+        }
+
+        maxHealth = baseMaxHealth + hpBonus;
     }
 
     public void TakeDamage(float damage, Vector3 hitPosition = default)
@@ -49,12 +101,20 @@ public class PlayerHealth : MonoBehaviour
             return;
         }
 
-        currentHealth -= damage;
+        // Apply defense reduction from equipment
+        float finalDamage = damage;
+        if (EquipmentManager.Instance != null)
+        {
+            float defense = EquipmentManager.Instance.GetTotalDefenseBonus();
+            finalDamage = Mathf.Max(0f, damage - defense); // Defense reduces damage (flat reduction)
+        }
+
+        currentHealth -= finalDamage;
         currentHealth = Mathf.Clamp(currentHealth, 0f, maxHealth);
 
         OnHealthChanged?.Invoke(currentHealth);
 
-        Debug.Log($"[PlayerHealth] Player took {damage} damage! Current HP: {currentHealth}/{maxHealth}");
+        Debug.Log($"[PlayerHealth] Player took {finalDamage} damage (original: {damage}, defense: {(EquipmentManager.Instance != null ? EquipmentManager.Instance.GetTotalDefenseBonus() : 0f)})! Current HP: {currentHealth}/{maxHealth}");
 
         // Check if player died BEFORE triggering get hit animation
         if (currentHealth <= 0f)

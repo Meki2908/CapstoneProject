@@ -121,6 +121,13 @@ public class InventoryController : MonoBehaviour
             weaponForgeUI.CloseForge();
         }
 
+        // Close Equipment Panel if open
+        EquipmentPanelUI equipmentPanelUI = FindObjectOfType<EquipmentPanelUI>();
+        if (equipmentPanelUI != null)
+        {
+            equipmentPanelUI.ClosePanel();
+        }
+
         // Hide cursor and lock
         Cursor.visible = false;
         Cursor.lockState = CursorLockMode.Locked;

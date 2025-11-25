@@ -1,11 +1,12 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.EventSystems;
 
 /// <summary>
 /// Manages the UI display and interactions for a single inventory item
 /// </summary>
-public class ItemUI : MonoBehaviour
+public class ItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
     [Header("Item References")]
     [SerializeField] private Image itemIcon;
@@ -13,6 +14,9 @@ public class ItemUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI itemAmountText;
     [SerializeField] private Button removeButton; // The X button
     [SerializeField] private Button itemButton; // The main item button
+
+    [Header("Tooltip")]
+    [SerializeField] private bool useTooltip = true; // Enable/disable tooltip for this item
 
     [Header("Item Data")]
     private Item itemData;
@@ -155,6 +159,28 @@ public class ItemUI : MonoBehaviour
     {
         itemAmount = amount;
         UpdateUI();
+    }
+
+    /// <summary>
+    /// Show tooltip when mouse enters item
+    /// </summary>
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        if (useTooltip && ItemTooltipManager.Instance != null && itemData != null)
+        {
+            ItemTooltipManager.Instance.ShowTooltip(itemData);
+        }
+    }
+
+    /// <summary>
+    /// Hide tooltip when mouse exits item
+    /// </summary>
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        if (useTooltip && ItemTooltipManager.Instance != null)
+        {
+            ItemTooltipManager.Instance.HideTooltip();
+        }
     }
 }
 

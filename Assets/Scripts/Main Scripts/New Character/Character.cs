@@ -12,6 +12,12 @@ public class Character : MonoBehaviour
     public float rotationSpeed = 5f;
     public float crouchColliderHeight = 1.35f;
 
+    // Base speeds (stored to apply gem multipliers)
+    private float basePlayerSpeed;
+    private float baseCrouchSpeed;
+    private float baseSprintSpeed;
+    private float baseDashSpeed;
+
     [Header("Dash Settings")]
     [SerializeField] public float dashDuration = 0.2f; // Duration of the dash
     [SerializeField] public int maxConsecutiveDashes = 2; // Maximum consecutive dashes allowed
@@ -99,6 +105,12 @@ public class Character : MonoBehaviour
         normalColliderHeight = controller.height;
         gravityValue *= gravityMultiplier;
 
+        // Store base speeds for gem multiplier calculation
+        basePlayerSpeed = playerSpeed;
+        baseCrouchSpeed = crouchSpeed;
+        baseSprintSpeed = sprintSpeed;
+        baseDashSpeed = dashSpeed;
+
         // Initialize dash state
         IsDashing = false;
 
@@ -107,6 +119,28 @@ public class Character : MonoBehaviour
 
         // Reset dash cooldown when game starts (important for Editor play/stop/play)
         DashState.ResetDashCooldown();
+
+        // Subscribe to weapon change events to update speed multipliers
+        var weaponController = GetComponent<WeaponController>();
+        if (weaponController != null)
+        {
+            weaponController.OnWeaponChanged += OnWeaponChanged;
+        }
+
+        // Subscribe to equipment changes
+        if (EquipmentManager.Instance != null)
+        {
+            EquipmentManager.Instance.OnEquipmentChanged += OnEquipmentChanged;
+        }
+
+        // Apply initial speed multipliers
+        UpdateSpeedWithGems();
+    }
+
+    private void OnEquipmentChanged()
+    {
+        // Update speeds when equipment changes
+        UpdateSpeedWithGems();
     }
 
     private void Update()
@@ -119,6 +153,63 @@ public class Character : MonoBehaviour
     private void FixedUpdate()
     {
         movementSM.currentState.PhysicsUpdate();
+    }
+
+    /// <summary>
+    /// Update speed values based on equipped gems and equipment: speed = baseSpeed + (baseSpeed × gem%) + (baseSpeed × equipment%)
+    /// </summary>
+    private void UpdateSpeedWithGems()
+    {
+        float gemSpeedPercent = 0f;
+        float equipmentSpeedPercent = 0f;
+
+        // Get gem speed multiplier
+        var weaponController = GetComponent<WeaponController>();
+        if (WeaponGemManager.Instance != null && weaponController != null)
+        {
+            WeaponSO currentWeapon = weaponController.GetCurrentWeapon();
+            if (currentWeapon != null)
+            {
+                float speedMultiplier = WeaponGemManager.Instance.GetMovementSpeedMultiplier(currentWeapon.weaponType);
+                gemSpeedPercent = speedMultiplier - 1f; // Extract the % part
+            }
+        }
+
+        // Get equipment speed bonus
+        if (EquipmentManager.Instance != null)
+        {
+            equipmentSpeedPercent = EquipmentManager.Instance.GetTotalMovementSpeedBonus();
+        }
+
+        // Calculate: baseSpeed + (baseSpeed × gem%) + (baseSpeed × equipment%)
+        float totalSpeedPercent = gemSpeedPercent + equipmentSpeedPercent;
+
+        playerSpeed = basePlayerSpeed + (basePlayerSpeed * totalSpeedPercent);
+        crouchSpeed = baseCrouchSpeed + (baseCrouchSpeed * totalSpeedPercent);
+        sprintSpeed = baseSprintSpeed + (baseSprintSpeed * totalSpeedPercent);
+        dashSpeed = baseDashSpeed + (baseDashSpeed * totalSpeedPercent);
+    }
+
+    private void OnWeaponChanged(WeaponSO weapon)
+    {
+        // Update speeds when weapon changes
+        UpdateSpeedWithGems();
+    }
+
+    private void OnDestroy()
+    {
+        // Unsubscribe from weapon change events
+        var weaponController = GetComponent<WeaponController>();
+        if (weaponController != null)
+        {
+            weaponController.OnWeaponChanged -= OnWeaponChanged;
+        }
+
+        // Unsubscribe from equipment changes
+        if (EquipmentManager.Instance != null)
+        {
+            EquipmentManager.Instance.OnEquipmentChanged -= OnEquipmentChanged;
+        }
     }
 
     #region Animation Events - Dash
