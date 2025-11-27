@@ -239,12 +239,22 @@ public class EnemyDetection : MonoBehaviour
         if (nearestEnemy != null)
         {
             Debug.Log("[EnemyDetection] Rotating to enemy");
+            // Disable root motion when enemy is present (manual rotation)
+            if (animator != null)
+            {
+                animator.applyRootMotion = false;
+            }
             AE_RotateToEnemy();
         }
         // Priority 2: Rotate to movement input if no enemy
         else
         {
-            Debug.Log("[EnemyDetection] Rotating to movement input");
+            Debug.Log("[EnemyDetection] Rotating to movement input - enabling root motion");
+            // Enable root motion when no enemy (for normal attack movement)
+            if (animator != null && useRootMotionWhenNoEnemy)
+            {
+                animator.applyRootMotion = true;
+            }
             AE_RotateToMovementInput();
         }
     }

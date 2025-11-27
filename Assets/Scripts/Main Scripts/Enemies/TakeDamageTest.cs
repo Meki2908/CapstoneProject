@@ -378,8 +378,14 @@ public class TakeDamageTest : MonoBehaviour
     }
     #endregion
 
-    // Simple damage method for testing normal attacks
+    // Simple damage method for testing normal attacks (backward compatibility)
     public void TakeDamage(float damage)
+    {
+        TakeDamage(damage, WeaponType.Sword, false);
+    }
+
+    // Overload with weapon type and crit status
+    public void TakeDamage(float damage, WeaponType weaponType, bool isCrit)
     {
         if (!isAlive)
         {
@@ -397,25 +403,22 @@ public class TakeDamageTest : MonoBehaviour
             Destroy(hit, hitEffectLifetime);
         }
 
-        // Spawn damage number using DamageNumbersPro
-        if (damageNumberPrefab != null)
+        // Spawn damage number using DamageTextManager
+        if (DamageTextManager.Instance != null)
         {
-            // Spawn damage number above the target
+            DamageTextManager.Instance.SpawnDamageText(transform.position, damage, weaponType, isCrit);
+        }
+        else if (damageNumberPrefab != null)
+        {
+            // Fallback to old system if DamageTextManager not available
             Vector3 spawnPosition = transform.position + Vector3.up * 2f;
             var damageNumber = damageNumberPrefab.Spawn(spawnPosition, damage);
-
-            // Customize the damage number appearance
-            damageNumber.SetColor(Color.red);
-            damageNumber.SetScale(1.2f); // Make it slightly larger
-
-            if (showDebugInfo)
-            {
-                Debug.Log($"[TakeDamageTest] Spawned damage number: {damage} at position {spawnPosition}");
-            }
+            damageNumber.SetColor(isCrit ? Color.yellow : Color.red);
+            damageNumber.SetScale(isCrit ? 1.5f : 1.2f);
         }
         else
         {
-            Debug.LogWarning("[TakeDamageTest] Cannot spawn damage number - no prefab assigned!");
+            Debug.LogWarning("[TakeDamageTest] Cannot spawn damage number - no DamageTextManager or prefab assigned!");
         }
 
         // Check for death
@@ -425,7 +428,7 @@ public class TakeDamageTest : MonoBehaviour
         }
         else if (showDebugInfo)
         {
-            Debug.Log($"[TakeDamageTest] {gameObject.name} took {damage} damage. HP: {currentHealth}/{maxHealth}");
+            Debug.Log($"[TakeDamageTest] {gameObject.name} took {damage} damage (weapon: {weaponType}, crit: {isCrit}). HP: {currentHealth}/{maxHealth}");
         }
     }
 

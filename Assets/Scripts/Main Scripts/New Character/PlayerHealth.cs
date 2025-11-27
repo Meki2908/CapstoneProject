@@ -1,4 +1,5 @@
 using UnityEngine;
+using TMPro;
 
 public class PlayerHealth : MonoBehaviour
 {
@@ -9,6 +10,12 @@ public class PlayerHealth : MonoBehaviour
     [Header("Components")]
     private Character character;
     private Animator animator;
+
+    [Header("UI")]
+    [Tooltip("Text to display current/max HP below health bar (auto-found if not assigned)")]
+    [SerializeField] private TextMeshProUGUI healthText;
+    [Tooltip("Auto-find health text from HealthBarUI or UI hierarchy")]
+    [SerializeField] private bool autoFindHealthText = true;
 
     [Header("Events")]
     public System.Action<float> OnHealthChanged;
@@ -39,7 +46,81 @@ public class PlayerHealth : MonoBehaviour
             EquipmentManager.Instance.OnEquipmentChanged += OnEquipmentChanged;
         }
 
+        // Auto-find health text if not assigned
+        if (autoFindHealthText && healthText == null)
+        {
+            FindHealthText();
+        }
+
+        // Update health text
+        UpdateHealthText();
+
         Debug.Log($"[PlayerHealth] Player initialized with {maxHealth} HP");
+    }
+
+    /// <summary>
+    /// Auto-find health text from HealthBarUI or UI hierarchy
+    /// </summary>
+    private void FindHealthText()
+    {
+        // Method 1: Try to find HealthBarUI and get TextMeshProUGUI from its children
+        HealthBarUI healthBarUI = FindObjectOfType<HealthBarUI>();
+        if (healthBarUI != null)
+        {
+            // Look for TextMeshProUGUI in HealthBarUI's children
+            healthText = healthBarUI.GetComponentInChildren<TextMeshProUGUI>();
+            if (healthText != null)
+            {
+                Debug.Log("[PlayerHealth] Found health text from HealthBarUI");
+                return;
+            }
+        }
+
+        // Method 2: Try to find by common names/tags in Canvas
+        Canvas[] canvases = FindObjectsOfType<Canvas>();
+        foreach (Canvas canvas in canvases)
+        {
+            // Look for TextMeshProUGUI with common health text names
+            TextMeshProUGUI[] texts = canvas.GetComponentsInChildren<TextMeshProUGUI>(true);
+            foreach (TextMeshProUGUI text in texts)
+            {
+                string textName = text.name.ToLower();
+                if (textName.Contains("health") || textName.Contains("hp") || textName.Contains("healthtext"))
+                {
+                    healthText = text;
+                    Debug.Log($"[PlayerHealth] Found health text by name: {text.name}");
+                    return;
+                }
+            }
+        }
+
+        // Method 3: Try to find in all TextMeshProUGUI components (last resort)
+        TextMeshProUGUI[] allTexts = FindObjectsOfType<TextMeshProUGUI>(true);
+        foreach (TextMeshProUGUI text in allTexts)
+        {
+            // Check if it's likely a health text (has "HP" or "Health" in name, or is child of health bar)
+            string textName = text.name.ToLower();
+            Transform parent = text.transform.parent;
+            bool isInHealthBar = false;
+            while (parent != null)
+            {
+                if (parent.name.ToLower().Contains("health") || parent.name.ToLower().Contains("bar"))
+                {
+                    isInHealthBar = true;
+                    break;
+                }
+                parent = parent.parent;
+            }
+
+            if (isInHealthBar || textName.Contains("health") || textName.Contains("hp"))
+            {
+                healthText = text;
+                Debug.Log($"[PlayerHealth] Found health text: {text.name}");
+                return;
+            }
+        }
+
+        Debug.LogWarning("[PlayerHealth] Could not auto-find health text! Please assign it manually in the inspector.");
     }
 
     private void OnDestroy()
@@ -68,6 +149,7 @@ public class PlayerHealth : MonoBehaviour
         }
 
         OnHealthChanged?.Invoke(currentHealth);
+        UpdateHealthText();
     }
 
     /// <summary>
@@ -113,6 +195,7 @@ public class PlayerHealth : MonoBehaviour
         currentHealth = Mathf.Clamp(currentHealth, 0f, maxHealth);
 
         OnHealthChanged?.Invoke(currentHealth);
+        UpdateHealthText();
 
         Debug.Log($"[PlayerHealth] Player took {finalDamage} damage (original: {damage}, defense: {(EquipmentManager.Instance != null ? EquipmentManager.Instance.GetTotalDefenseBonus() : 0f)})! Current HP: {currentHealth}/{maxHealth}");
 
@@ -153,6 +236,7 @@ public class PlayerHealth : MonoBehaviour
         currentHealth = Mathf.Clamp(currentHealth, 0f, maxHealth);
 
         OnHealthChanged?.Invoke(currentHealth);
+        UpdateHealthText();
         Debug.Log($"[PlayerHealth] Player healed for {amount}! Current HP: {currentHealth}/{maxHealth}");
     }
 
@@ -160,7 +244,19 @@ public class PlayerHealth : MonoBehaviour
     {
         currentHealth = maxHealth;
         OnHealthChanged?.Invoke(currentHealth);
+        UpdateHealthText();
         Debug.Log($"[PlayerHealth] Player health reset to {maxHealth}");
+    }
+
+    /// <summary>
+    /// Update health text to display "Current/Max HP"
+    /// </summary>
+    private void UpdateHealthText()
+    {
+        if (healthText != null)
+        {
+            healthText.text = $"{Mathf.CeilToInt(currentHealth)}/{Mathf.CeilToInt(maxHealth)}";
+        }
     }
 }
 

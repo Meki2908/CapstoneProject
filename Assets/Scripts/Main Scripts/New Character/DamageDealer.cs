@@ -47,6 +47,11 @@ public class DamageDealer : MonoBehaviour
                     // Check for critical hit from equipment
                     bool isCrit = false;
                     float critDamageMultiplier = 1f;
+                    WeaponType currentWeaponType = WeaponType.None;
+                    
+                    // Base crit multiplier (same as BaseEffectScript)
+                    const float BASE_CRIT_MULTIPLIER = 1.5f; // Default 1.5x crit multiplier
+                    
                     if (EquipmentManager.Instance != null)
                     {
                         float critRate = EquipmentManager.Instance.GetTotalCritRateBonus();
@@ -55,12 +60,25 @@ public class DamageDealer : MonoBehaviour
 
                         if (isCrit)
                         {
-                            critDamageMultiplier = EquipmentManager.Instance.GetTotalCritDamageMultiplier();
+                            // Base crit multiplier (1.5x) + equipment bonus
+                            critDamageMultiplier = BASE_CRIT_MULTIPLIER;
+                            float equipmentCritBonus = EquipmentManager.Instance.GetTotalCritDamageMultiplier();
+                            // Equipment returns total multiplier (e.g., 1.5), so we need to extract the bonus part
+                            // If equipment gives 1.5x, and base is 1.5x, total should be 1.5 + (1.5 - 1.0) = 2.0x
+                            float equipmentBonus = equipmentCritBonus - 1f; // Extract bonus part (e.g., 1.5 -> 0.5)
+                            critDamageMultiplier = BASE_CRIT_MULTIPLIER + equipmentBonus;
                             finalDamage *= critDamageMultiplier;
                         }
                     }
 
-                    enemy.TakeDamage(finalDamage);
+                    // Get current weapon type for damage text
+                    if (wc != null && wc.GetCurrentWeapon() != null)
+                    {
+                        currentWeaponType = wc.GetCurrentWeapon().weaponType;
+                    }
+
+                    // Pass weapon type and crit status to TakeDamage
+                    enemy.TakeDamage(finalDamage, currentWeaponType, isCrit);
                     hasDealtDamage.Add(hit.transform.gameObject);
 
                     if (isCrit)

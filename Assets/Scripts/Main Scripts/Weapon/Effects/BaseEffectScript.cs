@@ -8,11 +8,22 @@ public abstract class BaseEffectScript : MonoBehaviour
 
     private float baseDamage; // Store original damage value
     private WeaponController weaponController;
+    private EquipmentSystem equipmentSystem;
+
+    // Crit system
+    private const float BASE_CRIT_MULTIPLIER = 1.5f; // Default 1.5x crit multiplier
 
     protected virtual void Awake()
     {
         baseDamage = damage; // Store original damage
         weaponController = FindObjectOfType<WeaponController>();
+        
+        // Find EquipmentSystem for crit calculation
+        equipmentSystem = GetComponentInParent<EquipmentSystem>();
+        if (equipmentSystem == null)
+        {
+            equipmentSystem = FindObjectOfType<EquipmentSystem>();
+        }
     }
 
     protected virtual void Start()
@@ -59,10 +70,41 @@ public abstract class BaseEffectScript : MonoBehaviour
             // Update damage before applying (in case weapon changed)
             UpdateDamageWithGems();
 
-            if (debugMode) Debug.Log($"[{GetType().Name}] Particle hit: {enemy.name} for {damage} damage");
+            // Calculate crit
+            bool isCrit = false;
+            float finalDamage = damage;
+            WeaponType weaponType = WeaponType.None;
 
-            // Apply damage first
-            enemy.TakeDamage(damage);
+            // Get weapon type
+            if (weaponController != null && weaponController.GetCurrentWeapon() != null)
+            {
+                weaponType = weaponController.GetCurrentWeapon().weaponType;
+            }
+
+            // Check for critical hit
+            if (EquipmentManager.Instance != null)
+            {
+                float critRate = EquipmentManager.Instance.GetTotalCritRateBonus();
+                float randomValue = Random.Range(0f, 1f);
+                isCrit = randomValue < critRate;
+
+                if (isCrit)
+                {
+                    // Base crit multiplier (1.5x) + equipment bonus
+                    float critDamageMultiplier = BASE_CRIT_MULTIPLIER;
+                    float equipmentCritBonus = EquipmentManager.Instance.GetTotalCritDamageMultiplier();
+                    // Equipment returns total multiplier (e.g., 1.5), so we need to extract the bonus part
+                    // If equipment gives 1.5x, and base is 1.5x, total should be 1.5 + (1.5 - 1.0) = 2.0x
+                    float equipmentBonus = equipmentCritBonus - 1f; // Extract bonus part (e.g., 1.5 -> 0.5)
+                    critDamageMultiplier = BASE_CRIT_MULTIPLIER + equipmentBonus;
+                    finalDamage *= critDamageMultiplier;
+                }
+            }
+
+            if (debugMode) Debug.Log($"[{GetType().Name}] Particle hit: {enemy.name} for {finalDamage} damage (crit: {isCrit})");
+
+            // Apply damage with weapon type and crit status
+            enemy.TakeDamage(finalDamage, weaponType, isCrit);
 
             // Apply specific effect
             ApplyEffect(enemy);
@@ -76,10 +118,40 @@ public abstract class BaseEffectScript : MonoBehaviour
             // Update damage before applying (in case weapon changed)
             UpdateDamageWithGems();
 
-            if (debugMode) Debug.Log($"[{GetType().Name}] Collision hit: {enemy.name} for {damage} damage");
+            // Calculate crit
+            bool isCrit = false;
+            float finalDamage = damage;
+            WeaponType weaponType = WeaponType.None;
 
-            // Apply damage first
-            enemy.TakeDamage(damage);
+            // Get weapon type
+            if (weaponController != null && weaponController.GetCurrentWeapon() != null)
+            {
+                weaponType = weaponController.GetCurrentWeapon().weaponType;
+            }
+
+            // Check for critical hit
+            if (EquipmentManager.Instance != null)
+            {
+                float critRate = EquipmentManager.Instance.GetTotalCritRateBonus();
+                float randomValue = Random.Range(0f, 1f);
+                isCrit = randomValue < critRate;
+
+                if (isCrit)
+                {
+                    // Base crit multiplier (1.5x) + equipment bonus
+                    float critDamageMultiplier = BASE_CRIT_MULTIPLIER;
+                    float equipmentCritBonus = EquipmentManager.Instance.GetTotalCritDamageMultiplier();
+                    // Equipment returns total multiplier (e.g., 1.5), so we need to extract the bonus part
+                    float equipmentBonus = equipmentCritBonus - 1f; // Extract bonus part (e.g., 1.5 -> 0.5)
+                    critDamageMultiplier = BASE_CRIT_MULTIPLIER + equipmentBonus;
+                    finalDamage *= critDamageMultiplier;
+                }
+            }
+
+            if (debugMode) Debug.Log($"[{GetType().Name}] Collision hit: {enemy.name} for {finalDamage} damage (crit: {isCrit})");
+
+            // Apply damage with weapon type and crit status
+            enemy.TakeDamage(finalDamage, weaponType, isCrit);
 
             // Apply specific effect
             ApplyEffect(enemy);
