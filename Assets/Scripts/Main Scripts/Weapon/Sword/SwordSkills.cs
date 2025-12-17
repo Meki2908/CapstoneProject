@@ -41,7 +41,7 @@ public class SwordSkills : MonoBehaviour
     // Animation Event: Trigger cooldown for specific ability
     public void AE_TriggerCooldown(int inputIndex)
     {
-        var abilityIconManager = FindObjectOfType<AbilityIconManager>();
+        var abilityIconManager = UnityEngine.Object.FindFirstObjectByType<AbilityIconManager>();
         if (abilityIconManager != null)
         {
             abilityIconManager.AE_TriggerCooldown(inputIndex);
@@ -138,7 +138,7 @@ public class SwordSkills : MonoBehaviour
         }
 
         // Check cooldown
-        var abilityIconManager = FindObjectOfType<AbilityIconManager>();
+        var abilityIconManager = UnityEngine.Object.FindFirstObjectByType<AbilityIconManager>();
         if (abilityIconManager != null && abilityIconManager.IsOnCooldown(input))
         {
             Debug.Log($"[SwordSkills] {input} is on cooldown!");

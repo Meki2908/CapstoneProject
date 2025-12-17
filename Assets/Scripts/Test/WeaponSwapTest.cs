@@ -14,9 +14,9 @@ public class WeaponSwapTest : MonoBehaviour
     private void Start()
     {
         // Find components
-        weaponSwapper = FindObjectOfType<WeaponSwapper>();
-        character = FindObjectOfType<Character>();
-        enemyDetection = FindObjectOfType<EnemyDetection>();
+        weaponSwapper = UnityEngine.Object.FindFirstObjectByType<WeaponSwapper>();
+        character = UnityEngine.Object.FindFirstObjectByType<Character>();
+        enemyDetection = UnityEngine.Object.FindFirstObjectByType<EnemyDetection>();
 
         if (enableDebugLogs)
         {

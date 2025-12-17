@@ -35,7 +35,7 @@ public class GemItemUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDra
         canvas = GetComponentInParent<Canvas>();
         if (canvas == null)
         {
-            canvas = FindObjectOfType<Canvas>();
+            canvas = Object.FindFirstObjectByType<Canvas>();
         }
     }
 

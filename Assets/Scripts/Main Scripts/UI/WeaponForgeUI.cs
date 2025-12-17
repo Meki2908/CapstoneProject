@@ -36,13 +36,13 @@ public class WeaponForgeUI : MonoBehaviour
     {
         if (weaponController == null)
         {
-            weaponController = FindObjectOfType<WeaponController>();
+            weaponController = UnityEngine.Object.FindFirstObjectByType<WeaponController>();
         }
 
         // Get itemUIPrefab from InventoryController
         if (inventoryController == null)
         {
-            inventoryController = FindObjectOfType<InventoryController>();
+            inventoryController = UnityEngine.Object.FindFirstObjectByType<InventoryController>();
         }
 
         // Setup gem slot drop zones
@@ -229,7 +229,7 @@ public class WeaponForgeUI : MonoBehaviour
             Debug.LogWarning("[WeaponForgeUI] gemSlotDropZones is null or length < 3!");
             return;
         }
-        
+
         if (WeaponGemManager.Instance == null || currentWeaponType == WeaponType.None)
         {
             // Clear to empty
@@ -325,14 +325,14 @@ public class WeaponForgeUI : MonoBehaviour
                 if (item != null && item.itemType == ItemType.Gems)
                 {
                     GameObject gemUIObject = Instantiate(itemUIPrefab, gemsViewportContent);
-                    
+
                     // Add GemItemUI component if not exists (for drag & drop)
                     GemItemUI gemUI = gemUIObject.GetComponent<GemItemUI>();
                     if (gemUI == null)
                     {
                         gemUI = gemUIObject.AddComponent<GemItemUI>();
                     }
-                    
+
                     if (gemUI != null)
                     {
                         gemUI.Initialize(item, amount);

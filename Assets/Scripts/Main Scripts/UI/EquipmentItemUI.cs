@@ -35,7 +35,7 @@ public class EquipmentItemUI : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         canvas = GetComponentInParent<Canvas>();
         if (canvas == null)
         {
-            canvas = FindObjectOfType<Canvas>();
+            canvas = Object.FindFirstObjectByType<Canvas>();
         }
     }
 

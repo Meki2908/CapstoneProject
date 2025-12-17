@@ -64,7 +64,7 @@ public class PlayerHealth : MonoBehaviour
     private void FindHealthText()
     {
         // Method 1: Try to find HealthBarUI and get TextMeshProUGUI from its children
-        HealthBarUI healthBarUI = FindObjectOfType<HealthBarUI>();
+        HealthBarUI healthBarUI = UnityEngine.Object.FindFirstObjectByType<HealthBarUI>();
         if (healthBarUI != null)
         {
             // Look for TextMeshProUGUI in HealthBarUI's children
@@ -77,7 +77,7 @@ public class PlayerHealth : MonoBehaviour
         }
 
         // Method 2: Try to find by common names/tags in Canvas
-        Canvas[] canvases = FindObjectsOfType<Canvas>();
+        Canvas[] canvases = UnityEngine.Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include, UnityEngine.FindObjectsSortMode.None);
         foreach (Canvas canvas in canvases)
         {
             // Look for TextMeshProUGUI with common health text names
@@ -95,7 +95,7 @@ public class PlayerHealth : MonoBehaviour
         }
 
         // Method 3: Try to find in all TextMeshProUGUI components (last resort)
-        TextMeshProUGUI[] allTexts = FindObjectsOfType<TextMeshProUGUI>(true);
+        TextMeshProUGUI[] allTexts = UnityEngine.Object.FindObjectsByType<TextMeshProUGUI>(FindObjectsInactive.Include, UnityEngine.FindObjectsSortMode.None);
         foreach (TextMeshProUGUI text in allTexts)
         {
             // Check if it's likely a health text (has "HP" or "Health" in name, or is child of health bar)

@@ -2,6 +2,8 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using Unity.Cinemachine;
 
+#pragma warning disable CS0618 // CinemachineInputProvider is obsolete
+
 namespace MovementSystem
 {
     public class CameraCursor : MonoBehaviour
@@ -98,3 +100,4 @@ namespace MovementSystem
         }
     }
 }
+#pragma warning restore CS0618

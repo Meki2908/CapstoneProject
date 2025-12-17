@@ -18,7 +18,7 @@ public class ConsumableItemDisplay : MonoBehaviour
     [Tooltip("ID of the Health Potion item in the Item database")]
     [SerializeField] private int healthPotionItemId = 0; // Default ID for Health Potion
     [Tooltip("Percentage of max health to restore (0.0 to 1.0)")]
-    [SerializeField] [Range(0f, 1f)] private float healPercentage = 0.5f; // 50% by default
+    [SerializeField][Range(0f, 1f)] private float healPercentage = 0.5f; // 50% by default
     [Tooltip("Cooldown time in seconds between uses")]
     [SerializeField] private float cooldownTime = 15f;
 
@@ -65,7 +65,7 @@ public class ConsumableItemDisplay : MonoBehaviour
         // Auto-find PlayerHealth
         if (autoFindPlayerHealth && playerHealth == null)
         {
-            playerHealth = FindObjectOfType<PlayerHealth>();
+            playerHealth = UnityEngine.Object.FindFirstObjectByType<PlayerHealth>();
             if (playerHealth == null)
             {
                 Debug.LogWarning("[ConsumableItemDisplay] PlayerHealth not found! Auto-find failed.");
@@ -265,7 +265,7 @@ public class ConsumableItemDisplay : MonoBehaviour
     {
         if (autoFindPlayerHealth)
         {
-            playerHealth = FindObjectOfType<PlayerHealth>();
+            playerHealth = UnityEngine.Object.FindFirstObjectByType<PlayerHealth>();
         }
     }
 

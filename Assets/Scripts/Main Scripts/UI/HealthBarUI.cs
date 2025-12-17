@@ -82,7 +82,7 @@ public class HealthBarUI : MonoBehaviour
         }
 
         // Try FindObjectOfType as fallback
-        playerHealth = FindObjectOfType<PlayerHealth>();
+        playerHealth = Object.FindFirstObjectByType<PlayerHealth>();
         if (playerHealth != null)
         {
             SubscribeToHealthEvents();

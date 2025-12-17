@@ -44,8 +44,8 @@ public class UltimateIconShaderController : MonoBehaviour
 
     private void Start()
     {
-        abilityIconManager = FindObjectOfType<AbilityIconManager>();
-        weaponController = FindObjectOfType<WeaponController>();
+        abilityIconManager = UnityEngine.Object.FindFirstObjectByType<AbilityIconManager>();
+        weaponController = UnityEngine.Object.FindFirstObjectByType<WeaponController>();
         if (abilityIconManager == null)
         {
             Debug.LogError("[UltimateIconShaderController] AbilityIconManager not found!");

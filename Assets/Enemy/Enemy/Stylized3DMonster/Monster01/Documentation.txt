@@ -1,0 +1,125 @@
+Monster Cel Shader Package – Documentation
+
+This package provides two custom cel-shading shaders for Unity URP, designed for stylized and mobile-friendly games.
+
+MonsterCelShaderLowest.shader → Ultra lightweight, optimized for mobile & low-end devices.
+
+MonsterCelShaderOption.shader → Advanced, with full customization (rim light, metallic, emission, etc.).
+
+Table of Contents
+
+1. Introduction
+
+2. Installation
+
+3. Shader Setup
+
+4. Properties Overview
+
+5. Best Practices & Usage Tips
+
+6.Troubleshooting
+
+7. Contact & Support
+_____________
+
+1. Introduction
+
+Monster Cel Shader helps you achieve a stylized toon/anime look with options like outlines, rim lighting, and shading thresholds.
+
+Works only with Unity URP (Universal Render Pipeline).
+
+Suitable for characters, monsters, props, or any stylized 3D art.
+
+2. Installation
+
+Import the package into your Unity project.
+
+Find shaders inside:
+
+Assets/Shaders/MonsterCelShaderLowest.shader
+Assets/Shaders/MonsterCelShaderOption.shader
+
+
+Create a material:
+
+Right-click in Project → Create > Material.
+
+In the material’s Shader dropdown, choose either shader.
+
+3. Shader Setup
+
+Assign the created material to your mesh.
+
+In the Inspector, adjust shader properties.
+
+Preview results in both Scene view and Game view.
+
+4. Properties Overview
+
+| Property                    | Description                 | Shader |
+| --------------------------- | --------------------------- | ------ |
+| **\_MainTex**               | Base texture (albedo)       | Both   |
+| **\_Color**                 | Global tint                 | Both   |
+| **\_OutlineColor**          | Outline color               | Both   |
+| **\_OutlineWidth**          | Outline thickness           | Both   |
+| **\_UseShadeThreshold**     | Enable cel-shading cutoff   | Both   |
+| **\_ShadeThreshold**        | Shadow cutoff level         | Both   |
+| **\_ShadeIntensity**        | Shadow blending strength    | Both   |
+| **\_ShadeColor**            | Shadow color                | Both   |
+| **\_RimColor**              | Rim light color             | Option |
+| **\_RimPower**              | Rim light spread            | Option |
+| **\_RimIntensity**          | Rim light strength          | Option |
+| **\_MetallicStrength**      | Metallic influence          | Option |
+| **\_Smoothness**            | Surface smoothness          | Option |
+| **\_MetallicColor**         | Specular color              | Option |
+| **\_MetallicSmoothnessMap** | Texture map for PBR details | Option |
+| **\_EmissionColor**         | Glow emission color         | Option |
+
+
+5. Best Practices & Usage Tips
+
+Use Lowest Shader for mobile games or large crowds (NPCs, enemies).
+
+Use Option Shader for main characters or bosses to enhance detail.
+
+For cel look: set _UseShadeThreshold = 1, tweak _ShadeThreshold ~0.5.
+
+Outline width depends on mesh scale. Start with 0.02 – 0.05.
+
+Combine with gradient textures for unique stylized effects.
+
+6. Troubleshooting
+
+Shader not showing up?
+
+Make sure URP is set up in your project.
+
+Check that materials use the correct shader (Custom/MonsterCelShaderLowest or Custom/MonsterCelShaderOption).
+
+Outline too thin?
+
+Increase _OutlineWidth = 0 until visible.
+
+No shading effect?
+
+Set _UseShadeThreshold to 1.
+
+Adjust _ShadeThreshold and _ShadeIntensity for desired effect.
+
+7. Contact & Support
+
+For questions or support, please contact:
+
+My Name: PixeliusVita
+
+Email: pixeliusVita@gmail.com
+
+Thank you for using Monster Cel Shader Package!
+
+💡 If you enjoy this shader, please leave a ⭐ review on Unity Asset Store.
+It helps me a lot and motivates me to keep releasing free & premium assets!
+
+🙏 Thank you for choosing Monster Cel Shader Package.
+Your support means a lot! Please don’t forget to leave a ⭐ review on the Unity Asset Store – 
+it really helps this project grow and allows me to keep releasing more free & premium content for you.

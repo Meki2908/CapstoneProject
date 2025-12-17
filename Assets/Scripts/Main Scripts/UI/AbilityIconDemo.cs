@@ -11,7 +11,7 @@ public class AbilityIconDemo : MonoBehaviour
 
     private void Start()
     {
-        iconManager = FindObjectOfType<AbilityIconManager>();
+        iconManager = Object.FindFirstObjectByType<AbilityIconManager>();
 
         if (testButton != null)
         {

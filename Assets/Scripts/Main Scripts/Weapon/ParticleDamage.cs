@@ -19,13 +19,13 @@ public class ProjectileDamage : MonoBehaviour
         equipmentSystem = GetComponentInParent<EquipmentSystem>();
         if (equipmentSystem == null)
         {
-            equipmentSystem = FindObjectOfType<EquipmentSystem>();
+            equipmentSystem = UnityEngine.Object.FindFirstObjectByType<EquipmentSystem>();
         }
-        
+
         weaponController = GetComponentInParent<WeaponController>();
         if (weaponController == null)
         {
-            weaponController = FindObjectOfType<WeaponController>();
+            weaponController = UnityEngine.Object.FindFirstObjectByType<WeaponController>();
         }
     }
 
@@ -71,11 +71,11 @@ public class ProjectileDamage : MonoBehaviour
         {
             // Update damage before applying (in case weapon changed)
             UpdateDamageWithGems();
-            
+
             // Calculate crit
             bool isCrit = false;
             float finalDamage = damage;
-            
+
             if (EquipmentManager.Instance != null)
             {
                 float critRate = EquipmentManager.Instance.GetTotalCritRateBonus();
@@ -90,7 +90,7 @@ public class ProjectileDamage : MonoBehaviour
             }
 
             if (debugMode) Debug.Log($"[ProjectileDamage] Collision hit: {enemy.name} for {finalDamage} damage (crit: {isCrit})");
-            
+
             // Pass weapon type (Mage) and crit status
             enemy.TakeDamage(finalDamage, WeaponType.Mage, isCrit);
         }
@@ -102,11 +102,11 @@ public class ProjectileDamage : MonoBehaviour
         {
             // Update damage before applying (in case weapon changed)
             UpdateDamageWithGems();
-            
+
             // Calculate crit
             bool isCrit = false;
             float finalDamage = damage;
-            
+
             if (EquipmentManager.Instance != null)
             {
                 float critRate = EquipmentManager.Instance.GetTotalCritRateBonus();
@@ -121,7 +121,7 @@ public class ProjectileDamage : MonoBehaviour
             }
 
             if (debugMode) Debug.Log($"[ProjectileDamage] Particle hit: {enemy.name} for {finalDamage} damage (crit: {isCrit})");
-            
+
             // Pass weapon type (Mage) and crit status
             enemy.TakeDamage(finalDamage, WeaponType.Mage, isCrit);
         }

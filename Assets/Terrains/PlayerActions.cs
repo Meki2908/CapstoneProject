@@ -30,7 +30,7 @@ using UnityEngine.InputSystem.Utilities;
 /// public class Example : MonoBehaviour, MyActions.IPlayerActions
 /// {
 ///     private MyActions_Actions m_Actions;                  // Source code representation of asset.
-///     private MyActions_Actions.PlayerActions m_Player;     // Source code representation of action map.
+///     private MyActions_Actions.Player m_Player;     // Source code representation of action map.
 ///
 ///     void Awake()
 ///     {
@@ -72,7 +72,7 @@ using UnityEngine.InputSystem.Utilities;
 /// }
 /// </code>
 /// </example>
-public partial class @PlayerActions: IInputActionCollection2, IDisposable
+public partial class @PlayerActions : IInputActionCollection2, IDisposable
 {
     /// <summary>
     /// Provides access to the underlying asset instance.
@@ -1072,14 +1072,14 @@ public partial class @PlayerActions: IInputActionCollection2, IDisposable
     /// <summary>
     /// Provides access to input actions defined in input action map "Player".
     /// </summary>
-    public struct PlayerMap
+    public struct PlayerActionsMap
     {
-        private global::@PlayerActions m_Wrapper;
+        private @PlayerActions m_Wrapper;
 
         /// <summary>
         /// Construct a new instance of the input action map wrapper class.
         /// </summary>
-        public PlayerMap(global::@PlayerActions wrapper) { m_Wrapper = wrapper; }
+        public PlayerActionsMap(@PlayerActions wrapper) { m_Wrapper = wrapper; }
         /// <summary>
         /// Provides access to the underlying input action "Player/Move".
         /// </summary>
@@ -1131,9 +1131,9 @@ public partial class @PlayerActions: IInputActionCollection2, IDisposable
         /// <inheritdoc cref="UnityEngine.InputSystem.InputActionMap.enabled" />
         public bool enabled => Get().enabled;
         /// <summary>
-        /// Implicitly converts an <see ref="PlayerMap" /> to an <see ref="InputActionMap" /> instance.
+        /// Implicitly converts an <see ref="PlayerActionsMap" /> to an <see ref="InputActionMap" /> instance.
         /// </summary>
-        public static implicit operator InputActionMap(PlayerMap set) { return set.Get(); }
+        public static implicit operator InputActionMap(PlayerActionsMap set) { return set.Get(); }
         /// <summary>
         /// Adds <see cref="InputAction.started"/>, <see cref="InputAction.performed"/> and <see cref="InputAction.canceled"/> callbacks provided via <param cref="instance" /> on all input actions contained in this map.
         /// </summary>
@@ -1141,7 +1141,7 @@ public partial class @PlayerActions: IInputActionCollection2, IDisposable
         /// <remarks>
         /// If <paramref name="instance" /> is <c>null</c> or <paramref name="instance"/> have already been added this method does nothing.
         /// </remarks>
-        /// <seealso cref="PlayerMap" />
+        /// <seealso cref="Player" />
         public void AddCallbacks(IPlayerActions instance)
         {
             if (instance == null || m_Wrapper.m_PlayerActionsCallbackInterfaces.Contains(instance)) return;
@@ -1184,7 +1184,7 @@ public partial class @PlayerActions: IInputActionCollection2, IDisposable
         /// <remarks>
         /// Calling this method when <paramref name="instance" /> have not previously been registered has no side-effects.
         /// </remarks>
-        /// <seealso cref="PlayerMap" />
+        /// <seealso cref="Player" />
         private void UnregisterCallbacks(IPlayerActions instance)
         {
             @Move.started -= instance.OnMove;
@@ -1220,9 +1220,9 @@ public partial class @PlayerActions: IInputActionCollection2, IDisposable
         }
 
         /// <summary>
-        /// Unregisters <param cref="instance" /> and unregisters all input action callbacks via <see cref="PlayerMap.UnregisterCallbacks(IPlayerActions)" />.
+        /// Unregisters <param cref="instance" /> and unregisters all input action callbacks via <see cref="PlayerActions.UnregisterCallbacks(IPlayerActions)" />.
         /// </summary>
-        /// <seealso cref="PlayerMap.UnregisterCallbacks(IPlayerActions)" />
+        /// <seealso cref="PlayerActions.UnregisterCallbacks(IPlayerActions)" />
         public void RemoveCallbacks(IPlayerActions instance)
         {
             if (m_Wrapper.m_PlayerActionsCallbackInterfaces.Remove(instance))
@@ -1235,9 +1235,9 @@ public partial class @PlayerActions: IInputActionCollection2, IDisposable
         /// <remarks>
         /// If <paramref name="instance" /> is <c>null</c>, calling this method will only unregister all existing callbacks but not register any new callbacks.
         /// </remarks>
-        /// <seealso cref="PlayerMap.AddCallbacks(IPlayerActions)" />
-        /// <seealso cref="PlayerMap.RemoveCallbacks(IPlayerActions)" />
-        /// <seealso cref="PlayerMap.UnregisterCallbacks(IPlayerActions)" />
+        /// <seealso cref="PlayerActions.AddCallbacks(IPlayerActions)" />
+        /// <seealso cref="PlayerActions.RemoveCallbacks(IPlayerActions)" />
+        /// <seealso cref="PlayerActions.UnregisterCallbacks(IPlayerActions)" />
         public void SetCallbacks(IPlayerActions instance)
         {
             foreach (var item in m_Wrapper.m_PlayerActionsCallbackInterfaces)
@@ -1247,9 +1247,9 @@ public partial class @PlayerActions: IInputActionCollection2, IDisposable
         }
     }
     /// <summary>
-    /// Provides a new <see cref="PlayerMap" /> instance referencing this action map.
+    /// Provides a new <see cref="PlayerActions" /> instance referencing this action map.
     /// </summary>
-    public PlayerMap @Player => new PlayerMap(this);
+    public PlayerActionsMap @Player => new PlayerActionsMap(this);
 
     // UI
     private readonly InputActionMap m_UI;
@@ -1577,8 +1577,8 @@ public partial class @PlayerActions: IInputActionCollection2, IDisposable
     /// <summary>
     /// Interface to implement callback methods for all input action callbacks associated with input actions defined by "Player" which allows adding and removing callbacks.
     /// </summary>
-    /// <seealso cref="PlayerMap.AddCallbacks(IPlayerActions)" />
-    /// <seealso cref="PlayerMap.RemoveCallbacks(IPlayerActions)" />
+    /// <seealso cref="PlayerActions.AddCallbacks(IPlayerActions)" />
+    /// <seealso cref="PlayerActions.RemoveCallbacks(IPlayerActions)" />
     public interface IPlayerActions
     {
         /// <summary>

@@ -16,13 +16,13 @@ public abstract class BaseEffectScript : MonoBehaviour
     protected virtual void Awake()
     {
         baseDamage = damage; // Store original damage
-        weaponController = FindObjectOfType<WeaponController>();
-        
+        weaponController = UnityEngine.Object.FindFirstObjectByType<WeaponController>();
+
         // Find EquipmentSystem for crit calculation
         equipmentSystem = GetComponentInParent<EquipmentSystem>();
         if (equipmentSystem == null)
         {
-            equipmentSystem = FindObjectOfType<EquipmentSystem>();
+            equipmentSystem = UnityEngine.Object.FindFirstObjectByType<EquipmentSystem>();
         }
     }
 

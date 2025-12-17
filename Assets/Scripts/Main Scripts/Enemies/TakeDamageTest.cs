@@ -72,7 +72,7 @@ public class TakeDamageTest : MonoBehaviour
         // Find player for detection
         if (enableDetection || enableRaycastDamage)
         {
-            playerCharacter = FindObjectOfType<Character>();
+            playerCharacter = Object.FindFirstObjectByType<Character>();
             if (playerCharacter != null)
             {
                 player = playerCharacter.transform;

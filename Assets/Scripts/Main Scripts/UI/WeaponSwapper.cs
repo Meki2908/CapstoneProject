@@ -41,13 +41,13 @@ public class WeaponSwapper : MonoBehaviour
     {
         // Auto-find references if not assigned
         if (weaponController == null)
-            weaponController = FindObjectOfType<WeaponController>();
+            weaponController = UnityEngine.Object.FindFirstObjectByType<WeaponController>();
 
         if (character == null)
-            character = FindObjectOfType<Character>();
+            character = UnityEngine.Object.FindFirstObjectByType<Character>();
 
         if (enemyDetection == null)
-            enemyDetection = FindObjectOfType<EnemyDetection>();
+            enemyDetection = UnityEngine.Object.FindFirstObjectByType<EnemyDetection>();
     }
 
     private void Start()
@@ -60,7 +60,7 @@ public class WeaponSwapper : MonoBehaviour
     private void SetupUpgradeButtons()
     {
         if (weaponForgeUI == null)
-            weaponForgeUI = FindObjectOfType<WeaponForgeUI>();
+            weaponForgeUI = UnityEngine.Object.FindFirstObjectByType<WeaponForgeUI>();
 
         if (swordUpgradeButton != null)
             swordUpgradeButton.onClick.AddListener(() => OnUpgradeButtonClicked(WeaponType.Sword));

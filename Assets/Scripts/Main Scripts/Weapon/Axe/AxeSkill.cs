@@ -129,7 +129,7 @@ public class AxeSkill : MonoBehaviour
         }
 
         // Check cooldown
-        var abilityIconManager = FindObjectOfType<AbilityIconManager>();
+        var abilityIconManager = Object.FindFirstObjectByType<AbilityIconManager>();
         if (abilityIconManager != null && abilityIconManager.IsOnCooldown(input))
         {
             Debug.Log($"[AxeSkill.TryUse] {input} is on cooldown!");
@@ -282,7 +282,7 @@ public class AxeSkill : MonoBehaviour
     // Animation Event: Trigger cooldown for specific ability
     public void AE_TriggerCooldown(int inputIndex)
     {
-        var abilityIconManager = FindObjectOfType<AbilityIconManager>();
+        var abilityIconManager = Object.FindFirstObjectByType<AbilityIconManager>();
         if (abilityIconManager != null)
         {
             abilityIconManager.AE_TriggerCooldown(inputIndex);

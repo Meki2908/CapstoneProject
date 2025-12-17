@@ -165,7 +165,7 @@ public class InventoryManager : MonoBehaviour
             {
                 int currentAmount = inventoryItems[itemId];
                 int newAmount = currentAmount + amount;
-                
+
                 // Check max stack size
                 if (item.maxStackSize > 0 && newAmount > item.maxStackSize)
                 {
@@ -174,7 +174,7 @@ public class InventoryManager : MonoBehaviour
                     newAmount = item.maxStackSize;
                     Debug.Log($"[InventoryManager] Item {item.itemName} reached max stack size ({item.maxStackSize})");
                 }
-                
+
                 inventoryItems[itemId] = newAmount;
             }
             else
@@ -189,7 +189,7 @@ public class InventoryManager : MonoBehaviour
         }
 
         Debug.Log($"[InventoryManager] Added {amount}x {item.itemName} (ID: {itemId}) to inventory");
-        
+
         // Trigger events
         OnItemAdded?.Invoke(itemId, amount);
         OnInventoryChanged?.Invoke();
@@ -272,7 +272,7 @@ public class InventoryManager : MonoBehaviour
     public List<(Item item, int amount)> GetAllItems()
     {
         List<(Item, int)> result = new List<(Item, int)>();
-        
+
         foreach (var kvp in inventoryItems)
         {
             if (itemLookup.ContainsKey(kvp.Key))
@@ -280,7 +280,7 @@ public class InventoryManager : MonoBehaviour
                 result.Add((itemLookup[kvp.Key], kvp.Value));
             }
         }
-        
+
         return result;
     }
 
@@ -309,7 +309,7 @@ public class InventoryManager : MonoBehaviour
     /// </summary>
     private void RefreshInventoryUI()
     {
-        InventoryController inventoryController = FindObjectOfType<InventoryController>();
+        InventoryController inventoryController = UnityEngine.Object.FindFirstObjectByType<InventoryController>();
         if (inventoryController != null)
         {
             // Call a method to refresh UI (we'll need to add this to InventoryController)
@@ -351,7 +351,7 @@ public class InventoryManager : MonoBehaviour
 
         // Filter out null items
         Item[] validItems = itemsToUse.Where(item => item != null).ToArray();
-        
+
         if (validItems.Length == 0)
         {
             Debug.LogWarning("[InventoryManager] No valid items found!");
@@ -376,7 +376,7 @@ public class InventoryManager : MonoBehaviour
     private void SaveInventory()
     {
         InventorySaveData saveData = new InventorySaveData();
-        
+
         foreach (var kvp in inventoryItems)
         {
             saveData.items.Add(new InventoryItemData(kvp.Key, kvp.Value));

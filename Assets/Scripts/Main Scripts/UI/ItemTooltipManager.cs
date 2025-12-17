@@ -15,7 +15,7 @@ public class ItemTooltipManager : MonoBehaviour
     [SerializeField] private GameObject tooltipPanel; // The Image GameObject containing the tooltip
     [SerializeField] private TextMeshProUGUI tooltipText; // The TMP text component
     [SerializeField] private Image tooltipBackground; // The Image component (for resizing)
-    
+
     [Header("Settings")]
     [SerializeField] private Vector2 offset = new Vector2(10f, 10f); // Offset from mouse cursor
     [SerializeField] private float padding = 10f; // Padding around text
@@ -45,22 +45,22 @@ public class ItemTooltipManager : MonoBehaviour
         {
             tooltipPanel = gameObject;
         }
-        
+
         if (tooltipBackground == null)
         {
             tooltipBackground = GetComponent<Image>();
         }
-        
+
         if (tooltipText == null)
         {
             tooltipText = GetComponentInChildren<TextMeshProUGUI>();
         }
 
         // Find canvas
-        canvas = GetComponentInParent<Canvas>();
+        canvas = UnityEngine.Object.FindFirstObjectByType<Canvas>();
         if (canvas == null)
         {
-            canvas = FindObjectOfType<Canvas>();
+            canvas = UnityEngine.Object.FindFirstObjectByType<Canvas>();
         }
 
         if (canvas != null)
@@ -72,7 +72,7 @@ public class ItemTooltipManager : MonoBehaviour
         {
             tooltipRectTransform = tooltipPanel.GetComponent<RectTransform>();
         }
-        
+
         // Hide tooltip by default
         if (tooltipPanel != null)
         {
@@ -97,7 +97,7 @@ public class ItemTooltipManager : MonoBehaviour
 
         currentItem = item;
         string tooltipContent = GetTooltipText(item);
-        
+
         if (string.IsNullOrEmpty(tooltipContent))
         {
             HideTooltip();
@@ -106,10 +106,10 @@ public class ItemTooltipManager : MonoBehaviour
 
         tooltipText.text = tooltipContent;
         ResizeTooltipToContent();
-        
+
         tooltipPanel.SetActive(true);
         isShowing = true;
-        
+
         // Update position immediately
         UpdateTooltipPosition();
     }
@@ -149,7 +149,7 @@ public class ItemTooltipManager : MonoBehaviour
         Vector2 tooltipSize = tooltipRectTransform.sizeDelta;
         float maxX = canvasRectTransform.rect.width - tooltipSize.x;
         float maxY = canvasRectTransform.rect.height - tooltipSize.y;
-        
+
         mousePosition.x = Mathf.Clamp(mousePosition.x, 0f, maxX);
         mousePosition.y = Mathf.Clamp(mousePosition.y, 0f, maxY);
 
@@ -165,13 +165,13 @@ public class ItemTooltipManager : MonoBehaviour
 
         // Force text to update its preferred size
         tooltipText.ForceMeshUpdate();
-        
+
         // Get preferred size from text (unconstrained)
         Vector2 preferredSize = tooltipText.GetPreferredValues();
-        
+
         // Clamp width to min/max
         float clampedWidth = Mathf.Clamp(preferredSize.x, minWidth, maxWidth);
-        
+
         // If width was clamped, recalculate height with the clamped width
         if (Mathf.Abs(clampedWidth - preferredSize.x) > 0.01f)
         {
@@ -180,13 +180,13 @@ public class ItemTooltipManager : MonoBehaviour
             tooltipText.ForceMeshUpdate();
             preferredSize = tooltipText.GetPreferredValues();
         }
-        
+
         // Use clamped width
         preferredSize.x = clampedWidth;
-        
+
         // Add padding
         Vector2 newSize = preferredSize + new Vector2(padding * 2f, padding * 2f);
-        
+
         // Set tooltip size
         tooltipRectTransform.sizeDelta = newSize;
     }
@@ -232,7 +232,7 @@ public class ItemTooltipManager : MonoBehaviour
     private string GetEquipmentStats(Item item)
     {
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
-        
+
         sb.AppendLine($"<color=#FFD700>Slot: {item.equipmentSlot}</color>");
         sb.AppendLine();
 
@@ -291,10 +291,10 @@ public class ItemTooltipManager : MonoBehaviour
     private string GetGemStats(Item item)
     {
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
-        
+
         sb.AppendLine($"<color=#FFD700>Type: {item.gemType}</color>");
         sb.AppendLine();
-        
+
         string statText = item.GetGemStatText();
         if (!string.IsNullOrEmpty(statText))
         {
@@ -310,7 +310,7 @@ public class ItemTooltipManager : MonoBehaviour
     private string GetConsumableStats(Item item)
     {
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
-        
+
         // Special handling for Health Potion
         if (item != null && item.itemName != null && item.itemName.ToLower().Contains("health potion"))
         {
@@ -320,7 +320,7 @@ public class ItemTooltipManager : MonoBehaviour
         {
             sb.AppendLine("<color=#FFD700>Consumable Item</color>");
         }
-        
+
         return sb.ToString();
     }
 
@@ -330,11 +330,11 @@ public class ItemTooltipManager : MonoBehaviour
     private string GetMaterialStats(Item item)
     {
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
-        
+
         sb.AppendLine("<color=#FFD700>Material</color>");
-        
+
         // Add any material-specific stats here if needed
-        
+
         return sb.ToString();
     }
 

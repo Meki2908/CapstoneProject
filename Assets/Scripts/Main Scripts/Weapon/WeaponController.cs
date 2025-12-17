@@ -319,7 +319,7 @@ public class WeaponController : MonoBehaviour
         }
 
         // Unassign Ultimate Icon Shader material when sheathing
-        var shaderController = FindObjectOfType<WeaponUltimateShaderController>();
+        var shaderController = UnityEngine.Object.FindFirstObjectByType<WeaponUltimateShaderController>();
         if (shaderController != null)
         {
             shaderController.UnassignMaterial();
@@ -510,7 +510,7 @@ public class WeaponController : MonoBehaviour
     private void HandleUltimateIconShader(WeaponType weaponType)
     {
         // Find Ultimate Icon Shader Controller
-        var shaderController = FindObjectOfType<WeaponUltimateShaderController>();
+        var shaderController = UnityEngine.Object.FindFirstObjectByType<WeaponUltimateShaderController>();
         if (shaderController == null)
         {
             Debug.LogWarning("[WeaponController] WeaponUltimateShaderController not found!");
@@ -518,7 +518,7 @@ public class WeaponController : MonoBehaviour
         }
 
         // Check if Ultimate is on cooldown
-        var abilityIconManager = FindObjectOfType<AbilityIconManager>();
+        var abilityIconManager = UnityEngine.Object.FindFirstObjectByType<AbilityIconManager>();
         bool isUltimateOnCooldown = false;
         if (abilityIconManager != null)
         {

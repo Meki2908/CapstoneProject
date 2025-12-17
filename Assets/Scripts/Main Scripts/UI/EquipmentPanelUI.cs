@@ -27,7 +27,7 @@ public class EquipmentPanelUI : MonoBehaviour
         // Get itemUIPrefab from InventoryController
         if (inventoryController == null)
         {
-            inventoryController = FindObjectOfType<InventoryController>();
+            inventoryController = Object.FindFirstObjectByType<InventoryController>();
         }
 
         // Setup equipment slot drop zones (by index, not type)
@@ -109,7 +109,7 @@ public class EquipmentPanelUI : MonoBehaviour
             Debug.LogWarning("[EquipmentPanelUI] equipmentSlotDropZones is null or length < 4!");
             return;
         }
-        
+
         if (EquipmentManager.Instance == null)
         {
             // Clear to empty
@@ -178,7 +178,7 @@ public class EquipmentPanelUI : MonoBehaviour
         // Get itemUIPrefab from InventoryController (ensure it's available)
         if (inventoryController == null)
         {
-            inventoryController = FindObjectOfType<InventoryController>();
+            inventoryController = Object.FindFirstObjectByType<InventoryController>();
         }
 
         if (itemUIPrefab == null && inventoryController != null)
@@ -208,21 +208,21 @@ public class EquipmentPanelUI : MonoBehaviour
                 if (item != null && item.itemType == ItemType.Equipment)
                 {
                     GameObject equipmentUIObject = Instantiate(itemUIPrefab, equipmentViewportContent);
-                    
+
                     // Initialize ItemUI component first (for icon, name, amount display)
                     ItemUI itemUI = equipmentUIObject.GetComponent<ItemUI>();
                     if (itemUI != null && inventoryController != null)
                     {
                         itemUI.Initialize(item, amount, inventoryController);
                     }
-                    
+
                     // Add EquipmentItemUI component if not exists (for drag & drop)
                     EquipmentItemUI equipmentUI = equipmentUIObject.GetComponent<EquipmentItemUI>();
                     if (equipmentUI == null)
                     {
                         equipmentUI = equipmentUIObject.AddComponent<EquipmentItemUI>();
                     }
-                    
+
                     if (equipmentUI != null)
                     {
                         equipmentUI.Initialize(item, amount);

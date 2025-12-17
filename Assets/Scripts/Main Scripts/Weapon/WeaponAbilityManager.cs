@@ -16,7 +16,7 @@ public class WeaponAbilityManager : MonoBehaviour
         // Find icon manager if not assigned
         if (iconManager == null)
         {
-            iconManager = FindObjectOfType<AbilityIconManager>();
+            iconManager = UnityEngine.Object.FindFirstObjectByType<AbilityIconManager>();
             if (iconManager != null)
             {
                 Debug.Log("[WeaponAbilityManager] Auto-found AbilityIconManager");

@@ -46,8 +46,8 @@ public class WeaponUltimateShaderController : MonoBehaviour
 
     private void Start()
     {
-        abilityIconManager = FindObjectOfType<AbilityIconManager>();
-        weaponController = FindObjectOfType<WeaponController>();
+        abilityIconManager = UnityEngine.Object.FindFirstObjectByType<AbilityIconManager>();
+        weaponController = UnityEngine.Object.FindFirstObjectByType<WeaponController>();
 
         if (abilityIconManager == null)
         {
@@ -90,8 +90,8 @@ public class WeaponUltimateShaderController : MonoBehaviour
     public void UpdateMaterialForWeapon(WeaponType weaponType)
     {
         if (!isInitialized) return;
-
-        currentWeaponType = weaponType;
+        abilityIconManager = UnityEngine.Object.FindFirstObjectByType<AbilityIconManager>();
+        weaponController = UnityEngine.Object.FindFirstObjectByType<WeaponController>();
         Material targetMaterial = null;
 
         switch (weaponType)

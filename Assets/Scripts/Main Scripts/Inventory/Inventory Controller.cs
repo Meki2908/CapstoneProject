@@ -5,6 +5,8 @@ using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
 
+#pragma warning disable CS0618 // CinemachineInputProvider is obsolete
+
 public class InventoryController : MonoBehaviour
 {
     [SerializeField] private GameObject inventory;
@@ -41,7 +43,7 @@ public class InventoryController : MonoBehaviour
         isRemoveModeActive = false;
 
         if (character == null)
-            character = FindObjectOfType<Character>();
+            character = UnityEngine.Object.FindFirstObjectByType<Character>();
         if (playerInput == null && character != null)
             playerInput = character.GetComponent<PlayerInput>();
 
@@ -71,6 +73,8 @@ public class InventoryController : MonoBehaviour
             ToggleInventory();
         }
     }
+
+#pragma warning restore CS0618
 
     private void ToggleInventory()
     {
@@ -115,14 +119,14 @@ public class InventoryController : MonoBehaviour
         }
 
         // Close Weapon Forge panel if open
-        WeaponForgeUI weaponForgeUI = FindObjectOfType<WeaponForgeUI>();
+        WeaponForgeUI weaponForgeUI = UnityEngine.Object.FindFirstObjectByType<WeaponForgeUI>();
         if (weaponForgeUI != null)
         {
             weaponForgeUI.CloseForge();
         }
 
         // Close Equipment Panel if open
-        EquipmentPanelUI equipmentPanelUI = FindObjectOfType<EquipmentPanelUI>();
+        EquipmentPanelUI equipmentPanelUI = UnityEngine.Object.FindFirstObjectByType<EquipmentPanelUI>();
         if (equipmentPanelUI != null)
         {
             equipmentPanelUI.ClosePanel();

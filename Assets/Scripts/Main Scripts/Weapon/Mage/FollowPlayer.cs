@@ -18,7 +18,7 @@ public class FollowPlayer : MonoBehaviour
         if (target == null)
         {
             // Auto find player
-            var player = FindObjectOfType<Character>();
+            var player = UnityEngine.Object.FindFirstObjectByType<Character>();
             target = player?.transform;
         }
     }

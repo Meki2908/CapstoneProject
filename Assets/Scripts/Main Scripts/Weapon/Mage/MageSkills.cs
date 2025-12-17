@@ -125,7 +125,7 @@ public class MageSkills : MonoBehaviour
         }
 
         // Check cooldown
-        var abilityIconManager = FindObjectOfType<AbilityIconManager>();
+        var abilityIconManager = UnityEngine.Object.FindFirstObjectByType<AbilityIconManager>();
         if (abilityIconManager != null && abilityIconManager.IsOnCooldown(input))
         {
             Debug.Log($"[MageSkills.TryUse] {input} is on cooldown!");
@@ -386,7 +386,7 @@ public class MageSkills : MonoBehaviour
     // Animation Event: Trigger cooldown for specific ability
     public void AE_TriggerCooldown(int inputIndex)
     {
-        var abilityIconManager = FindObjectOfType<AbilityIconManager>();
+        var abilityIconManager = UnityEngine.Object.FindFirstObjectByType<AbilityIconManager>();
         if (abilityIconManager != null)
         {
             abilityIconManager.AE_TriggerCooldown(inputIndex);

@@ -23,7 +23,7 @@ public class MasteryProgressionDisplay : MonoBehaviour
         // Auto-find WeaponController if not assigned
         if (weaponController == null)
         {
-            weaponController = FindObjectOfType<WeaponController>();
+            weaponController = Object.FindFirstObjectByType<WeaponController>();
         }
     }
 

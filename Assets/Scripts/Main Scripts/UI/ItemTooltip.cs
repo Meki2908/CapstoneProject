@@ -13,11 +13,11 @@ public class ItemTooltip : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
     [SerializeField] private GameObject tooltipPanel; // The Image GameObject containing the tooltip
     [SerializeField] private TextMeshProUGUI tooltipText; // The TMP text component
     [SerializeField] private Image tooltipBackground; // The Image component (for resizing)
-    
+
     [Header("Settings")]
     [SerializeField] private Vector2 offset = new Vector2(10f, 10f); // Offset from mouse cursor
     [SerializeField] private float padding = 10f; // Padding around text
-    
+
     private Canvas canvas;
     private RectTransform canvasRectTransform;
     private RectTransform tooltipRectTransform;
@@ -31,12 +31,12 @@ public class ItemTooltip : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
         {
             tooltipPanel = gameObject;
         }
-        
+
         if (tooltipBackground == null)
         {
             tooltipBackground = GetComponent<Image>();
         }
-        
+
         if (tooltipText == null)
         {
             tooltipText = GetComponentInChildren<TextMeshProUGUI>();
@@ -46,7 +46,7 @@ public class ItemTooltip : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
         canvas = GetComponentInParent<Canvas>();
         if (canvas == null)
         {
-            canvas = FindObjectOfType<Canvas>();
+            canvas = UnityEngine.Object.FindFirstObjectByType<Canvas>();
         }
 
         if (canvas != null)
@@ -55,7 +55,7 @@ public class ItemTooltip : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
         }
 
         tooltipRectTransform = tooltipPanel.GetComponent<RectTransform>();
-        
+
         // Hide tooltip by default
         if (tooltipPanel != null)
         {
@@ -80,7 +80,7 @@ public class ItemTooltip : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
 
         currentItem = item;
         string tooltipContent = GetTooltipText(item);
-        
+
         if (string.IsNullOrEmpty(tooltipContent))
         {
             HideTooltip();
@@ -89,10 +89,10 @@ public class ItemTooltip : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
 
         tooltipText.text = tooltipContent;
         ResizeTooltipToContent();
-        
+
         tooltipPanel.SetActive(true);
         isShowing = true;
-        
+
         // Update position immediately
         UpdateTooltipPosition();
     }
@@ -132,7 +132,7 @@ public class ItemTooltip : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
         Vector2 tooltipSize = tooltipRectTransform.sizeDelta;
         float maxX = canvasRectTransform.rect.width - tooltipSize.x;
         float maxY = canvasRectTransform.rect.height - tooltipSize.y;
-        
+
         mousePosition.x = Mathf.Clamp(mousePosition.x, 0f, maxX);
         mousePosition.y = Mathf.Clamp(mousePosition.y, 0f, maxY);
 
@@ -148,16 +148,16 @@ public class ItemTooltip : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
 
         // Force text to update its preferred size
         tooltipText.ForceMeshUpdate();
-        
+
         // Get preferred size from text
         Vector2 preferredSize = tooltipText.GetPreferredValues();
-        
+
         // Add padding
         Vector2 newSize = preferredSize + new Vector2(padding * 2f, padding * 2f);
-        
+
         // Set tooltip size
         tooltipRectTransform.sizeDelta = newSize;
-        
+
         // Ensure text is properly positioned (centered or top-left, depending on your preference)
         // You can adjust this based on your UI layout
     }
@@ -210,7 +210,7 @@ public class ItemTooltip : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
     private string GetEquipmentStats(Item item)
     {
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
-        
+
         sb.AppendLine($"<color=#FFD700>Slot: {item.equipmentSlot}</color>");
         sb.AppendLine();
 
@@ -269,10 +269,10 @@ public class ItemTooltip : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
     private string GetGemStats(Item item)
     {
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
-        
+
         sb.AppendLine($"<color=#FFD700>Type: {item.gemType}</color>");
         sb.AppendLine();
-        
+
         string statText = item.GetGemStatText();
         if (!string.IsNullOrEmpty(statText))
         {
@@ -288,11 +288,11 @@ public class ItemTooltip : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
     private string GetConsumableStats(Item item)
     {
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
-        
+
         sb.AppendLine("<color=#FFD700>Consumable Item</color>");
-        
+
         // Add any consumable-specific stats here if needed
-        
+
         return sb.ToString();
     }
 
@@ -302,11 +302,11 @@ public class ItemTooltip : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
     private string GetMaterialStats(Item item)
     {
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
-        
+
         sb.AppendLine("<color=#FFD700>Material</color>");
-        
+
         // Add any material-specific stats here if needed
-        
+
         return sb.ToString();
     }
 
