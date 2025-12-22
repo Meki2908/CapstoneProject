@@ -474,9 +474,24 @@ public class TakeDamageTest : MonoBehaviour
         }
         enableRaycastDamage = false;
 
-        // You can add death animation, effects, or destroy the object here
-        // For now, we'll just disable the enemy
-        // Destroy(gameObject, 2f); // Destroy after 2 seconds (optional)
+        // Trigger enemy-specific death behaviour (AI, animation, etc.)
+        var spiderAI = GetComponent<SpiderEnemyAI>();
+        if (spiderAI != null)
+        {
+            spiderAI.Die();
+        }
+        else
+        {
+            // If there is a generic Animator, at least try to play "die" trigger
+            var animator = GetComponent<Animator>();
+            if (animator != null)
+            {
+                animator.SetTrigger("Die");
+            }
+        }
+
+        // Optionally destroy the enemy after a short delay (tùy bạn bật/tắt)
+        // Destroy(gameObject, 3f);
     }
 
 
