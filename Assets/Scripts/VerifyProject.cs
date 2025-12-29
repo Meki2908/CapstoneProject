@@ -24,8 +24,18 @@ namespace Unity.FantasyKingdom
         static void EditorSceneManagerOnSceneOpening(string path, OpenSceneMode mode)
         {
             var asset = AssetDatabase.LoadAssetAtPath<VerifyProject>("Assets/Data/VerifyProjectSettings.asset");
+            if (asset == null)
+            {
+                UnityEngine.Debug.LogWarning("VerifyProject settings asset not found at Assets/Data/VerifyProjectSettings.asset");
+                return;
+            }
+
             asset.OnEnable();
-            EditorApplication.delayCall += () => asset.OnEnable();
+            EditorApplication.delayCall += () =>
+            {
+                if (asset != null)
+                    asset.OnEnable();
+            };
         }
 
         void OnEnable()
