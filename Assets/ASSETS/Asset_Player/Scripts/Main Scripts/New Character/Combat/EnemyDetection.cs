@@ -8,22 +8,23 @@ public class EnemyDetection : MonoBehaviour
     [SerializeField] private float detectionRadius = 10f;
     [SerializeField] private LayerMask enemyLayer;
     [SerializeField] private float autoTargetRadius = 5f; // Bán kính tự động target enemy gần nhất
+    [SerializeField] private float detectionUpdateInterval = 0.1f; // Update detection every 0.1 seconds instead of every frame
 
     [Header("Camera Settings")]
     [SerializeField] private CinemachineCamera cnCamera;
     [SerializeField] private float combatCameraDistance = 9f;
     [SerializeField] private float normalCameraDistance = 5f;
     [SerializeField] private float cameraTransitionSpeed = 2f;
-    [SerializeField] private float cameraLookOffset = 0.5f; // Offset để camera nhìn giữa player và enemy
+    // [SerializeField] private float cameraLookOffset = 0.5f; // Unused - commented out
 
     [Header("Combat Movement")]
     [SerializeField] private float combatMoveSpeed = 2f; // Tốc độ di chuyển về phía enemy khi đánh
-    [SerializeField] private float rotationSpeed = 8f; // Tốc độ xoay người về phía enemy
+    // [SerializeField] private float rotationSpeed = 8f; // Unused - commented out
     [SerializeField] private float smoothRotationDuration = 0.3f; // Thời gian xoay mượt
 
     [Header("Root Motion Control")]
     [SerializeField] private bool useRootMotionWhenNoEnemy = true; // Dùng root motion khi không có enemy
-    [SerializeField] private bool moveTowardEnemyWhenAttacking = true; // Di chuyển về phía enemy khi đánh
+    // [SerializeField] private bool moveTowardEnemyWhenAttacking = true; // Unused - commented out
 
     [Header("Weapon's Attack Range")]
     [SerializeField] private float swordAttackRange = 3f;
@@ -42,6 +43,12 @@ public class EnemyDetection : MonoBehaviour
     private Coroutine smoothRotationCoroutine;
     private Vector3 lastEnemyPosition;
 
+    // Optimization variables
+    private float lastDetectionTime = 0f;
+    private float detectionRadiusSquared; // Cache squared radius for faster distance checks
+    private float autoTargetRadiusSquared;
+    private Collider[] enemyCollidersCache = new Collider[50]; // Reusable array to avoid allocations
+
     // Events
     public System.Action<Transform> OnEnemyDetected;
     public System.Action OnNoEnemyDetected;
@@ -55,6 +62,10 @@ public class EnemyDetection : MonoBehaviour
 
         if (!cnCamera)
             cnCamera = GetComponent<CinemachineCamera>();
+
+        // Cache squared radii for faster distance checks
+        detectionRadiusSquared = detectionRadius * detectionRadius;
+        autoTargetRadiusSquared = autoTargetRadius * autoTargetRadius;
     }
 
     private void Start()
@@ -69,16 +80,22 @@ public class EnemyDetection : MonoBehaviour
 
     private void Update()
     {
-        UpdateEnemyDetection();
-        UpdateCameraSystem();
+        // Update enemy detection at intervals instead of every frame
+        if (Time.time - lastDetectionTime >= detectionUpdateInterval)
+        {
+            UpdateEnemyDetection();
+            lastDetectionTime = Time.time;
+        }
 
+        UpdateCameraSystem();
     }
 
     #region Enemy Detection
     private void UpdateEnemyDetection()
     {
-        Collider[] enemies = Physics.OverlapSphere(transform.position, detectionRadius, enemyLayer);
-        Transform newNearestEnemy = GetNearestEnemy(enemies);
+        // Use cached array to avoid allocations
+        int enemyCount = Physics.OverlapSphereNonAlloc(transform.position, detectionRadius, enemyCollidersCache, enemyLayer);
+        Transform newNearestEnemy = GetNearestEnemyOptimized(enemyCount);
 
         // Check if nearest enemy changed
         if (newNearestEnemy != nearestEnemy)
@@ -131,21 +148,26 @@ public class EnemyDetection : MonoBehaviour
         return true;
     }
 
-    private Transform GetNearestEnemy(Collider[] enemies)
+    private Transform GetNearestEnemyOptimized(int enemyCount)
     {
-        if (enemies.Length == 0) return null;
+        if (enemyCount == 0) return null;
 
         Transform nearest = null;
-        float nearestDistance = float.MaxValue;
+        float nearestDistanceSquared = float.MaxValue;
+        Vector3 playerPos = transform.position;
 
-        foreach (Collider enemy in enemies)
+        for (int i = 0; i < enemyCount; i++)
         {
+            Collider enemy = enemyCollidersCache[i];
             if (enemy == null) continue;
 
-            float distance = Vector3.Distance(transform.position, enemy.transform.position);
-            if (distance < nearestDistance)
+            // Use squared distance to avoid expensive square root calculations
+            Vector3 enemyPos = enemy.transform.position;
+            float distanceSquared = (enemyPos - playerPos).sqrMagnitude;
+
+            if (distanceSquared < nearestDistanceSquared)
             {
-                nearestDistance = distance;
+                nearestDistanceSquared = distanceSquared;
                 nearest = enemy.transform;
             }
         }
@@ -208,9 +230,7 @@ public class EnemyDetection : MonoBehaviour
     private IEnumerator SmoothCameraDistance(float targetDistance)
     {
         // Get current distance from camera's body component
-#pragma warning disable CS0618 // Type is obsolete - use CinemachineThirdPersonFollow in Cinemachine 3.x
-        var body = cnCamera.GetCinemachineComponent(CinemachineCore.Stage.Body) as Cinemachine3rdPersonFollow;
-#pragma warning restore CS0618
+        var body = cnCamera.GetCinemachineComponent(CinemachineCore.Stage.Body) as CinemachineThirdPersonFollow;
         if (body == null) yield break;
 
         float startDistance = body.CameraDistance;
@@ -455,16 +475,9 @@ public class EnemyDetection : MonoBehaviour
     private bool IsCharacterAttacking()
     {
         if (animator == null) return false;
-        if (character == null) return false;
 
         // Check if character is in attack state
-        bool isAttackingFromSM = false;
-        if (character.movementSM != null && character.attacking != null)
-        {
-            isAttackingFromSM = character.movementSM.currentState == character.attacking;
-        }
-
-        return isAttackingFromSM ||
+        return character.movementSM.currentState == character.attacking ||
                animator.GetCurrentAnimatorStateInfo(0).IsName("Attack") ||
                animator.GetBool("isAttacking");
     }
