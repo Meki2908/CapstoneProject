@@ -57,7 +57,8 @@ public abstract class BaseEnemyAI : MonoBehaviour
         detectionRadiusSquared = detectionRadius * detectionRadius;
         attackRangeSquared = attackRange * attackRange;
         returnThresholdSquared = returnThreshold * returnThreshold;
-        returnThresholdWithHysteresis = returnThreshold + hysteresisBuffer;
+        // Precompute squared threshold including hysteresis buffer for comparisons on XZ plane
+        returnThresholdWithHysteresis = (returnThreshold + hysteresisBuffer) * (returnThreshold + hysteresisBuffer);
 
         // Initialize optimization variables
         lastDistanceToPlayerSquared = float.MaxValue;
@@ -130,13 +131,12 @@ public abstract class BaseEnemyAI : MonoBehaviour
         bool playerInDetect = lastDistanceToPlayerSquared <= detectionRadiusSquared;
         bool playerInAttack = lastDistanceToPlayerSquared <= attackRangeSquared;
         bool tooFarFromSpawn = distFromSpawnSquared > returnThresholdSquared;
+        bool playerWithinReturnAreaWithHysteresis = distFromSpawnSquared <= returnThresholdWithHysteresis;
 
-        // Hysteresis logic
-        float effectiveReturnThreshold = (currentState == EnemyState.Return) ?
-            returnThresholdSquared * 0.8f : returnThresholdSquared;
-
-        // Priority: Return if too far from spawn
-        if (tooFarFromSpawn && !playerInAttack)
+        // Priority: If too far from spawn and not currently chasing the player (or player not detected),
+        // switch to Return. But if we're actively chasing and the player is still detected and within the
+        // hysteresis-expanded return area, keep chasing to avoid rapid back-and-forth.
+        if (tooFarFromSpawn && !(currentState == EnemyState.Chase && playerInDetect && playerWithinReturnAreaWithHysteresis) && !playerInAttack)
         {
             currentState = EnemyState.Return;
         }
@@ -144,8 +144,9 @@ public abstract class BaseEnemyAI : MonoBehaviour
         {
             currentState = EnemyState.Attack;
         }
-        else if (playerInDetect && distFromSpawnSquared <= effectiveReturnThreshold)
+        else if (playerInDetect && playerWithinReturnAreaWithHysteresis)
         {
+            // Player detected and within acceptable distance from spawn (with hysteresis)
             currentState = EnemyState.Chase;
         }
         else
