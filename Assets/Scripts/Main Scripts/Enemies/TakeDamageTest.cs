@@ -14,11 +14,11 @@ public class TakeDamageTest : MonoBehaviour
     public bool showDebugInfo = true;
 
     [Header("Effectiveness Settings")]
-    [SerializeField] float thrownAwayForce = 5f;
-    [SerializeField] float knockupForce = 3f;
-    [SerializeField] float pullForce = 2f;
-    [SerializeField] float tornadoRotationSpeed = 180f;
-    [SerializeField] float tornadoDuration = 2f;
+    // [SerializeField] float thrownAwayForce = 5f; // Unused - commented out
+    // [SerializeField] float knockupForce = 3f; // Unused - commented out
+    // [SerializeField] float pullForce = 2f; // Unused - commented out
+    // [SerializeField] float tornadoRotationSpeed = 180f; // Unused - commented out
+    // [SerializeField] float tornadoDuration = 2f; // Unused - commented out
 
     [Header("Enemy Detection Settings")]
     [SerializeField] private float detectionRange = 8f;
@@ -54,6 +54,12 @@ public class TakeDamageTest : MonoBehaviour
     private float lastDetectionTime = 0f;
     private float detectionCooldown = 0.5f; // Minimum time between detection checks
 
+    // Optimization variables
+    private float detectionRangeSquared; // Cache squared detection range
+    private float raycastRangeSquared; // Cache squared raycast range
+    private RaycastHit[] raycastHitsCache = new RaycastHit[10]; // Reusable raycast hits array
+    private bool isCameraObject; // Cache camera check result
+
     // Raycast damage state
     private float lastDamageTime = 0f;
 
@@ -62,6 +68,13 @@ public class TakeDamageTest : MonoBehaviour
         // Initialize health
         currentHealth = maxHealth;
         isAlive = true;
+
+        // Cache squared ranges for faster distance checks
+        detectionRangeSquared = detectionRange * detectionRange;
+        raycastRangeSquared = raycastRange * raycastRange;
+
+        // Cache camera check result
+        isCameraObject = IsCameraObject();
 
         // Ensure we have a damage number prefab
         if (damageNumberPrefab == null)
@@ -122,21 +135,23 @@ public class TakeDamageTest : MonoBehaviour
 
         bool wasDetected = hasDetectedPlayer;
 
-        // Check distance
-        float distance = Vector3.Distance(transform.position, player.position);
-        if (distance > detectionRange)
+        // Check distance using squared distance (faster)
+        Vector3 toPlayer = player.position - transform.position;
+        float distanceSquared = toPlayer.sqrMagnitude;
+        if (distanceSquared > detectionRangeSquared)
         {
             hasDetectedPlayer = false;
             if (wasDetected)
             {
+                float distance = Mathf.Sqrt(distanceSquared);
                 Debug.Log($"[TakeDamageTest] {gameObject.name} lost sight of player (too far: {distance:F1}m)");
                 OnPlayerLost();
             }
             return;
         }
 
-        // Check angle (field of view)
-        Vector3 directionToPlayer = (player.position - transform.position).normalized;
+        // Check angle (field of view) - only if within distance
+        Vector3 directionToPlayer = toPlayer.normalized;
         float angle = Vector3.Angle(transform.forward, directionToPlayer);
 
         if (angle > detectionAngle / 2f)
@@ -150,12 +165,12 @@ public class TakeDamageTest : MonoBehaviour
             return;
         }
 
-        // Check line of sight (no obstacles)
-        RaycastHit hit;
+        // Check line of sight (no obstacles) - only perform raycast if other conditions met
         Vector3 rayOrigin = transform.position + Vector3.up * 1.5f; // Eye level
         Vector3 rayDirection = (player.position + Vector3.up * 1.5f) - rayOrigin;
+        float rayDistance = rayDirection.magnitude;
 
-        if (Physics.Raycast(rayOrigin, rayDirection.normalized, out hit, distance, obstacleLayerMask))
+        if (Physics.Raycast(rayOrigin, rayDirection.normalized, out RaycastHit hit, rayDistance, obstacleLayerMask))
         {
             // Check if hit is the player
             if (hit.collider.transform != player)
@@ -174,6 +189,7 @@ public class TakeDamageTest : MonoBehaviour
         hasDetectedPlayer = true;
         if (!wasDetected)
         {
+            float distance = Mathf.Sqrt(distanceSquared);
             Debug.Log($"[TakeDamageTest] {gameObject.name} detected player! (Distance: {distance:F1}m, Angle: {angle:F1}°)");
             OnPlayerDetected();
         }
@@ -207,8 +223,8 @@ public class TakeDamageTest : MonoBehaviour
     /// </summary>
     public void ActiveDamage()
     {
-        // Prevent camera from damaging player - only allow enemies
-        if (IsCameraObject())
+        // Prevent camera from damaging player - only allow enemies (cached check)
+        if (isCameraObject)
         {
             if (showDebugInfo)
             {
@@ -236,9 +252,8 @@ public class TakeDamageTest : MonoBehaviour
             {
                 Debug.Log($"[TakeDamageTest] Player is dashing (invincible) - skipping raycast damage");
             }
-            // Update lastDamageTime to prevent spam attempts
             lastDamageTime = Time.time;
-            return; // Don't even cast raycast if player is invincible
+            return;
         }
 
         // Early check: Skip raycast if player is on "Nothing" layer (dash invincibility)
@@ -248,65 +263,39 @@ public class TakeDamageTest : MonoBehaviour
             {
                 Debug.Log($"[TakeDamageTest] Player is on Nothing layer (invincible) - skipping raycast damage");
             }
-            // Update lastDamageTime to prevent spam attempts
             lastDamageTime = Time.time;
-            return; // Don't even cast raycast if player layer is Nothing
+            return;
         }
 
-        // Cast ray from enemy to player
+        // Cast ray from enemy to player - use squared distance check first
         Vector3 rayOrigin = transform.position + Vector3.up * 1.5f; // Enemy eye level
-        Vector3 rayDirection = (player.position + Vector3.up * 1.5f) - rayOrigin;
-        float distance = rayDirection.magnitude;
+        Vector3 targetPos = player.position + Vector3.up * 1.5f;
+        Vector3 toTarget = targetPos - rayOrigin;
+        float distanceSquared = toTarget.sqrMagnitude;
 
-        // Only damage if player is within raycast range
-        if (distance > raycastRange)
+        // Only damage if player is within raycast range (squared check)
+        if (distanceSquared > raycastRangeSquared)
         {
             return;
         }
 
-        // Perform raycast - use RaycastAll to find all hits, then filter out camera
-        RaycastHit[] hits = Physics.RaycastAll(rayOrigin, rayDirection.normalized, raycastRange, playerLayerMask);
+        // Perform raycast using cached array to avoid allocations
+        int hitCount = Physics.RaycastNonAlloc(rayOrigin, toTarget.normalized, raycastHitsCache, raycastRange, playerLayerMask);
 
-        // Sort hits by distance to get closest first
-        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
-
-        // Find first valid hit (not camera)
-        foreach (RaycastHit hit in hits)
+        // Find first valid hit (not camera) - optimized loop
+        for (int i = 0; i < hitCount; i++)
         {
-            // Skip camera colliders - check if the hit has a Camera component or is a child of a camera
-            if (hit.collider.GetComponent<Camera>() != null)
-            {
-                if (showDebugInfo)
-                {
-                    Debug.Log($"[TakeDamageTest] Skipping camera collider: {hit.collider.name}");
-                }
-                continue;
-            }
+            RaycastHit hit = raycastHitsCache[i];
 
-            // Check parent hierarchy for camera
-            Transform parent = hit.collider.transform.parent;
-            bool isCameraChild = false;
-            while (parent != null)
+            // Skip camera colliders - simplified check (camera components are rare)
+            if (hit.collider.CompareTag("MainCamera") || hit.collider.GetComponent<Camera>() != null)
             {
-                if (parent.GetComponent<Camera>() != null)
-                {
-                    isCameraChild = true;
-                    break;
-                }
-                parent = parent.parent;
-            }
-
-            if (isCameraChild)
-            {
-                if (showDebugInfo)
-                {
-                    Debug.Log($"[TakeDamageTest] Skipping camera child collider: {hit.collider.name}");
-                }
                 continue;
             }
 
             // Check if we hit the player
-            if (hit.collider.transform == player || hit.collider.transform.IsChildOf(player))
+            Transform hitTransform = hit.collider.transform;
+            if (hitTransform == player || hitTransform.IsChildOf(player))
             {
                 // Check if player is invincible (dashing or layer is Nothing)
                 if (playerCharacter != null && playerCharacter.IsDashing)
@@ -315,26 +304,23 @@ public class TakeDamageTest : MonoBehaviour
                     {
                         Debug.Log($"[TakeDamageTest] Player is dashing (invincible) - damage ignored");
                     }
-                    // Still update lastDamageTime to prevent spam, but don't damage
                     lastDamageTime = Time.time;
-                    return; // Found player but invincible, exit
+                    return;
                 }
 
-                // Check if player is on "Nothing" layer (dash invincibility via layer)
-                if (hit.collider.gameObject.layer == 0) // "Nothing" layer
+                // Check if player is on "Nothing" layer
+                if (hit.collider.gameObject.layer == 0)
                 {
                     if (showDebugInfo)
                     {
                         Debug.Log($"[TakeDamageTest] Player is on Nothing layer (invincible) - damage ignored");
                     }
-                    // Still update lastDamageTime to prevent spam, but don't damage
                     lastDamageTime = Time.time;
-                    return; // Found player but invincible via layer, exit
+                    return;
                 }
 
                 // Player is not invincible - apply damage
                 playerHealth.TakeDamage(damagePerHit, hit.point);
-
                 lastDamageTime = Time.time;
 
                 if (showDebugInfo)
@@ -345,10 +331,10 @@ public class TakeDamageTest : MonoBehaviour
             }
         }
 
-        // If we got here, raycast didn't hit player (probably hit camera or other collider)
-        if (showDebugInfo && hits.Length > 0)
+        // If we got here, raycast didn't hit player
+        if (showDebugInfo && hitCount > 0)
         {
-            Debug.Log($"[TakeDamageTest] Raycast hit {hits.Length} collider(s) but none were valid player colliders");
+            Debug.Log($"[TakeDamageTest] Raycast hit {hitCount} collider(s) but none were valid player colliders");
         }
     }
 
