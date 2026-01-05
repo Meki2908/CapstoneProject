@@ -46,6 +46,9 @@ public class AttackState : State
         pressedSinceLastCheck = false;
         nextAttackBuffered = false;
 
+        // Track attack input time for resuming after hit
+        character.lastAttackInputTime = Time.time;
+
         character.animator.applyRootMotion = false;
         timePassed = 0f;
 

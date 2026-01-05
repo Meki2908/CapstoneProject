@@ -26,6 +26,10 @@ public class PlayerHealth : MonoBehaviour
     public float CurrentHealth => currentHealth;
     public float MaxHealth => maxHealth;
     public bool IsAlive => currentHealth > 0f;
+    // Temporary invulnerability (for ultimates)
+    bool isInvulnerable = false;
+
+    public bool IsInvulnerable() => isInvulnerable;
 
     void Start()
     {
@@ -170,6 +174,13 @@ public class PlayerHealth : MonoBehaviour
     {
         if (!IsAlive) return; // Already dead, ignore damage
 
+        // If invulnerable (e.g., ultimate), ignore damage
+        if (isInvulnerable)
+        {
+            Debug.Log("[PlayerHealth] Player is invulnerable - damage ignored");
+            return;
+        }
+
         // Don't allow damage if already in DieState
         if (character != null && character.movementSM != null && character.movementSM.currentState == character.dieState)
         {
@@ -204,6 +215,12 @@ public class PlayerHealth : MonoBehaviour
         {
             Die();
             return; // Exit early - don't trigger get hit if dead
+        }
+
+        // Store current state before transitioning to hit state
+        if (character != null)
+        {
+            character.lastStateBeforeHit = character.movementSM.currentState;
         }
 
         // Don't trigger animation here - let GetHitState handle it based on currentLocomotionState
@@ -257,6 +274,36 @@ public class PlayerHealth : MonoBehaviour
         {
             healthText.text = $"{Mathf.CeilToInt(currentHealth)}/{Mathf.CeilToInt(maxHealth)}";
         }
+    }
+
+    // Public API: Begin temporary invulnerability for duration seconds
+    public void BeginInvulnerability(float duration)
+    {
+        if (duration <= 0f) return;
+        if (isInvulnerable)
+        {
+            // extend timer by restarting coroutine
+            StopCoroutine("InvulnerabilityCoroutine");
+        }
+        StartCoroutine(InvulnerabilityCoroutine(duration));
+    }
+
+    System.Collections.IEnumerator InvulnerabilityCoroutine(float duration)
+    {
+        isInvulnerable = true;
+        Debug.Log($"[PlayerHealth] Invulnerability started for {duration} seconds");
+        yield return new WaitForSeconds(duration);
+        isInvulnerable = false;
+        Debug.Log("[PlayerHealth] Invulnerability ended");
+    }
+
+    // Set invulnerability state directly (used for skill lock duration)
+    public void SetInvulnerable(bool value)
+    {
+        // Stop any timed invulnerability when explicitly setting
+        try { StopCoroutine("InvulnerabilityCoroutine"); } catch { }
+        isInvulnerable = value;
+        Debug.Log($"[PlayerHealth] SetInvulnerable -> {value}");
     }
 }
 

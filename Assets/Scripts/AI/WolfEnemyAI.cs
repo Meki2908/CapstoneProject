@@ -71,3 +71,18 @@ public class WolfEnemyAI : BaseEnemyAI
         return count;
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

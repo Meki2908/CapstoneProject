@@ -21,6 +21,9 @@ public class SkillLock : MonoBehaviour
         isPerformingSkill = true;
         var anim = animator != null ? animator : _animator;
         if (anim) anim.applyRootMotion = enableRootMotion;
+        // Make player invulnerable for the duration of the skill
+        var ph = GetComponent<PlayerHealth>();
+        ph?.SetInvulnerable(true);
     }
 
     // Kết thúc skill: clear cờ + tắt root motion
@@ -29,6 +32,9 @@ public class SkillLock : MonoBehaviour
         isPerformingSkill = false;
         var anim = animator != null ? animator : _animator;
         if (anim) anim.applyRootMotion = false;
+        // Remove invulnerability when skill ends
+        var ph = GetComponent<PlayerHealth>();
+        ph?.SetInvulnerable(false);
     }
 
     // Animation Event: Lock CC and Apply Root Motion
@@ -37,6 +43,9 @@ public class SkillLock : MonoBehaviour
         isPerformingSkill = true;
         _animator.applyRootMotion = true;
         LockPosition(); // Lock position to prevent snap back
+        // Make player invulnerable for the duration of the skill (animation event path)
+        var ph = GetComponent<PlayerHealth>();
+        ph?.SetInvulnerable(true);
     }
 
     // Animation Event: Unlock CC and Disable Root Motion
@@ -45,6 +54,9 @@ public class SkillLock : MonoBehaviour
         isPerformingSkill = false;
         _animator.applyRootMotion = false;
         UnlockPosition(); // Unlock position after skill
+        // Remove invulnerability when skill animation ends
+        var ph = GetComponent<PlayerHealth>();
+        ph?.SetInvulnerable(false);
     }
 
     // Legacy methods for backward compatibility

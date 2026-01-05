@@ -67,6 +67,8 @@ public class Character : MonoBehaviour
     public Vector3 playerVelocity;
 
     public State currentLocomotionState;
+    public State lastStateBeforeHit; // Track state before getting hit
+    public float lastAttackInputTime; // Track when attack was last pressed
 
     //public bool isInCombatState { get; set; }
     public bool isWeaponDrawn { get; set; }
@@ -119,6 +121,13 @@ public class Character : MonoBehaviour
 
         // Reset dash cooldown when game starts (important for Editor play/stop/play)
         DashState.ResetDashCooldown();
+
+        // Add stuck detection if not present
+        if (GetComponent<StuckDetection>() == null)
+        {
+            gameObject.AddComponent<StuckDetection>();
+            Debug.Log("[Character] Added StuckDetection component");
+        }
 
         // Subscribe to weapon change events to update speed multipliers
         var weaponController = GetComponent<WeaponController>();

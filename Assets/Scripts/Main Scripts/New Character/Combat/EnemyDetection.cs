@@ -474,10 +474,10 @@ public class EnemyDetection : MonoBehaviour
 
     private bool IsCharacterAttacking()
     {
-        if (animator == null) return false;
+        if (animator == null || character == null) return false;
 
-        // Check if character is in attack state
-        return character.movementSM.currentState == character.attacking ||
+        // Check if character is in attack state (with null checks)
+        return (character.attacking != null && character.movementSM.currentState == character.attacking) ||
                animator.GetCurrentAnimatorStateInfo(0).IsName("Attack") ||
                animator.GetBool("isAttacking");
     }

@@ -32,11 +32,6 @@ public class EnemyBT : BehaviorTree
     [HideInInspector] public bool isPositionLocked = false;
     [HideInInspector] public Vector3 lockedPosition;
 
-    // Animation parameter names
-    private static readonly string ANIM_SPEED = "Speed";
-    private static readonly string ANIM_ATTACK = "Attack";
-    private static readonly string ANIM_DIE = "Die";
-    private static readonly string ANIM_IDLE = "Idle";
 
     protected override Node SetupTree()
     {
