@@ -75,3 +75,18 @@ public class TestEnemySystem : MonoBehaviour
         GUI.Label(new Rect(10, 100, 400, 20), "Press T: TakeHit | Y: Die | U: Log State");
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

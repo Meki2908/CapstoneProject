@@ -1,6 +1,19 @@
 using UnityEngine;
 using DamageNumbersPro;
 
+/// <summary>
+/// Enhanced enemy damage and detection system with optimized performance
+/// Usage:
+/// - For normal attacks: TakeDamage(damage, weaponType, isCrit)
+/// - For skills: Use specific skill methods like TakeSwordSkillDamage(damage, isCrit)
+/// - For projectiles: TakeProjectileDamage(damage, weaponType, isCrit)
+/// - For area effects: TakeAreaDamage(damage, weaponType, damageSourcePosition)
+///
+/// IMPORTANT: If skills don't work with spider/catfish enemies, ensure that:
+/// 1. Skill projectiles/weapons have correct collision layers
+/// 2. Skill scripts call the appropriate TakeDamage methods
+/// 3. Enemy colliders are set to trigger if needed for projectile detection
+/// </summary>
 public class TakeDamageTest : MonoBehaviour
 {
     [Header("Damage Number Settings")]
@@ -22,6 +35,7 @@ public class TakeDamageTest : MonoBehaviour
 
     [Header("Enemy Detection Settings")]
     [SerializeField] private float detectionRange = 8f;
+    [SerializeField] private float detectionBufferZone = 2f; // Buffer zone to prevent spam detection
     [SerializeField] private float detectionAngle = 120f; // Field of view angle
     [SerializeField] private LayerMask playerLayerMask = -1;
     [SerializeField] private LayerMask obstacleLayerMask = -1;
@@ -32,9 +46,10 @@ public class TakeDamageTest : MonoBehaviour
 
     [Header("Raycast Damage Settings")]
     [SerializeField] private float raycastRange = 5f;
+    [SerializeField] private float raycastBufferZone = 0.5f; // Buffer zone to prevent spam raycast damage
     [SerializeField] private float damagePerHit = 1f;
     [SerializeField] private float damageInterval = 2f; // Damage every 2 seconds
-    [SerializeField] private bool enableRaycastDamage = true;
+    [SerializeField] private bool enableRaycastDamage = false;
 
     [Header("Enemy Health Settings")]
     [SerializeField] private float maxHealth = 100f;
@@ -53,6 +68,7 @@ public class TakeDamageTest : MonoBehaviour
     private bool hasDetectedPlayer = false;
     private float lastDetectionTime = 0f;
     private float detectionCooldown = 0.5f; // Minimum time between detection checks
+    private float lastDetectionDistance = float.MaxValue; // Track last detection distance for hysteresis
 
     // Optimization variables
     private float detectionRangeSquared; // Cache squared detection range
@@ -62,6 +78,8 @@ public class TakeDamageTest : MonoBehaviour
 
     // Raycast damage state
     private float lastDamageTime = 0f;
+    private float lastRaycastDistance = float.MaxValue; // Track last raycast distance for hysteresis
+    private float lastRaycastDamageTime = 0f; // Track last time we damaged player with raycast
 
     void Start()
     {
@@ -124,6 +142,9 @@ public class TakeDamageTest : MonoBehaviour
                 ActiveDamage();
             }
         }
+
+        // Also check for skill projectiles hitting this enemy
+        CheckForSkillDamage();
     }
 
     #region Player Detection
@@ -138,15 +159,22 @@ public class TakeDamageTest : MonoBehaviour
         // Check distance using squared distance (faster)
         Vector3 toPlayer = player.position - transform.position;
         float distanceSquared = toPlayer.sqrMagnitude;
-        if (distanceSquared > detectionRangeSquared)
+        float currentDistance = Mathf.Sqrt(distanceSquared);
+
+        // Use hysteresis to prevent spam detection at range boundaries
+        float effectiveRange = hasDetectedPlayer ?
+            detectionRange + detectionBufferZone : // Larger range when already detected
+            detectionRange; // Normal range when not detected
+
+        if (distanceSquared > effectiveRange * effectiveRange)
         {
             hasDetectedPlayer = false;
             if (wasDetected)
             {
-                float distance = Mathf.Sqrt(distanceSquared);
-                Debug.Log($"[TakeDamageTest] {gameObject.name} lost sight of player (too far: {distance:F1}m)");
+                Debug.Log($"[TakeDamageTest] {gameObject.name} lost sight of player (too far: {currentDistance:F1}m, effective range: {effectiveRange:F1}m)");
                 OnPlayerLost();
             }
+            lastDetectionDistance = currentDistance;
             return;
         }
 
@@ -268,16 +296,25 @@ public class TakeDamageTest : MonoBehaviour
         }
 
         // Cast ray from enemy to player - use squared distance check first
-        Vector3 rayOrigin = transform.position + Vector3.up * 1.5f; // Enemy eye level
-        Vector3 targetPos = player.position + Vector3.up * 1.5f;
+        // Adjust ray origin based on enemy size and facing direction
+        Vector3 rayOrigin = transform.position + Vector3.up * 1.2f; // Lower ray origin to prevent going through player
+        Vector3 targetPos = player.position + Vector3.up * 1.0f; // Target player's center mass
         Vector3 toTarget = targetPos - rayOrigin;
         float distanceSquared = toTarget.sqrMagnitude;
 
-        // Only damage if player is within raycast range (squared check)
-        if (distanceSquared > raycastRangeSquared)
+        // Use hysteresis for raycast damage to prevent spam
+        float effectiveRaycastRange = (lastRaycastDistance <= raycastRange) ?
+            raycastRange + raycastBufferZone : // Larger range if was recently in range
+            raycastRange; // Normal range
+
+        // Only damage if player is within effective raycast range
+        if (distanceSquared > effectiveRaycastRange * effectiveRaycastRange)
         {
+            lastRaycastDistance = Mathf.Sqrt(distanceSquared);
             return;
         }
+
+        lastRaycastDistance = Mathf.Sqrt(distanceSquared);
 
         // Perform raycast using cached array to avoid allocations
         int hitCount = Physics.RaycastNonAlloc(rayOrigin, toTarget.normalized, raycastHitsCache, raycastRange, playerLayerMask);
@@ -319,15 +356,22 @@ public class TakeDamageTest : MonoBehaviour
                     return;
                 }
 
-                // Player is not invincible - apply damage
-                playerHealth.TakeDamage(damagePerHit, hit.point);
-                lastDamageTime = Time.time;
+                // Check if we recently damaged player to avoid spam
+        if (Time.time - lastRaycastDamageTime < 0.5f) // Minimum 0.5 seconds between raycast damage
+        {
+            return;
+        }
 
-                if (showDebugInfo)
-                {
-                    Debug.Log($"[TakeDamageTest] {gameObject.name} damaged player for {damagePerHit} via raycast! Player HP: {playerHealth.CurrentHealth}/{playerHealth.MaxHealth}");
-                }
-                return; // Found player, exit
+        // Player is not invincible - apply damage
+        playerHealth.TakeDamage(damagePerHit, hit.point);
+        lastDamageTime = Time.time;
+        lastRaycastDamageTime = Time.time;
+
+        if (showDebugInfo)
+        {
+            Debug.Log($"[TakeDamageTest] {gameObject.name} damaged player for {damagePerHit} via raycast! Player HP: {playerHealth.CurrentHealth}/{playerHealth.MaxHealth}");
+        }
+        return; // Found player, exit
             }
         }
 
@@ -341,7 +385,7 @@ public class TakeDamageTest : MonoBehaviour
     /// <summary>
     /// Check if this object is a camera or part of camera hierarchy
     /// </summary>
-    private bool IsCameraObject()
+    public bool IsCameraObject()
     {
         // Check if this object has Camera component
         if (GetComponent<Camera>() != null)
@@ -373,9 +417,68 @@ public class TakeDamageTest : MonoBehaviour
     // Overload with weapon type and crit status
     public void TakeDamage(float damage, WeaponType weaponType, bool isCrit)
     {
+        TakeDamage(damage, weaponType, isCrit, false);
+    }
+
+    // Full overload with weapon type, crit status, and skill flag
+    public void TakeDamage(float damage, WeaponType weaponType, bool isCrit, bool isSkill)
+    {
+        TakeDamage(damage, weaponType, isCrit, isSkill, Vector3.zero);
+    }
+
+    // Area damage method (for skills that hit multiple enemies)
+    public void TakeAreaDamage(float damage, WeaponType weaponType, Vector3 damageSource)
+    {
+        TakeDamage(damage, weaponType, false, true, (transform.position - damageSource).normalized);
+    }
+
+    // Projectile damage method
+    public void TakeProjectileDamage(float damage, WeaponType weaponType, bool isCrit = false)
+    {
+        TakeDamage(damage, weaponType, isCrit, true);
+    }
+
+    // Special skill damage methods for specific weapon types
+    public void TakeSwordSkillDamage(float damage, bool isCrit = false)
+    {
+        TakeDamage(damage, WeaponType.Sword, isCrit, true);
+    }
+
+    public void TakeAxeSkillDamage(float damage, bool isCrit = false)
+    {
+        TakeDamage(damage, WeaponType.Axe, isCrit, true);
+    }
+
+    public void TakeMageSkillDamage(float damage, bool isCrit = false)
+    {
+        TakeDamage(damage, WeaponType.Mage, isCrit, true);
+    }
+
+    // Check for skill projectiles hitting this enemy
+    private void CheckForSkillDamage()
+    {
+        // This method can be used for additional skill damage checks if needed
+        // Currently relying on SkillDamageHelper for projectile damage
+    }
+
+    // Skill damage method (convenience method)
+    public void TakeSkillDamage(float damage, WeaponType weaponType, bool isCrit = false)
+    {
+        TakeDamage(damage, weaponType, isCrit, true);
+    }
+
+    // Full overload with weapon type, crit status, skill flag, and hit direction
+    public void TakeDamage(float damage, WeaponType weaponType, bool isCrit, bool isSkill, Vector3 hitDirection)
+    {
         if (!isAlive)
         {
             return; // Already dead, don't process damage
+        }
+
+        // Debug skill damage
+        if (showDebugInfo && isSkill)
+        {
+            Debug.Log($"[TakeDamageTest] {gameObject.name} taking SKILL damage: {damage} from {weaponType} (crit: {isCrit})");
         }
 
         // Apply damage
@@ -405,6 +508,12 @@ public class TakeDamageTest : MonoBehaviour
         else
         {
             Debug.LogWarning("[TakeDamageTest] Cannot spawn damage number - no DamageTextManager or prefab assigned!");
+        }
+
+        // Play hit animation if still alive (non-lethal hit)
+        if (currentHealth > 0f)
+        {
+            PlayHitAnimation();
         }
 
         // Check for death
@@ -460,19 +569,28 @@ public class TakeDamageTest : MonoBehaviour
         }
         enableRaycastDamage = false;
 
-        // Trigger enemy-specific death behaviour (AI, animation, etc.)
-        var spiderAI = GetComponent<SpiderEnemyAI>();
-        if (spiderAI != null)
+        // Trigger enemy-specific death behaviour (AI, animation, physics, etc.)
+        // Priority: EnemyDeathController -> specific AI Die() -> animator trigger fallback
+        var deathController = GetComponent<EnemyDeathController>();
+        if (deathController != null)
         {
-            spiderAI.Die();
+            deathController.Die();
         }
         else
         {
-            // If there is a generic Animator, at least try to play "die" trigger
-            var animator = GetComponent<Animator>();
-            if (animator != null)
+            var spiderAI = GetComponent<SpiderEnemyAI>();
+            if (spiderAI != null)
             {
-                animator.SetTrigger("Die");
+                spiderAI.Die();
+            }
+            else
+            {
+                // If there is a generic Animator, at least try to play "Die"
+                var animator = GetComponent<Animator>();
+                if (animator != null)
+                {
+                    animator.SetTrigger("Die");
+                }
             }
         }
 
@@ -530,6 +648,46 @@ public class TakeDamageTest : MonoBehaviour
     public float GetExpReward() => expReward;
     #endregion
 
+    // Try to play "Hit" animation on this enemy if Animator supports it.
+    private void PlayHitAnimation()
+    {
+        var animator = GetComponent<Animator>();
+        if (animator == null) return;
+
+        // Check animator parameters for a "Hit" parameter and set it appropriately.
+        foreach (var p in animator.parameters)
+        {
+            if (p.name == "Hit")
+            {
+                if (p.type == AnimatorControllerParameterType.Trigger)
+                {
+                    animator.SetTrigger("Hit");
+                }
+                else if (p.type == AnimatorControllerParameterType.Bool)
+                {
+                    animator.SetBool("Hit", true);
+                    StartCoroutine(ResetAnimatorBool("Hit", 0.15f));
+                }
+                else
+                {
+                    animator.SetTrigger("Hit");
+                }
+                return;
+            }
+        }
+
+        // Fallback: try trigger "Hit" anyway (safe if not present)
+        try { animator.SetTrigger("Hit"); } catch { }
+    }
+
+    private System.Collections.IEnumerator ResetAnimatorBool(string param, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        var animator = GetComponent<Animator>();
+        if (animator != null)
+            animator.SetBool(param, false);
+    }
+
     #region Visual Debug
     private void OnDrawGizmosSelected()
     {
@@ -538,6 +696,13 @@ public class TakeDamageTest : MonoBehaviour
         // Draw detection range
         Gizmos.color = hasDetectedPlayer ? Color.red : Color.yellow;
         Gizmos.DrawWireSphere(transform.position, detectionRange);
+
+        // Draw buffer zone
+        if (detectionBufferZone > 0)
+        {
+            Gizmos.color = hasDetectedPlayer ? new Color(1, 0.5f, 0.5f, 0.3f) : new Color(1, 1, 0, 0.3f);
+            Gizmos.DrawWireSphere(transform.position, detectionRange + detectionBufferZone);
+        }
 
         // Draw field of view
         Gizmos.color = hasDetectedPlayer ? Color.red : Color.yellow;
@@ -551,7 +716,7 @@ public class TakeDamageTest : MonoBehaviour
         if (hasDetectedPlayer && player != null)
         {
             Gizmos.color = Color.red;
-            Gizmos.DrawLine(transform.position + Vector3.up * 1.5f, player.position + Vector3.up * 1.5f);
+            Gizmos.DrawLine(transform.position + Vector3.up * 1.2f, player.position + Vector3.up * 1.0f);
         }
 
         // Draw damage number spawn position
@@ -564,15 +729,22 @@ public class TakeDamageTest : MonoBehaviour
             Gizmos.color = Color.magenta;
             Gizmos.DrawWireSphere(transform.position, raycastRange);
 
+            // Draw buffer zone for raycast
+            if (raycastBufferZone > 0)
+            {
+                Gizmos.color = new Color(1, 0, 1, 0.3f);
+                Gizmos.DrawWireSphere(transform.position, raycastRange + raycastBufferZone);
+            }
+
             // Draw raycast direction to player
             if (player != null)
             {
-                Vector3 rayOrigin = transform.position + Vector3.up * 1.5f;
-                Vector3 rayDirection = (player.position + Vector3.up * 1.5f) - rayOrigin;
-                if (rayDirection.magnitude <= raycastRange)
+                Vector3 rayOrigin = transform.position + Vector3.up * 1.2f;
+                Vector3 rayDirection = (player.position + Vector3.up * 1.0f) - rayOrigin;
+                if (rayDirection.magnitude <= raycastRange + raycastBufferZone)
                 {
                     Gizmos.color = Color.magenta;
-                    Gizmos.DrawLine(rayOrigin, player.position + Vector3.up * 1.5f);
+                    Gizmos.DrawLine(rayOrigin, player.position + Vector3.up * 1.0f);
                 }
             }
         }

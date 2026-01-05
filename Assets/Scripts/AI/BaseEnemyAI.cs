@@ -16,7 +16,7 @@ public abstract class BaseEnemyAI : MonoBehaviour
     public float detectionRadius = 8f;
     public float attackRange = 1.8f;
     public float returnThreshold = 12f;
-    public float hysteresisBuffer = 1.5f; // Buffer to prevent rapid state switching
+    public float hysteresisBuffer = 3.0f; // Buffer to prevent rapid state switching - increased
     public float patrolSpeed = 2.5f;
     public float chaseSpeed = 4.5f;
     public float waypointPause = 1.5f;
@@ -32,6 +32,7 @@ public abstract class BaseEnemyAI : MonoBehaviour
     protected float nextAttackTime;
     protected float waitTimer;
     protected EnemyState currentState = EnemyState.Idle;
+    private EnemyState lastDebugState = EnemyState.Idle; // For debugging state changes
 
     // Optimization variables
     protected float detectionRadiusSquared;
@@ -42,6 +43,8 @@ public abstract class BaseEnemyAI : MonoBehaviour
     protected float lastDistanceToPlayerSquared;
     protected float lastAnimatorUpdateTime;
     protected const float ANIMATOR_UPDATE_INTERVAL = 0.1f;
+    protected float lastStateChangeTime;
+    protected const float STATE_CHANGE_COOLDOWN = 0.5f; // Minimum time between state changes
 
     public enum EnemyState { Idle, Patrol, Chase, Return, Attack, Dead }
 
@@ -51,7 +54,8 @@ public abstract class BaseEnemyAI : MonoBehaviour
         anim = GetComponent<Animator>();
         spawnPos = transform.position;
 
-        agent.stoppingDistance = 0.2f;
+        // Ensure agent stops slightly before the attack range to avoid collider penetration
+        agent.stoppingDistance = attackRange + 0.3f;
 
         // Cache squared distances for faster calculations
         detectionRadiusSquared = detectionRadius * detectionRadius;
@@ -102,6 +106,13 @@ public abstract class BaseEnemyAI : MonoBehaviour
         // State decision with hysteresis
         UpdateState();
 
+        // DEBUG: Log state changes for debugging
+        if (currentState != lastDebugState)
+        {
+            Debug.Log($"[BaseEnemyAI] {gameObject.name} state changed: {lastDebugState} -> {currentState} (dist: {GetDistanceToPlayer():F2}m)");
+            lastDebugState = currentState;
+        }
+
         // Execute current state
         ExecuteState();
 
@@ -125,6 +136,9 @@ public abstract class BaseEnemyAI : MonoBehaviour
 
     protected virtual void UpdateState()
     {
+        // Prevent state changes too frequently
+        if (Time.time - lastStateChangeTime < STATE_CHANGE_COOLDOWN) return;
+
         float distFromSpawnSquared = (new Vector2(transform.position.x, transform.position.z) -
                                      new Vector2(spawnPos.x, spawnPos.z)).sqrMagnitude;
 
@@ -133,25 +147,36 @@ public abstract class BaseEnemyAI : MonoBehaviour
         bool tooFarFromSpawn = distFromSpawnSquared > returnThresholdSquared;
         bool playerWithinReturnAreaWithHysteresis = distFromSpawnSquared <= returnThresholdWithHysteresis;
 
-        // Priority: If too far from spawn and not currently chasing the player (or player not detected),
-        // switch to Return. But if we're actively chasing and the player is still detected and within the
-        // hysteresis-expanded return area, keep chasing to avoid rapid back-and-forth.
-        if (tooFarFromSpawn && !(currentState == EnemyState.Chase && playerInDetect && playerWithinReturnAreaWithHysteresis) && !playerInAttack)
+        EnemyState newState = currentState; // Default to current state
+
+        // Priority-based state logic with improved hysteresis
+        if (playerInAttack && Time.time >= nextAttackTime)
         {
-            currentState = EnemyState.Return;
-        }
-        else if (playerInAttack && Time.time >= nextAttackTime)
-        {
-            currentState = EnemyState.Attack;
+            newState = EnemyState.Attack;
         }
         else if (playerInDetect && playerWithinReturnAreaWithHysteresis)
         {
             // Player detected and within acceptable distance from spawn (with hysteresis)
-            currentState = EnemyState.Chase;
+            newState = EnemyState.Chase;
         }
-        else
+        else if (tooFarFromSpawn && currentState != EnemyState.Attack)
         {
-            currentState = EnemyState.Patrol;
+            // Only return if we're not in attack state and player is not detected
+            if (!playerInDetect)
+            {
+                newState = EnemyState.Return;
+            }
+        }
+        else if (!playerInDetect && !tooFarFromSpawn)
+        {
+            newState = EnemyState.Patrol;
+        }
+
+        // Only change state if it's actually different
+        if (newState != currentState)
+        {
+            currentState = newState;
+            lastStateChangeTime = Time.time;
         }
     }
 
@@ -192,12 +217,15 @@ public abstract class BaseEnemyAI : MonoBehaviour
     protected virtual void Chase()
     {
         agent.speed = chaseSpeed;
+        if (agent.isStopped) agent.isStopped = false;
         agent.SetDestination(player.position);
     }
 
     protected virtual void Attack()
     {
+        // Stop the agent immediately to avoid physics pushing into the player
         agent.ResetPath();
+        agent.isStopped = true;
         transform.LookAt(new Vector3(player.position.x, transform.position.y, player.position.z));
         anim.SetTrigger("Attack");
         nextAttackTime = Time.time + attackCooldown;
@@ -207,6 +235,7 @@ public abstract class BaseEnemyAI : MonoBehaviour
     protected virtual void ReturnToSpawn()
     {
         agent.speed = patrolSpeed;
+        if (agent.isStopped) agent.isStopped = false;
         agent.SetDestination(spawnPos);
 
         if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.1f)

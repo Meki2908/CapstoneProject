@@ -29,7 +29,6 @@ public class MageSkills : MonoBehaviour
     private Character character;
     private SkillLock skillLock;
     private GameObject currentWeapon;
-    private bool isSheathing = false;
     private readonly Dictionary<AbilityInput, AbilitySO> abilityMap = new();
     private readonly Dictionary<int, float> lastVfxSpawnTime = new();
     private readonly Dictionary<int, int> lastVfxSpawnFrame = new();
@@ -138,6 +137,8 @@ public class MageSkills : MonoBehaviour
 
         if (input == AbilityInput.Q_Ultimate && ultimateDirector != null)
         {
+            // Lock skill immediately and start timeline
+            skillLock?.BeginSkillRootMotion(animator, true);
             ultimateDirector.time = 0;
             ultimateDirector.Play();
         }
@@ -293,7 +294,7 @@ public class MageSkills : MonoBehaviour
         {
             currentWeapon.transform.SetParent(handTarget);
             ApplySocket(currentWeapon.transform, weapon.handSocket);
-            isSheathing = false;
+            // isSheathing = false; // Variable removed
 
             onComplete?.Invoke(currentWeapon); // THÊM: Callback return instance
         }));
@@ -326,7 +327,7 @@ public class MageSkills : MonoBehaviour
         float speed = weapon?.sheathSpeed ?? 8f;
 
         // WeaponMover removed - use simple transform movement
-        isSheathing = true;
+        // isSheathing = true; // Variable removed
         SetWeaponVisible(currentWeapon, false);
         StartCoroutine(MoveWeaponToTarget(currentWeapon, sheathPos, speed, () =>
         {
@@ -398,4 +399,13 @@ public class MageSkills : MonoBehaviour
     public void AE_TriggerRCooldown() => AE_TriggerCooldown((int)AbilityInput.R);
     public void AE_TriggerTCooldown() => AE_TriggerCooldown((int)AbilityInput.T);
     public void AE_TriggerUltimateCooldown() => AE_TriggerCooldown((int)AbilityInput.Q_Ultimate);
+    // Cancel currently playing ultimate/timeline and unlock skill if active
+    public void CancelSkill()
+    {
+        if (ultimateDirector != null && ultimateDirector.state == PlayState.Playing)
+        {
+            ultimateDirector.Stop();
+        }
+        skillLock?.EndSkillRootMotion(animator);
+    }
 }

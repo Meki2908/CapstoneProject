@@ -4,10 +4,8 @@ using System.Collections;
 public class TornadoEffect : BaseEffectScript
 {
     [Header("Tornado Settings")]
-    [SerializeField] private float tornadoRotationSpeed = 180f;
     [SerializeField] private float tornadoDuration = 2f;
     [SerializeField] private float tornadoHeight = 5f; // Height enemy flies up
-    [SerializeField] private float tornadoFallSpeed = 2f; // Speed enemy falls down
 
     protected override void ApplyEffect(TakeDamageTest enemy)
     {

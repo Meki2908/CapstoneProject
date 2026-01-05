@@ -17,7 +17,6 @@ public class UltimateIconShaderController : MonoBehaviour
     [SerializeField] private string readyPulseProperty = "_ReadyPulse";
 
     [Header("Effect Settings")]
-    [SerializeField] private float maxGlowIntensity = 3.0f;
     [SerializeField] private float readyGlowIntensity = 2.5f;
     [SerializeField] private float readyPulseIntensity = 0.8f;
     [SerializeField] private float normalGlowIntensity = 1.0f;

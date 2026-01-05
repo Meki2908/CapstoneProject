@@ -5,7 +5,6 @@ public class DieState : State
     private float dieDuration = 3f; // Duration of death state (can be adjusted)
     private float dieTimer;
     private WeaponController weaponController;
-    private bool weaponLayersWereDisabled = false;
 
     public DieState(Character _character, StateMachine _stateMachine) : base(_character, _stateMachine)
     {
@@ -18,7 +17,6 @@ public class DieState : State
         base.Enter();
 
         dieTimer = dieDuration;
-        weaponLayersWereDisabled = false;
 
         // Find WeaponController if not already found
         if (weaponController == null)
@@ -69,7 +67,6 @@ public class DieState : State
 
         // Store original layer weights and disable weapon layers
         // This ensures die plays on base layer only
-        weaponLayersWereDisabled = true;
 
         int baseLayer = 0; // Base Layer is always 0
         int swordLayer = 1;

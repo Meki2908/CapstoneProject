@@ -32,6 +32,17 @@ public class ProjectileDamage : MonoBehaviour
     private void Start()
     {
         UpdateDamageWithGems();
+
+        // Auto-setup with SkillProjectileManager if available
+        if (SkillProjectileManager.Instance != null)
+        {
+            WeaponType weaponType = WeaponType.Mage; // Default for projectiles
+            if (weaponController != null && weaponController.GetCurrentWeapon() != null)
+            {
+                weaponType = weaponController.GetCurrentWeapon().weaponType;
+            }
+            SkillProjectileManager.Instance.SetupSkillProjectile(gameObject, damage, weaponType, AbilityInput.E, false);
+        }
     }
 
     /// <summary>

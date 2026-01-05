@@ -18,15 +18,11 @@ public class AxeSkill : MonoBehaviour
     [SerializeField] private string skillStateTag = "AxeSkill";    // tag cho các state skill của Axe
 
     [Header("Behavior")]
-    [SerializeField] private bool enableRootMotionDuringSkill = false;
-    [SerializeField] private float vfxLifetime = 2f;
-    [SerializeField] private float maxSkillLockSeconds = 3f;
     [SerializeField] private bool useInputDirection = false;
     [SerializeField] private Transform forwardAnchor;
 
     private Character character;
     private SkillLock skillLock;
-    private float skillLockExpireAt = 0f;
 
     private readonly Dictionary<AbilityInput, AbilitySO> abilityMap = new();
     // Debounce VFX
@@ -153,6 +149,8 @@ public class AxeSkill : MonoBehaviour
 
         if (input == AbilityInput.Q_Ultimate && ultimateDirector != null)
         {
+            // Lock skill immediately and start timeline
+            skillLock?.BeginSkillRootMotion(animator, true);
             ultimateDirector.time = 0;
             ultimateDirector.Play();
         }
@@ -294,4 +292,13 @@ public class AxeSkill : MonoBehaviour
     public void AE_TriggerRCooldown() => AE_TriggerCooldown((int)AbilityInput.R);
     public void AE_TriggerTCooldown() => AE_TriggerCooldown((int)AbilityInput.T);
     public void AE_TriggerUltimateCooldown() => AE_TriggerCooldown((int)AbilityInput.Q_Ultimate);
+    // Cancel currently playing ultimate/timeline and unlock skill if active
+    public void CancelSkill()
+    {
+        if (ultimateDirector != null && ultimateDirector.state == PlayState.Playing)
+        {
+            ultimateDirector.Stop();
+        }
+        skillLock?.EndSkillRootMotion(animator);
+    }
 }
