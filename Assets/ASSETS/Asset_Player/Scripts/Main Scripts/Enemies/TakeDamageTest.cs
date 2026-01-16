@@ -2,7 +2,11 @@ using UnityEngine;
 using DamageNumbersPro;
 
 /// <summary>
-/// Enhanced enemy damage and detection system with optimized performance
+/// Enhanced enemy HEALTH and DETECTION system - ENEMY RECEIVES DAMAGE FROM PLAYER
+/// This component handles enemy taking damage from player attacks, NOT enemy dealing damage to player.
+///
+/// For enemy DEALING damage to player, use EnemyContactDamage.cs instead.
+///
 /// Usage:
 /// - For normal attacks: TakeDamage(damage, weaponType, isCrit)
 /// - For skills: Use specific skill methods like TakeSwordSkillDamage(damage, isCrit)
@@ -13,6 +17,8 @@ using DamageNumbersPro;
 /// 1. Skill projectiles/weapons have correct collision layers
 /// 2. Skill scripts call the appropriate TakeDamage methods
 /// 3. Enemy colliders are set to trigger if needed for projectile detection
+///
+/// WARNING: ActiveDamage() method is DISABLED to prevent conflicts with EnemyContactDamage.cs
 /// </summary>
 public class TakeDamageTest : MonoBehaviour
 {
@@ -49,7 +55,7 @@ public class TakeDamageTest : MonoBehaviour
     [SerializeField] private float raycastBufferZone = 0.5f; // Buffer zone to prevent spam raycast damage
     [SerializeField] private float damagePerHit = 1f;
     [SerializeField] private float damageInterval = 2f; // Damage every 2 seconds
-    [SerializeField] private bool enableRaycastDamage = false;
+    [SerializeField] private bool enableRaycastDamage = false; // Disabled by default to prevent conflicts with contact damage
 
     [Header("Enemy Health Settings")]
     [SerializeField] private float maxHealth = 100f;
@@ -134,14 +140,18 @@ public class TakeDamageTest : MonoBehaviour
             CheckForPlayer();
         }
 
-        // Raycast damage check every interval
+        // Raycast damage check every interval - DISABLED to prevent conflicts with EnemyContactDamage
+        // TakeDamageTest should only handle enemy receiving damage from player, not dealing damage to player
+        /*
         if (enableRaycastDamage && player != null && playerHealth != null)
         {
             if (Time.time - lastDamageTime >= damageInterval)
             {
+                Debug.Log($"[TakeDamageTest] {gameObject.name} attempting raycast damage to player");
                 ActiveDamage();
             }
         }
+        */
 
         // Also check for skill projectiles hitting this enemy
         CheckForSkillDamage();

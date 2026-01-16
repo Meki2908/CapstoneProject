@@ -92,6 +92,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 3694025063789721027, guid: fc8b2cba9cb464b42ae9163249a17e01, type: 3}
+      propertyPath: m_StoppingDistance
+      value: 2.1
+      objectReference: {fileID: 0}
     - target: {fileID: 4038684195741072223, guid: fc8b2cba9cb464b42ae9163249a17e01, type: 3}
       propertyPath: attackRange
       value: 3
@@ -724,6 +728,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 6478788383888068105, guid: fc8b2cba9cb464b42ae9163249a17e01, type: 3}
       insertIndex: -1
       addedObject: {fileID: 4438802628141113382}
+    - targetCorrespondingSourceObject: {fileID: 6478788383888068105, guid: fc8b2cba9cb464b42ae9163249a17e01, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 278354893966160186}
   m_SourcePrefab: {fileID: 100100000, guid: fc8b2cba9cb464b42ae9163249a17e01, type: 3}
 --- !u!4 &4384166933469111249 stripped
 Transform:
@@ -781,7 +788,7 @@ Rigidbody:
   m_UseGravity: 1
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 0
+  m_Constraints: 80
   m_CollisionDetection: 1
 --- !u!114 &8789602854860337267
 MonoBehaviour:
@@ -849,7 +856,17 @@ MonoBehaviour:
   contactDamage: 1
   damageCooldown: 1
   playerTag: Player
-  useAnimationEvents: 1
+  player: {fileID: 0}
+  enemyAI: {fileID: 0}
+  useAnimationEvents: 0
+  useDamageRange: 1
+  requireAttackState: 1
+  damageRange: 2
+  damageLayerMask:
+    serializedVersion: 2
+    m_Bits: 256
+  disableRangeOnDistance: 1
+  maxRangeDistance: 10
   damagePoint: {fileID: 629360404627415938}
   damageRadius: 1.2
   playerLayerMask:
@@ -870,3 +887,26 @@ MonoBehaviour:
   stateHits:
   - stateName: attack1
     hitNormalizedTime: 0.6
+--- !u!114 &278354893966160186
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4384166933469544433}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 39e017e888c9ed4438f3b72c6768fe02, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  autoSetupOnAwake: 1
+  requireNavMeshAgent: 1
+  requireAnimator: 1
+  requireRigidbody: 1
+  requireCollider: 1
+  requireEnemyContactDamage: 1
+  requireTakeDamageTest: 1
+  agentRadius: 0.5
+  agentHeight: 2
+  agentStoppingDistance: 2.1
+  rigidbodyConstraints: 80
