@@ -146,7 +146,8 @@ public class BehaviorTreeDebugger : MonoBehaviour
             string info = $"<b>{gameObject.name}</b>\n" +
                          $"State: {currentState}\n" +
                          $"Target: {targetName}\n" +
-                         $"Distance: {distanceToTarget:F1}m";
+                         $"Distance: {distanceToTarget:F1}m\n" +
+                         $"Has Target: {hasTarget}";
 
             GUI.Label(new Rect(screenPos.x - 95, Screen.height - screenPos.y - 55, 190, 70), info, guiStyle);
         }

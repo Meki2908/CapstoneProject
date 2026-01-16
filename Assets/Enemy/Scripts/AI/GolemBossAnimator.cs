@@ -40,8 +40,8 @@ public class GolemBossAnimator : MonoBehaviour
     
     // State names
     private static readonly string STATE_IDLE = "Idle";
-    private static readonly string STATE_WALK = "Walk";
-    private static readonly string STATE_DIE = "Die";
+    // private static readonly string STATE_WALK = "Walk"; // Unused
+    // private static readonly string STATE_DIE = "Die";   // Unused
 
     // Internal state
     private float currentSpeed = 0f;

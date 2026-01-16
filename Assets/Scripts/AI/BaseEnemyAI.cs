@@ -22,6 +22,7 @@ public abstract class BaseEnemyAI : MonoBehaviour
     public float waypointPause = 1.5f;
     public float attackCooldown = 1.0f;
     public bool drawGizmos = true;
+    public bool enableDebugLogging = false; // Disable for production performance
 
     // Cached components
     protected NavMeshAgent agent;
@@ -42,11 +43,13 @@ public abstract class BaseEnemyAI : MonoBehaviour
     protected Vector3 lastPlayerPosition;
     protected float lastDistanceToPlayerSquared;
     protected float lastAnimatorUpdateTime;
-    protected const float ANIMATOR_UPDATE_INTERVAL = 0.1f;
+    protected const float ANIMATOR_UPDATE_INTERVAL = 0.2f; // Further reduced for many enemies
     protected float lastStateChangeTime;
-    protected const float STATE_CHANGE_COOLDOWN = 0.5f; // Minimum time between state changes
+    protected const float STATE_CHANGE_COOLDOWN = 1.0f; // Further increased for many enemies
+    protected const float DISTANCE_UPDATE_INTERVAL = 0.1f; // How often to update player distance
+    protected float lastDistanceUpdateTime;
 
-    public enum EnemyState { Idle, Patrol, Chase, Return, Attack, Dead }
+    public enum EnemyState { Idle, Patrol, Chase, Return, Attack, Attacking, Dead }
 
     protected virtual void Awake()
     {
@@ -56,6 +59,11 @@ public abstract class BaseEnemyAI : MonoBehaviour
 
         // Ensure agent stops slightly before the attack range to avoid collider penetration
         agent.stoppingDistance = attackRange + 0.3f;
+
+        // Configure NavMeshAgent for better collision behavior
+        agent.avoidancePriority = 50; // Lower priority means less avoidance
+        agent.radius = 0.5f; // Adjust based on enemy size
+        agent.height = 2.0f; // Adjust based on enemy height
 
         // Cache squared distances for faster calculations
         detectionRadiusSquared = detectionRadius * detectionRadius;
@@ -100,16 +108,24 @@ public abstract class BaseEnemyAI : MonoBehaviour
             return;
         }
 
+        // Distance-based performance optimization
+        // Enemies far from player update less frequently
+        float distanceToPlayer = GetDistanceToPlayer();
+        float updateInterval = GetUpdateIntervalBasedOnDistance(distanceToPlayer);
+
+        if (Time.time - lastFullUpdateTime < updateInterval) return;
+        lastFullUpdateTime = Time.time;
+
         // Optimized distance calculations
         UpdateDistances();
 
         // State decision with hysteresis
         UpdateState();
 
-        // DEBUG: Log state changes for debugging
-        if (currentState != lastDebugState)
+        // DEBUG: Log state changes for debugging (only if enabled)
+        if (enableDebugLogging && currentState != lastDebugState)
         {
-            Debug.Log($"[BaseEnemyAI] {gameObject.name} state changed: {lastDebugState} -> {currentState} (dist: {GetDistanceToPlayer():F2}m)");
+            Debug.Log($"[BaseEnemyAI] {gameObject.name} state changed: {lastDebugState} -> {currentState} (dist: {distanceToPlayer:F2}m)");
             lastDebugState = currentState;
         }
 
@@ -120,8 +136,22 @@ public abstract class BaseEnemyAI : MonoBehaviour
         UpdateAnimatorSpeed();
     }
 
+    protected float lastFullUpdateTime;
+    protected virtual float GetUpdateIntervalBasedOnDistance(float distance)
+    {
+        // Performance optimization: distant enemies update less frequently
+        if (distance > 20f) return 0.5f;      // Very far: update every 0.5s
+        if (distance > 10f) return 0.2f;      // Far: update every 0.2s
+        if (distance > 5f) return 0.1f;       // Medium: update every 0.1s
+        return 0.05f;                         // Close: update every 0.05s
+    }
+
     protected virtual void UpdateDistances()
     {
+        // Throttle distance updates for performance with many enemies
+        if (Time.time - lastDistanceUpdateTime < DISTANCE_UPDATE_INTERVAL) return;
+        lastDistanceUpdateTime = Time.time;
+
         Vector3 currentPos = transform.position;
         Vector3 playerPos = player.position;
 
@@ -149,8 +179,13 @@ public abstract class BaseEnemyAI : MonoBehaviour
 
         EnemyState newState = currentState; // Default to current state
 
+        // Check if attacking animation is finished (simple time-based check)
+        if (currentState == EnemyState.Attacking && Time.time >= nextAttackTime)
+        {
+            newState = EnemyState.Chase;
+        }
         // Priority-based state logic with improved hysteresis
-        if (playerInAttack && Time.time >= nextAttackTime)
+        else if (playerInAttack && Time.time >= nextAttackTime)
         {
             newState = EnemyState.Attack;
         }
@@ -193,6 +228,11 @@ public abstract class BaseEnemyAI : MonoBehaviour
             case EnemyState.Attack:
                 Attack();
                 break;
+            case EnemyState.Attacking:
+                // Stay stopped and facing player during attack animation
+                agent.isStopped = true;
+                transform.LookAt(new Vector3(player.position.x, transform.position.y, player.position.z));
+                break;
             case EnemyState.Return:
                 ReturnToSpawn();
                 break;
@@ -229,7 +269,7 @@ public abstract class BaseEnemyAI : MonoBehaviour
         transform.LookAt(new Vector3(player.position.x, transform.position.y, player.position.z));
         anim.SetTrigger("Attack");
         nextAttackTime = Time.time + attackCooldown;
-        currentState = EnemyState.Chase;
+        currentState = EnemyState.Attacking; // Stay in attacking state until animation finishes
     }
 
     protected virtual void ReturnToSpawn()
@@ -286,6 +326,14 @@ public abstract class BaseEnemyAI : MonoBehaviour
     public float GetDistanceToPlayer() => Mathf.Sqrt(lastDistanceToPlayerSquared);
     public bool IsPlayerInDetectionRange() => lastDistanceToPlayerSquared <= detectionRadiusSquared;
     public bool IsPlayerInAttackRange() => lastDistanceToPlayerSquared <= attackRangeSquared;
+
+    // Debug/Test API
+    public void ForceAttackForTesting()
+    {
+        if (currentState == EnemyState.Dead) return;
+        Debug.Log($"[BaseEnemyAI] Force attack triggered for {gameObject.name}");
+        Attack();
+    }
 
     // Debug
     protected virtual void OnDrawGizmosSelected()

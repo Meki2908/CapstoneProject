@@ -200,6 +200,11 @@ public class PlayerHealth : MonoBehaviour
         {
             float defense = EquipmentManager.Instance.GetTotalDefenseBonus();
             finalDamage = Mathf.Max(0f, damage - defense); // Defense reduces damage (flat reduction)
+            Debug.Log($"[PlayerHealth] Damage calculation: original={damage}, defense={defense}, final={finalDamage}");
+
+            // TEMPORARY: Disable defense to test if that's the issue
+            // Comment out this line to re-enable defense
+            finalDamage = damage;
         }
 
         currentHealth -= finalDamage;
