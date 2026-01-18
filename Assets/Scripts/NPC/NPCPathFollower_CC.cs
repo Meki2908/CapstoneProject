@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Linq;
 
 [RequireComponent(typeof(CharacterController))]
 public class NPCPathFollower_CC : MonoBehaviour
@@ -87,7 +88,11 @@ public class NPCPathFollower_CC : MonoBehaviour
         if (animator)
         {
             float planarSpeed = new Vector3(cc.velocity.x, 0, cc.velocity.z).magnitude;
-            animator.SetFloat(speedParam, planarSpeed);
+            // Check if the speed parameter exists before setting it
+            if (animator.parameters.Any(p => p.name == speedParam))
+            {
+                animator.SetFloat(speedParam, planarSpeed);
+            }
         }
     }
 

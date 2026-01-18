@@ -110,6 +110,21 @@ public class EquipmentSlotDropZone : MonoBehaviour, IDropHandler, IPointerEnterH
     /// </summary>
     public void SetSlotIcon(Sprite icon)
     {
+        // Fallback: try to get Image component if slotImage is null
+        if (slotImage == null)
+        {
+            slotImage = GetComponent<Image>();
+            if (slotImage == null)
+            {
+                slotImage = gameObject.AddComponent<Image>();
+            }
+            // Initialize original color if not set
+            if (originalColor == Color.clear)
+            {
+                originalColor = slotImage.color;
+            }
+        }
+
         if (slotImage != null)
         {
             if (icon != null)
@@ -129,7 +144,7 @@ public class EquipmentSlotDropZone : MonoBehaviour, IDropHandler, IPointerEnterH
         }
         else
         {
-            Debug.LogWarning($"[EquipmentSlotDropZone] slotImage is null on slot {slotIndex}!");
+            Debug.LogWarning($"[EquipmentSlotDropZone] slotImage is still null on slot {slotIndex} after fallback!");
         }
     }
 

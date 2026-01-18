@@ -80,6 +80,21 @@ public class GemSlotDropZone : MonoBehaviour, IDropHandler, IPointerEnterHandler
     /// </summary>
     public void SetSlotIcon(Sprite icon)
     {
+        // Fallback: try to get Image component if slotImage is null
+        if (slotImage == null)
+        {
+            slotImage = GetComponent<Image>();
+            if (slotImage == null)
+            {
+                slotImage = gameObject.AddComponent<Image>();
+            }
+            // Initialize original color if not set
+            if (originalColor == Color.clear)
+            {
+                originalColor = slotImage.color;
+            }
+        }
+
         if (slotImage != null)
         {
             if (icon != null)
@@ -97,7 +112,7 @@ public class GemSlotDropZone : MonoBehaviour, IDropHandler, IPointerEnterHandler
         }
         else
         {
-            Debug.LogWarning($"[GemSlotDropZone] slotImage is null on slot {slotIndex}!");
+            Debug.LogWarning($"[GemSlotDropZone] slotImage is still null on slot {slotIndex} after fallback!");
         }
     }
 
