@@ -62,6 +62,11 @@ public class TakeDamageTest : MonoBehaviour
     [SerializeField] private float currentHealth;
     [SerializeField] private bool isAlive = true;
 
+    [Header("Health Bar Settings")]
+    [SerializeField] private bool useHealthBar = false;
+    [SerializeField] private string bossName = "";
+    [SerializeField] private Color healthBarColor = Color.red;
+
     [Header("EXP Reward Settings")]
     [Tooltip("Amount of EXP granted when this enemy is defeated")]
     [SerializeField] private float expReward = 1000f;
@@ -648,6 +653,37 @@ public class TakeDamageTest : MonoBehaviour
     public float GetMaxHealth() => maxHealth;
     public bool IsAlive() => isAlive;
     public float GetHealthPercentage() => maxHealth > 0 ? currentHealth / maxHealth : 0f;
+
+    // Health Bar API (for boss enemies) - Added for Golem boss compatibility
+    public bool UseHealthBar
+    {
+        get => useHealthBar;
+        set => useHealthBar = value;
+    }
+    public string BossName
+    {
+        get => bossName;
+        set => bossName = value;
+    }
+    public float MaxHealth
+    {
+        get => maxHealth;
+        set => maxHealth = value;
+    }
+    public float CurrentHealth
+    {
+        get => currentHealth;
+        set => currentHealth = value;
+    }
+    public Color HealthBarColor
+    {
+        get => healthBarColor;
+        set => healthBarColor = value;
+    }
+
+    // Raycast Damage API
+    public bool EnableRaycastDamage { get => enableRaycastDamage; set => enableRaycastDamage = value; }
+    public void DisableRaycastDamage() => enableRaycastDamage = false;
 
     // EXP API
     public void SetExpReward(float exp)

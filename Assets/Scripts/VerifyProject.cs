@@ -66,7 +66,8 @@ namespace Unity.FantasyKingdom
                 var qualityLevel = qsArray.GetArrayElementAtIndex(i);
                 var customRenderPipeline = qualityLevel.FindPropertyRelative("customRenderPipeline");
 
-                if (customRenderPipeline.objectReferenceValue != qualityRPAssets[i])
+                // Check bounds to prevent IndexOutOfRangeException
+                if (i < qualityRPAssets.Length && customRenderPipeline.objectReferenceValue != qualityRPAssets[i])
                 {
                     // Debug.Log($"Updating custom renderpipeline asset for quality level {i} {qNames[i]}.");
                     customRenderPipeline.objectReferenceValue = qualityRPAssets[i];
