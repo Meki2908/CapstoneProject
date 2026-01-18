@@ -7,9 +7,13 @@ namespace SlimUI.ModernMenu{
 
 		public ThemedUIData themeController;
 
-		protected virtual void OnSkinUI(){
-
+	protected virtual void OnSkinUI(){
+		// Check if themeController is assigned
+		if (themeController == null) {
+			Debug.LogWarning("ThemedUI: themeController is not assigned on " + gameObject.name);
+			return;
 		}
+	}
 
 		public virtual void Awake(){
 			OnSkinUI();

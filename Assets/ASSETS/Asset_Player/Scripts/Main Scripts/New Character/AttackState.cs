@@ -132,8 +132,17 @@ public class AttackState : State
         else
         {
             // Fallback to layer 1 if weapon layer not found
-            clipLength = character.animator.GetCurrentAnimatorClipInfo(1)[0].clip.length;
-            clipSpeed = character.animator.GetCurrentAnimatorStateInfo(1).speed;
+            if (character.animator.GetCurrentAnimatorClipInfoCount(1) > 0)
+            {
+                clipLength = character.animator.GetCurrentAnimatorClipInfo(1)[0].clip.length;
+                clipSpeed = character.animator.GetCurrentAnimatorStateInfo(1).speed;
+            }
+            else
+            {
+                // Default fallback values if no clips are playing
+                clipLength = 1.0f;
+                clipSpeed = 1.0f;
+            }
         }
 
         // Apply attack speed multiplier from equipment

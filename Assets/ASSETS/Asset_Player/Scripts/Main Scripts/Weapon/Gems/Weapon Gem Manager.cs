@@ -41,6 +41,11 @@ public class WeaponGemManager : MonoBehaviour
         if (Instance == null)
         {
             Instance = this;
+            // Ensure we're on a root GameObject before calling DontDestroyOnLoad
+            if (transform.parent != null)
+            {
+                transform.SetParent(null);
+            }
             DontDestroyOnLoad(gameObject);
             InitializeRuntime();
             Load();

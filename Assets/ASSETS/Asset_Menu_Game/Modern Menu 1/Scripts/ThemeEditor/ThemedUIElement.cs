@@ -20,15 +20,23 @@ namespace SlimUI.ModernMenu{
 		protected override void OnSkinUI(){
 			base.OnSkinUI();
 
+			// Additional null check for themeController
+			if (themeController == null) return;
+
 			if(hasImage && !useCustomColor){
 				image = GetComponent<Image>();
-				image.color = themeController.currentColor;
+				if (image != null) {
+					image.color = themeController.currentColor;
+				}
 			}
 
 			message = gameObject;
 
 			if(isText && !useCustomColor){
-				message.GetComponent<TextMeshPro>().color = themeController.textColor;
+				TextMeshPro textComponent = message.GetComponent<TextMeshPro>();
+				if (textComponent != null) {
+					textComponent.color = themeController.textColor;
+				}
 			}
 		}
 	}
