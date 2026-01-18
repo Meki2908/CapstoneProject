@@ -29,7 +29,9 @@ public class MageSkills : MonoBehaviour
     private Character character;
     private SkillLock skillLock;
     private GameObject currentWeapon;
+#pragma warning disable CS0414 // Used internally for state tracking
     private bool isSheathing = false;
+#pragma warning restore CS0414
     private readonly Dictionary<AbilityInput, AbilitySO> abilityMap = new();
     private readonly Dictionary<int, float> lastVfxSpawnTime = new();
     private readonly Dictionary<int, int> lastVfxSpawnFrame = new();

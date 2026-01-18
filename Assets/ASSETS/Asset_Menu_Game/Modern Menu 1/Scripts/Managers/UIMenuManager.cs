@@ -82,33 +82,46 @@ namespace SlimUI.ModernMenu{
 
 		void Start(){
 			CameraObject = transform.GetComponent<Animator>();
+            if (CameraObject != null)
+            {
+                CameraObject.updateMode = AnimatorUpdateMode.UnscaledTime;
+            }
 
-			playMenu.SetActive(false);
-			exitMenu.SetActive(false);
+            // Null checks for AudioSources
+            if (playMenu != null) playMenu.SetActive(false);
+			if (exitMenu != null) exitMenu.SetActive(false);
 			if(extrasMenu) extrasMenu.SetActive(false);
-			firstMenu.SetActive(true);
-			mainMenu.SetActive(true);
+			if (firstMenu != null) firstMenu.SetActive(true);
+			if (mainMenu != null) mainMenu.SetActive(true);
 
 			SetThemeColors();
 		}
 
 		void SetThemeColors()
 		{
+            if (themeController == null) return;
+
 			switch (theme)
 			{
 				case Theme.custom1:
-					themeController.currentColor = themeController.custom1.graphic1;
-					themeController.textColor = themeController.custom1.text1;
+                    if (themeController.custom1 != null) {
+					    themeController.currentColor = themeController.custom1.graphic1;
+					    themeController.textColor = themeController.custom1.text1;
+                    }
 					themeIndex = 0;
 					break;
 				case Theme.custom2:
-					themeController.currentColor = themeController.custom2.graphic2;
-					themeController.textColor = themeController.custom2.text2;
+                    if (themeController.custom2 != null) {
+					    themeController.currentColor = themeController.custom2.graphic2;
+					    themeController.textColor = themeController.custom2.text2;
+                    }
 					themeIndex = 1;
 					break;
 				case Theme.custom3:
-					themeController.currentColor = themeController.custom3.graphic3;
-					themeController.textColor = themeController.custom3.text3;
+                    if (themeController.custom3 != null) {
+					    themeController.currentColor = themeController.custom3.graphic3;
+					    themeController.textColor = themeController.custom3.text3;
+                    }
 					themeIndex = 2;
 					break;
 				default:
@@ -118,23 +131,23 @@ namespace SlimUI.ModernMenu{
 		}
 
 		public void PlayCampaign(){
-			exitMenu.SetActive(false);
+			if (exitMenu) exitMenu.SetActive(false);
 			if(extrasMenu) extrasMenu.SetActive(false);
-			playMenu.SetActive(true);
+			if (playMenu) playMenu.SetActive(true);
 		}
 		
 		public void PlayCampaignMobile(){
-			exitMenu.SetActive(false);
+			if (exitMenu) exitMenu.SetActive(false);
 			if(extrasMenu) extrasMenu.SetActive(false);
-			playMenu.SetActive(true);
-			mainMenu.SetActive(false);
+			if (playMenu) playMenu.SetActive(true);
+			if (mainMenu) mainMenu.SetActive(false);
 		}
 
 		public void ReturnMenu(){
-			playMenu.SetActive(false);
+			if (playMenu) playMenu.SetActive(false);
 			if(extrasMenu) extrasMenu.SetActive(false);
-			exitMenu.SetActive(false);
-			mainMenu.SetActive(true);
+			if (exitMenu) exitMenu.SetActive(false);
+			if (mainMenu) mainMenu.SetActive(true);
 		}
 
 		public void LoadScene(string scene){
@@ -144,93 +157,95 @@ namespace SlimUI.ModernMenu{
 		}
 
 		public void  DisablePlayCampaign(){
-			playMenu.SetActive(false);
+			if (playMenu) playMenu.SetActive(false);
 		}
 
 		public void Position2(){
 			DisablePlayCampaign();
-			CameraObject.SetFloat("Animate",1);
+            if (CameraObject != null)
+			    CameraObject.SetFloat("Animate",1);
 		}
 
 		public void Position1(){
-			CameraObject.SetFloat("Animate",0);
+            if (CameraObject != null)
+			    CameraObject.SetFloat("Animate",0);
 		}
 
 		void DisablePanels(){
-			PanelControls.SetActive(false);
-			PanelVideo.SetActive(false);
-			PanelGame.SetActive(false);
-			PanelKeyBindings.SetActive(false);
+			if (PanelControls) PanelControls.SetActive(false);
+			if (PanelVideo) PanelVideo.SetActive(false);
+			if (PanelGame) PanelGame.SetActive(false);
+			if (PanelKeyBindings) PanelKeyBindings.SetActive(false);
 
-			lineGame.SetActive(false);
-			lineControls.SetActive(false);
-			lineVideo.SetActive(false);
-			lineKeyBindings.SetActive(false);
+			if (lineGame) lineGame.SetActive(false);
+			if (lineControls) lineControls.SetActive(false);
+			if (lineVideo) lineVideo.SetActive(false);
+			if (lineKeyBindings) lineKeyBindings.SetActive(false);
 
-			PanelMovement.SetActive(false);
-			lineMovement.SetActive(false);
-			PanelCombat.SetActive(false);
-			lineCombat.SetActive(false);
-			PanelGeneral.SetActive(false);
-			lineGeneral.SetActive(false);
+			if (PanelMovement) PanelMovement.SetActive(false);
+			if (lineMovement) lineMovement.SetActive(false);
+			if (PanelCombat) PanelCombat.SetActive(false);
+			if (lineCombat) lineCombat.SetActive(false);
+			if (PanelGeneral) PanelGeneral.SetActive(false);
+			if (lineGeneral) lineGeneral.SetActive(false);
 		}
 
 		public void GamePanel(){
 			DisablePanels();
-			PanelGame.SetActive(true);
-			lineGame.SetActive(true);
+			if (PanelGame) PanelGame.SetActive(true);
+			if (lineGame) lineGame.SetActive(true);
 		}
 
 		public void VideoPanel(){
 			DisablePanels();
-			PanelVideo.SetActive(true);
-			lineVideo.SetActive(true);
+			if (PanelVideo) PanelVideo.SetActive(true);
+			if (lineVideo) lineVideo.SetActive(true);
 		}
 
 		public void ControlsPanel(){
 			DisablePanels();
-			PanelControls.SetActive(true);
-			lineControls.SetActive(true);
+			if (PanelControls) PanelControls.SetActive(true);
+			if (lineControls) lineControls.SetActive(true);
 		}
 
 		public void KeyBindingsPanel(){
 			DisablePanels();
 			MovementPanel();
-			PanelKeyBindings.SetActive(true);
-			lineKeyBindings.SetActive(true);
+			if (PanelKeyBindings) PanelKeyBindings.SetActive(true);
+			if (lineKeyBindings) lineKeyBindings.SetActive(true);
 		}
 
 		public void MovementPanel(){
 			DisablePanels();
-			PanelKeyBindings.SetActive(true);
-			PanelMovement.SetActive(true);
-			lineMovement.SetActive(true);
+			if (PanelKeyBindings) PanelKeyBindings.SetActive(true);
+			if (PanelMovement) PanelMovement.SetActive(true);
+			if (lineMovement) lineMovement.SetActive(true);
 		}
 
 		public void CombatPanel(){
 			DisablePanels();
-			PanelKeyBindings.SetActive(true);
-			PanelCombat.SetActive(true);
-			lineCombat.SetActive(true);
+			if (PanelKeyBindings) PanelKeyBindings.SetActive(true);
+			if (PanelCombat) PanelCombat.SetActive(true);
+			if (lineCombat) lineCombat.SetActive(true);
 		}
 
 		public void GeneralPanel(){
 			DisablePanels();
-			PanelKeyBindings.SetActive(true);
-			PanelGeneral.SetActive(true);
-			lineGeneral.SetActive(true);
+			if (PanelKeyBindings) PanelKeyBindings.SetActive(true);
+			if (PanelGeneral) PanelGeneral.SetActive(true);
+			if (lineGeneral) lineGeneral.SetActive(true);
 		}
 
 		public void PlayHover(){
-			hoverSound.Play();
+            if (hoverSound) hoverSound.Play();
 		}
 
 		public void PlaySFXHover(){
-			sliderSound.Play();
+            if (sliderSound) sliderSound.Play();
 		}
 
 		public void PlaySwoosh(){
-			swooshSound.Play();
+            if (swooshSound) swooshSound.Play();
 		}
 
 		// Are You Sure - Quit Panel Pop Up

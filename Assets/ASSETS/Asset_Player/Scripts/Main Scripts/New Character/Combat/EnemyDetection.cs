@@ -14,16 +14,22 @@ public class EnemyDetection : MonoBehaviour
     [SerializeField] private float combatCameraDistance = 9f;
     [SerializeField] private float normalCameraDistance = 5f;
     [SerializeField] private float cameraTransitionSpeed = 2f;
+#pragma warning disable CS0414 // Kept for future camera look implementation
     [SerializeField] private float cameraLookOffset = 0.5f; // Offset để camera nhìn giữa player và enemy
+#pragma warning restore CS0414
 
     [Header("Combat Movement")]
     [SerializeField] private float combatMoveSpeed = 2f; // Tốc độ di chuyển về phía enemy khi đánh
+#pragma warning disable CS0414 // Kept for future rotation tuning
     [SerializeField] private float rotationSpeed = 8f; // Tốc độ xoay người về phía enemy
+#pragma warning restore CS0414
     [SerializeField] private float smoothRotationDuration = 0.3f; // Thời gian xoay mượt
 
     [Header("Root Motion Control")]
     [SerializeField] private bool useRootMotionWhenNoEnemy = true; // Dùng root motion khi không có enemy
+#pragma warning disable CS0414 // Kept for future combat movement implementation
     [SerializeField] private bool moveTowardEnemyWhenAttacking = true; // Di chuyển về phía enemy khi đánh
+#pragma warning restore CS0414
 
     [Header("Weapon's Attack Range")]
     [SerializeField] private float swordAttackRange = 3f;
@@ -466,7 +472,17 @@ public class EnemyDetection : MonoBehaviour
 
         return isAttackingFromSM ||
                animator.GetCurrentAnimatorStateInfo(0).IsName("Attack") ||
-               animator.GetBool("isAttacking");
+               HasAnimatorParameter(animator, "isAttacking") && animator.GetBool("isAttacking");
+    }
+
+    // Helper method to safely check if animator has a parameter
+    private bool HasAnimatorParameter(Animator anim, string paramName)
+    {
+        foreach (AnimatorControllerParameter param in anim.parameters)
+        {
+            if (param.name == paramName) return true;
+        }
+        return false;
     }
 
     private void UpdateRootMotion()

@@ -14,11 +14,13 @@ public class TakeDamageTest : MonoBehaviour
     public bool showDebugInfo = true;
 
     [Header("Effectiveness Settings")]
+#pragma warning disable CS0414 // Unused fields kept for future effect implementations
     [SerializeField] float thrownAwayForce = 5f;
     [SerializeField] float knockupForce = 3f;
     [SerializeField] float pullForce = 2f;
     [SerializeField] float tornadoRotationSpeed = 180f;
     [SerializeField] float tornadoDuration = 2f;
+#pragma warning restore CS0414
 
     [Header("Enemy Detection Settings")]
     [SerializeField] private float detectionRange = 8f;

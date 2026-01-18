@@ -5,7 +5,9 @@ public class DieState : State
     private float dieDuration = 3f; // Duration of death state (can be adjusted)
     private float dieTimer;
     private WeaponController weaponController;
+#pragma warning disable CS0414 // Kept for potential future layer restoration logic
     private bool weaponLayersWereDisabled = false;
+#pragma warning restore CS0414
 
     public DieState(Character _character, StateMachine _stateMachine) : base(_character, _stateMachine)
     {

@@ -143,21 +143,32 @@ public class InventoryController : MonoBehaviour
             equipmentPanelUI.ClosePanel();
         }
 
-        // Hide cursor and lock
-        Cursor.visible = false;
-        Cursor.lockState = CursorLockMode.Locked;
+        // Kiểm tra PauseMenu có đang mở không
+        PauseMenuController pauseMenu = FindFirstObjectByType<PauseMenuController>();
+        bool isPauseMenuOpen = pauseMenu != null && pauseMenu.IsMenuOpen;
 
-        // Enable camera controls
-        EnableCameraControls();
+        // Chỉ lock cursor nếu PauseMenu KHÔNG mở
+        if (!isPauseMenuOpen)
+        {
+            Cursor.visible = false;
+            Cursor.lockState = CursorLockMode.Locked;
+            
+            // Enable camera controls
+            EnableCameraControls();
 
-        // Enable player input
-        EnablePlayerInput();
+            // Enable player input
+            EnablePlayerInput();
+        }
+        else
+        {
+            Debug.Log("[InventoryController] PauseMenu is open - keeping cursor unlocked");
+        }
 
         // Hide inventory
         inventory.SetActive(false);
         isInventoryOpen = false;
 
-        Debug.Log("[InventoryController] Inventory closed - Cursor hidden and locked");
+        Debug.Log("[InventoryController] Inventory closed");
     }
 
     /// <summary>

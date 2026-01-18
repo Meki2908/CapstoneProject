@@ -4,10 +4,14 @@ using System.Collections;
 public class TornadoEffect : BaseEffectScript
 {
     [Header("Tornado Settings")]
+#pragma warning disable CS0414 // Kept for future tornado effect tuning
     [SerializeField] private float tornadoRotationSpeed = 180f;
+#pragma warning restore CS0414
     [SerializeField] private float tornadoDuration = 2f;
     [SerializeField] private float tornadoHeight = 5f; // Height enemy flies up
+#pragma warning disable CS0414 // Kept for future tornado effect tuning
     [SerializeField] private float tornadoFallSpeed = 2f; // Speed enemy falls down
+#pragma warning restore CS0414
 
     protected override void ApplyEffect(TakeDamageTest enemy)
     {

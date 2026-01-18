@@ -18,15 +18,19 @@ public class AxeSkill : MonoBehaviour
     [SerializeField] private string skillStateTag = "AxeSkill";    // tag cho các state skill của Axe
 
     [Header("Behavior")]
+#pragma warning disable CS0414 // Kept for future skill behavior tuning
     [SerializeField] private bool enableRootMotionDuringSkill = false;
     [SerializeField] private float vfxLifetime = 2f;
     [SerializeField] private float maxSkillLockSeconds = 3f;
+#pragma warning restore CS0414
     [SerializeField] private bool useInputDirection = false;
     [SerializeField] private Transform forwardAnchor;
 
     private Character character;
     private SkillLock skillLock;
+#pragma warning disable CS0414 // Kept for future skill lock timing
     private float skillLockExpireAt = 0f;
+#pragma warning restore CS0414
 
     private readonly Dictionary<AbilityInput, AbilitySO> abilityMap = new();
     // Debounce VFX

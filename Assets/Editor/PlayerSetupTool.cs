@@ -68,7 +68,7 @@ public class PlayerSetupTool : EditorWindow
         else
         {
             // Try to find in scene if not in prefab hierarchy (though user said prefab)
-            minimapCam = FindObjectOfType<MinimapCameraFollow>();
+            minimapCam = FindFirstObjectByType<MinimapCameraFollow>();
             if (minimapCam != null)
             {
                  Transform playerT = FindChildRecursively(playerRoot.transform, "Player");

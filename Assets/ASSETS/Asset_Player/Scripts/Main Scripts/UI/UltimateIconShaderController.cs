@@ -17,7 +17,9 @@ public class UltimateIconShaderController : MonoBehaviour
     [SerializeField] private string readyPulseProperty = "_ReadyPulse";
 
     [Header("Effect Settings")]
+#pragma warning disable CS0414 // Kept for future glow intensity clamping
     [SerializeField] private float maxGlowIntensity = 3.0f;
+#pragma warning restore CS0414
     [SerializeField] private float readyGlowIntensity = 2.5f;
     [SerializeField] private float readyPulseIntensity = 0.8f;
     [SerializeField] private float normalGlowIntensity = 1.0f;
