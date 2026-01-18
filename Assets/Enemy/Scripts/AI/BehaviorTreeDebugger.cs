@@ -1,12 +1,12 @@
 using UnityEngine;
 
 /// <summary>
-/// Debug tool để visualize và test Behavior Tree
+/// Debug tool để visualize và test Enemy AI
 /// Gắn vào Enemy để xem real-time AI decisions
 /// </summary>
 public class BehaviorTreeDebugger : MonoBehaviour
 {
-    private EnemyBT enemyBT;
+    private BaseEnemyAI enemyAI;
 
     [Header("Debug Display")]
     public bool showDebugInfo = true;
@@ -27,7 +27,7 @@ public class BehaviorTreeDebugger : MonoBehaviour
 
     void Start()
     {
-        enemyBT = GetComponent<EnemyBT>();
+        enemyAI = GetComponent<BaseEnemyAI>();
 
         // Setup GUI style
         guiStyle = new GUIStyle();
@@ -38,37 +38,50 @@ public class BehaviorTreeDebugger : MonoBehaviour
 
     void Update()
     {
-        if (enemyBT == null) return;
+        if (enemyAI == null) return;
 
-        // Get current target from behavior tree
-        // (Giả sử bạn expose public property trong EnemyBT)
+        // Get current target from enemy AI
         UpdateDebugInfo();
     }
 
     void UpdateDebugInfo()
     {
-        // Detect current target (simplified)
-        Collider[] hits = Physics.OverlapSphere(transform.position, enemyBT.detectionRange, enemyBT.targetLayer);
-
-        if (hits.Length > 0)
+        // Use BaseEnemyAI state and target
+        if (enemyAI.player != null)
         {
-            currentTarget = hits[0].transform;
+            currentTarget = enemyAI.player;
             hasTarget = true;
             targetName = currentTarget.name;
-            distanceToTarget = Vector3.Distance(transform.position, currentTarget.position);
+            distanceToTarget = enemyAI.GetDistanceToPlayer();
 
-            // Determine state
-            if (distanceToTarget <= enemyBT.attackRange)
+            // Get current state from BaseEnemyAI
+            var state = enemyAI.GetCurrentState();
+            switch (state)
             {
-                currentState = "🗡️ ATTACKING";
-            }
-            else if (distanceToTarget <= enemyBT.detectionRange)
-            {
-                currentState = "🏃 CHASING";
-            }
-            else
-            {
-                currentState = "👁️ DETECTING";
+                case BaseEnemyAI.EnemyState.Idle:
+                    currentState = "😴 IDLE";
+                    break;
+                case BaseEnemyAI.EnemyState.Patrol:
+                    currentState = "🚶 PATROLLING";
+                    break;
+                case BaseEnemyAI.EnemyState.Chase:
+                    currentState = "🏃 CHASING";
+                    break;
+                case BaseEnemyAI.EnemyState.Return:
+                    currentState = "🏠 RETURNING";
+                    break;
+                case BaseEnemyAI.EnemyState.Attack:
+                    currentState = "⚔️ ATTACKING";
+                    break;
+                case BaseEnemyAI.EnemyState.Attacking:
+                    currentState = "🗡️ ATTACKING";
+                    break;
+                case BaseEnemyAI.EnemyState.Dead:
+                    currentState = "💀 DEAD";
+                    break;
+                default:
+                    currentState = "❓ UNKNOWN";
+                    break;
             }
         }
         else
@@ -77,27 +90,27 @@ public class BehaviorTreeDebugger : MonoBehaviour
             hasTarget = false;
             targetName = "None";
             distanceToTarget = 0f;
-            currentState = "🚶 PATROLLING";
+            currentState = "❓ NO TARGET";
         }
     }
 
     void OnDrawGizmos()
     {
-        if (!showGizmos || enemyBT == null) return;
+        if (!showGizmos || enemyAI == null) return;
 
         Vector3 position = transform.position;
 
         // Detection Range
         Gizmos.color = detectionColor;
-        Gizmos.DrawWireSphere(position, enemyBT.detectionRange);
+        Gizmos.DrawWireSphere(position, enemyAI.detectionRadius);
 
         // Attack Range
         Gizmos.color = attackColor;
-        Gizmos.DrawWireSphere(position, enemyBT.attackRange);
+        Gizmos.DrawWireSphere(position, enemyAI.attackRange);
 
         // Patrol Radius
         Gizmos.color = patrolColor;
-        Gizmos.DrawWireSphere(position, enemyBT.patrolRadius);
+        Gizmos.DrawWireSphere(position, enemyAI.patrolRadius);
 
         // Line to target
         if (currentTarget != null)
@@ -109,19 +122,8 @@ public class BehaviorTreeDebugger : MonoBehaviour
             Gizmos.DrawWireSphere(currentTarget.position, 0.5f);
         }
 
-        // Patrol points
-        if (enemyBT.patrolPoints != null)
-        {
-            Gizmos.color = Color.cyan;
-            foreach (Transform point in enemyBT.patrolPoints)
-            {
-                if (point != null)
-                {
-                    Gizmos.DrawWireSphere(point.position, 0.3f);
-                    Gizmos.DrawLine(position, point.position);
-                }
-            }
-        }
+        // Patrol points - BaseEnemyAI doesn't use explicit patrol points
+        // if (enemyAI has patrol points) - would need to add to BaseEnemyAI
 
         // Forward direction
         Gizmos.color = Color.blue;
@@ -130,7 +132,7 @@ public class BehaviorTreeDebugger : MonoBehaviour
 
     void OnGUI()
     {
-        if (!showDebugInfo || enemyBT == null) return;
+        if (!showDebugInfo || enemyAI == null) return;
 
         // Get screen position
         Vector3 screenPos = Camera.main.WorldToScreenPoint(transform.position + Vector3.up * 3f);
