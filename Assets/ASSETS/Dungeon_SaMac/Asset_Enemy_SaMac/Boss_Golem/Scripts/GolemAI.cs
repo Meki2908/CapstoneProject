@@ -2,7 +2,9 @@ using System.Collections;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.AI;
+// Force recompilation
 //script su dung GolemAnimator.controller
+// Updated to use GolemDamageHandler instead of Enemy.GolemDamageHandler
 [RequireComponent(typeof(Animator))]
 [RequireComponent(typeof(NavMeshAgent))]
 public class GolemAI : MonoBehaviour
@@ -36,7 +38,7 @@ public class GolemAI : MonoBehaviour
     [Tooltip("TakeDamageTest component - auto-created if missing")]
     public TakeDamageTest healthBarSystem;
     [Tooltip("Custom Golem damage handler - optional for boss-specific logic")]
-    public Enemy.GolemDamageHandler golemDamageHandler;
+    public GolemDamageHandler golemDamageHandler;
 
     [Header("Detection / Movement")]
     public LayerMask playerLayer;
@@ -362,7 +364,7 @@ public class GolemAI : MonoBehaviour
         // Ưu tiên GolemDamageHandler, chỉ dùng TakeDamageTest làm fallback
         if (golemDamageHandler == null)
         {
-            golemDamageHandler = GetComponent<Enemy.GolemDamageHandler>();
+            golemDamageHandler = GetComponent<GolemDamageHandler>();
         }
 
         // Chỉ tạo TakeDamageTest nếu không có GolemDamageHandler
@@ -373,6 +375,13 @@ public class GolemAI : MonoBehaviour
             {
                 healthBarSystem = gameObject.AddComponent<TakeDamageTest>();
             }
+        }
+
+        // Sync health values from GolemDamageHandler first
+        if (golemDamageHandler != null)
+        {
+            maxHealth = golemDamageHandler.MaxHealth;
+            currentHealth = golemDamageHandler.CurrentHealth;
         }
 
         // Cấu hình health bar system
@@ -1489,7 +1498,7 @@ public class GolemAI : MonoBehaviour
             landingPos = hit.position;
         }
 
-        // Spawn landing indicator if provided, otherwise spawn runtime indicator
+        // Spawn landing indicator if provided
         if (landingIndicatorPrefab != null)
         {
             var indicator = Instantiate(landingIndicatorPrefab, landingPos, Quaternion.identity);
@@ -1497,7 +1506,8 @@ public class GolemAI : MonoBehaviour
         }
         else
         {
-            LandingIndicator.Spawn(landingPos, landingIndicatorDuration, Mathf.Clamp(groundSlamRange, 1f, 5f));
+            // TODO: Implement runtime landing indicator or assign landingIndicatorPrefab
+            Debug.LogWarning("[GolemAI] No landingIndicatorPrefab assigned - landing indicator will not be shown");
         }
 
         // Smoothly move in an arc from start to landingPos over the animation duration
