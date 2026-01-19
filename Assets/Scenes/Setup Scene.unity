@@ -2588,6 +2588,57 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 317655874}
   m_CullTransparentMesh: 1
+--- !u!1 &319728481
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 319728483}
+  - component: {fileID: 319728482}
+  m_Layer: 0
+  m_Name: EnemySpawner
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!114 &319728482
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 319728481}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6e6a69269774b7d448b4e18a4d75cfca, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  spiderPrefab: {fileID: 4384166933469544433, guid: 63dc74ab2eb6d4741b1261a890ae39ac, type: 3}
+  minotaurPrefab: {fileID: 2550459491328735147, guid: 3f4f8ec16ac94914aa97bb61e820dc04, type: 3}
+  spiderCount: 6
+  minotaurCount: 3
+  maxSpawnAttempts: 30
+  minDistanceBetweenEnemies: 5
+  spawnSearchRadius: 50
+--- !u!4 &319728483
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 319728481}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 296.48093, y: 100.53104, z: 193.62062}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &355409188
 GameObject:
   m_ObjectHideFlags: 0
@@ -4537,6 +4588,9 @@ MonoBehaviour:
   maxHealth: 100
   currentHealth: 0
   isAlive: 1
+  useHealthBar: 0
+  bossName: 
+  healthBarColor: {r: 1, g: 0, b: 0, a: 1}
   expReward: 1000
 --- !u!114 &719721963
 MonoBehaviour:
@@ -7294,7 +7348,7 @@ MonoBehaviour:
   m_MoveRepeatDelay: 0.5
   m_MoveRepeatRate: 0.1
   m_XRTrackingOrigin: {fileID: 0}
-  m_ActionsAsset: {fileID: -944628639613478452, guid: 79e5d3dca193cf840a7218cfbd5ed5b6, type: 3}
+  m_ActionsAsset: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_PointAction: {fileID: 1783109872385329229, guid: 79e5d3dca193cf840a7218cfbd5ed5b6, type: 3}
   m_MoveAction: {fileID: -9219260169088033027, guid: 79e5d3dca193cf840a7218cfbd5ed5b6, type: 3}
   m_SubmitAction: {fileID: -5186335419717685805, guid: 79e5d3dca193cf840a7218cfbd5ed5b6, type: 3}
@@ -15683,6 +15737,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 550977221}
     - target: {fileID: 9112917704254440014, guid: d132d38ddd16e4948bd8e4537a2de1d5, type: 3}
+      propertyPath: m_Actions
+      value: 
+      objectReference: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+    - target: {fileID: 9112917704254440014, guid: d132d38ddd16e4948bd8e4537a2de1d5, type: 3}
       propertyPath: m_UIInputModule
       value: 
       objectReference: {fileID: 1094895637}
@@ -16064,3 +16122,4 @@ SceneRoots:
   - {fileID: 355409190}
   - {fileID: 1768300510}
   - {fileID: 580680845}
+  - {fileID: 319728483}
