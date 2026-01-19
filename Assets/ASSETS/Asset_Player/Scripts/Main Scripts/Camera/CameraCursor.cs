@@ -34,6 +34,15 @@ namespace MovementSystem
             }
         }
 
+        private void Update()
+        {
+            // Check for left ALT key press to unlock cursor
+            if (Input.GetKeyDown(KeyCode.LeftAlt))
+            {
+                ToggleCursor();
+            }
+        }
+
         private void OnEnable()
         {
             if (cameraToggleInputAction != null && cameraToggleInputAction.asset != null)
