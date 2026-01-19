@@ -9178,7 +9178,10 @@ MonoBehaviour:
   bigMapPanel: {fileID: 1272782064}
   mapRect: {fileID: 494778794}
   playerMarkerRect: {fileID: 0}
-  player: {fileID: 0}
+  hideWhenBigMapOpen:
+  - {fileID: 1498245003}
+  - {fileID: 1025600513}
+  player: {fileID: 326179184}
   minX: -400
   maxX: 400
   minZ: -400
@@ -9382,6 +9385,11 @@ PrefabInstance:
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 50cfa3a2b2640c14698c938f9d7b7aef, type: 3}
   m_PrefabInstance: {fileID: 322155413}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &326179184 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 7332234538299034481, guid: 64b8d063346d9464699b0e24a8a26392, type: 3}
+  m_PrefabInstance: {fileID: 969971542}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &330171496
 GameObject:
@@ -20920,19 +20928,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6424165978324034521, guid: 64b8d063346d9464699b0e24a8a26392, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.0054541603
+      value: 0.013435352
       objectReference: {fileID: 0}
     - target: {fileID: 6424165978324034521, guid: 64b8d063346d9464699b0e24a8a26392, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0.0004092089
+      value: -0.001008013
       objectReference: {fileID: 0}
     - target: {fileID: 6424165978324034521, guid: 64b8d063346d9464699b0e24a8a26392, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0.9971824
+      value: 0.99710685
       objectReference: {fileID: 0}
     - target: {fileID: 6424165978324034521, guid: 64b8d063346d9464699b0e24a8a26392, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.07481554
+      value: 0.07480986
       objectReference: {fileID: 0}
     - target: {fileID: 6582949763138699569, guid: 64b8d063346d9464699b0e24a8a26392, type: 3}
       propertyPath: m_LocalPosition.x
@@ -20949,7 +20957,7 @@ PrefabInstance:
     - target: {fileID: 6644122938474417824, guid: 64b8d063346d9464699b0e24a8a26392, type: 3}
       propertyPath: m_Actions
       value: 
-      objectReference: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+      objectReference: {fileID: -944628639613478452, guid: 79e5d3dca193cf840a7218cfbd5ed5b6, type: 3}
     - target: {fileID: 7332234538299034481, guid: 64b8d063346d9464699b0e24a8a26392, type: 3}
       propertyPath: m_LocalPosition.x
       value: -2.652937
@@ -22079,6 +22087,11 @@ PrefabInstance:
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 50cfa3a2b2640c14698c938f9d7b7aef, type: 3}
   m_PrefabInstance: {fileID: 1016910647}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1025600513 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5190531507421674693, guid: 64b8d063346d9464699b0e24a8a26392, type: 3}
+  m_PrefabInstance: {fileID: 969971542}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &1030812421
 GameObject:
@@ -28631,7 +28644,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 0}
+  m_audioClip: {fileID: 8300000, guid: c747e62359494344e953ac4bbf8e5f51, type: 3}
   m_Resource: {fileID: 8300000, guid: c747e62359494344e953ac4bbf8e5f51, type: 3}
   m_PlayOnAwake: 0
   m_Volume: 0.1
@@ -28790,7 +28803,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 0}
+  m_audioClip: {fileID: 8300000, guid: be0043f3cd319e94ba492465bc92eee9, type: 3}
   m_Resource: {fileID: 8300000, guid: be0043f3cd319e94ba492465bc92eee9, type: 3}
   m_PlayOnAwake: 0
   m_Volume: 0
@@ -36693,6 +36706,11 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 50cfa3a2b2640c14698c938f9d7b7aef, type: 3}
   m_PrefabInstance: {fileID: 1496441891}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1498245003 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5454620566477405225, guid: 64b8d063346d9464699b0e24a8a26392, type: 3}
+  m_PrefabInstance: {fileID: 969971542}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1498421880
 GameObject:
   m_ObjectHideFlags: 0
@@ -43411,7 +43429,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 0}
+  m_audioClip: {fileID: 8300000, guid: c0624300f5222c248818b32e128c2c8a, type: 3}
   m_Resource: {fileID: 8300000, guid: c0624300f5222c248818b32e128c2c8a, type: 3}
   m_PlayOnAwake: 0
   m_Volume: 0.4
