@@ -7,6 +7,7 @@ using UnityEngine.SceneManagement;
 namespace SlimUI.ModernMenu{
 	public class UIMenuManager : MonoBehaviour {
 		private Animator CameraObject;
+		private AsyncOperation currentLoadOperation;
 
 		// campaign button sub menu
         [Header("MENUS")]
@@ -82,46 +83,33 @@ namespace SlimUI.ModernMenu{
 
 		void Start(){
 			CameraObject = transform.GetComponent<Animator>();
-            if (CameraObject != null)
-            {
-                CameraObject.updateMode = AnimatorUpdateMode.UnscaledTime;
-            }
 
-            // Null checks for AudioSources
-            if (playMenu != null) playMenu.SetActive(false);
-			if (exitMenu != null) exitMenu.SetActive(false);
+			playMenu.SetActive(false);
+			exitMenu.SetActive(false);
 			if(extrasMenu) extrasMenu.SetActive(false);
-			if (firstMenu != null) firstMenu.SetActive(true);
-			if (mainMenu != null) mainMenu.SetActive(true);
+			firstMenu.SetActive(true);
+			mainMenu.SetActive(true);
 
 			SetThemeColors();
 		}
 
 		void SetThemeColors()
 		{
-            if (themeController == null) return;
-
 			switch (theme)
 			{
 				case Theme.custom1:
-                    if (themeController.custom1 != null) {
-					    themeController.currentColor = themeController.custom1.graphic1;
-					    themeController.textColor = themeController.custom1.text1;
-                    }
+					themeController.currentColor = themeController.custom1.graphic1;
+					themeController.textColor = themeController.custom1.text1;
 					themeIndex = 0;
 					break;
 				case Theme.custom2:
-                    if (themeController.custom2 != null) {
-					    themeController.currentColor = themeController.custom2.graphic2;
-					    themeController.textColor = themeController.custom2.text2;
-                    }
+					themeController.currentColor = themeController.custom2.graphic2;
+					themeController.textColor = themeController.custom2.text2;
 					themeIndex = 1;
 					break;
 				case Theme.custom3:
-                    if (themeController.custom3 != null) {
-					    themeController.currentColor = themeController.custom3.graphic3;
-					    themeController.textColor = themeController.custom3.text3;
-                    }
+					themeController.currentColor = themeController.custom3.graphic3;
+					themeController.textColor = themeController.custom3.text3;
 					themeIndex = 2;
 					break;
 				default:
@@ -131,121 +119,129 @@ namespace SlimUI.ModernMenu{
 		}
 
 		public void PlayCampaign(){
-			if (exitMenu) exitMenu.SetActive(false);
+			exitMenu.SetActive(false);
 			if(extrasMenu) extrasMenu.SetActive(false);
-			if (playMenu) playMenu.SetActive(true);
+			playMenu.SetActive(true);
 		}
 		
 		public void PlayCampaignMobile(){
-			if (exitMenu) exitMenu.SetActive(false);
+			exitMenu.SetActive(false);
 			if(extrasMenu) extrasMenu.SetActive(false);
-			if (playMenu) playMenu.SetActive(true);
-			if (mainMenu) mainMenu.SetActive(false);
+			playMenu.SetActive(true);
+			mainMenu.SetActive(false);
 		}
 
 		public void ReturnMenu(){
-			if (playMenu) playMenu.SetActive(false);
+			playMenu.SetActive(false);
 			if(extrasMenu) extrasMenu.SetActive(false);
-			if (exitMenu) exitMenu.SetActive(false);
-			if (mainMenu) mainMenu.SetActive(true);
+			exitMenu.SetActive(false);
+			mainMenu.SetActive(true);
 		}
 
 		public void LoadScene(string scene){
-			if(scene != ""){
-				StartCoroutine(LoadAsynchronously(scene));
+			if(string.IsNullOrEmpty(scene)) return;
+
+			// Prepare UI
+			if (mainCanvas) mainCanvas.SetActive(false);
+			if (loadingMenu) loadingMenu.SetActive(true);
+			if (loadingBar) loadingBar.value = 0f;
+			if (loadPromptText) loadPromptText.text = "";
+
+			// Start async load and manage it in Update (no coroutine)
+			currentLoadOperation = SceneManager.LoadSceneAsync(scene);
+			if (currentLoadOperation != null){
+				currentLoadOperation.allowSceneActivation = false;
 			}
 		}
 
 		public void  DisablePlayCampaign(){
-			if (playMenu) playMenu.SetActive(false);
+			playMenu.SetActive(false);
 		}
 
 		public void Position2(){
 			DisablePlayCampaign();
-            if (CameraObject != null)
-			    CameraObject.SetFloat("Animate",1);
+			CameraObject.SetFloat("Animate",1);
 		}
 
 		public void Position1(){
-            if (CameraObject != null)
-			    CameraObject.SetFloat("Animate",0);
+			CameraObject.SetFloat("Animate",0);
 		}
 
 		void DisablePanels(){
-			if (PanelControls) PanelControls.SetActive(false);
-			if (PanelVideo) PanelVideo.SetActive(false);
-			if (PanelGame) PanelGame.SetActive(false);
-			if (PanelKeyBindings) PanelKeyBindings.SetActive(false);
+			PanelControls.SetActive(false);
+			PanelVideo.SetActive(false);
+			PanelGame.SetActive(false);
+			PanelKeyBindings.SetActive(false);
 
-			if (lineGame) lineGame.SetActive(false);
-			if (lineControls) lineControls.SetActive(false);
-			if (lineVideo) lineVideo.SetActive(false);
-			if (lineKeyBindings) lineKeyBindings.SetActive(false);
+			lineGame.SetActive(false);
+			lineControls.SetActive(false);
+			lineVideo.SetActive(false);
+			lineKeyBindings.SetActive(false);
 
-			if (PanelMovement) PanelMovement.SetActive(false);
-			if (lineMovement) lineMovement.SetActive(false);
-			if (PanelCombat) PanelCombat.SetActive(false);
-			if (lineCombat) lineCombat.SetActive(false);
-			if (PanelGeneral) PanelGeneral.SetActive(false);
-			if (lineGeneral) lineGeneral.SetActive(false);
+			PanelMovement.SetActive(false);
+			lineMovement.SetActive(false);
+			PanelCombat.SetActive(false);
+			lineCombat.SetActive(false);
+			PanelGeneral.SetActive(false);
+			lineGeneral.SetActive(false);
 		}
 
 		public void GamePanel(){
 			DisablePanels();
-			if (PanelGame) PanelGame.SetActive(true);
-			if (lineGame) lineGame.SetActive(true);
+			PanelGame.SetActive(true);
+			lineGame.SetActive(true);
 		}
 
 		public void VideoPanel(){
 			DisablePanels();
-			if (PanelVideo) PanelVideo.SetActive(true);
-			if (lineVideo) lineVideo.SetActive(true);
+			PanelVideo.SetActive(true);
+			lineVideo.SetActive(true);
 		}
 
 		public void ControlsPanel(){
 			DisablePanels();
-			if (PanelControls) PanelControls.SetActive(true);
-			if (lineControls) lineControls.SetActive(true);
+			PanelControls.SetActive(true);
+			lineControls.SetActive(true);
 		}
 
 		public void KeyBindingsPanel(){
 			DisablePanels();
 			MovementPanel();
-			if (PanelKeyBindings) PanelKeyBindings.SetActive(true);
-			if (lineKeyBindings) lineKeyBindings.SetActive(true);
+			PanelKeyBindings.SetActive(true);
+			lineKeyBindings.SetActive(true);
 		}
 
 		public void MovementPanel(){
 			DisablePanels();
-			if (PanelKeyBindings) PanelKeyBindings.SetActive(true);
-			if (PanelMovement) PanelMovement.SetActive(true);
-			if (lineMovement) lineMovement.SetActive(true);
+			PanelKeyBindings.SetActive(true);
+			PanelMovement.SetActive(true);
+			lineMovement.SetActive(true);
 		}
 
 		public void CombatPanel(){
 			DisablePanels();
-			if (PanelKeyBindings) PanelKeyBindings.SetActive(true);
-			if (PanelCombat) PanelCombat.SetActive(true);
-			if (lineCombat) lineCombat.SetActive(true);
+			PanelKeyBindings.SetActive(true);
+			PanelCombat.SetActive(true);
+			lineCombat.SetActive(true);
 		}
 
 		public void GeneralPanel(){
 			DisablePanels();
-			if (PanelKeyBindings) PanelKeyBindings.SetActive(true);
-			if (PanelGeneral) PanelGeneral.SetActive(true);
-			if (lineGeneral) lineGeneral.SetActive(true);
+			PanelKeyBindings.SetActive(true);
+			PanelGeneral.SetActive(true);
+			lineGeneral.SetActive(true);
 		}
 
 		public void PlayHover(){
-            if (hoverSound) hoverSound.Play();
+			hoverSound.Play();
 		}
 
 		public void PlaySFXHover(){
-            if (sliderSound) sliderSound.Play();
+			sliderSound.Play();
 		}
 
 		public void PlaySwoosh(){
-            if (swooshSound) swooshSound.Play();
+			swooshSound.Play();
 		}
 
 		// Are You Sure - Quit Panel Pop Up
@@ -276,29 +272,30 @@ namespace SlimUI.ModernMenu{
 			#endif
 		}
 
-		// Load Bar synching animation
-		IEnumerator LoadAsynchronously(string sceneName){ // scene name is just the name of the current scene being loaded
-			AsyncOperation operation = SceneManager.LoadSceneAsync(sceneName);
-			operation.allowSceneActivation = false;
-			mainCanvas.SetActive(false);
-			loadingMenu.SetActive(true);
+		// Manage async loading in Update to avoid coroutine
+		void Update(){
+			if (currentLoadOperation == null) return;
 
-			while (!operation.isDone){
-				float progress = Mathf.Clamp01(operation.progress / .95f);
-				loadingBar.value = progress;
+			float rawProgress = currentLoadOperation.progress;
+			float progress = Mathf.Clamp01(rawProgress / 0.9f);
+			if (loadingBar) loadingBar.value = progress;
 
-				if (operation.progress >= 0.9f && waitForInput){
-					loadPromptText.text = "Press " + userPromptKey.ToString().ToUpper() + " to continue";
-					loadingBar.value = 1;
-
+			if (rawProgress >= 0.9f){
+				// Loading finished (reached 90%). Show prompt or auto-activate.
+				if (loadingBar) loadingBar.value = 1f;
+				if (waitForInput){
+					if (loadPromptText) loadPromptText.text = "Press " + userPromptKey.ToString().ToUpper() + " to continue";
 					if (Input.GetKeyDown(userPromptKey)){
-						operation.allowSceneActivation = true;
+						currentLoadOperation.allowSceneActivation = true;
 					}
-                }else if(operation.progress >= 0.9f && !waitForInput){
-					operation.allowSceneActivation = true;
+				} else {
+					currentLoadOperation.allowSceneActivation = true;
 				}
+			}
 
-				yield return null;
+			if (currentLoadOperation.isDone){
+				// Clear reference once done (scene will switch)
+				currentLoadOperation = null;
 			}
 		}
 	}

@@ -884,8 +884,23 @@ public class GolemAI : MonoBehaviour
             }
 
             if (!rotationLocked)
-        {
-            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(dir), Time.deltaTime * 15f);
+            {
+                // Only rotate toward player while preparing an attack or while in attack animations
+                bool shouldRotate = false;
+                if (isPreparingAttack) shouldRotate = true;
+                else if (animator != null)
+                {
+                    var animState = animator.GetCurrentAnimatorStateInfo(0);
+                    if (animState.IsName("Hit") || animState.IsName("Hit2") || animState.IsName("Rage"))
+                    {
+                        shouldRotate = true;
+                    }
+                }
+
+                if (shouldRotate)
+                {
+                    transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(dir), Time.deltaTime * 15f);
+                }
             }
             else
             {
@@ -1482,6 +1497,20 @@ public class GolemAI : MonoBehaviour
                 isIdleActionPlaying = false;
                 rageTransitionScheduled = false; // Reset transition flag
                 idleActionTransitionScheduled = false; // Reset IdleAction flag
+                // Face the player immediately when entering Rage and lock rotation
+                if (playerTarget != null)
+                {
+                    Vector3 dir = playerTarget.position - transform.position;
+                    dir.y = 0f;
+                    if (dir.sqrMagnitude > 0.001f)
+                    {
+                        lockedRotation = Quaternion.LookRotation(dir);
+                        rotationLocked = true;
+                        // Lock until rage animation finishes (with small minimum)
+                        rotationLockEndTime = Time.time + Mathf.Max(0.1f, rageAnimationDuration);
+                        transform.rotation = lockedRotation; // snap to face player immediately
+                    }
+                }
                 break;
             case State.Dead:
                 agent.isStopped = true;
@@ -1696,6 +1725,8 @@ public class GolemAI : MonoBehaviour
 
             // Animate rise then destroy
             StartCoroutine(RiseAndDestroy(spikes, endPos, iceSpikeRiseDuration, iceSpikeDuration));
+            // Enable damage after spike has risen, disable before destroy
+            StartCoroutine(EnableDamageFor(damageDealer, iceSpikeRiseDuration, Mathf.Max(0f, iceSpikeDuration - iceSpikeRiseDuration)));
         }
         else
         {
@@ -2397,6 +2428,8 @@ public class GolemAI : MonoBehaviour
                     if (phaseWeaponLengthField != null) phaseWeaponLengthField.SetValue(phaseDamageDealer, phaseSpikeWeaponLength);
 
                     StartCoroutine(RiseAndDestroy(spike, spikePos, phaseAttackIceSpikeRiseDuration, phaseAttackIceSpikeDuration));
+                    // enable damage window for phase spikes
+                    StartCoroutine(EnableDamageFor(phaseDamageDealer, phaseAttackIceSpikeRiseDuration, Mathf.Max(0f, phaseAttackIceSpikeDuration - phaseAttackIceSpikeRiseDuration)));
                 }
                 else
                 {
@@ -2455,6 +2488,25 @@ public class GolemAI : MonoBehaviour
 
         Gizmos.color = Color.cyan;
         Gizmos.DrawWireSphere(transform.position, groundSlamRange);
+    }
+
+    private System.Collections.IEnumerator EnableDamageFor(DamageDealer dealer, float delayBeforeEnable, float duration)
+    {
+        if (dealer == null) yield break;
+
+        // Wait before enabling damage (e.g., while spike rises)
+        if (delayBeforeEnable > 0f)
+            yield return new WaitForSeconds(delayBeforeEnable);
+
+        dealer.StartDealDamage();
+
+        // Keep damage active for the requested duration
+        if (duration > 0f)
+            yield return new WaitForSeconds(duration);
+
+        // Disable damage before spike is destroyed
+        if (dealer != null)
+            dealer.EndDealDamage();
     }
 
     private System.Collections.IEnumerator RiseAndDestroy(GameObject go, Vector3 targetPos, float riseDuration, float totalDuration)
