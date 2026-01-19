@@ -2,7 +2,6 @@ using System.Collections;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.AI;
-// Force recompilation
 //script su dung GolemAnimator.controller
 // Updated to use GolemDamageHandler instead of Enemy.GolemDamageHandler
 [RequireComponent(typeof(Animator))]
@@ -38,7 +37,7 @@ public class GolemAI : MonoBehaviour
     [Tooltip("TakeDamageTest component - auto-created if missing")]
     public TakeDamageTest healthBarSystem;
     [Tooltip("Custom Golem damage handler - optional for boss-specific logic")]
-    public GolemDamageHandler golemDamageHandler;
+    public GolemDamageHandler golemDamageHandler; // Force recompilation
 
     [Header("Detection / Movement")]
     public LayerMask playerLayer;
@@ -108,6 +107,14 @@ public class GolemAI : MonoBehaviour
     public GameObject landingIndicatorPrefab;
     [Tooltip("How long the landing indicator remains before landing")]
     public float landingIndicatorDuration = 1f;
+    [Tooltip("Tỷ lệ kích thước của landing indicator so với prefab (1 = mặc định)")]
+    public float landingIndicatorScale = 1f;
+    [Tooltip("Material thay thế cho landing indicator (để trống nếu dùng material trong prefab)")]
+    public Material landingIndicatorMaterialOverride;
+    [Tooltip("Có áp dụng màu tùy chỉnh lên landing indicator không?")]
+    public bool landingIndicatorUseColor = false;
+    [Tooltip("Màu sẽ áp lên material của landing indicator khi bật tùy chỉnh màu")]
+    public Color landingIndicatorColor = Color.white;
     [Tooltip("Max sample radius when finding valid NavMesh landing position")]
     public float leapLandingSampleRadius = 2f;
     [Tooltip("Duration of the leap animation/movement (seconds)")]
@@ -124,20 +131,7 @@ public class GolemAI : MonoBehaviour
     public float phaseLeapDuration = 1.5f;
     [Tooltip("Simple height multiplier for phase leap (1.0 = same as regular, 2.0 = twice as high)")]
     public float phaseLeapHeightMultiplier = 2.0f;
-    [Tooltip("Prefab for ice spike effect spawned at landing (assign IceSpikes2.fbx or prefab)")]
-    public GameObject iceSpikePrefab;
-    [Tooltip("How long spawned ice spikes should exist (seconds)")]
-    public float iceSpikeDuration = 3f;
-    [Tooltip("Multiplier applied to ice spike model height")]
-    public float iceSpikeHeightMultiplier = 1f;
-    [Tooltip("Multiplier applied to ice spike model radius (X/Z)")]
-    public float iceSpikeRadiusMultiplier = 1f;
-    [Tooltip("Optional material to apply to spawned ice spikes")]
-    public Material iceSpikeMaterial;
-    [Tooltip("How deep below ground spikes spawn before rising")]
-    public float iceSpikeSpawnDepth = 0.6f;
-    [Tooltip("How long spikes take to rise into place (seconds)")]
-    public float iceSpikeRiseDuration = 0.3f;
+    
     [Header("Phase Sequence (50% HP)")]
     public bool enablePhaseAtHalfHealth = true;
     private bool phaseTriggered = false;
@@ -212,7 +206,7 @@ public class GolemAI : MonoBehaviour
     [Tooltip("Duration ground lines show in phase attack")]
     public float phaseAttackGroundLineDuration = 0.8f;
 
-    [Header("Ice Spike Damage Settings")]
+    [Header("Landing Ice Spike Damage")]
     [Tooltip("Damage multiplier for landing ice spikes (relative to ground slam damage)")]
     public float landingSpikeDamageMultiplier = 0.5f;
     [Tooltip("Fixed damage for landing ice spikes (if > 0, overrides multiplier)")]
@@ -221,6 +215,24 @@ public class GolemAI : MonoBehaviour
     public float landingSpikeHitRadius = 0.8f;
     [Tooltip("Weapon length for landing ice spikes damage range")]
     public float landingSpikeWeaponLength = 1f;
+    
+    [Header("Ice Spike Settings (Landing)")]
+    [Tooltip("Prefab cho hiệu ứng cột băng xuất hiện khi đáp (gán IceSpikes2.fbx hoặc prefab)")]
+    public GameObject iceSpikePrefab;
+    [Tooltip("Thời gian cột băng tồn tại sau khi xuất hiện (giây)")]
+    public float iceSpikeDuration = 3f;
+    [Tooltip("Hệ số nhân chiều cao mô hình cột băng (1 = mặc định)")]
+    public float iceSpikeHeightMultiplier = 1f;
+    [Tooltip("Hệ số nhân bán kính (X/Z) của mô hình cột băng")]
+    public float iceSpikeRadiusMultiplier = 1f;
+    [Tooltip("Material tùy chọn áp lên cột băng khi sinh ra")]
+    public Material iceSpikeMaterial;
+    [Tooltip("Khoảng cách (m) cột băng sinh ra dưới mặt đất trước khi trồi lên")]
+    public float iceSpikeSpawnDepth = 0.6f;
+    [Tooltip("Thời gian cột băng trồi lên từ dưới đất đến vị trí (giây)")]
+    public float iceSpikeRiseDuration = 0.3f;
+
+    [Header("Phase Ice Spike Damage")]
     [Tooltip("Damage multiplier for phase ice spikes (relative to rage smash damage)")]
     public float phaseSpikeDamageMultiplier = 0.6f;
     [Tooltip("Fixed damage for phase ice spikes (if > 0, overrides multiplier)")]
@@ -342,10 +354,11 @@ public class GolemAI : MonoBehaviour
         // Configure NavMeshAgent for smooth movement
         if (agent != null)
         {
-            agent.updateRotation = true;
+            // Disable automatic rotation from NavMeshAgent so model only rotates when we explicitly allow it
+            agent.updateRotation = false;
             agent.updatePosition = true;
             agent.acceleration = 8f;  // Smooth acceleration
-            agent.angularSpeed = 120f;  // Smooth rotation
+            agent.angularSpeed = 120f;  // Smooth rotation (used if we enable agent.updateRotation temporarily)
             agent.stoppingDistance = 0.1f;  // Stop close to target
         }
 
@@ -375,13 +388,6 @@ public class GolemAI : MonoBehaviour
             {
                 healthBarSystem = gameObject.AddComponent<TakeDamageTest>();
             }
-        }
-
-        // Sync health values from GolemDamageHandler first
-        if (golemDamageHandler != null)
-        {
-            maxHealth = golemDamageHandler.MaxHealth;
-            currentHealth = golemDamageHandler.CurrentHealth;
         }
 
         // Cấu hình health bar system
@@ -683,9 +689,8 @@ public class GolemAI : MonoBehaviour
                     dir.y = 0;
                     if (dir.sqrMagnitude > 0.001f)
                     {
-                        Quaternion targetRotation = Quaternion.LookRotation(dir);
-                        transform.rotation = targetRotation;
-                        if (showDebug) Debug.Log($"[GolemAI] TURNED to face player: dir={dir.normalized:F2}, rotation={transform.rotation.eulerAngles:F0}");
+                        // Rotation is only applied during Attack state; skip auto-turn here.
+                        if (showDebug) Debug.Log("[GolemAI] Skipping auto-turn (IdleAction) - rotation only on attack.");
                     }
                     else
                     {
@@ -710,14 +715,14 @@ public class GolemAI : MonoBehaviour
             isIdleActionPlaying = false;
 
             // Still try to turn to face player even in timeout
-            if (playerTarget != null)
+                if (playerTarget != null)
             {
                 Vector3 dir = playerTarget.position - transform.position;
                 dir.y = 0;
                 if (dir.sqrMagnitude > 0.001f)
                 {
-                    transform.rotation = Quaternion.LookRotation(dir);
-                    if (showDebug) Debug.Log($"[GolemAI] TURNED to face player (timeout): dir={dir.normalized:F2}");
+                    // Skip auto-turn on timeout; rotation only on attack
+                    if (showDebug) Debug.Log("[GolemAI] Skipping auto-turn on timeout - rotation only on attack.");
                 }
             }
 
@@ -834,17 +839,26 @@ public class GolemAI : MonoBehaviour
         if (Vector3.Distance(currentAgentDestination, playerTarget.position) > 0.5f)
         {
             if (agentAvailable)
-        {
-            agent.isStopped = false;
-            agent.speed = chaseSpeed;
-            agent.SetDestination(playerTarget.position);
-            SetAnimatorWalk(chaseSpeed);
+            {
+                agent.isStopped = false;
+                agent.speed = chaseSpeed;
+                // ensure agent handles rotation while chasing
+                agent.updateRotation = true;
+                agent.SetDestination(playerTarget.position);
+                SetAnimatorWalk(chaseSpeed);
             }
             else
             {
                 // Fallback movement when agent not available/on-navmesh
                 // Move transform directly toward player to avoid errors
                 transform.position = Vector3.MoveTowards(transform.position, playerTarget.position, chaseSpeed * Time.deltaTime);
+                // manual rotation so model faces player while moving
+                Vector3 dirMove = playerTarget.position - transform.position;
+                dirMove.y = 0f;
+                if (dirMove.sqrMagnitude > 0.001f)
+                {
+                    transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(dirMove), Time.deltaTime * 5f);
+                }
                 SetAnimatorWalk(chaseSpeed);
             }
         }
@@ -1412,33 +1426,39 @@ public class GolemAI : MonoBehaviour
                     animator.CrossFade("Sleep", 0.1f, 0);
                     if (showDebug) Debug.Log("[GolemAI] Entering sleep state - crossfading to Sleep");
                 }
+                if (agent != null) agent.updateRotation = false;
                 break;
             case State.IdleAction:
                 agent.isStopped = true;
                 SetAnimatorWalk(0f);
                 idleActionStartTime = Time.time;
                 isRagePlaying = false;
+                if (agent != null) agent.updateRotation = false;
                 break;
             case State.Idle:
                 agent.isStopped = true;
+                if (agent != null) agent.updateRotation = false;
                 break;
             case State.Patrol:
                 agent.isStopped = false;
                 agent.speed = patrolSpeed;
                 currentPatrolTarget = GetRandomPatrolPoint();
                 agent.SetDestination(currentPatrolTarget);
+                if (agent != null) agent.updateRotation = false;
                 break;
             case State.Chase:
                 if (agent != null && agent.enabled && agent.isOnNavMesh)
                 {
                     agent.isStopped = false;
                     agent.speed = chaseSpeed;
+                    if (agent != null) agent.updateRotation = true;
                 }
                 break;
             case State.Attack:
                 if (agent != null && agent.enabled && agent.isOnNavMesh)
                 {
                     agent.isStopped = true;
+                    if (agent != null) agent.updateRotation = false;
                 }
                 // Lock rotation immediately when entering Attack state so boss doesn't track player mid-attack
                 if (playerTarget != null)
@@ -1502,12 +1522,30 @@ public class GolemAI : MonoBehaviour
         if (landingIndicatorPrefab != null)
         {
             var indicator = Instantiate(landingIndicatorPrefab, landingPos, Quaternion.identity);
+            // apply scale multiplier if changed
+            if (Mathf.Abs(landingIndicatorScale - 1f) > 0.0001f)
+            {
+                indicator.transform.localScale = indicator.transform.localScale * landingIndicatorScale;
+            }
+            // override material if provided
+            if (landingIndicatorMaterialOverride != null)
+            {
+                var rends = indicator.GetComponentsInChildren<Renderer>();
+                foreach (var r in rends) r.material = landingIndicatorMaterialOverride;
+            }
+            // apply color override if requested
+            if (landingIndicatorUseColor)
+            {
+                var rends = indicator.GetComponentsInChildren<Renderer>();
+                foreach (var r in rends)
+                {
+                    if (r.material != null && r.material.HasProperty("_Color"))
+                    {
+                        r.material.color = landingIndicatorColor;
+                    }
+                }
+            }
             Destroy(indicator, landingIndicatorDuration);
-        }
-        else
-        {
-            // TODO: Implement runtime landing indicator or assign landingIndicatorPrefab
-            Debug.LogWarning("[GolemAI] No landingIndicatorPrefab assigned - landing indicator will not be shown");
         }
 
         // Smoothly move in an arc from start to landingPos over the animation duration
@@ -2066,7 +2104,11 @@ public class GolemAI : MonoBehaviour
         {
             Vector3 dir = playerTarget.position - transform.position;
             dir.y = 0f;
-            if (dir.sqrMagnitude > 0.001f) transform.rotation = Quaternion.LookRotation(dir);
+            if (dir.sqrMagnitude > 0.001f)
+            {
+                // Do not auto-rotate during phase sequence; rotation is only applied while in Attack.
+                if (showDebug) Debug.Log("[GolemAI] Skipping phase auto-rotate - rotation only on attack.");
+            }
         }
         if (animator != null)
         {
@@ -2225,7 +2267,11 @@ public class GolemAI : MonoBehaviour
         {
             Vector3 dir = playerTarget.position - transform.position;
             dir.y = 0f;
-            if (dir.sqrMagnitude > 0.001f) transform.rotation = Quaternion.LookRotation(dir);
+            if (dir.sqrMagnitude > 0.001f)
+            {
+                // Do not auto-rotate during phase sequence; rotation is only applied while in Attack.
+                if (showDebug) Debug.Log("[GolemAI] Skipping phase auto-rotate (second Rage) - rotation only on attack.");
+            }
         }
         if (animator != null)
         {
@@ -2241,7 +2287,11 @@ public class GolemAI : MonoBehaviour
         {
             Vector3 dir = (playerTarget.position - transform.position).normalized;
             dir.y = 0f;
-            if (dir.sqrMagnitude > 0.001f) transform.rotation = Quaternion.LookRotation(dir);
+            if (dir.sqrMagnitude > 0.001f)
+            {
+                // Skip auto-rotate during phase sleep step; rotation only applied during Attack/Chase.
+                if (showDebug) Debug.Log("[GolemAI] Skipping phase sleep auto-rotate - rotation only on attack/chase.");
+            }
         }
         if (animator != null)
         {
