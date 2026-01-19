@@ -7,15 +7,17 @@ using UnityEngine.InputSystem;
 public class BigMapController : MonoBehaviour
 {
     [Header("UI")]
-    public GameObject bigMapPanel;        // Panel chứa map (ẩn/hiện)
-    public RectTransform mapRect;         // RectTransform của MapImage (hoặc MapViewport)
-    public RectTransform playerMarkerRect; // Marker người chơi (con của mapRect)
+    public GameObject bigMapPanel;            // Panel chứa Big Map
+    public RectTransform mapRect;             // RectTransform của map
+    public RectTransform playerMarkerRect;    // Marker người chơi (con của mapRect)
+
+    [Header("UI Hide When BigMap Open")]
+    public GameObject[] hideWhenBigMapOpen;   // Các UI cần ẩn khi mở Big Map
 
     [Header("Player")]
     public Transform player;
 
     [Header("World Bounds (from capture camera)")]
-    // Bạn chụp cam ở (0,800,0), ortho size 400, ảnh vuông => bounds mặc định như này
     public float minX = -400, maxX = 400;
     public float minZ = -400, maxZ = 400;
 
@@ -27,9 +29,9 @@ public class BigMapController : MonoBehaviour
     public KeyCode toggleKey = KeyCode.M;
 
     [Header("Portals (Teleport Markers)")]
-    public Transform[] portalPoints;           // Các điểm dịch chuyển trong world
-    public MapPortalMarker portalMarkerPrefab; // Prefab UI marker (nên là Button + MapPortalMarker)
-    public RectTransform portalsParent;        // Parent chứa portal markers (thường = mapRect)
+    public Transform[] portalPoints;
+    public MapPortalMarker portalMarkerPrefab;
+    public RectTransform portalsParent;
     public bool closeMapAfterTeleport = true;
 
     [Header("Teleport Support (optional)")]
@@ -43,6 +45,9 @@ public class BigMapController : MonoBehaviour
 
     private MapPortalMarker[] _portalMarkers;
 
+    // =========================
+    // Unity
+    // =========================
     void Awake()
     {
         if (bigMapPanel != null)
@@ -51,12 +56,16 @@ public class BigMapController : MonoBehaviour
         if (portalsParent == null)
             portalsParent = mapRect;
 
-        // Auto grab components if not assigned
         if (player != null)
         {
-            if (characterController == null) characterController = player.GetComponent<CharacterController>();
-            if (playerRigidbody == null) playerRigidbody = player.GetComponent<Rigidbody>();
-            if (navAgent == null) navAgent = player.GetComponent<UnityEngine.AI.NavMeshAgent>();
+            if (characterController == null)
+                characterController = player.GetComponent<CharacterController>();
+
+            if (playerRigidbody == null)
+                playerRigidbody = player.GetComponent<Rigidbody>();
+
+            if (navAgent == null)
+                navAgent = player.GetComponent<UnityEngine.AI.NavMeshAgent>();
         }
     }
 
@@ -69,16 +78,7 @@ public class BigMapController : MonoBehaviour
     {
         if (IsTogglePressedThisFrame())
         {
-            if (bigMapPanel == null)
-            {
-                Debug.LogError("[BigMap] bigMapPanel is NULL (kéo BigMapPanel vào Inspector).");
-                return;
-            }
-
-            bool next = !bigMapPanel.activeSelf;
-            bigMapPanel.SetActive(next);
-
-            if (debugLogs) Debug.Log("[BigMap] bigMapPanel active = " + next);
+            ToggleBigMap();
         }
 
         if (bigMapPanel != null && bigMapPanel.activeSelf)
@@ -88,19 +88,49 @@ public class BigMapController : MonoBehaviour
         }
     }
 
+    // =========================
+    // Toggle BigMap
+    // =========================
+    void ToggleBigMap()
+    {
+        if (bigMapPanel == null)
+        {
+            Debug.LogError("[BigMap] bigMapPanel is NULL.");
+            return;
+        }
+
+        bool next = !bigMapPanel.activeSelf;
+        bigMapPanel.SetActive(next);
+
+        // Ẩn / hiện UI khác
+        SetOtherUIActive(!next);
+
+        if (debugLogs)
+            Debug.Log("[BigMap] BigMap active = " + next);
+    }
+
+    void SetOtherUIActive(bool active)
+    {
+        if (hideWhenBigMapOpen == null) return;
+
+        foreach (var ui in hideWhenBigMapOpen)
+        {
+            if (ui != null)
+                ui.SetActive(active);
+        }
+    }
+
     bool IsTogglePressedThisFrame()
     {
 #if ENABLE_INPUT_SYSTEM
-        // New Input System: hỗ trợ phím M
         if (Keyboard.current != null && Keyboard.current.mKey.wasPressedThisFrame)
             return true;
 #endif
-        // Old Input
         return Input.GetKeyDown(toggleKey);
     }
 
     // =========================
-    // World -> Map UI conversion
+    // World -> Map UI
     // =========================
     Vector2 WorldToMapUI(Vector3 worldPos)
     {
@@ -122,63 +152,48 @@ public class BigMapController : MonoBehaviour
     }
 
     // =========================
-    // Player marker
+    // Player Marker
     // =========================
     void UpdatePlayerMarker()
     {
-        if (player == null || playerMarkerRect == null || mapRect == null) return;
+        if (player == null || playerMarkerRect == null || mapRect == null)
+            return;
 
         Vector2 ui = WorldToMapUI(player.position);
         playerMarkerRect.anchoredPosition = ui;
 
         if (debugLogs)
-            Debug.Log($"[BigMap] Player world=({player.position.x:F1},{player.position.z:F1}) ui={ui}");
+            Debug.Log($"[BigMap] Player UI Pos = {ui}");
     }
 
     // =========================
-    // Portal markers
+    // Portal Markers
     // =========================
     void SpawnPortalMarkers()
     {
-        if (portalMarkerPrefab == null)
-        {
-            if (debugLogs) Debug.LogWarning("[BigMap] portalMarkerPrefab is NULL (chưa gán prefab marker).");
+        if (portalMarkerPrefab == null || portalPoints == null || portalPoints.Length == 0)
             return;
-        }
 
-        if (portalPoints == null || portalPoints.Length == 0)
-        {
-            if (debugLogs) Debug.LogWarning("[BigMap] portalPoints is empty.");
-            return;
-        }
-
-        if (portalsParent == null) portalsParent = mapRect;
         if (portalsParent == null)
-        {
-            Debug.LogError("[BigMap] portalsParent/mapRect is NULL.");
-            return;
-        }
+            portalsParent = mapRect;
 
-        // clear old
+        // Clear old
         if (_portalMarkers != null)
         {
-            for (int i = 0; i < _portalMarkers.Length; i++)
-                if (_portalMarkers[i] != null)
-                    Destroy(_portalMarkers[i].gameObject);
+            foreach (var m in _portalMarkers)
+                if (m != null)
+                    Destroy(m.gameObject);
         }
 
         _portalMarkers = new MapPortalMarker[portalPoints.Length];
 
         for (int i = 0; i < portalPoints.Length; i++)
         {
-            var t = portalPoints[i];
-            if (t == null) continue;
+            if (portalPoints[i] == null) continue;
 
             var marker = Instantiate(portalMarkerPrefab, portalsParent);
             marker.name = $"PortalMarker_{i}";
-
-            // IMPORTANT: Init(map, target) chỉ 2 args
-            marker.Init(this, t);
+            marker.Init(this, portalPoints[i]);
 
             _portalMarkers[i] = marker;
         }
@@ -186,15 +201,13 @@ public class BigMapController : MonoBehaviour
 
     void UpdatePortalMarkers()
     {
-        if (_portalMarkers == null || _portalMarkers.Length == 0) return;
+        if (_portalMarkers == null) return;
 
-        for (int i = 0; i < _portalMarkers.Length; i++)
+        foreach (var m in _portalMarkers)
         {
-            var m = _portalMarkers[i];
             if (m == null || m.Target == null) continue;
 
-            Vector2 ui = WorldToMapUI(m.Target.position);
-            m.Rect.anchoredPosition = ui;
+            m.Rect.anchoredPosition = WorldToMapUI(m.Target.position);
         }
     }
 
@@ -207,17 +220,15 @@ public class BigMapController : MonoBehaviour
 
         Vector3 finalPos = targetPos + teleportOffset;
 
-        // Nếu dùng NavMeshAgent: dùng Warp
         if (navAgent != null && navAgent.enabled)
         {
             navAgent.Warp(finalPos);
         }
         else
         {
-            // Nếu dùng CharacterController: tắt/bật để khỏi bị đẩy ngược
-            if (characterController != null) characterController.enabled = false;
+            if (characterController != null)
+                characterController.enabled = false;
 
-            // Nếu dùng Rigidbody: reset velocity
             if (playerRigidbody != null)
             {
                 playerRigidbody.linearVelocity = Vector3.zero;
@@ -226,12 +237,17 @@ public class BigMapController : MonoBehaviour
 
             player.position = finalPos;
 
-            if (characterController != null) characterController.enabled = true;
+            if (characterController != null)
+                characterController.enabled = true;
         }
 
         if (closeMapAfterTeleport && bigMapPanel != null)
+        {
             bigMapPanel.SetActive(false);
+            SetOtherUIActive(true);
+        }
 
-        if (debugLogs) Debug.Log("[BigMap] Teleported to: " + finalPos);
+        if (debugLogs)
+            Debug.Log("[BigMap] Teleported to " + finalPos);
     }
 }
