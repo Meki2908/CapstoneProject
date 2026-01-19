@@ -2036,6 +2036,10 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 3
       objectReference: {fileID: 0}
+    - target: {fileID: 5190531507421674693, guid: 64b8d063346d9464699b0e24a8a26392, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 5190916689608526156, guid: 64b8d063346d9464699b0e24a8a26392, type: 3}
       propertyPath: m_Layer
       value: 3
@@ -2091,6 +2095,10 @@ PrefabInstance:
     - target: {fileID: 5454620566477405225, guid: 64b8d063346d9464699b0e24a8a26392, type: 3}
       propertyPath: m_Layer
       value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 5454620566477405225, guid: 64b8d063346d9464699b0e24a8a26392, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5456096945242504718, guid: 64b8d063346d9464699b0e24a8a26392, type: 3}
       propertyPath: m_Layer
@@ -3079,6 +3087,10 @@ MonoBehaviour:
   leapCooldown: 8
   landingIndicatorPrefab: {fileID: 5451084722673319884, guid: 45058281578c64944878598e69c3ce5a, type: 3}
   landingIndicatorDuration: 1
+  landingIndicatorScale: 10
+  landingIndicatorMaterialOverride: {fileID: 2100000, guid: 961be6efe44e9fe4fbe2dec0c4e4c62e, type: 2}
+  landingIndicatorUseColor: 0
+  landingIndicatorColor: {r: 1, g: 0.5566037, b: 0.5566037, a: 1}
   leapLandingSampleRadius: 2
   leapDuration: 0.9
   leapArcHeightMultiplier: 0.5
@@ -3130,8 +3142,8 @@ MonoBehaviour:
   landingSpikeWeaponLength: 1
   iceSpikePrefab: {fileID: 100000, guid: b9ce37055ebde674f81e44fcd35f6184, type: 3}
   iceSpikeDuration: 3
-  iceSpikeHeightMultiplier: 1
-  iceSpikeRadiusMultiplier: 1
+  iceSpikeHeightMultiplier: 5
+  iceSpikeRadiusMultiplier: 5
   iceSpikeMaterial: {fileID: 2100000, guid: a61b60ffb43586e40adaba8c9f15351a, type: 2}
   iceSpikeSpawnDepth: 0.6
   iceSpikeRiseDuration: 0.3
@@ -3157,7 +3169,7 @@ MonoBehaviour:
   absorbedOrbsCount: 0
   isFirePhaseActive: 0
   maxHealth: 1000
-  currentHealth: 0
+  currentHealth: 1000
   alwaysStartSleeping: 1
   rageThresholdPercent: 0.33
   showDebug: 1

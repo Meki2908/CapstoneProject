@@ -5,208 +5,124 @@ using UnityEngine.UI;
 using UnityEditor;
 
 /// <summary>
-/// Editor Tool để tự động gắn MenuBackground vào Canvas
+/// Tool đơn giản để thêm Background vào Main_Menu
+/// Cách dùng: Tools > Add Background to Main Menu
 /// </summary>
 public class MenuBackgroundTool
 {
-    [MenuItem("Tools/Menu Background/Add to Selected Canvas")]
-    public static void AddToSelectedCanvas()
+    [MenuItem("Tools/Add Background to Main Menu")]
+    public static void AddBackgroundToMainMenu()
     {
-        GameObject selected = Selection.activeGameObject;
-        
-        if (selected == null)
+        // Tìm Main_Menu trong scene
+        GameObject mainMenu = GameObject.Find("Main_Menu");
+
+        if (mainMenu == null)
         {
-            EditorUtility.DisplayDialog("Lỗi", "Vui lòng chọn một Canvas trong Hierarchy!", "OK");
-            return;
-        }
-        
-        Canvas canvas = selected.GetComponent<Canvas>();
-        if (canvas == null)
-        {
-            canvas = selected.GetComponentInParent<Canvas>();
-        }
-        
-        if (canvas == null)
-        {
-            EditorUtility.DisplayDialog("Lỗi", "Object được chọn không phải Canvas!", "OK");
-            return;
-        }
-        
-        // Kiểm tra đã có script chưa
-        MenuBackground existing = canvas.GetComponent<MenuBackground>();
-        if (existing != null)
-        {
-            Selection.activeGameObject = canvas.gameObject;
-            EditorUtility.DisplayDialog("Đã có sẵn", 
-                "Canvas này đã có MenuBackground!\nĐang chọn nó cho bạn.", "OK");
-            return;
-        }
-        
-        // Thêm script
-        MenuBackground menuBg = canvas.gameObject.AddComponent<MenuBackground>();
-        
-        // Set defaults
-        menuBg.autoSetSortOrder = true;
-        menuBg.sortOrder = -100;
-        menuBg.useOverlay = true;
-        
-        Selection.activeGameObject = canvas.gameObject;
-        
-        EditorUtility.DisplayDialog("Thành công!", 
-            "Đã thêm MenuBackground vào Canvas!\n\n" +
-            "Bây giờ bạn có thể:\n" +
-            "• Kéo Sprite vào 'Background Sprite'\n" +
-            "• Hoặc chọn Video và kéo vào 'Background Video'\n" +
-            "• Điều chỉnh Sort Order nếu cần", "OK");
-    }
-    
-    [MenuItem("Tools/Menu Background/Create Background Canvas")]
-    public static void CreateBackgroundCanvas()
-    {
-        // Tạo Canvas mới
-        GameObject canvasGO = new GameObject("Canvas_Background");
-        Canvas canvas = canvasGO.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = -100;
-        
-        canvasGO.AddComponent<CanvasScaler>();
-        canvasGO.AddComponent<GraphicRaycaster>();
-        
-        // Thêm MenuBackground
-        MenuBackground menuBg = canvasGO.AddComponent<MenuBackground>();
-        menuBg.autoSetSortOrder = true;
-        menuBg.sortOrder = -100;
-        menuBg.useOverlay = true;
-        
-        // Đăng ký Undo
-        Undo.RegisterCreatedObjectUndo(canvasGO, "Create Background Canvas");
-        
-        Selection.activeGameObject = canvasGO;
-        
-        EditorUtility.DisplayDialog("Thành công!", 
-            "Đã tạo Canvas_Background!\n\n" +
-            "Sort Order = -100 (nằm dưới các Canvas khác)\n\n" +
-            "Bây giờ kéo ảnh vào 'Background Sprite' trong Inspector.", "OK");
-    }
-    
-    [MenuItem("Tools/Menu Background/Remove from Selected")]
-    public static void RemoveFromSelected()
-    {
-        GameObject selected = Selection.activeGameObject;
-        
-        if (selected == null)
-        {
-            EditorUtility.DisplayDialog("Lỗi", "Vui lòng chọn một object!", "OK");
-            return;
-        }
-        
-        MenuBackground menuBg = selected.GetComponent<MenuBackground>();
-        if (menuBg == null)
-        {
-            EditorUtility.DisplayDialog("Không tìm thấy", 
-                "Object này không có MenuBackground!", "OK");
-            return;
-        }
-        
-        // Xóa background container nếu có
-        Transform bgContainer = selected.transform.Find("_MenuBackground_");
-        if (bgContainer != null)
-        {
-            Undo.DestroyObjectImmediate(bgContainer.gameObject);
-        }
-        
-        Undo.DestroyObjectImmediate(menuBg);
-        
-        EditorUtility.DisplayDialog("Đã xóa", "MenuBackground đã được xóa!", "OK");
-    }
-    
-    [MenuItem("Tools/Menu Background/Fix Background Layering")]
-    public static void FixBackgroundLayering()
-    {
-        // Tìm tất cả MenuBackground trong scene
-        MenuBackground[] allMenuBgs = Object.FindObjectsOfType<MenuBackground>();
-        
-        if (allMenuBgs.Length == 0)
-        {
-            EditorUtility.DisplayDialog("Không tìm thấy", 
-                "Không có MenuBackground nào trong scene!", "OK");
-            return;
-        }
-        
-        int fixedCount = 0;
-        
-        foreach (MenuBackground menuBg in allMenuBgs)
-        {
-            // Fix 1: Đảm bảo _MenuBackground_ là sibling đầu tiên
-            Transform bgContainer = menuBg.transform.Find("_MenuBackground_");
-            if (bgContainer != null)
+            // Tìm theo tên khác
+            mainMenu = GameObject.Find("Canvas_Main_Menu");
+            if (mainMenu == null)
             {
-                bgContainer.SetAsFirstSibling();
-                fixedCount++;
-            }
-            
-            // Fix 2: Set sort order cho Canvas
-            Canvas canvas = menuBg.GetComponent<Canvas>();
-            if (canvas != null)
-            {
-                canvas.overrideSorting = true;
-                canvas.sortingOrder = menuBg.sortOrder;
+                mainMenu = GameObject.Find("MainMenu");
             }
         }
-        
-        // Tìm tất cả Canvas khác và đảm bảo sort order > -100
-        Canvas[] allCanvases = Object.FindObjectsOfType<Canvas>();
-        int canvasFixed = 0;
-        
-        foreach (Canvas canvas in allCanvases)
+
+        if (mainMenu == null)
         {
-            // Bỏ qua canvas có MenuBackground
-            if (canvas.GetComponent<MenuBackground>() != null) continue;
-            
-            // Nếu sort order <= -100, tăng lên 0
-            if (canvas.sortingOrder <= -100)
-            {
-                canvas.overrideSorting = true;
-                canvas.sortingOrder = 0;
-                canvasFixed++;
-                EditorUtility.SetDirty(canvas);
-            }
+            EditorUtility.DisplayDialog("Không tìm thấy",
+                "Không tìm thấy Main_Menu trong scene!\n\n" +
+                "Hãy dùng 'Add Background to Selected' thay thế.", "OK");
+            return;
         }
-        
-        // Đánh dấu scene đã thay đổi
-        UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(
-            UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene());
-        
-        EditorUtility.DisplayDialog("Hoàn thành!", 
-            $"Đã fix {fixedCount} MenuBackground!\n" +
-            $"Đã điều chỉnh {canvasFixed} Canvas khác.\n\n" +
-            "Background giờ sẽ nằm phía sau UI.", "OK");
+
+        AddBackgroundToObject(mainMenu);
     }
-    
-    [MenuItem("Tools/Menu Background/Recreate Background")]
-    public static void RecreateBackground()
+
+    [MenuItem("Tools/Add Background to Selected")]
+    public static void AddBackgroundToSelected()
     {
         GameObject selected = Selection.activeGameObject;
-        
+
         if (selected == null)
         {
-            EditorUtility.DisplayDialog("Lỗi", "Vui lòng chọn object có MenuBackground!", "OK");
+            EditorUtility.DisplayDialog("Lỗi", "Vui lòng chọn một object trong Hierarchy!", "OK");
             return;
         }
-        
-        MenuBackground menuBg = selected.GetComponent<MenuBackground>();
-        if (menuBg == null)
+
+        AddBackgroundToObject(selected);
+    }
+
+    static void AddBackgroundToObject(GameObject target)
+    {
+        // Kiểm tra đã có background chưa
+        Transform existingBg = target.transform.Find("===BACKGROUND===");
+        if (existingBg != null)
         {
-            EditorUtility.DisplayDialog("Lỗi", "Object này không có MenuBackground!", "OK");
+            Selection.activeGameObject = existingBg.gameObject;
+            EditorUtility.DisplayDialog("Đã có sẵn",
+                "Background đã tồn tại!\n\n" +
+                "Đang chọn nó cho bạn. Kéo ảnh vào component Image.", "OK");
             return;
         }
-        
-        // Xóa và tạo lại
-        menuBg.CreateBackground();
-        
-        EditorUtility.DisplayDialog("Thành công!", 
-            "Đã tạo lại background!\n" +
-            "_MenuBackground_ giờ nằm đầu tiên trong hierarchy.", "OK");
+
+        // Tạo Background Image
+        GameObject bgObj = new GameObject("===BACKGROUND===");
+        Undo.RegisterCreatedObjectUndo(bgObj, "Add Background");
+
+        bgObj.transform.SetParent(target.transform);
+        bgObj.transform.SetAsFirstSibling(); // ĐẶT ĐẦU TIÊN = nằm dưới cùng
+
+        // Setup RectTransform để stretch full màn hình
+        RectTransform rect = bgObj.AddComponent<RectTransform>();
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+        rect.localScale = Vector3.one;
+        rect.localPosition = Vector3.zero;
+
+        // Thêm Image component
+        Image bgImage = bgObj.AddComponent<Image>();
+        bgImage.color = Color.white; // TRẮNG để sprite hiển thị đúng
+        bgImage.raycastTarget = false;
+        bgImage.preserveAspect = false; // Stretch để fill màn hình
+
+        // Log để debug
+        Debug.Log("[Background] Đã tạo ===BACKGROUND=== tại index 0. Kéo sprite vào Source Image trong Inspector.");
+        Debug.Log("[Background] Nếu không thấy, kiểm tra: 1) Sprite đã import đúng chưa 2) Color = White 3) Canvas có Render Mode đúng không");
+
+        // Chọn object mới tạo
+        Selection.activeGameObject = bgObj;
+
+        EditorUtility.DisplayDialog("Thành công!",
+            "Đã thêm ===BACKGROUND=== vào " + target.name + "!\n\n" +
+            "Bây giờ:\n" +
+            "1. Chọn ===BACKGROUND=== trong Hierarchy\n" +
+            "2. Trong Inspector, tìm component 'Image'\n" +
+            "3. Kéo sprite vào field 'Source Image'\n\n" +
+            "Background sẽ nằm phía sau tất cả UI!", "OK");
+    }
+
+    [MenuItem("Tools/Remove Background from Selected")]
+    public static void RemoveBackground()
+    {
+        GameObject selected = Selection.activeGameObject;
+
+        if (selected == null)
+        {
+            EditorUtility.DisplayDialog("Lỗi", "Vui lòng chọn object chứa background!", "OK");
+            return;
+        }
+
+        Transform bg = selected.transform.Find("===BACKGROUND===");
+        if (bg == null)
+        {
+            EditorUtility.DisplayDialog("Không tìm thấy",
+                "Object này không có ===BACKGROUND===!", "OK");
+            return;
+        }
+
+        Undo.DestroyObjectImmediate(bg.gameObject);
+        EditorUtility.DisplayDialog("Đã xóa", "Background đã được xóa!", "OK");
     }
 }
 #endif

@@ -9,6 +9,12 @@ namespace SlimUI.ModernMenu{
 		public enum Platform {Desktop, Mobile};
 		public Platform platform;
 		// toggle buttons
+		[Header("MOBILE SETTINGS")]
+		public GameObject mobileSFXtext;
+		public GameObject mobileMusictext;
+		public GameObject mobileShadowofftextLINE;
+		public GameObject mobileShadowlowtextLINE;
+		public GameObject mobileShadowhightextLINE;
 
 		[Header("VIDEO SETTINGS")]
 		public GameObject fullscreentext;
@@ -30,6 +36,10 @@ namespace SlimUI.ModernMenu{
 		[Header("GAME SETTINGS")]
 		public GameObject showhudtext;
 		public GameObject tooltipstext;
+		public GameObject difficultynormaltext;
+		public GameObject difficultynormaltextLINE;
+		public GameObject difficultyhardcoretext;
+		public GameObject difficultyhardcoretextLINE;
 
 		[Header("CONTROLS SETTINGS")]
 		public GameObject invertmousetext;
@@ -47,6 +57,16 @@ namespace SlimUI.ModernMenu{
 		
 
 		public void  Start (){
+			// check difficulty
+			if(PlayerPrefs.GetInt("NormalDifficulty") == 1){
+				difficultynormaltextLINE.gameObject.SetActive(true);
+				difficultyhardcoretextLINE.gameObject.SetActive(false);
+			}
+			else
+			{
+				difficultyhardcoretextLINE.gameObject.SetActive(true);
+				difficultynormaltextLINE.gameObject.SetActive(false);
+			}
 
 			// check slider values
 			musicSlider.GetComponent<Slider>().value = PlayerPrefs.GetFloat("MusicVolume");
@@ -100,6 +120,28 @@ namespace SlimUI.ModernMenu{
 					shadowofftextLINE.gameObject.SetActive(false);
 					shadowlowtextLINE.gameObject.SetActive(false);
 					shadowhightextLINE.gameObject.SetActive(true);
+				}
+			}else if(platform == Platform.Mobile){
+				if(PlayerPrefs.GetInt("MobileShadows") == 0){
+					QualitySettings.shadowCascades = 0;
+					QualitySettings.shadowDistance = 0;
+					mobileShadowofftextLINE.gameObject.SetActive(true);
+					mobileShadowlowtextLINE.gameObject.SetActive(false);
+					mobileShadowhightextLINE.gameObject.SetActive(false);
+				}
+				else if(PlayerPrefs.GetInt("MobileShadows") == 1){
+					QualitySettings.shadowCascades = 2;
+					QualitySettings.shadowDistance = 75;
+					mobileShadowofftextLINE.gameObject.SetActive(false);
+					mobileShadowlowtextLINE.gameObject.SetActive(true);
+					mobileShadowhightextLINE.gameObject.SetActive(false);
+				}
+				else if(PlayerPrefs.GetInt("MobileShadows") == 2){
+					QualitySettings.shadowCascades = 4;
+					QualitySettings.shadowDistance = 100;
+					mobileShadowofftextLINE.gameObject.SetActive(false);
+					mobileShadowlowtextLINE.gameObject.SetActive(false);
+					mobileShadowhightextLINE.gameObject.SetActive(true);
 				}
 			}
 
@@ -205,6 +247,29 @@ namespace SlimUI.ModernMenu{
 			}
 		}
 
+		// the playerprefs variable that is checked to enable mobile sfx while in game
+		public void MobileSFXMute (){
+			if(PlayerPrefs.GetInt("Mobile_MuteSfx")==0){
+				PlayerPrefs.SetInt("Mobile_MuteSfx",1);
+				mobileSFXtext.GetComponent<TMP_Text>().text = "on";
+			}
+			else if(PlayerPrefs.GetInt("Mobile_MuteSfx")==1){
+				PlayerPrefs.SetInt("Mobile_MuteSfx",0);
+				mobileSFXtext.GetComponent<TMP_Text>().text = "off";
+			}
+		}
+
+		public void MobileMusicMute (){
+			if(PlayerPrefs.GetInt("Mobile_MuteMusic")==0){
+				PlayerPrefs.SetInt("Mobile_MuteMusic",1);
+				mobileMusictext.GetComponent<TMP_Text>().text = "on";
+			}
+			else if(PlayerPrefs.GetInt("Mobile_MuteMusic")==1){
+				PlayerPrefs.SetInt("Mobile_MuteMusic",0);
+				mobileMusictext.GetComponent<TMP_Text>().text = "off";
+			}
+		}
+
 		// show tool tips like: 'How to Play' control pop ups
 		public void ToolTips (){
 			if(PlayerPrefs.GetInt("ToolTips")==0){
@@ -215,6 +280,20 @@ namespace SlimUI.ModernMenu{
 				PlayerPrefs.SetInt("ToolTips",0);
 				tooltipstext.GetComponent<TMP_Text>().text = "off";
 			}
+		}
+
+		public void NormalDifficulty (){
+			difficultyhardcoretextLINE.gameObject.SetActive(false);
+			difficultynormaltextLINE.gameObject.SetActive(true);
+			PlayerPrefs.SetInt("NormalDifficulty",1);
+			PlayerPrefs.SetInt("HardCoreDifficulty",0);
+		}
+
+		public void HardcoreDifficulty (){
+			difficultyhardcoretextLINE.gameObject.SetActive(true);
+			difficultynormaltextLINE.gameObject.SetActive(false);
+			PlayerPrefs.SetInt("NormalDifficulty",0);
+			PlayerPrefs.SetInt("HardCoreDifficulty",1);
 		}
 
 		public void ShadowsOff (){
@@ -244,6 +323,32 @@ namespace SlimUI.ModernMenu{
 			shadowhightextLINE.gameObject.SetActive(true);
 		}
 
+		public void MobileShadowsOff (){
+			PlayerPrefs.SetInt("MobileShadows",0);
+			QualitySettings.shadowCascades = 0;
+			QualitySettings.shadowDistance = 0;
+			mobileShadowofftextLINE.gameObject.SetActive(true);
+			mobileShadowlowtextLINE.gameObject.SetActive(false);
+			mobileShadowhightextLINE.gameObject.SetActive(false);
+		}
+
+		public void MobileShadowsLow (){
+			PlayerPrefs.SetInt("MobileShadows",1);
+			QualitySettings.shadowCascades = 2;
+			QualitySettings.shadowDistance = 75;
+			mobileShadowofftextLINE.gameObject.SetActive(false);
+			mobileShadowlowtextLINE.gameObject.SetActive(true);
+			mobileShadowhightextLINE.gameObject.SetActive(false);
+		}
+
+		public void MobileShadowsHigh (){
+			PlayerPrefs.SetInt("MobileShadows",2);
+			QualitySettings.shadowCascades = 4;
+			QualitySettings.shadowDistance = 500;
+			mobileShadowofftextLINE.gameObject.SetActive(false);
+			mobileShadowlowtextLINE.gameObject.SetActive(false);
+			mobileShadowhightextLINE.gameObject.SetActive(true);
+		}
 
 		public void vsync (){
 			if(QualitySettings.vSyncCount == 0){

@@ -7,6 +7,8 @@ public class DamageDealer : MonoBehaviour
     [SerializeField] float weaponDamage = 10f;      // dmg
     [SerializeField] float hitRadius = 0.3f;        // bán kính SphereCast
     [SerializeField] LayerMask targetLayer;         // kẻ địch nằm layer nào
+    [Header("Debug")]
+    [SerializeField] bool debugDamage = false;
 
     bool canDealDamage;
     List<GameObject> hasDealtDamage;
@@ -21,71 +23,38 @@ public class DamageDealer : MonoBehaviour
     {
         if (canDealDamage)
         {
+            // Primary detection: spherecast along forward (useful for swings/projectiles)
             RaycastHit[] hits = Physics.SphereCastAll(
-                transform.position,         // điểm bắt đầu
-                hitRadius,                  // bán kính
-                transform.forward,          // hướng chém
-                weaponLength,               // tầm chém
-                targetLayer                 // chỉ chém trúng enemy layer
+                transform.position,
+                hitRadius,
+                transform.forward,
+                weaponLength,
+                targetLayer
             );
+
+            HashSet<GameObject> processed = new HashSet<GameObject>();
 
             foreach (var hit in hits)
             {
-                if (hit.transform.TryGetComponent(out TakeDamageTest enemy)
-                    && !hasDealtDamage.Contains(hit.transform.gameObject))
-                {
-                    float finalDamage = weaponDamage;
+                if (hit.transform == null) continue;
+                var go = hit.transform.gameObject;
+                if (processed.Contains(go) || hasDealtDamage.Contains(go)) continue;
+                ProcessHitTransform(hit.transform, hit.point);
+                processed.Add(go);
+            }
 
-                    // Apply damage multiplier from equipped gems (based on current weapon)
-                    var wc = GetComponentInParent<WeaponController>();
-                    if (wc != null && wc.GetCurrentWeapon() != null && WeaponGemManager.Instance != null)
-                    {
-                        float dmgMult = WeaponGemManager.Instance.GetDamageMultiplier(wc.GetCurrentWeapon().weaponType);
-                        finalDamage *= dmgMult;
-                    }
-
-                    // Check for critical hit from equipment
-                    bool isCrit = false;
-                    float critDamageMultiplier = 1f;
-                    WeaponType currentWeaponType = WeaponType.None;
-                    
-                    // Base crit multiplier (same as BaseEffectScript)
-                    const float BASE_CRIT_MULTIPLIER = 1.5f; // Default 1.5x crit multiplier
-                    
-                    if (EquipmentManager.Instance != null)
-                    {
-                        float critRate = EquipmentManager.Instance.GetTotalCritRateBonus();
-                        float randomValue = Random.Range(0f, 1f);
-                        isCrit = randomValue < critRate;
-
-                        if (isCrit)
-                        {
-                            // Base crit multiplier (1.5x) + equipment bonus
-                            critDamageMultiplier = BASE_CRIT_MULTIPLIER;
-                            float equipmentCritBonus = EquipmentManager.Instance.GetTotalCritDamageMultiplier();
-                            // Equipment returns total multiplier (e.g., 1.5), so we need to extract the bonus part
-                            // If equipment gives 1.5x, and base is 1.5x, total should be 1.5 + (1.5 - 1.0) = 2.0x
-                            float equipmentBonus = equipmentCritBonus - 1f; // Extract bonus part (e.g., 1.5 -> 0.5)
-                            critDamageMultiplier = BASE_CRIT_MULTIPLIER + equipmentBonus;
-                            finalDamage *= critDamageMultiplier;
-                        }
-                    }
-
-                    // Get current weapon type for damage text
-                    if (wc != null && wc.GetCurrentWeapon() != null)
-                    {
-                        currentWeaponType = wc.GetCurrentWeapon().weaponType;
-                    }
-
-                    // Pass weapon type and crit status to TakeDamage
-                    enemy.TakeDamage(finalDamage, currentWeaponType, isCrit);
-                    hasDealtDamage.Add(hit.transform.gameObject);
-
-                    if (isCrit)
-                    {
-                        Debug.Log($"[DamageDealer] Critical hit! Damage: {finalDamage} (multiplier: {critDamageMultiplier:F2}x)");
-                    }
-                }
+            // Secondary detection: overlap capsule from base to top of weapon (covers vertical spikes)
+            Vector3 capsuleStart = transform.position;
+            Vector3 capsuleEnd = transform.position + Vector3.up * Mathf.Max(0.01f, weaponLength);
+            Collider[] overlaps = Physics.OverlapCapsule(capsuleStart, capsuleEnd, Mathf.Max(0.01f, hitRadius), targetLayer);
+            foreach (var col in overlaps)
+            {
+                if (col == null || col.transform == null) continue;
+                var go = col.transform.gameObject;
+                if (processed.Contains(go) || hasDealtDamage.Contains(go)) continue;
+                Vector3 hitPoint = col.ClosestPoint(transform.position);
+                ProcessHitTransform(col.transform, hitPoint);
+                processed.Add(go);
             }
         }
     }
@@ -110,5 +79,80 @@ public class DamageDealer : MonoBehaviour
         Gizmos.DrawWireSphere(transform.position, hitRadius);
         Gizmos.DrawLine(transform.position, transform.position + direction * weaponLength);
         Gizmos.DrawWireSphere(transform.position + direction * weaponLength, hitRadius);
+    }
+
+    private void ProcessHitTransform(Transform targetTransform, Vector3 hitPoint)
+    {
+        if (targetTransform == null) return;
+
+        GameObject rootGo = targetTransform.gameObject;
+        if (debugDamage) Debug.Log($"[DamageDealer] Processing hit: target={rootGo.name}, layer={LayerMask.LayerToName(rootGo.layer)}, damage={weaponDamage:F2}");
+
+        // 1) IDamageable on self or parent
+        var dmgable = targetTransform.GetComponentInParent<IDamageable>();
+        if (dmgable != null)
+        {
+            int intDamage = Mathf.RoundToInt(weaponDamage);
+            if (debugDamage) Debug.Log($"[DamageDealer] Found IDamageable on {dmgable.GetTransform().name}, applying {intDamage} damage");
+            dmgable.TakeDamage(intDamage, hitPoint);
+            hasDealtDamage.Add(rootGo);
+            return;
+        }
+
+        // 2) PlayerHealth on self or parent
+        var playerHealth = targetTransform.GetComponentInParent<PlayerHealth>();
+        if (playerHealth != null)
+        {
+            float finalDamage = weaponDamage;
+            var wc = GetComponentInParent<WeaponController>();
+            if (wc != null && wc.GetCurrentWeapon() != null && WeaponGemManager.Instance != null)
+            {
+                float dmgMult = WeaponGemManager.Instance.GetDamageMultiplier(wc.GetCurrentWeapon().weaponType);
+                finalDamage *= dmgMult;
+            }
+            if (debugDamage) Debug.Log($"[DamageDealer] Hitting PlayerHealth on {playerHealth.gameObject.name} for {finalDamage:F2} at {hitPoint}");
+            playerHealth.TakeDamage(finalDamage, hitPoint);
+            hasDealtDamage.Add(rootGo);
+            return;
+        }
+
+        // 3) Enemy TakeDamageTest (fallback)
+        var enemy = targetTransform.GetComponentInParent<TakeDamageTest>();
+        if (enemy != null)
+        {
+            float finalDamage = weaponDamage;
+            var wc = GetComponentInParent<WeaponController>();
+            if (wc != null && wc.GetCurrentWeapon() != null && WeaponGemManager.Instance != null)
+            {
+                float dmgMult = WeaponGemManager.Instance.GetDamageMultiplier(wc.GetCurrentWeapon().weaponType);
+                finalDamage *= dmgMult;
+            }
+
+            // Crit calculation
+            bool isCrit = false;
+            const float BASE_CRIT_MULTIPLIER = 1.5f;
+            float critDamageMultiplier = 1f;
+            if (EquipmentManager.Instance != null)
+            {
+                float critRate = EquipmentManager.Instance.GetTotalCritRateBonus();
+                if (Random.Range(0f, 1f) < critRate)
+                {
+                    isCrit = true;
+                    critDamageMultiplier = BASE_CRIT_MULTIPLIER;
+                    float equipmentCritBonus = EquipmentManager.Instance.GetTotalCritDamageMultiplier();
+                    float equipmentBonus = equipmentCritBonus - 1f;
+                    critDamageMultiplier = BASE_CRIT_MULTIPLIER + equipmentBonus;
+                    finalDamage *= critDamageMultiplier;
+                }
+            }
+
+            WeaponType currentWeaponType = WeaponType.None;
+            var wc2 = GetComponentInParent<WeaponController>();
+            if (wc2 != null && wc2.GetCurrentWeapon() != null) currentWeaponType = wc2.GetCurrentWeapon().weaponType;
+
+            enemy.TakeDamage(finalDamage, currentWeaponType, isCrit);
+            hasDealtDamage.Add(rootGo);
+            if (isCrit) Debug.Log($"[DamageDealer] Critical hit! Damage: {finalDamage} (multiplier: {critDamageMultiplier:F2}x)");
+        }
     }
 }
