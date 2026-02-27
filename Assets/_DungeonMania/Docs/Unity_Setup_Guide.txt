@@ -1,0 +1,417 @@
+# HƯỚNG DẪN SETUP DUNGEON WAVE SYSTEM - CÁCH A
+# (Dùng EnemyNew Prefab + GamePlayManager)
+
+## MỤC LỤC
+1. Tổng quan về Cách A
+2. Tạo UI Canvas
+3. Setup DungeonManager
+4. Kết nối Player với hệ thống
+5. Test hệ thống
+6. Các vấn đề thường gặp
+
+---
+
+## BƯỚC 1: TỔNG QUAN VỀ CÁCH A
+
+### 1.1 Nguyên lý hoạt động
+
+Cách A sử dụng:
+- **1 prefab duy nhất**: `EnemyNew` (chứa tất cả enemy bên trong)
+- **GamePlayManager**: Cấu hình số lượng mỗi loại enemy cho từng wave
+- **RandomEnemy**: Tự động chọn loại enemy ngẫu nhiên theo cấu hình
+
+### 1.2 Ưu điểm
+- Không cần tách prefab
+- Không cần patch EnemyScript
+- Nhanh nhất (35-50 phút)
+
+### 1.3 Nhược điểm
+- Enemy được chọn ngẫu nhiên theo tỷ lệ (không cố định 100%)
+
+### 1.4 Luồng hoạt động
+
+```
+Wave bắt đầu
+    ↓
+DungeonWaveManager cấu hình GamePlayManager:
+  - GamePlayManager.archers = 2
+  - GamePlayManager.monsteres = 1
+  - GamePlayManager.lich = 0
+    ↓
+Spawn 3 lần EnemyNew
+    ↓
+Mỗi EnemyNew:
+  - RandomEnemy chạy
+  - Đọc GamePlayManager để chọn enemy
+  - Lần 1: chọn archer (vì archers < 2)
+  - Lần 2: chọn archer (vì archers < 2)  
+  - Lần 3: chọn monster (vì archers = 2 rồi, monsters < 1)
+    ↓
+Player tiêu diệt hết → Wave tiếp theo
+```
+
+---
+
+## BƯỚC 2: TẠO UI CANVAS
+
+### 2.1 Tạo Canvas mới
+1. Trong Unity, right-click trong Hierarchy → **UI** → **Canvas**
+2. Đặt tên: `DungeonCanvas`
+3. Trong Inspector của Canvas:
+   - **Render Mode**: Screen Space - Overlay
+   - **UI Scale Mode**: Scale With Screen Size
+   - **Reference Resolution**: 1920 x 1080
+
+### 2.2 Tạo Wave Notification UI
+1. Right-click vào `DungeonCanvas` → **UI** → **GameObject** (đặt tên: `WaveNotification`)
+2. Thêm component **CanvasGroup**
+3. Trong `WaveNotification`:
+   - Tạo **Text - TextMeshPro** (đặt tên: `WaveNameText`)
+   - Text: "WAVE 1"
+   - Font Size: 72
+   - Color: White/Yellow
+   - Alignment: Center/Middle
+   - Position: Giữa màn hình (0, 200, 0)
+   - RectTransform: Width 800, Height 150
+
+### 2.3 Tạo Countdown UI
+1. Right-click vào `DungeonCanvas` → **UI** → **GameObject** (đặt tên: `CountdownUI`)
+2. Trong `CountdownUI`:
+   - Tạo **Text - TextMeshPro** (đặt tên: `CountdownText`)
+   - Text: "5"
+   - Font Size: 150
+   - Color: Red/Orange
+   - Alignment: Center/Middle
+   - Position: Giữa màn hình (0, 0, 0)
+   - RectTransform: Width 300, Height 300
+
+### 2.4 Tạo Status Text
+1. Right-click vào `DungeonCanvas` → **UI** → **Text - TextMeshPro** (đặt tên: `StatusText`)
+2. Thiết lập:
+   - Text: (để trống)
+   - Font Size: 36
+   - Color: White
+   - Alignment: Center/Middle
+   - Position: Đáy màn hình (0, 100, 0)
+   - RectTransform: Width 1000, Height 50
+
+### 2.5 Tạo Dungeon Complete UI
+1. Right-click vào `DungeonCanvas` → **UI** → **Panel** (đặt tên: `DungeonCompleteUI`)
+2. Trong Inspector Panel:
+   - **Image Color**: Black với Alpha 180 (mờ)
+   - Width: 1920, Height: 1080
+3. Thêm các child objects:
+   - **Text - TextMeshPro**: "DUNGEON COMPLETE!"
+     - Font Size: 64, Color: Gold/Green, Alignment: Center
+     - Position: (0, 150, 0)
+   - **Text - TextMeshPro** (đặt tên: `ExpRewardText`)
+     - Text: "EXP: 0"
+     - Font Size: 40, Color: White
+     - Position: (0, 50, 0)
+   - **Button - TextMeshPro** (đặt tên: `BtnReturnMap`)
+     - Text: "Return to Map"
+     - Position: (0, -100, 0)
+     - Size: 300 x 80
+
+### 2.6 Tạo Dungeon Failed UI
+1. Right-click vào `DungeonCanvas` → **UI** → **Panel** (đặt tên: `DungeonFailedUI`)
+2. Trong Inspector Panel:
+   - **Image Color**: Black với Alpha 180
+   - Width: 1920, Height: 1080
+3. Thêm các child objects:
+   - **Text - TextMeshPro**: "DUNGEON FAILED!"
+     - Font Size: 64, Color: Red
+     - Position: (0, 150, 0)
+   - **Button - TextMeshPro** (đặt tên: `BtnRetry`)
+     - Text: "Retry"
+     - Position: (0, 0, 0)
+     - Size: 300 x 80
+   - **Button - TextMeshPro** (đặt tên: `BtnReturnMapFailed`)
+     - Text: "Return to Map"
+     - Position: (0, -100, 0)
+     - Size: 300 x 80
+
+---
+
+## BƯỚC 3: SETUP DUNGEON MANAGER
+
+### 3.1 Tạo GameObject DungeonManager
+1. Trong Hierarchy, right-click → **Create Empty** (đặt tên: `DungeonManager`)
+2. Position: (0, 0, 0)
+
+### 3.2 Thêm Script
+1. Kéo script `DungeonWaveManager.cs` vào `DungeonManager`
+2. Hoặc: Trong Inspector, click **Add Component** → gõ `DungeonWaveManager`
+
+### 3.3 Cấu hình Inspector - Phần 1: Dungeon Settings
+
+```
+Dungeon Name: "Sa Mac Dungeon"
+Total Waves: 5
+Map Type: 0 (Desert)
+```
+
+### 3.4 Cấu hình Inspector - Phần 2: Spawn Settings
+
+```
+Spawn Radius: 20
+Min Distance From Player: 5
+Obstacle Layer: [Chọn layer của tường]
+Spawn Attempt Count: 10
+```
+
+### 3.5 Cấu hình Inspector - Phần 3: Wave Timing
+
+```
+Wave Countdown Time: 5
+Wave Delay Time: 3
+```
+
+### 3.6 Cấu hình Inspector - Phần 4: ENEMY COUNT PER WAVE (CÁCH A)
+
+Đây là phần QUAN TRỌNG để điều khiển số lượng enemy mỗi wave!
+
+**Archer Count** (Size = 5):
+```
+Element 0: 1   (Wave 1: 1 archer)
+Element 1: 2   (Wave 2: 2 archer)
+Element 2: 3   (Wave 3: 3 archer)
+Element 3: 2   (Wave 4: 2 archer)
+Element 4: 1   (Wave 5: 1 archer)
+```
+
+**Monster Count** (Size = 5):
+```
+Element 0: 0   (Wave 1: 0 monster)
+Element 1: 1   (Wave 2: 1 monster)
+Element 2: 2   (Wave 3: 2 monster)
+Element 3: 3   (Wave 4: 3 monster)
+Element 4: 2   (Wave 5: 2 monster)
+```
+
+**Lich Count** (Size = 5):
+```
+Element 0: 0   (Wave 1: 0 lich)
+Element 1: 0   (Wave 2: 0 lich)
+Element 2: 1   (Wave 3: 1 lich)
+Element 3: 1   (Wave 4: 1 lich)
+Element 4: 2   (Wave 5: 2 lich)
+```
+
+**Boss Count** (Size = 5):
+```
+Element 0: 0   (Wave 1: 0 boss)
+Element 1: 0   (Wave 2: 0 boss)
+Element 2: 0   (Wave 3: 0 boss)
+Element 3: 1   (Wave 4: 1 boss)
+Element 4: 0   (Wave 5: 0 boss)
+```
+
+**Demon Count** (Size = 5):
+```
+Element 0: 0   (Wave 1: 0 demon)
+Element 1: 0   (Wave 2: 0 demon)
+Element 3: 0   (Wave 3: 0 demon)
+Element 3: 0   (Wave 4: 0 demon)
+Element 4: 1   (Wave 5: 1 demon)
+```
+
+### 3.7 Cấu hình Inspector - Phần 5: PREFAB (CÁCH A)
+
+```
+Enemy New Prefab: [Kéo prefab EnemyNew vào đây]
+```
+
+**Lưu ý quan trọng:**
+- Chỉ cần kéo **1 prefab duy nhất**: `EnemyNew`
+- KHÔNG cần kéo các prefab riêng (Skeleton, Archer, Monster,...)
+- Script sẽ tự động dùng RandomEnemy để chọn loại enemy
+
+### 3.8 Cấu hình Inspector - Phần 6: REFERENCES
+
+Kéo các UI objects vào các slot tương ứng:
+
+| Script Field | Kéo từ Hierarchy |
+|--------------|------------------|
+| Player | Player object |
+| Wave Notification UI | WaveNotification |
+| Wave Name Text | WaveNameText |
+| Countdown UI | CountdownUI |
+| Countdown Text | CountdownText |
+| Dungeon Complete UI | DungeonCompleteUI |
+| Dungeon Failed UI | DungeonFailedUI |
+| Exp Reward Text | ExpRewardText |
+| Status Text | StatusText |
+
+---
+
+## BƯỚC 4: KẾT NỐI PLAYER VỚI HỆ THỐNG
+
+### 4.1 Kiểm tra Player Object
+1. Tìm object Player trong scene
+2. Đảm bảo tên là **"Player"** (không có dấu cách thừa)
+3. Đảm bảo có các components:
+   - CharacterController hoặc CapsuleCollider
+   - Character (script)
+   - PlayerHealth (script)
+
+### 4.2 Thêm kết nối Player Death
+Mở file `PlayerHealth.cs` và tìm method `Die()` hoặc `OnDeath()`, thêm dòng này vào cuối method:
+
+```csharp
+// Thêm vào cuối method Die()
+private void Die()
+{
+    // ... code hiện tại ...
+    
+    // Thêm dòng này để báo dungeon manager biết player chết
+    var dungeonManager = FindObjectOfType<DungeonWaveManager>();
+    if (dungeonManager != null)
+    {
+        dungeonManager.OnPlayerDied();
+    }
+}
+```
+
+### 4.3 Đảm bảo Player có NavMeshAgent (nếu dùng Enemy NavMesh)
+1. Chọn Player object
+2. Add Component → **NavMeshAgent**
+3. Cấu hình:
+   - Radius: 0.5
+   - Height: 2
+   - Speed: 5
+   - Auto Braking: true
+
+---
+
+## BƯỚC 5: TEST HỆ THỐNG
+
+### 5.1 Build and Run
+1. Nhấn **Ctrl + B** để build
+2. Hoặc: Nhấn **Play** trong Unity Editor
+
+### 5.2 Kiểm tra các tính năng
+
+| Tính năng | Cách test |
+|-----------|-----------|
+| Countdown | Chạy game → thấy đếm ngược 5→4→3→2→1 |
+| Spawn Enemy | Sau countdown → enemy spawn quanh player |
+| Wave Notification | Thấy "WAVE 1" hiện lên |
+| Kill Enemy | Đánh chết 1 enemy → đếm giảm |
+| Chuyển wave | Kill hết enemy → thấy countdown wave mới |
+| Boss Wave | Wave 4 → thấy Boss spawn |
+| Demon Wave | Wave 5 → thấy Demon spawn |
+| Win | Kill Demon → thấy "DUNGEON COMPLETE!" |
+| Fail | Để player chết → thấy "DUNGEON FAILED!" |
+
+### 5.3 Debug Keys (Trong Game)
+
+Nhấn các phím này khi đang chơi để test nhanh:
+
+| Phím | Chức năng |
+|------|-----------|
+| **K** | Kill tất cả enemy (test wave complete) |
+| **N** | Next wave (force chuyển wave) |
+| **1** | Jump to Wave 1 |
+| **2** | Jump to Wave 2 |
+| **3** | Jump to Wave 3 |
+| **4** | Jump to Wave 4 |
+| **5** | Jump to Wave 5 |
+
+### 5.4 Debug Log
+
+Mở Console để xem log:
+```
+[DungeonWave] Bắt đầu dungeon: Sa Mac Dungeon
+[DungeonWave] Wave 1: A=1 M=0 L=0 B=0 D=0 (Tổng: 1)
+[DungeonWave] GamePlayManager configured: A=1 M=0 L=0 B=0 D=0
+[DungeonWave] Spawned EnemyNew at (x, y, z)
+[DungeonWave] Enemy type identified: 1
+[DungeonWave] Enemy type 1 died. Còn lại: 0. EXP: 150
+```
+
+---
+
+## CÁC VẤN ĐỀ THƯỜNG GẶP
+
+### Lỗi: Enemy spawn trong tường
+**Nguyên nhân:** Chưa gán Obstacle Layer
+**Giải pháp:** Chọn layer cho tường (ví dụ: "Obstacle"), sau đó chọn layer đó trong Obstacle Layer field
+
+### Lỗi: Player không tìm thấy
+**Nguyên nhân:** Tên Player object khác
+**Giải pháp:** Đổi tên thành "Player" hoặc kéo Player vào Player field trong Inspector
+
+### Lỗi: UI không hiện
+**Nguyên nhân:** Chưa gán UI references
+**Giải pháp:** Kéo đủ UI objects vào các field trong Inspector
+
+### Lỗi: Enemy không di chuyển
+**Nguyên nhân:** Thiếu NavMeshAgent hoặc chưa bake NavMesh
+**Giải pháp:** 
+1. Thêm NavMeshAgent vào enemy prefab
+2. Chọn Floor/Terrain → Window → AI → Navigation → Bake
+
+### Lỗi: EnemyNew Prefab = None
+**Nguyên nhân:** Chưa kéo prefab EnemyNew vào field
+**Giải pháp:** Kéo prefab EnemyNew vào "Enemy New Prefab" trong Inspector
+
+### Lỗi: Số lượng enemy không đúng với cấu hình
+**Nguyên nhân:** RandomEnemy chọn ngẫu nhiên, có thể không chính xác 100%
+**Giải pháp:** Đây là behavior bình thường của Cách A. Nếu cần chính xác, dùng Cách B
+
+---
+
+## BẢNG CHEAT SHEET
+
+| Thao tác | Cách làm |
+|----------|----------|
+| Đổi số enemy mỗi wave | Sửa array trong Inspector (Archer Count, Monster Count,...) |
+| Đổi bán kính spawn | Sửa Spawn Radius = 25 |
+| Đổi thời gian countdown | Sửa Wave Countdown Time = 3 |
+| Đổi tên dungeon | Sửa Dungeon Name = "Ten Map" |
+| Test nhanh wave complete | Nhấn K |
+| Test next wave | Nhấn N |
+| Jump to wave X | Nhấn số 1-5 |
+
+---
+
+## SO SÁNH CÁCH A vs CÁCH B
+
+| Tiêu chí | Cách A | Cách B |
+|----------|--------|--------|
+| **Thời gian setup** | 35-50 phút | 60-80 phút |
+| **Độ khó** | Dễ | Trung bình |
+| **Cần tách prefab** | ❌ Không | ✅ Có |
+| **Cần sửa code** | ❌ Không | ✅ Patch EnemyScript |
+| **Kiểm soát chính xác** | ❌ Ngẫu nhiên | ✅ 100% chính xác |
+| **Prefab duy nhất** | ✅ EnemyNew | ❌ 6 prefab riêng |
+
+---
+
+## TIẾP THEO
+
+Khi có map Đầm Lầy và Hell:
+1. Copy scene Desert → đổi tên
+2. Thay đổi Enemy Count arrays (tăng số lượng enemy)
+3. Thay đổi Map Type (1 = Swamp, 2 = Hell)
+4. Import enemy models mới
+
+---
+
+## NOTE VỀ EXP VÀ DAMAGE NUMBER
+
+### EXP System
+- EXP được tính trong `EnemyWaveTracker.OnEnemyDeath()`
+- Mỗi loại enemy có EXP riêng:
+  - Skeleton: 100
+  - Archer: 150
+  - Monster: 300
+  - Lich: 350
+  - Boss: 1500
+  - Demon: 3000
+- Tổng EXP hiển thị khi hoàn thành dungeon
+
+### Damage Number
+- Để hiển thị damage number, cần thêm `TakeDamageTest` vào EnemyNew prefab
+- Xem hướng dẫn ở section bổ sung nếu cần
