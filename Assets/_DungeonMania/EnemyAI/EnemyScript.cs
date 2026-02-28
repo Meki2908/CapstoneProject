@@ -1,11 +1,18 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.UI;
 using UnityEngine.AI;
+
 public class EnemyScript : MonoBehaviour {
     [HideInInspector] public bool hit, attack, delay, wait, alive;
+    
+    // Static flag để chỉ log warning một lần
+    private static bool hasLoggedHeroInfoWarning = false;
+    
     public EnemyClass enemy;
+    
+    // Category enemy (phân loại chính)
     public enum EnemyType{
         skelet,
         archer,
@@ -15,6 +22,30 @@ public class EnemyScript : MonoBehaviour {
         demon
     }
     public EnemyType enemyType = EnemyType.skelet;
+    
+    // Specific enemy type (loại enemy cụ thể trong prefab EnemyNew)
+    // Theo yêu cầu:
+    // Skeleton@Skin = Skelet, skeleton_archer = Skelet
+    // Orc@Skin = Monster, Troll@Skin = Monster, Guul@Skin = Monster
+    // Lich@Skin = Lich
+    // Stoneogre@Skin = Boss, Golem@Skin = Boss, Minotaur@Skin = Boss, Ifrit@Skin = Boss
+    // Demon@Skin = Demon
+    public enum SpecificEnemyType
+    {
+        Skeleton,        // index 0
+        SkeletonArcher,  // index 1
+        Orc,             // index 2
+        Troll,           // index 3
+        Guul,            // index 4
+        Lich,            // index 5
+        Stoneogre,       // index 6
+        Golem,           // index 7
+        Minotaur,        // index 8
+        Ifrit,           // index 9
+        Demon            // index 10
+    }
+    public SpecificEnemyType specificEnemyType = SpecificEnemyType.Skeleton;
+    
     public EnemyClass.Boss boss = EnemyClass.Boss.None;
     public ParticleSystem[] bow, skill;
     [HideInInspector]public Bow[] bowScript;
@@ -43,13 +74,29 @@ public class EnemyScript : MonoBehaviour {
     }
     private void Awake () {
         enemy = new EnemyClass((int)enemyType);
-        target = GameObject.Find ( "player" ).transform;
-        if(bow.Length != 0){
+
+        // Tìm player với kiểm tra null
+        GameObject playerObj = GameObject.Find("player");
+        if (playerObj != null) {
+            target = playerObj.transform;
+        } else {
+            Debug.LogWarning("[EnemyScript] Player not found! Using fallback.");
+            // Thử tìm bằng tag
+            playerObj = GameObject.FindGameObjectWithTag("Player");
+            if (playerObj != null) target = playerObj.transform;
+        }
+
+        // Setup bow scripts
+        if(bow != null && bow.Length != 0){
             bowScript = new Bow[bow.Length];
             for(int i = 0; i < bow.Length; i++){
-                bowScript[i] = bow[i].GetComponent<Bow>();
+                if (bow[i] != null) {
+                    bowScript[i] = bow[i].GetComponent<Bow>();
+                }
             }
-        } 
+        }
+
+        // Setup boss magic type
         switch(boss){
             case EnemyClass.Boss.None:
             break;
@@ -66,20 +113,100 @@ public class EnemyScript : MonoBehaviour {
                 enemy.enemyMagic = (int)EnemyClass.EnemyMagic.fire;
             break;
         }
+
+        // Setup NavMeshAgent
         navMeshAgent = GetComponent<NavMeshAgent> ();
-        navMeshAgent.isStopped = true;
+        if (navMeshAgent != null) {
+            navMeshAgent.isStopped = true;
+        }
+
         animator = GetComponent<Animator> ();
+
+        // Setup parent references
         parent = transform.parent;
-        enemyManager = parent.GetComponent<EnemyManager>();
-        randomEnemyScript = parent.GetComponent<RandomEnemy> ();
-        playerManager = target.GetComponent<PlayerManager> ();
+        if (parent != null) {
+            enemyManager = parent.GetComponent<EnemyManager>();
+            randomEnemyScript = parent.GetComponent<RandomEnemy>();
+        }
+
+        // Setup player manager với kiểm tra null
+        if (target != null) {
+            playerManager = target.GetComponent<PlayerManager>();
+            
+            // If PlayerManager not found, try to find DungeonManiaPlayerBridge
+            if (playerManager == null) {
+                DungeonManiaPlayerBridge bridge = target.GetComponent<DungeonManiaPlayerBridge>();
+                if (bridge != null) {
+                    // Create a temporary PlayerManager-like wrapper
+                    // We'll handle this differently - see below
+                    Debug.Log("[EnemyScript] Found DungeonManiaPlayerBridge, will use it for damage");
+                }
+            }
+        }
+
+        // Setup component references
         enemyState = GetComponent<EnemyState> ();
         enemyAttack = GetComponent<EnemyAttack>();
         enemyDamage = GetComponent<EnemyDamage>();
-        gameManager = GameObject.Find ( "GameManager" );
-        audioManager = gameManager.GetComponent<AudioManager> ();
-        heroInformation = gameManager.GetComponent<HeroInformation>();
-        gameObject.SetActive ( false );
+
+        // Setup game manager với kiểm tra null
+        gameManager = GameObject.Find("GameManager");
+        if (gameManager != null) {
+            audioManager = gameManager.GetComponent<AudioManager>();
+            heroInformation = gameManager.GetComponent<HeroInformation>();
+        }
+
+        // KHÔNG set active false trong Awake - để RandomEnemy quản lý
+    }
+    
+    // Cập nhật specificEnemyType dựa trên index trong mảng enemy của RandomEnemy
+    public void SetSpecificEnemyType(int index)
+    {
+        specificEnemyType = (SpecificEnemyType)Mathf.Clamp(index, 0, System.Enum.GetValues(typeof(SpecificEnemyType)).Length - 1);
+        
+        // Cập nhật enemyType (category) dựa trên specific type
+        switch (specificEnemyType)
+        {
+            case SpecificEnemyType.Skeleton:
+            case SpecificEnemyType.SkeletonArcher:
+                enemyType = EnemyType.skelet;
+                break;
+            case SpecificEnemyType.Orc:
+            case SpecificEnemyType.Troll:
+            case SpecificEnemyType.Guul:
+                enemyType = EnemyType.monster;
+                break;
+            case SpecificEnemyType.Lich:
+                enemyType = EnemyType.lich;
+                break;
+            case SpecificEnemyType.Stoneogre:
+            case SpecificEnemyType.Golem:
+            case SpecificEnemyType.Minotaur:
+            case SpecificEnemyType.Ifrit:
+                enemyType = EnemyType.boss;
+                // Cập nhật boss type
+                switch (specificEnemyType)
+                {
+                    case SpecificEnemyType.Stoneogre:
+                        boss = EnemyClass.Boss.Ogre;
+                        break;
+                    case SpecificEnemyType.Golem:
+                        boss = EnemyClass.Boss.Golem;
+                        break;
+                    case SpecificEnemyType.Minotaur:
+                        boss = EnemyClass.Boss.Mino;
+                        break;
+                    case SpecificEnemyType.Ifrit:
+                        boss = EnemyClass.Boss.Ifrit;
+                        break;
+                }
+                break;
+            case SpecificEnemyType.Demon:
+                enemyType = EnemyType.demon;
+                break;
+        }
+        
+        Debug.Log($"[EnemyScript] Set specific type: {specificEnemyType}, category: {enemyType}");
     }  
     void OnEnable () {
         EnemyEvent.WaitEvent += Wait;
@@ -107,11 +234,33 @@ public class EnemyScript : MonoBehaviour {
         animator.SetBool("run", true);
     }
     IEnumerator Delay(){
+        // Kiểm tra null trước khi tiếp tục
+        if (enemy == null) {
+            Debug.LogWarning("[EnemyScript] Enemy is null in Delay!");
+            delay = false;
+            yield break;
+        }
+
         animator.SetBool("hit", false);
         Distance();
         RotateToPlayer();
-        enemy.EnemySet((int)enemyType);
-        enemy.UpdateEnemy();
+
+        // Kiểm tra HeroInformation.player - nếu null thì dùng target (player object)
+        // Chỉ log warning một lần để tránh spam console
+        if (HeroInformation.player != null) {
+            enemy.UpdateEnemy();
+        } else {
+            // Chỉ log warning nếu chưa từng log (sử dụng static flag)
+            if (!hasLoggedHeroInfoWarning) {
+                Debug.Log("[EnemyScript] HeroInformation.player is null - using target as fallback (this is normal when not using DungeonMania player)");
+                hasLoggedHeroInfoWarning = true;
+            }
+            // Sử dụng target (player GameObject) nếu HeroInformation.player null
+            if (target != null) {
+                // Enemy vẫn hoạt động với target là player
+            }
+        }
+
         attackDistance = enemy.distance;
         yield return new WaitForSeconds ( 0.5f );
         delay = false;

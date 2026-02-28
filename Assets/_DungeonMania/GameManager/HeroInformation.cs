@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
@@ -15,7 +15,7 @@ public class HeroInformation : MonoBehaviour {
     public GameObject playerLevel;
     static Text playerLevelText;
     public static PlayerClass player;
-    public static bool alive;
+    public static bool alive = true; // Mặc định là true để enemy hoạt động khi không dùng HeroInformation của DungeonMania
     public static bool isSkill;
     public static bool isShield;
     static GameObject playerStat;
@@ -40,61 +40,82 @@ public class HeroInformation : MonoBehaviour {
     public Traning training;
 
     void Awake() {
+        // Tìm EndGame với kiểm tra null
         endGame = GameObject.Find( "EndGame" );
-        endGameScript = endGame.GetComponent<EndGame>();
-        endGame.SetActive(false);
+        if (endGame != null) {
+            endGameScript = endGame.GetComponent<EndGame>();
+            if (endGameScript != null) {
+                endGame.SetActive(false);
+            }
+        } else {
+            Debug.LogWarning("[HeroInformation] EndGame not found in scene");
+        }
+        
         playerStat = GameObject.Find( "GameUI" );
         menuUI = GameObject.Find("MenuUi");
-        experiencePoint = textPlayerExp.GetComponent<Text>();
-        gold = textPlayerGold.GetComponent<Text>();
-        score = textPlayerScore.GetComponent<Text>();
-        //keys = textPlayerKeys.GetComponent<Text>();
-        playerLevelText = playerLevel.GetComponent<Text>();
+        
+        if (textPlayerExp != null)
+            experiencePoint = textPlayerExp.GetComponent<Text>();
+        if (textPlayerGold != null)
+            gold = textPlayerGold.GetComponent<Text>();
+        if (textPlayerScore != null)
+            score = textPlayerScore.GetComponent<Text>();
+        if (playerLevel != null)
+            playerLevelText = playerLevel.GetComponent<Text>();
+            
         gameController = GetComponent<GameController>();
         CreatePlayer();
         UpdateInformation();
     }
     public void CreatePlayer(){
-        // 🧪 TEST MODE: Luôn tạo player mới (xóa save)
-        PlayerPrefs.DeleteKey("GameSave");
-        PlayerPrefs.DeleteKey("PlayerSave1");
-        
+        // ✅ PRODUCTION: Load save game nếu có, tạo mới nếu không
+        // ⚠️ TEST MODE: Uncomment dòng dưới để xóa save mỗi lần khởi động
+        // PlayerPrefs.DeleteKey("GameSave");
+        // PlayerPrefs.DeleteKey("PlayerSave1");
+
         if (PlayerPrefs.HasKey("GameSave")) {
             player = (PlayerClass)ObjectSerialization.Load("GameSave");
-            player.sword = itemDataBase.swords[player.currentSwordIndex];
+            if (itemDataBase != null && itemDataBase.swords != null && itemDataBase.swords.Count > 0 && player.currentSwordIndex < itemDataBase.swords.Count)
+                player.sword = itemDataBase.swords[player.currentSwordIndex];
             player.score = 0;
             alive = true;
         }
         else if (PlayerPrefs.HasKey("PlayerSave1")) {
             player = (PlayerClass)ObjectSerialization.Load("PlayerSave1");
-            player.inventorySword.Clear();
-            player.indicatorSwordList = 1;
-            player.inventorySword.Add(itemDataBase.swords[0].index);
-            player.sword = itemDataBase.swords[0];
-            player.score = 0;
-            alive = true;
-            player.dungeonLevel = 0;
-            player.gameLevel = 1;
+            if (player != null) {
+                player.inventorySword.Clear();
+                player.indicatorSwordList = 1;
+                if (itemDataBase != null && itemDataBase.swords != null && itemDataBase.swords.Count > 0) {
+                    player.inventorySword.Add(itemDataBase.swords[0].index);
+                    player.sword = itemDataBase.swords[0];
+                }
+                player.score = 0;
+                alive = true;
+                player.dungeonLevel = 0;
+                player.gameLevel = 1;
 
-            player.statePlayerForDialogue = CharactersClass.StatePlayerForDialogue.FirstMeet;
-            player.itemMeet = false;
-            player.storyMeet = false;
-            player.bossMeet = false;
-            player.demonMeet = false;
-            player.firstBoss = false;
-            player.firstDemon = false;
-            player.firstDead = false;
+                player.statePlayerForDialogue = CharactersClass.StatePlayerForDialogue.FirstMeet;
+                player.itemMeet = false;
+                player.storyMeet = false;
+                player.bossMeet = false;
+                player.demonMeet = false;
+                player.firstBoss = false;
+                player.firstDemon = false;
+                player.firstDead = false;
 
-            SetGlobalVar();
+                SetGlobalVar();
 
-            ObjectSerialization.Save("GameSave", player);
-            PlayerPrefs.DeleteKey("PlayerSave1");
+                ObjectSerialization.Save("GameSave", player);
+                PlayerPrefs.DeleteKey("PlayerSave1");
+            }
         }
         else{
             player = new PlayerClass("Player");
             SetGlobalVar();
-            player.inventorySword.Add(itemDataBase.swords[0].index);
-            player.sword = itemDataBase.swords[0];
+            if (itemDataBase != null && itemDataBase.swords != null && itemDataBase.swords.Count > 0) {
+                player.inventorySword.Add(itemDataBase.swords[0].index);
+                player.sword = itemDataBase.swords[0];
+            }
             alive = true;
             player.UpdateAbilitys();
         }

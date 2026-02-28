@@ -1,6 +1,7 @@
-﻿using System.Collections;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+
 public class GamePlayManager : MonoBehaviour {
     public Slider slider;
     public Image sliderIcon;
@@ -34,7 +35,18 @@ public class GamePlayManager : MonoBehaviour {
     public Transform player;
     public Transform cameras;
     public GameObject arenaInfo;
+    
+    // Sử dụng hệ thống wave mới
+    public bool useNewWaveSystem = true;
+    private DungeonWaveManager dungeonWaveManager;
+    
+    // Static instance để truy cập từ static method
+    public static GamePlayManager Instance;
+    
     private void Awake(){
+        // Thiết lập Instance
+        Instance = this;
+        
         gameController = GetComponent<GameController>();
         startGame = GetComponent<StartGame>();
         staticNpcObject = npcObject;
@@ -42,6 +54,16 @@ public class GamePlayManager : MonoBehaviour {
         SetBossSlider(false, 0);
         npcIndicator = npc.transform.GetChild(4).gameObject;
         Ini();
+        
+        // Tìm DungeonWaveManager đã có trong scene (không tạo mới)
+        if (useNewWaveSystem)
+        {
+            dungeonWaveManager = FindObjectOfType<DungeonWaveManager>();
+            if (dungeonWaveManager == null)
+            {
+                Debug.LogWarning("[GamePlayManager] DungeonWaveManager not found in scene! Please add it manually.");
+            }
+        }
     }
     private void OnEnable() {
         SetEnemyRoom.BossSlider += SetBossSlider;
@@ -92,6 +114,45 @@ public class GamePlayManager : MonoBehaviour {
     public static void Arenalevel() {
         leftEnemiesArena = 0;
         checkAreneEnemys = 0;
+        
+        if (Instance.useNewWaveSystem && DungeonWaveManager.Instance != null)
+        {
+            // Sử dụng hệ thống wave mới
+            ArenalevelNew();
+        }
+        else
+        {
+            // Sử dụng hệ thống wave cũ
+            ArenalevelOld();
+        }
+    }
+    
+    // Hệ thống wave mới
+    private static void ArenalevelNew()
+    {
+        waveOfArena++;
+        
+        // Cập nhật wave cho DungeonWaveManager
+        DungeonWaveManager.Instance.SetWave(waveOfArena);
+        
+        // Lấy số lượng enemy từ DungeonWaveManager
+        int skeletCount, lichCount, bossCount, demonCount;
+        DungeonWaveManager.Instance.GetEnemyCounts(out skeletCount, out lichCount, out bossCount, out demonCount);
+        
+        // Tính tổng số enemy trong wave
+        int totalEnemies = skeletCount + lichCount + bossCount + demonCount;
+        enemysOfWave = totalEnemies;
+        
+        // Thiết lập enemyType theo format cũ để tương thích
+        // enemyType[0] = archers (skelet), [1] = monsters, [2] = lich, [3] = boss, [4] = demon
+        level.enemyType = new int[] { skeletCount, 0, lichCount, bossCount, demonCount };
+        
+        Debug.Log($"[GamePlayManager] Wave {waveOfArena}: Skelet={skeletCount}, Lich={lichCount}, Boss={bossCount}, Demon={demonCount}, Total={totalEnemies}");
+    }
+    
+    // Hệ thống wave cũ - giữ nguyên để tương thích
+    private static void ArenalevelOld()
+    {
         waveOfArena++;
         enemysOfWave = Random.Range(25, 30) + waveOfArena * 2;
         switch (waveOfArena) {

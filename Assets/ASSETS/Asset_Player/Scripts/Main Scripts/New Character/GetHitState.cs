@@ -140,11 +140,15 @@ public class GetHitState : State
     {
         base.HandleInput();
 
-        // Allow dash and jump input even during hit
-        if (dashAction.triggered)
-        {
-            dash = true;
-        }
+        // TEMPORARILY DISABLE DASH DURING HIT to fix auto-dash issue
+        // The user reported player auto-dashes when hit - this should only happen with right mouse button
+        // For now, disable dash input during hit to prevent auto-dash
+        // Re-enable this if you want dash during hit:
+        // if (dashAction.triggered)
+        // {
+        //     dash = true;
+        // }
+        
         if (jumpAction.triggered)
         {
             jump = true;

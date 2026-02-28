@@ -113,13 +113,30 @@ public class EnemyClass{
             }
     }
     public void UpdateEnemy(){
+        // Sửa: Kiểm tra null cho HeroInformation.player
+        if (HeroInformation.player == null) {
+            Debug.LogWarning("[EnemyClass] HeroInformation.player is null! Skipping UpdateEnemy.");
+            return;
+        }
+
+        // Sửa: Level là struct nên không thể null, kiểm tra bằng cách khác
+        // Kiểm tra xem GamePlayManager.level đã được khởi tạo chưa
+        if (GamePlayManager.level.levelType == 0 && GamePlayManager.level.currentLevel == 0 && GamePlayManager.level.enemyType == null) {
+            Debug.LogWarning("[EnemyClass] GamePlayManager.level chưa được khởi tạo! Sử dụng giá trị mặc định.");
+            // Vẫn tiếp tục với giá trị mặc định - struct sẽ có giá trị mặc định
+        }
+
         int k = 0;
         if (GamePlayManager.level.levelType == Level.LevelType.arena) {
             k += GamePlayManager.waveOfArena * 5;
-            score *= GamePlayManager.waveOfArena * 250;
+            // Sửa: Đảm bảo score không bằng 0 khi waveOfArena = 0
+            int waveScore = GamePlayManager.waveOfArena > 0 ? GamePlayManager.waveOfArena : 1;
+            score *= waveScore * 250;
+
             if (GamePlayManager.waveOfArena > 3) {
                 attack.value += k;
-                helth.value += helth.value * k / 100;
+                // Sửa: Health tăng theo tỷ lệ phần trăm cố định (20%) thay vì cộng dồn
+                helth.value += (int)(helth.value * 0.2f);
                 armor.value += GamePlayManager.waveOfArena;
                 magic.value += k;
                 crit.value += k;
@@ -128,19 +145,22 @@ public class EnemyClass{
                 armor.value = 1 + GamePlayManager.waveOfArena;
                 helth.value = 20 + GamePlayManager.waveOfArena + 5;
             }
-        } 
+        }
         else {
             if (HeroInformation.player.gameLevel > 1) {
                 k += (HeroInformation.player.gameLevel * 5);
-                int percent = k * 20 / 100;
+                // Giới hạn percent tối đa 20% để tránh tăng quá nhanh
+                int percent = Mathf.Min(k * 20 / 100, 20);
                 attack.value += k * 2;
-                helth.value += helth.value * percent;
+                // Sửa: Health chỉ tăng thêm một lần với tỷ lệ giới hạn
+                helth.value += (int)(helth.value * percent / 100f);
                 armor.value += HeroInformation.player.gameLevel;
                 magic.value += k * 2;
                 crit.value += k * 2;
                 accuracy.value += k + 1;
-                gold *= k;
-                score *= k + 300;
+                // Sửa: Đảm bảo gold không bằng 0
+                gold = gold > 0 ? gold * Mathf.Max(k, 1) : Random.Range(1, 3);
+                score = score > 0 ? score * (k + 300) : 300;
             } else {
                 if (HeroInformation.player.dungeonLevel != 0) {
                     k = HeroInformation.player.dungeonLevel;
@@ -156,9 +176,11 @@ public class EnemyClass{
                         else PercentUp(k + 5);
                     } else PercentUp(k);
 
-
-                    gold *= k * HeroInformation.player.gameLevel;
-                    score *= k + 200;
+                    // Sửa: Đảm bảo gold và score không bằng 0
+                    int multiplier = k * HeroInformation.player.gameLevel;
+                    if (multiplier <= 0) multiplier = 1;
+                    gold *= multiplier;
+                    score = score > 0 ? score * (k + 200) : 200;
                 } else {
                     k = GamePlayManager.level.currentLevel;
                     if (!isBoss) {
@@ -170,10 +192,11 @@ public class EnemyClass{
                         accuracy.value += k;
                     } else {
                         armor.value = 7;
-                        //helth.value = 500;
                     }
-                    gold *= k;
-                    score *= k + 100;
+                    // Sửa: Đảm bảo gold và score không bằng 0
+                    if (k <= 0) k = 1;
+                    gold = gold > 0 ? gold * k : Random.Range(1, 3);
+                    score = score > 0 ? score * (k + 100) : 100;
                 }
             }
         }

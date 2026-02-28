@@ -168,17 +168,23 @@ public class Chest : MonoBehaviour {
     }
     public void CloseChests(bool b) {
         if(b){
-            animator.Play("close");
+            // Kiểm tra animator trước khi play
+            if (animator != null && animator.isActiveAndEnabled) {
+                animator.Play("close");
+            }
             open = false;
             isPlayerEnter = false;
-            goldParticle.Stop();
+            if (goldParticle != null) goldParticle.Stop();
         }
         else{
             if(firstLevel){
-            animator.Play("close");
-            open = false;
-            isPlayerEnter = false;
-            goldParticle.Stop();                
+                // Kiểm tra animator trước khi play
+                if (animator != null && animator.isActiveAndEnabled) {
+                    animator.Play("close");
+                }
+                open = false;
+                isPlayerEnter = false;
+                if (goldParticle != null) goldParticle.Stop();
             }
         }
     }

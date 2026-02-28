@@ -31,17 +31,19 @@ public class DungeonWaveManager : MonoBehaviour
     [Tooltip("Thời gian nghỉ giữa các wave (giây)")]
     public float waveDelayTime = 3f;
 
-    [Header("=== ENEMY COUNT PER WAVE (CÁCH A) ===")]
-    [Tooltip("Số lượng Archer mỗi wave [wave1, wave2, wave3, wave4, wave5]")]
-    public int[] archerCount = { 1, 2, 3, 2, 1 };
-    [Tooltip("Số lượng Monster mỗi wave")]
-    public int[] monsterCount = { 0, 1, 2, 3, 2 };
+    [Header("=== ENEMY COUNT PER WAVE (CÁCH A - HỆ THỐNG MỚI) ===")]
+    [Tooltip("Số lượng Skelet (Skeleton + skeleton_archer) mỗi wave [wave1, wave2, wave3, wave4, wave5]")]
+    public int[] skeletCount = { 3, 4, 5, 4, 0 };
+    
     [Tooltip("Số lượng Lich mỗi wave")]
-    public int[] lichCount = { 0, 0, 1, 1, 2 };
+    public int[] lichCount = { 0, 0, 0, 1, 0 };
+    
     [Tooltip("Số lượng Boss mỗi wave")]
-    public int[] bossCount = { 0, 0, 0, 1, 0 };
+    public int[] bossCount = { 0, 0, 0, 0, 2 };
+    
     [Tooltip("Số lượng Demon mỗi wave")]
     public int[] demonCount = { 0, 0, 0, 0, 1 };
+    
     [Tooltip("Tổng số enemy mỗi wave (tự tính)")]
     public int[] totalEnemiesPerWave;
 
@@ -76,6 +78,16 @@ public class DungeonWaveManager : MonoBehaviour
     private bool isCountingDown = false;
     private bool isDungeonActive = false;
     private bool isDungeonComplete = false;
+    private bool showDebugLog = true;
+    
+    // Trackers for enemy spawn (tránh gọi GetEnemyCounts nhiều lần)
+    private int currentSkeletCount = 0;
+    private int currentLichCount = 0;
+    private int currentBossCount = 0;
+    private int currentDemonCount = 0;
+    
+    // Static instance for global access
+    public static DungeonWaveManager Instance;
 
     // Events
     public System.Action<int> OnWaveStarted;
@@ -88,12 +100,22 @@ public class DungeonWaveManager : MonoBehaviour
 
     // ===== UNITY LIFECYCLE =====
 
+    void Awake()
+    {
+        // Singleton pattern
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
+
     void Start()
     {
-        // Tính tổng số enemy mỗi wave
-        CalculateTotalEnemiesPerWave();
-
-        // Tìm player nếu chưa gán
+        // Tìm player TRƯỚC KHI làm gì khác
         if (player == null)
         {
             // Thử tìm bằng tag "Player" trước (project của bạn dùng tag)
@@ -112,8 +134,11 @@ public class DungeonWaveManager : MonoBehaviour
             }
         }
 
-        // THIẾT LẬP CÁC REFERENCES CẦN THIẾT CHO DUNGEONMANIA
-        SetupDungeonManiaReferences();
+        // Tính tổng số enemy mỗi wave
+        CalculateTotalEnemiesPerWave();
+
+        // THIẾT LẬP CÁC REFERENCES CẦN THIẾT CHO DUNGEONMANIA (SAU KHI TÌM ĐƯỢC PLAYER)
+        SetupPlayerReference();
 
         // Ẩn tất cả UI
         HideAllUI();
@@ -123,47 +148,32 @@ public class DungeonWaveManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Thiết lập các references cần thiết cho DungeonMania enemy
+    /// Thiết lập "player" (lowercase) reference cho EnemyScript
+    /// EnemyScript tìm object "player" để làm target
     /// </summary>
-    private void SetupDungeonManiaReferences()
+    private void SetupPlayerReference()
     {
-        // 1. Tạo object "player" (chữ thường) nếu chưa có
-        // EnemyScript tìm "player" (chữ thường)
+        // Tìm object "player" (lowercase) - EnemyScript cần cái này làm target
         GameObject playerLower = GameObject.Find("player");
+        
         if (playerLower == null && player != null)
         {
+            // Tạo mới "player" reference nếu chưa có
             playerLower = new GameObject("player");
             playerLower.transform.position = player.position;
             playerLower.transform.rotation = player.rotation;
             // Làm child của player thật để di chuyển cùng
             playerLower.transform.SetParent(player);
-            Debug.Log("[DungeonWave] Created 'player' reference object");
+            Debug.Log("[DungeonWave] Created 'player' reference for EnemyScript");
+        }
+        else if (playerLower != null && player != null)
+        {
+            // Cập nhật vị trí nếu player đã di chuyển
+            playerLower.transform.position = player.position;
+            playerLower.transform.rotation = player.rotation;
         }
 
-        // 2. Tạo GameManager object nếu chưa có
-        GameObject gameManager = GameObject.Find("GameManager");
-        if (gameManager == null)
-        {
-            gameManager = new GameObject("GameManager");
-            Debug.Log("[DungeonWave] Created GameManager object");
-            
-            // Thêm các component cần thiết
-            if (gameManager.GetComponent<AudioManager>() == null)
-                gameManager.AddComponent<AudioManager>();
-            if (gameManager.GetComponent<HeroInformation>() == null)
-                gameManager.AddComponent<HeroInformation>();
-            if (gameManager.GetComponent<GameController>() == null)
-                gameManager.AddComponent<GameController>();
-        }
-        
-        // 3. Đảm bảo PlayerManager component tồn tại trên player
-        if (player != null && player.GetComponent<PlayerManager>() == null)
-        {
-            player.gameObject.AddComponent<PlayerManager>();
-            Debug.Log("[DungeonWave] Added PlayerManager to player");
-        }
-
-        Debug.Log("[DungeonWave] DungeonMania references setup complete");
+        Debug.Log("[DungeonWave] Player reference ready for enemies");
     }
 
     void Update()
@@ -206,12 +216,11 @@ public class DungeonWaveManager : MonoBehaviour
         totalEnemiesPerWave = new int[totalWaves];
         for (int i = 0; i < totalWaves; i++)
         {
-            int archers = i < archerCount.Length ? archerCount[i] : 0;
-            int monsters = i < monsterCount.Length ? monsterCount[i] : 0;
+            int skelets = i < skeletCount.Length ? skeletCount[i] : 0;
             int liches = i < lichCount.Length ? lichCount[i] : 0;
             int bosses = i < bossCount.Length ? bossCount[i] : 0;
             int demons = i < demonCount.Length ? demonCount[i] : 0;
-            totalEnemiesPerWave[i] = archers + monsters + liches + bosses + demons;
+            totalEnemiesPerWave[i] = skelets + liches + bosses + demons;
         }
     }
 
@@ -345,29 +354,30 @@ public class DungeonWaveManager : MonoBehaviour
         OnDungeonCompleted?.Invoke();
     }
 
-    // ===== SPAWNING SYSTEM (CÁCH A) =====
+    // ===== SPAWNING SYSTEM (CÁCH A - HỆ THỐNG MỚI) =====
 
     /// <summary>
     /// Spawn enemy cho wave hiện tại (CÁCH A - Dùng EnemyNew + GamePlayManager)
+    /// Hệ thống mới: Wave 1-3 = Skelet, Wave 4 = Skelet + Lich, Wave 5 = Boss + Demon
     /// </summary>
     private void SpawnWave(int waveIndex)
     {
         int waveIdx = waveIndex - 1; // Array index (0-based)
 
-        // Lấy số lượng enemy cho wave này
-        int archers = waveIdx < archerCount.Length ? archerCount[waveIdx] : 0;
-        int monsters = waveIdx < monsterCount.Length ? monsterCount[waveIdx] : 0;
-        int liches = waveIdx < lichCount.Length ? lichCount[waveIdx] : 0;
-        int bosses = waveIdx < bossCount.Length ? bossCount[waveIdx] : 0;
-        int demons = waveIdx < demonCount.Length ? demonCount[waveIdx] : 0;
+        // Lấy số lượng enemy cho wave này (hệ thống mới)
+        currentSkeletCount = waveIdx < skeletCount.Length ? skeletCount[waveIdx] : 0;
+        currentLichCount = waveIdx < lichCount.Length ? lichCount[waveIdx] : 0;
+        currentBossCount = waveIdx < bossCount.Length ? bossCount[waveIdx] : 0;
+        currentDemonCount = waveIdx < demonCount.Length ? demonCount[waveIdx] : 0;
 
-        int totalEnemies = archers + monsters + liches + bosses + demons;
+        int totalEnemies = currentSkeletCount + currentLichCount + currentBossCount + currentDemonCount;
         enemiesAlive = totalEnemies;
 
-        Debug.Log($"[DungeonWave] Wave {waveIndex}: A={archers} M={monsters} L={liches} B={bosses} D={demons} (Tổng: {totalEnemies})");
+        Debug.Log($"[DungeonWave] Wave {waveIndex}: Skelet={currentSkeletCount} Lich={currentLichCount} Boss={currentBossCount} Demon={currentDemonCount} (Tổng: {totalEnemies})");
 
         // === CẤU HÌNH GAMEPLAY MANAGER (CÁCH A) ===
-        ConfigureGamePlayManager(archers, monsters, liches, bosses, demons);
+        // enemyType[0] = skelet (archers trong code cũ), [1] = monster (không dùng), [2] = lich, [3] = boss, [4] = demon
+        ConfigureGamePlayManager(currentSkeletCount, 0, currentLichCount, currentBossCount, currentDemonCount);
 
         // Spawn từng enemy một
         for (int i = 0; i < totalEnemies; i++)
@@ -379,9 +389,9 @@ public class DungeonWaveManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Cấu hình GamePlayManager trước khi spawn (CÁCH A)
+    /// Cấu hình GamePlayManager trước khi spawn (CÁCH A - HỆ THỐNG MỚI)
     /// </summary>
-    private void ConfigureGamePlayManager(int archers, int monsters, int liches, int bosses, int demons)
+    private void ConfigureGamePlayManager(int skelets, int monsters, int liches, int bosses, int demons)
     {
         // Reset static counters trong GamePlayManager
         GamePlayManager.archers = 0;
@@ -390,27 +400,30 @@ public class DungeonWaveManager : MonoBehaviour
         GamePlayManager.boss = 0;
         GamePlayManager.demon = 0;
 
-        // Cấu hình level.enemyType [archers, monsters, liches, boss, demon]
-        // Theo thứ tự trong RandomEnemy: index 0=skeleton, 1=archer, 2=monster, 3=lich, 4=boss
-        // Nhưng GamePlayManager.level.enemyType có 5 phần tử
+        // Cấu hình level.enemyType [skelet, monster(ignored), lich, boss, demon]
+        // RandomEnemy sẽ đọc:
+        // - enemyType[0] = skelet (Skeleton + skeleton_archer)
+        // - enemyType[1] = monster (không dùng trong hệ thống mới)
+        // - enemyType[2] = lich
+        // - enemyType[3] = boss
+        // - enemyType[4] = demon
         if (GamePlayManager.level.enemyType == null || GamePlayManager.level.enemyType.Length != 5)
         {
             GamePlayManager.level.enemyType = new int[5];
         }
         
-        // Đặt theo thứ tự: [skeleton, archer, monster, lich, boss] + demon riêng
-        // Trong GamePlayManager: enemyType[0]=archer, [1]=monster, [2]=lich, [3]=boss, [4]=demon
-        GamePlayManager.level.enemyType[0] = 0; // skeleton (không dùng trong dungeon này)
-        GamePlayManager.level.enemyType[1] = archers;
-        GamePlayManager.level.enemyType[2] = monsters;
-        GamePlayManager.level.enemyType[3] = liches;
-        GamePlayManager.level.enemyType[4] = bosses + demons; // boss và demon dùng cùng slot
+        // Đặt theo thứ tự mới
+        GamePlayManager.level.enemyType[0] = skelets; // Skelet
+        GamePlayManager.level.enemyType[1] = monsters; // Monster (không dùng)
+        GamePlayManager.level.enemyType[2] = liches;   // Lich
+        GamePlayManager.level.enemyType[3] = bosses;  // Boss
+        GamePlayManager.level.enemyType[4] = demons;   // Demon
 
-        Debug.Log($"[DungeonWave] GamePlayManager configured: A={archers} M={monsters} L={liches} B={bosses} D={demons}");
+        Debug.Log($"[DungeonWave] GamePlayManager configured: Skelet={skelets} Lich={liches} Boss={bosses} Demon={demons}");
     }
 
     /// <summary>
-    /// Spawn 1 enemy từ EnemyNew prefab (CÁCH A)
+    /// Spawn 1 enemy từ EnemyNew prefab (CÁCH A - ĐƠN GIẢN)
     /// </summary>
     private void SpawnEnemyFromEnemyNew()
     {
@@ -425,34 +438,109 @@ public class DungeonWaveManager : MonoBehaviour
         // Instantiate EnemyNew
         GameObject enemy = Instantiate(enemyNewPrefab, spawnPos, Quaternion.identity);
         
-        // Thiết lập SelectEnemyPos với vị trí spawn trước khi gọi RandomEnemy.Enable()
-        // Tạo một mảng các Transform tạm để RandomEnemy sử dụng
-        SetupSelectEnemyPos(spawnPos);
+        // === QUAN TRỌNG: Tắt tất cả enemy con trong prefab ===
+        DisableAllChildEnemies(enemy);
         
-        // Thêm script theo dõi enemy
+        // Thiết lập SelectEnemyPos với vị trí spawn cho tất cả các enemy
+        // Mỗi lần spawn sẽ tạo mới để tránh bị ghi đè
+        SetupSelectEnemyPosForAllEnemies(spawnPos);
+        
+        // Thêm EnemyWaveTracker
         EnemyWaveTracker tracker = enemy.AddComponent<EnemyWaveTracker>();
         tracker.waveManager = this;
         
-        // GỌI RANDOMENEMY.ENABLE() ĐỂ KÍCH HOẠT ENEMY BÊN TRONG
-        RandomEnemy randomEnemy = enemy.GetComponent<RandomEnemy>();
-        if (randomEnemy != null)
+        // KHÔNG gọi Enable() trực tiếp ở đây!
+        // RandomEnemy.OnEnable() đã đăng ký event handler cho EnableEvent
+        // Khi gọi EnemyEventSystem(0), nó sẽ gọi RandomEnemy.Enable() tự động
+        // Nếu gọi cả hai sẽ bị gọi 2 lần!
+
+        // KÍCH HOẠT ENEMY EVENT ĐỂ ĐẢM BẢO AI CHẠY
+        // Gọi event để kích hoạt AI của tất cả enemy
+        // Case 0 = EnableEvent (gọi RandomEnemy.Enable()), Case 2 = AttackEvent (bắt đầu chase)
+        EnemyEvent.EnemyEventSystem(0); // EnableEvent - kích hoạt hệ thống và chọn enemy
+        EnemyEvent.EnemyEventSystem(2); // AttackEvent - bắt đầu chase (gọi Chase())
+
+        // SAU KHI enemy bên trong đã được kích hoạt bởi RandomEnemy.Enable()
+        // Thêm EnemyDeathBridge vào enemy bên TRONG (không phải EnemyNew parent)
+        AddEnemyDeathBridgeToActiveEnemy(enemy);
+
+        Debug.Log($"[DungeonWave] Spawned EnemyNew at {spawnPos} - AI activated");
+    }
+
+    /// <summary>
+    /// Thêm EnemyDeathBridge vào enemy đang active bên trong EnemyNew
+    /// </summary>
+    private void AddEnemyDeathBridgeToActiveEnemy(GameObject enemyNew)
+    {
+        RandomEnemy randomEnemy = enemyNew.GetComponent<RandomEnemy>();
+        if (randomEnemy == null || randomEnemy.enemys == null) return;
+
+        // Tìm enemy đang active
+        for (int i = 0; i < randomEnemy.enemys.Length; i++)
         {
-            // Reset childNumber để nó chọn đúng vị trí
-            // (childNumber được set trong RandomEnemy.Awake() từ sibling index)
-            
-            randomEnemy.Enable();
-            Debug.Log($"[DungeonWave] Đã gọi RandomEnemy.Enable()");
+            if (randomEnemy.enemys[i] != null && randomEnemy.enemys[i].activeSelf)
+            {
+                GameObject activeEnemy = randomEnemy.enemys[i];
+                
+                // Kiểm tra xem đã có EnemyDeathBridge chưa
+                if (activeEnemy.GetComponent<EnemyDeathBridge>() == null)
+                {
+                    activeEnemy.AddComponent<EnemyDeathBridge>();
+                    Debug.Log($"[DungeonWave] Added EnemyDeathBridge to {activeEnemy.name}");
         }
-        else
+                break; // Chỉ thêm vào một enemy đang active
+            }
+        }
+    }
+
+    /// <summary>
+    /// Thiết lập SelectEnemyPos cho tất cả các enemy trong wave
+    /// </summary>
+    private void SetupSelectEnemyPosForAllEnemies(Vector3 spawnPos)
+    {
+        int count = 10;
+        SelectEnemyPos.enemyTr = new Transform[count];
+
+        // Tạo parent để quản lý
+        GameObject parent = new GameObject("TempSpawnPoints");
+        parent.transform.position = spawnPos;
+
+        float radius = 5f;
+
+        for (int i = 0; i < count; i++)
         {
-            Debug.LogWarning($"[DungeonWave] EnemyNew không có RandomEnemy component!");
+            float angle = (Mathf.PI * 2f / count) * i;
+            Vector3 offset = new Vector3(Mathf.Cos(angle), 0, Mathf.Sin(angle)) * radius;
+
+            GameObject p = new GameObject($"TempSpawnPos_{i}");
+            p.transform.position = spawnPos + offset;
+            p.transform.parent = parent.transform;
+
+            SelectEnemyPos.enemyTr[i] = p.transform;
         }
 
-        // Xác định enemy type để tính EXP (sẽ được xác định bởi RandomEnemy)
-        // Đợi một chút để RandomEnemy chọn xong
-        StartCoroutine(TrackEnemyType(enemy, tracker));
+        // Destroy sau khi spawn xong để tránh memory leak
+        Destroy(parent, 5f);
+        
+        Debug.Log($"[DungeonWave] Setup SelectEnemyPos với {count} vị trí tại {spawnPos}");
+    }
 
-        Debug.Log($"[DungeonWave] Spawned EnemyNew at {spawnPos}");
+    /// <summary>
+    /// Tắt tất cả enemy con trong EnemyNew prefab
+    /// </summary>
+    private void DisableAllChildEnemies(GameObject enemyRoot)
+    {
+        // Tắt tất cả child objects (các enemy)
+        for (int i = 0; i < enemyRoot.transform.childCount; i++)
+        {
+            Transform child = enemyRoot.transform.GetChild(i);
+            // Không tắt RandomEnemy component
+            if (child.GetComponent<RandomEnemy>() == null)
+            {
+                child.gameObject.SetActive(false);
+            }
+        }
+        Debug.Log("[DungeonWave] Đã tắt tất cả child enemies trong prefab");
     }
     
     /// <summary>
@@ -462,6 +550,13 @@ public class DungeonWaveManager : MonoBehaviour
     {
         // Số vị trí spawn - khớp với kích thước mảng trong SelectEnemyPos
         int count = 10;
+
+        // Xóa các temp objects cũ nếu có
+        GameObject oldParent = GameObject.Find("TempSpawnPoints");
+        if (oldParent != null)
+        {
+            Destroy(oldParent);
+        }
 
         // Khởi tạo mảng mới với đủ số phần tử
         SelectEnemyPos.enemyTr = new Transform[count];
@@ -739,6 +834,43 @@ public class DungeonWaveManager : MonoBehaviour
     public bool IsDungeonActive => isDungeonActive;
     public bool IsWaveActive => isWaveActive;
     public int TotalExpGained => totalExpGained;
+
+    // ===== CÁC PHƯƠNG THỨC CHO GAMEPLAY MANAGER =====
+
+    /// <summary>
+    /// Thiết lập wave hiện tại (được gọi từ GamePlayManager.Arenalevel)
+    /// </summary>
+    public void SetWave(int wave)
+    {
+        currentWave = Mathf.Clamp(wave, 1, totalWaves);
+        
+        if (showDebugLog)
+            Debug.Log($"[DungeonWaveManager] SetWave: {currentWave}");
+    }
+
+    /// <summary>
+    /// Lấy số lượng enemy theo từng loại cho wave hiện tại
+    /// </summary>
+    public void GetEnemyCounts(out int skeletOut, out int lichOut, out int bossOut, out int demonOut)
+    {
+        int waveIdx = Mathf.Clamp(currentWave - 1, 0, totalWaves - 1);
+        
+        skeletOut = waveIdx < skeletCount.Length ? skeletCount[waveIdx] : 0;
+        lichOut = waveIdx < lichCount.Length ? lichCount[waveIdx] : 0;
+        bossOut = waveIdx < bossCount.Length ? bossCount[waveIdx] : 0;
+        demonOut = waveIdx < demonCount.Length ? demonCount[waveIdx] : 0;
+    }
+
+    /// <summary>
+    /// Lấy số lượng enemy còn lại có thể spawn (dùng trong RandomEnemy - KHÔNG reset counters)
+    /// </summary>
+    public void GetRemainingEnemyCounts(out int skeletOut, out int lichOut, out int bossOut, out int demonOut)
+    {
+        skeletOut = Mathf.Max(0, currentSkeletCount - GamePlayManager.archers);
+        lichOut = Mathf.Max(0, currentLichCount - GamePlayManager.lich);
+        bossOut = Mathf.Max(0, currentBossCount - GamePlayManager.boss);
+        demonOut = Mathf.Max(0, currentDemonCount - GamePlayManager.demon);
+    }
 }
 
 /// <summary>

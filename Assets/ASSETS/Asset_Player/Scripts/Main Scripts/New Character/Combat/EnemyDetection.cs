@@ -1,6 +1,7 @@
 using UnityEngine;
 using Unity.Cinemachine;
 using System.Collections;
+using System.Linq;
 
 public class EnemyDetection : MonoBehaviour
 {
@@ -138,8 +139,18 @@ public class EnemyDetection : MonoBehaviour
         var enemyAnimator = nearestEnemy.GetComponent<Animator>();
         if (enemyAnimator != null)
         {
-            // Check if enemy is in combat state (e.g., "Combat" or "Alert" state)
-            return enemyAnimator.GetBool("isInCombat") ||
+            // Check if enemy is in combat state - safely check if parameter exists first
+            bool isInCombatParam = false;
+            try {
+                var param = enemyAnimator.parameters.FirstOrDefault(p => p.name == "isInCombat");
+                if (param != null) {
+                    isInCombatParam = enemyAnimator.GetBool("isInCombat");
+                }
+            } catch {
+                // Parameter doesn't exist in this animator
+            }
+            
+            return isInCombatParam ||
                    enemyAnimator.GetCurrentAnimatorStateInfo(0).IsName("Combat") ||
                    enemyAnimator.GetCurrentAnimatorStateInfo(0).IsName("Alert");
         }
@@ -477,9 +488,31 @@ public class EnemyDetection : MonoBehaviour
         if (animator == null || character == null) return false;
 
         // Check if character is in attack state (with null checks)
-        return (character.attacking != null && character.movementSM.currentState == character.attacking) ||
-               animator.GetCurrentAnimatorStateInfo(0).IsName("Attack") ||
-               animator.GetBool("isAttacking");
+        bool isInAttackState = (character.attacking != null && character.movementSM.currentState == character.attacking);
+
+        // Check animator state with try-catch to handle missing parameters
+        bool isInAttackAnimation = false;
+        try {
+            isInAttackAnimation = animator.GetCurrentAnimatorStateInfo(0).IsName("Attack");
+        } catch {
+            // Ignore errors
+        }
+
+        // Check for isAttacking parameter - may not exist in all animators
+        bool isAttackingParam = false;
+        try {
+            // First check if parameter exists to avoid errors
+            if (animator != null) {
+                var param = animator.parameters.FirstOrDefault(p => p.name == "isAttacking");
+                if (param != null) {
+                    isAttackingParam = animator.GetBool("isAttacking");
+                }
+            }
+        } catch {
+            // Parameter doesn't exist in this animator
+        }
+
+        return isInAttackState || isInAttackAnimation || isAttackingParam;
     }
 
     private void UpdateRootMotion()

@@ -19,36 +19,68 @@ Cách A sử dụng:
 - **1 prefab duy nhất**: `EnemyNew` (chứa tất cả enemy bên trong)
 - **GamePlayManager**: Cấu hình số lượng mỗi loại enemy cho từng wave
 - **RandomEnemy**: Tự động chọn loại enemy ngẫu nhiên theo cấu hình
+- **DungeonWaveManager**: Quản lý wave theo cấu hình mới
 
 ### 1.2 Ưu điểm
 - Không cần tách prefab
 - Không cần patch EnemyScript
 - Nhanh nhất (35-50 phút)
+- Kiểm soát chính xác số lượng enemy mỗi wave
 
 ### 1.3 Nhược điểm
-- Enemy được chọn ngẫu nhiên theo tỷ lệ (không cố định 100%)
+- Cần hiểu cấu trúc mới của hệ thống
 
-### 1.4 Luồng hoạt động
+### 1.4 LUỒNG HOẠT ĐỘNG MỚI
 
 ```
 Wave bắt đầu
     ↓
-DungeonWaveManager cấu hình GamePlayManager:
-  - GamePlayManager.archers = 2
-  - GamePlayManager.monsteres = 1
-  - GamePlayManager.lich = 0
+DungeonWaveManager cấu hình:
+  - Wave 1: 3 Skelet
+  - Wave 2: 4 Skelet
+  - Wave 3: 5 Skelet
+  - Wave 4: 4 Skelet + 1 Lich
+  - Wave 5: 2 Boss + 1 Demon
     ↓
-Spawn 3 lần EnemyNew
+GamePlayManager thiết lập enemyType[]
+    ↓
+Spawn N lần EnemyNew (N = tổng số enemy trong wave)
     ↓
 Mỗi EnemyNew:
   - RandomEnemy chạy
-  - Đọc GamePlayManager để chọn enemy
-  - Lần 1: chọn archer (vì archers < 2)
-  - Lần 2: chọn archer (vì archers < 2)  
-  - Lần 3: chọn monster (vì archers = 2 rồi, monsters < 1)
+  - Đọc DungeonWaveManager để chọn enemy theo category
+  - Ưu tiên: Demon → Boss → Lich → Skelet
     ↓
 Player tiêu diệt hết → Wave tiếp theo
 ```
+
+### 1.5 DANH SÁCH ENEMY TRONG ENEMYNEW PREFAB
+
+| Index | Tên trong Prefab | Category | Ghi chú |
+|-------|------------------|----------|----------|
+| 0 | Skeleton | Skelet | Wave 1-4 |
+| 1 | skeleton_archer | Skelet | Wave 1-4 |
+| 2 | Orc | Monster | Chưa dùng |
+| 3 | Troll | Monster | Chưa dùng |
+| 4 | Guul | Monster | Chưa dùng |
+| 5 | Lich | Lich | Wave 4 |
+| 6 | Stoneogre | Boss | Wave 5 |
+| 7 | Golem | Boss | Wave 5 |
+| 8 | Minotaur | Boss | Wave 5 |
+| 9 | Ifrit | Boss | Wave 5 |
+| 10 | Demon | Demon | Wave 5 |
+
+### 1.6 CẤU HÌNH WAVE MẶC ĐỊNH
+
+| Wave | Skelet | Lich | Boss | Demon | Tổng |
+|------|--------|------|------|-------|-------|
+| Wave 1 | 3 | 0 | 0 | 0 | 3 |
+| Wave 2 | 4 | 0 | 0 | 0 | 4 |
+| Wave 3 | 5 | 0 | 0 | 0 | 5 |
+| Wave 4 | 4 | 1 | 0 | 0 | 5 |
+| Wave 5 | 0 | 0 | 2 | 1 | 3 |
+
+**Lưu ý:** Có thể điều chỉnh số lượng trong Inspector của DungeonWaveManager
 
 ---
 
@@ -135,15 +167,12 @@ Player tiêu diệt hết → Wave tiếp theo
 
 ## BƯỚC 3: SETUP DUNGEON MANAGER
 
-### 3.1 Tạo GameObject DungeonManager
+### 3.1 Thêm DungeonWaveManager vào Scene
 1. Trong Hierarchy, right-click → **Create Empty** (đặt tên: `DungeonManager`)
 2. Position: (0, 0, 0)
+3. Trong Inspector, click **Add Component** → gõ `DungeonWaveManager` (script nằm trong Assets/_DungeonMania/Scripts/)
 
-### 3.2 Thêm Script
-1. Kéo script `DungeonWaveManager.cs` vào `DungeonManager`
-2. Hoặc: Trong Inspector, click **Add Component** → gõ `DungeonWaveManager`
-
-### 3.3 Cấu hình Inspector - Phần 1: Dungeon Settings
+### 3.2 Cấu hình Inspector - Phần 1: Dungeon Settings
 
 ```
 Dungeon Name: "Sa Mac Dungeon"
@@ -167,53 +196,50 @@ Wave Countdown Time: 5
 Wave Delay Time: 3
 ```
 
-### 3.6 Cấu hình Inspector - Phần 4: ENEMY COUNT PER WAVE (CÁCH A)
+### 3.6 Cấu hình Inspector - Phần 4: ENEMY COUNT PER WAVE (MỚI)
 
 Đây là phần QUAN TRỌNG để điều khiển số lượng enemy mỗi wave!
 
-**Archer Count** (Size = 5):
-```
-Element 0: 1   (Wave 1: 1 archer)
-Element 1: 2   (Wave 2: 2 archer)
-Element 2: 3   (Wave 3: 3 archer)
-Element 3: 2   (Wave 4: 2 archer)
-Element 4: 1   (Wave 5: 1 archer)
-```
+Theo cấu hình mới:
+- **Skelet**: Wave 1-4 (Skeleton + skeleton_archer)
+- **Lich**: Wave 4 (chỉ wave 4)
+- **Boss**: Wave 5 (Stoneogre, Golem, Minotaur, Ifrit)
+- **Demon**: Wave 5
 
-**Monster Count** (Size = 5):
+**Skelet Count** (Size = 5):
 ```
-Element 0: 0   (Wave 1: 0 monster)
-Element 1: 1   (Wave 2: 1 monster)
-Element 2: 2   (Wave 3: 2 monster)
-Element 3: 3   (Wave 4: 3 monster)
-Element 4: 2   (Wave 5: 2 monster)
+Element 0: 3   (Wave 1: 3 Skelet)
+Element 1: 4   (Wave 2: 4 Skelet)
+Element 2: 5   (Wave 3: 5 Skelet)
+Element 3: 4   (Wave 4: 4 Skelet)
+Element 4: 0   (Wave 5: 0 Skelet)
 ```
 
 **Lich Count** (Size = 5):
 ```
-Element 0: 0   (Wave 1: 0 lich)
-Element 1: 0   (Wave 2: 0 lich)
-Element 2: 1   (Wave 3: 1 lich)
-Element 3: 1   (Wave 4: 1 lich)
-Element 4: 2   (Wave 5: 2 lich)
+Element 0: 0   (Wave 1: 0 Lich)
+Element 1: 0   (Wave 2: 0 Lich)
+Element 2: 0   (Wave 3: 0 Lich)
+Element 3: 1   (Wave 4: 1 Lich)
+Element 4: 0   (Wave 5: 0 Lich)
 ```
 
 **Boss Count** (Size = 5):
 ```
-Element 0: 0   (Wave 1: 0 boss)
-Element 1: 0   (Wave 2: 0 boss)
-Element 2: 0   (Wave 3: 0 boss)
-Element 3: 1   (Wave 4: 1 boss)
-Element 4: 0   (Wave 5: 0 boss)
+Element 0: 0   (Wave 1: 0 Boss)
+Element 1: 0   (Wave 2: 0 Boss)
+Element 2: 0   (Wave 3: 0 Boss)
+Element 3: 0   (Wave 4: 0 Boss)
+Element 4: 2   (Wave 5: 2 Boss)
 ```
 
 **Demon Count** (Size = 5):
 ```
-Element 0: 0   (Wave 1: 0 demon)
-Element 1: 0   (Wave 2: 0 demon)
-Element 3: 0   (Wave 3: 0 demon)
-Element 3: 0   (Wave 4: 0 demon)
-Element 4: 1   (Wave 5: 1 demon)
+Element 0: 0   (Wave 1: 0 Demon)
+Element 1: 0   (Wave 2: 0 Demon)
+Element 2: 0   (Wave 3: 0 Demon)
+Element 3: 0   (Wave 4: 0 Demon)
+Element 4: 1   (Wave 5: 1 Demon)
 ```
 
 ### 3.7 Cấu hình Inspector - Phần 5: PREFAB (CÁCH A)
@@ -243,6 +269,12 @@ Kéo các UI objects vào các slot tương ứng:
 | Exp Reward Text | ExpRewardText |
 | Status Text | StatusText |
 
+### 3.9 Cấu hình GamePlayManager
+
+1. Tìm GameObject có script GamePlayManager
+2. Trong Inspector, đảm bảo:
+   - **Use New Wave System**: ✅ Đã tick (true)
+
 ---
 
 ## BƯỚC 4: KẾT NỐI PLAYER VỚI HỆ THỐNG
@@ -255,7 +287,20 @@ Kéo các UI objects vào các slot tương ứng:
    - Character (script)
    - PlayerHealth (script)
 
-### 4.2 Thêm kết nối Player Death
+### 4.2 THÊM DUNGEONMANIAPLAYERBRIDGE (QUAN TRỌNG!)
+Đây là bước QUAN TRỌNG để enemy có thể tấn công player!
+
+1. Chọn **Player** object trong Hierarchy
+2. Trong Inspector, click **Add Component**
+3. Tìm và thêm `DungeonManiaPlayerBridge` (nằm trong Assets/_DungeonMania/Scripts/)
+4. Sau khi thêm, component sẽ tự động tìm `PlayerHealth` trên cùng object
+5. Nếu không tự động, kéo `PlayerHealth` component vào slot `Player Health` trong Inspector
+
+**Cấu hình thêm:**
+- **Hit Trigger Name**: Điền tên trigger animation cho animation hit (ví dụ: "Hit", "TakeDamage",...)
+- Animation player của bạn phải có trigger parameter này để chơi animation khi bị đánh
+
+### 4.3 Thêm kết nối Player Death
 Mở file `PlayerHealth.cs` và tìm method `Die()` hoặc `OnDeath()`, thêm dòng này vào cuối method:
 
 ```csharp
@@ -299,9 +344,10 @@ private void Die()
 | Wave Notification | Thấy "WAVE 1" hiện lên |
 | Kill Enemy | Đánh chết 1 enemy → đếm giảm |
 | Chuyển wave | Kill hết enemy → thấy countdown wave mới |
-| Boss Wave | Wave 4 → thấy Boss spawn |
-| Demon Wave | Wave 5 → thấy Demon spawn |
-| Win | Kill Demon → thấy "DUNGEON COMPLETE!" |
+| Skelet Wave | Wave 1-3 → thấy Skeleton và Archer spawn |
+| Lich Wave | Wave 4 → thấy Lich spawn cùng Skelet |
+| Boss + Demon Wave | Wave 5 → thấy Boss (Stoneogre/Golem/Minotaur/Ifrit) và Demon spawn |
+| Win | Kill hết enemy wave 5 → thấy "DUNGEON COMPLETE!" |
 | Fail | Để player chết → thấy "DUNGEON FAILED!" |
 
 ### 5.3 Debug Keys (Trong Game)
@@ -322,12 +368,15 @@ Nhấn các phím này khi đang chơi để test nhanh:
 
 Mở Console để xem log:
 ```
-[DungeonWave] Bắt đầu dungeon: Sa Mac Dungeon
-[DungeonWave] Wave 1: A=1 M=0 L=0 B=0 D=0 (Tổng: 1)
-[DungeonWave] GamePlayManager configured: A=1 M=0 L=0 B=0 D=0
-[DungeonWave] Spawned EnemyNew at (x, y, z)
-[DungeonWave] Enemy type identified: 1
-[DungeonWave] Enemy type 1 died. Còn lại: 0. EXP: 150
+[DungeonWaveManager] Wave 1: Skelet=3, Lich=0, Boss=0, Demon=0
+[RandomEnemy] Enemy type identified: Skeleton (index 0)
+[RandomEnemy] Enemy type identified: skeleton_archer (index 1)
+[GamePlayManager] Wave 4: Skelet=4, Lich=1, Boss=0, Demon=0
+[RandomEnemy] Enemy type identified: Lich (index 5)
+[GamePlayManager] Wave 5: Skelet=0, Lich=0, Boss=2, Demon=1
+[RandomEnemy] Enemy type identified: Golem (index 7)
+[RandomEnemy] Enemy type identified: Minotaur (index 8)
+[RandomEnemy] Enemy type identified: Demon (index 10)
 ```
 
 ---
@@ -356,9 +405,34 @@ Mở Console để xem log:
 **Nguyên nhân:** Chưa kéo prefab EnemyNew vào field
 **Giải pháp:** Kéo prefab EnemyNew vào "Enemy New Prefab" trong Inspector
 
-### Lỗi: Số lượng enemy không đúng với cấu hình
-**Nguyên nhân:** RandomEnemy chọn ngẫu nhiên, có thể không chính xác 100%
-**Giải pháp:** Đây là behavior bình thường của Cách A. Nếu cần chính xác, dùng Cách B
+### Lỗi: Wave sai cấu hình
+**Nguyên nhân:** Use New Wave System chưa được tick
+**Giải pháp:** Đảm bảo GamePlayManager.useNewWaveSystem = true
+
+### Lỗi: Enemy spawn sai loại
+**Nguyên nhân:** Kiểm tra lại mảng enemy trong RandomEnemy
+**Giải pháp:** Đảm bảo EnemyNew prefab có đủ 11 child objects theo đúng thứ tự
+
+### Lỗi: Particle System hiển thị màu tím/magenta
+**Nguyên nhân:** Shader không tương thích với Unity version hiện tại
+**Giải pháp:**
+1. **Cách 1**: Re-import DungeonMania assets với Unity version hiện tại
+2. **Cách 2**: Thay đổi Material của particle system sang shader mới:
+   - Chọn Particle System object
+   - Trong Inspector → Renderer → Material
+   - Thay bằng material có shader tương thích (ví dụ: Particles/Standard Surface hoặc URP/HDRP Particle)
+3. **Cách 3**: Nếu dùng URP/HDRP, cần convert materials sang phiên bản tương thích
+
+### Lỗi: Enemy tấn công không gây damage
+**Nguyên nhân:** Chưa thêm DungeonManiaPlayerBridge vào Player
+**Giải pháp:** Xem BƯỚC 4.2 ở trên để thêm component
+
+### Lỗi: Player chơi animation rolling thay vì hit khi bị đánh
+**Nguyên nhân:** Tên trigger parameter sai hoặc chưa có trong Animator
+**Giải pháp:**
+1. Kiểm tra Animator Controller của player
+2. Đảm bảo có trigger parameter với tên khớp với "Hit Trigger Name" trong DungeonManiaPlayerBridge
+3. Hoặc đổi "Hit Trigger Name" trong Inspector của DungeonManiaPlayerBridge thành tên trigger mà player của bạn đang dùng
 
 ---
 
@@ -366,7 +440,10 @@ Mở Console để xem log:
 
 | Thao tác | Cách làm |
 |----------|----------|
-| Đổi số enemy mỗi wave | Sửa array trong Inspector (Archer Count, Monster Count,...) |
+| Đổi số Skelet mỗi wave | Sửa Skelet Count array trong Inspector |
+| Đổi số Lich mỗi wave | Sửa Lich Count array trong Inspector |
+| Đổi số Boss mỗi wave | Sửa Boss Count array trong Inspector |
+| Đổi số Demon mỗi wave | Sửa Demon Count array trong Inspector |
 | Đổi bán kính spawn | Sửa Spawn Radius = 25 |
 | Đổi thời gian countdown | Sửa Wave Countdown Time = 3 |
 | Đổi tên dungeon | Sửa Dungeon Name = "Ten Map" |
@@ -376,30 +453,32 @@ Mở Console để xem log:
 
 ---
 
-## SO SÁNH CÁCH A vs CÁCH B
+## NOTE VỀ ENEMYSCRIPT VÀ SPECIFIC ENEMY TYPE
 
-| Tiêu chí | Cách A | Cách B |
-|----------|--------|--------|
-| **Thời gian setup** | 35-50 phút | 60-80 phút |
-| **Độ khó** | Dễ | Trung bình |
-| **Cần tách prefab** | ❌ Không | ✅ Có |
-| **Cần sửa code** | ❌ Không | ✅ Patch EnemyScript |
-| **Kiểm soát chính xác** | ❌ Ngẫu nhiên | ✅ 100% chính xác |
-| **Prefab duy nhất** | ✅ EnemyNew | ❌ 6 prefab riêng |
+### EnemyScript đã được cập nhật
 
----
+Script EnemyScript đã được thêm enum `SpecificEnemyType` để phân loại chính xác từng loại enemy:
 
-## TIẾP THEO
+```csharp
+public enum SpecificEnemyType
+{
+    Skeleton,        // index 0
+    SkeletonArcher,  // index 1
+    Orc,             // index 2
+    Troll,           // index 3
+    Guul,            // index 4
+    Lich,            // index 5
+    Stoneogre,       // index 6
+    Golem,           // index 7
+    Minotaur,        // index 8
+    Ifrit,           // index 9
+    Demon            // index 10
+}
+```
 
-Khi có map Đầm Lầy và Hell:
-1. Copy scene Desert → đổi tên
-2. Thay đổi Enemy Count arrays (tăng số lượng enemy)
-3. Thay đổi Map Type (1 = Swamp, 2 = Hell)
-4. Import enemy models mới
+Khi RandomEnemy spawn enemy, nó sẽ tự động gọi `SetSpecificEnemyType(index)` để cập nhật loại enemy.
 
----
-
-## NOTE VỀ EXP VÀ DAMAGE NUMBER
+### NOTE VỀ EXP VÀ DAMAGE NUMBER
 
 ### EXP System
 - EXP được tính trong `EnemyWaveTracker.OnEnemyDeath()`
@@ -415,3 +494,56 @@ Khi có map Đầm Lầy và Hell:
 ### Damage Number
 - Để hiển thị damage number, cần thêm `TakeDamageTest` vào EnemyNew prefab
 - Xem hướng dẫn ở section bổ sung nếu cần
+
+---
+
+## TÙY CHỈNH SỐ LƯỢNG ENEMY
+
+### Cách thay đổi số lượng enemy
+
+Bạn có thể tùy chỉnh số lượng enemy theo ý muốn bằng cách:
+
+**Cách 1: Sửa trong Inspector**
+1. Chọn GameObject có DungeonWaveManager
+2. Tìm mảng Skelet Count, Lich Count, Boss Count, Demon Count
+3. Thay đổi giá trị từng phần tử
+
+**Cách 2: Sửa bằng code**
+```csharp
+// Trong DungeonWaveManager.cs hoặc từ script khác
+DungeonWaveManager.Instance.SetWaveConfig(waveIndex: 0, skeletCount: 5, lichCount: 0, bossCount: 0, demonCount: 0);
+```
+
+### Ví dụ cấu hình khác
+
+**Ví dụ 1: Dungeon khó hơn**
+```
+Wave 1: 5 Skelet
+Wave 2: 6 Skelet
+Wave 3: 7 Skelet + 1 Lich
+Wave 4: 5 Skelet + 2 Lich
+Wave 5: 3 Boss + 2 Demon
+```
+
+**Ví dụ 2: Dungeon nhẹ hơn**
+```
+Wave 1: 2 Skelet
+Wave 2: 3 Skelet
+Wave 3: 4 Skelet
+Wave 4: 3 Skelet + 1 Lich
+Wave 5: 1 Boss + 1 Demon
+```
+
+---
+
+## KIỂM TRA CUỐI CÙNG
+
+Trước khi build, hãy đảm bảo:
+
+1. ✅ GamePlayManager có useNewWaveSystem = true
+2. ✅ DungeonWaveManager đã được thêm vào scene
+3. ✅ EnemyNew prefab đã được kéo vào Enemy New Prefab field
+4. ✅ Tất cả UI references đã được kéo vào đúng field
+5. ✅ Player object tên là "Player"
+6. ✅ NavMesh đã được bake
+7. ✅ Obstacle Layer đã được chọn (nếu có tường)

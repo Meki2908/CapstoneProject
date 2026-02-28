@@ -172,10 +172,22 @@ public class PlayerHealth : MonoBehaviour
 
     public void TakeDamage(float damage, Vector3 hitPosition = default)
     {
+        // Delegate to the main TakeDamage method with default values
+        TakeDamage(damage, hitPosition, false);
+    }
+
+    /// <summary>
+    /// Main TakeDamage method with extended parameters
+    /// </summary>
+    /// <param name="damage">Damage amount</param>
+    /// <param name="hitPosition">Position where damage came from</param>
+    /// <param name="forceHitAnimation">Force hit animation even if invulnerable</param>
+    public void TakeDamage(float damage, Vector3 hitPosition, bool forceHitAnimation)
+    {
         if (!IsAlive) return; // Already dead, ignore damage
 
-        // If invulnerable (e.g., ultimate), ignore damage
-        if (isInvulnerable)
+        // If invulnerable (e.g., ultimate), ignore damage (unless forced)
+        if (isInvulnerable && !forceHitAnimation)
         {
             Debug.Log("[PlayerHealth] Player is invulnerable - damage ignored");
             return;
@@ -188,7 +200,7 @@ public class PlayerHealth : MonoBehaviour
         }
 
         // Invincibility frame during dash - no damage received
-        if (character != null && character.IsDashing)
+        if (character != null && character.IsDashing && !forceHitAnimation)
         {
             Debug.Log($"[PlayerHealth] Dash invincibility frame active - damage ignored!");
             return;
@@ -232,8 +244,28 @@ public class PlayerHealth : MonoBehaviour
         // Transition to GetHitState if not already in DieState
         if (character != null && character.movementSM != null && character.movementSM.currentState != character.dieState)
         {
+            Debug.Log($"[PlayerHealth] Changing state from {character.movementSM.currentState?.GetType().Name} to GetHitState. IsDashing={character.IsDashing}");
             character.movementSM.ChangeState(character.getHit);
         }
+        else
+        {
+            Debug.LogWarning($"[PlayerHealth] Could not change to GetHitState! character={(character != null ? "exists" : "null")}, movementSM={(character?.movementSM != null ? "exists" : "null")}, currentState={character?.movementSM?.currentState?.GetType().Name}");
+        }
+    }
+
+    /// <summary>
+    /// PlayerDamage - called by DungeonMania's EnemyAttack script
+    /// Converts DungeonMania's Damage struct to player's damage system
+    /// </summary>
+    public void PlayerDamage(Damage damageStruct, int hit)
+    {
+        // Calculate total damage from DungeonMania's damage struct
+        int totalDamage = damageStruct.damage + damageStruct.damageElemental + damageStruct.crit;
+        
+        Debug.Log($"[PlayerHealth] PlayerDamage called: total={totalDamage}, base={damageStruct.damage}, elemental={damageStruct.damageElemental}, crit={damageStruct.crit}, isBow={damageStruct.isBow}");
+        
+        // Call main TakeDamage
+        TakeDamage(totalDamage, Vector3.zero, true);
     }
 
     private void Die()
