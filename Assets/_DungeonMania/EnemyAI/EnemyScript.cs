@@ -129,7 +129,26 @@ public class EnemyScript : MonoBehaviour {
             bowScript = new Bow[bow.Length];
             for(int i = 0; i < bow.Length; i++){
                 if (bow[i] != null) {
+                    // Thử tìm trên chính object trước
                     bowScript[i] = bow[i].GetComponent<Bow>();
+                    
+                    // Nếu không có, tìm trong children
+                    if (bowScript[i] == null)
+                    {
+                        bowScript[i] = bow[i].GetComponentInChildren<Bow>();
+                    }
+                    
+                    // Nếu vẫn không có, tìm trên parent "Bow" object
+                    if (bowScript[i] == null && bow[i].transform.parent != null)
+                    {
+                        bowScript[i] = bow[i].transform.parent.GetComponent<Bow>();
+                    }
+                    
+                    if (bowScript[i] != null) {
+                        Debug.Log($"[EnemyScript] Found Bow script for bow[{i}]: {bowScript[i].gameObject.name}");
+                    } else {
+                        Debug.LogWarning($"[EnemyScript] Bow script not found for bow[{i}]: {bow[i].name}");
+                    }
                 }
             }
         }
