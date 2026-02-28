@@ -4,8 +4,14 @@ using UnityEngine;
 public class EnemyAttack : MonoBehaviour {
     EnemyScript enemyScript;
     Damage damageStruct;
+    EnemyAttackEffects attackEffects;
+    
     private void Start(){
         enemyScript = GetComponent<EnemyScript> ();
+        // Tìm EnemyAttackEffects
+        attackEffects = GetComponent<EnemyAttackEffects>();
+        if (attackEffects == null)
+            attackEffects = GetComponentInChildren<EnemyAttackEffects>();
     }
     public void StartAction(string anim){
         if(HeroInformation.alive && enemyScript != null){
@@ -59,6 +65,9 @@ public class EnemyAttack : MonoBehaviour {
                 
                 if (bridge != null) {
                     if (enemyScript.enemyState.distance <= enemyScript.attackDistance) {
+                        // Gọi particle effects trước khi gây damage
+                        if (attackEffects != null) attackEffects.PlayBowAttack();
+                        
                         damageStruct = D();
                         Debug.Log($"[EnemyAttack] Calling bridge.PlayerDamage. Distance: {enemyScript.enemyState.distance}, attackDistance: {enemyScript.attackDistance}");
                         bridge.PlayerDamage(damageStruct, hit);
@@ -105,6 +114,9 @@ public class EnemyAttack : MonoBehaviour {
                 }
                 
                 if (bridge != null) {
+                    // Gọi skill effects trước khi gây damage
+                    if (attackEffects != null) attackEffects.PlaySkillAttack();
+                    
                     damageStruct = D();
                     damageStruct.damage += enemyScript.enemy.attack.value;
                     damageStruct.damageElemental += enemyScript.enemy.magicValue;
@@ -124,21 +136,53 @@ public class EnemyAttack : MonoBehaviour {
         enemyScript.playerManager.playerHelth.PlayerDamage ( damageStruct, hit);
     }
     public void Bow (int hit) {
+        Debug.Log("[EnemyAttack] Bow() called!");
+        
         // Kiểm tra null và bounds cho bowScript
-        if(enemyScript == null || enemyScript.bowScript == null) return;
-        if(enemyScript.enemy == null) return;
+        if(enemyScript == null) {
+            Debug.LogWarning("[EnemyAttack] Bow: enemyScript is null!");
+            return;
+        }
+        if(enemyScript.bowScript == null) {
+            Debug.LogWarning("[EnemyAttack] Bow: bowScript is null! Make sure 'bow' array is assigned in EnemyScript inspector.");
+            return;
+        }
+        if(enemyScript.enemy == null) {
+            Debug.LogWarning("[EnemyAttack] Bow: enemyScript.enemy is null!");
+            return;
+        }
 
         int magicIndex = enemyScript.enemy.enemyMagic;
-        if (magicIndex < 0 || magicIndex >= enemyScript.bowScript.Length) return;
-        if (enemyScript.bowScript[magicIndex] == null) return;
-        if (enemyScript.audioManager == null) return;
+        Debug.Log($"[EnemyAttack] Bow: magicIndex={magicIndex}, bowScript.Length={enemyScript.bowScript.Length}");
+        
+        if (magicIndex < 0 || magicIndex >= enemyScript.bowScript.Length) {
+            Debug.LogWarning($"[EnemyAttack] Bow: magicIndex {magicIndex} out of bounds!");
+            return;
+        }
+        if (enemyScript.bowScript[magicIndex] == null) {
+            Debug.LogWarning($"[EnemyAttack] Bow: bowScript[{magicIndex}] is null! Make sure Bow script is on the particle object.");
+            return;
+        }
+        
+        // Audio manager is optional - don't require it
+        // if (enemyScript.audioManager == null) return;
+
+        // Gọi bow particle effects
+        if (attackEffects != null) attackEffects.PlayBowAttack();
 
         damageStruct = D();
+        Debug.Log($"[EnemyAttack] Bow: Calling DamageBow with damage={damageStruct.damage}");
         enemyScript.bowScript[magicIndex].DamageBow(damageStruct, hit);
-        enemyScript.audioManager.CommonEnemySound(2);
+        
+        if (enemyScript.audioManager != null) {
+            enemyScript.audioManager.CommonEnemySound(2);
+        }
     }
     public void Skill(int hit){
         if(enemyScript == null || enemyScript.skillScript == null) return;
+
+        // Gọi skill particle effects
+        if (attackEffects != null) attackEffects.PlaySkillAttack();
 
         HitSkill();
         damageStruct = D();
@@ -160,7 +204,19 @@ public class EnemyAttack : MonoBehaviour {
         // Kiểm tra null cho bow
         if (enemyScript.bow != null && enemyScript.bow.Length != 0) isBow = true;
 
-        int damage = Random.Range ( enemyScript.enemy.sword.damageMin , enemyScript.enemy.sword.damageMax + 1 );
+        // ƯU TIÊN: Dùng enemy.attack.value (đã được gán từ Inspector qua ApplyInspectorValues)
+        // Nếu attack.value = 0 (chưa set), thì mới dùng sword
+        int damage;
+        if (enemyScript.enemy.attack.value > 0)
+        {
+            // Dùng attackDamage từ Inspector (đã được gán vào enemy.attack.value)
+            damage = enemyScript.enemy.attack.value;
+        }
+        else
+        {
+            // Fallback: dùng sword damage (giá trị mặc định từ EnemyClass)
+            damage = Random.Range(enemyScript.enemy.sword.damageMin, enemyScript.enemy.sword.damageMax + 1);
+        }
         int damageElemental = enemyScript.enemy.magicValue;
         int checkAccuracy = Random.Range ( 1 , 101 );
         if ( checkAccuracy > enemyScript.enemy.accuracy.value ) {

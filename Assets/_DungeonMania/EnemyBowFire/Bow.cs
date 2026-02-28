@@ -11,7 +11,29 @@ public class Bow : MonoBehaviour {
     int hit;
     
 	void Awake () {
+        // Tìm particle trên object này
         ps = GetComponent<ParticleSystem>();
+        
+        // Nếu không có, tìm trong children
+        if (ps == null)
+        {
+            ParticleSystem[] children = GetComponentsInChildren<ParticleSystem>();
+            if (children.Length > 0)
+            {
+                ps = children[0];
+                Debug.Log($"[Bow] Found particle system in children: {ps.gameObject.name}");
+            }
+        }
+        else
+        {
+            Debug.Log($"[Bow] Found particle system on same object: {ps.gameObject.name}");
+        }
+        
+        if (ps == null)
+        {
+            Debug.LogWarning("[Bow] No ParticleSystem found! Make sure ParticleSystem is a child of this object.");
+        }
+        
         SetupPlayerReference();
 	}
     

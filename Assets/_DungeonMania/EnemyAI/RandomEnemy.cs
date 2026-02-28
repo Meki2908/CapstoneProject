@@ -224,6 +224,8 @@ public class RandomEnemy : MonoBehaviour{
             if (enemyScript != null)
             {
                 enemyScript.SetSpecificEnemyType(index);
+                // Áp dụng lại giá trị từ Inspector sau khi đã set specific type
+                enemyScript.ApplyInspectorValuesManual();
             }
         } else {
             Debug.LogError($"[RandomEnemy] Enemy at index {index} is null!");

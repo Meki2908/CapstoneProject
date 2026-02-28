@@ -12,6 +12,44 @@ public class EnemyScript : MonoBehaviour {
     
     public EnemyClass enemy;
     
+    // ========================================
+    // PUBLIC STATS - CÓ THỂ CHỈNH TRONG INSPECTOR
+    // ========================================
+    [Header("=== ENEMY STATS (Editable) ===")]
+    [Tooltip("Tên enemy")]
+    public string enemyName = "Enemy";
+    
+    [Tooltip("Máu tối đa")]
+    public int maxHealth = 100;
+    [Tooltip("Sát thương tấn công")]
+    public int attackDamage = 10;
+    [Tooltip("Giáp")]
+    public int armorValue = 5;
+    [Tooltip("Magic damage")]
+    public int magicValue = 0;
+    [Tooltip("Crit chance (%)")]
+    public int critChance = 10;
+    [Tooltip("Accuracy (%)")]
+    public int accuracy = 50;
+    [Tooltip("EXP khi tiêu diệt")]
+    public int expReward = 100;
+    [Tooltip("Gold khi tiêu diệt")]
+    public int goldReward = 10;
+    [Tooltip("Score khi tiêu diệt")]
+    public int scoreReward = 100;
+    [Tooltip("Khoảng cách tấn công")]
+    public float attackDistanceOverride = 1.5f;
+    [Tooltip("Tốc độ di chuyển")]
+    public float moveSpeed = 3.5f;
+    
+    [Header("=== ENEMY TYPE ===")]
+    [Tooltip("Loại enemy (phân loại chính)")]
+    public bool isBoss = false;
+    
+    // ========================================
+    // EXISTING CODE BELOW
+    // ========================================
+    
     // Category enemy (phân loại chính)
     public enum EnemyType{
         skelet,
@@ -209,6 +247,9 @@ public class EnemyScript : MonoBehaviour {
         Debug.Log($"[EnemyScript] Set specific type: {specificEnemyType}, category: {enemyType}");
     }  
     void OnEnable () {
+        // ÁP DỤNG GIÁ TRỊ TỪ INSPECTOR (chạy mỗi lần enemy được kích hoạt)
+        ApplyInspectorValues();
+
         EnemyEvent.WaitEvent += Wait;
         EnemyEvent.AttackEvent += Chase;
         wait =false;
@@ -271,6 +312,63 @@ public class EnemyScript : MonoBehaviour {
     }
     public void Distance(){
         enemyState.distance = Vector3.Distance(target.position, transform.position);
+    }
+
+    /// <summary>
+    /// Áp dụng các giá trị từ Inspector vào EnemyClass (private)
+    /// </summary>
+    private void ApplyInspectorValues()
+    {
+        if (enemy == null) return;
+
+        // Áp dụng health
+        enemy.helth.value = maxHealth;
+        enemy.mainHelth = maxHealth;
+        
+        // Áp dụng attack
+        enemy.attack.value = attackDamage;
+        
+        // Áp dụng armor
+        enemy.armor.value = armorValue;
+        
+        // Áp dụng magic
+        enemy.magic.value = magicValue;
+        
+        // Áp dụng crit
+        enemy.crit.value = critChance;
+        
+        // Áp dụng accuracy
+        enemy.accuracy.value = accuracy;
+        
+        // Áp dụng rewards
+        enemy.experiance = expReward;
+        enemy.gold = goldReward;
+        enemy.score = scoreReward;
+        
+        // Áp dụng attack distance
+        if (attackDistanceOverride > 0)
+        {
+            enemy.distance = attackDistanceOverride;
+        }
+        
+        // Áp dụng boss flag
+        enemy.isBoss = isBoss;
+        
+        // Áp dụng move speed cho NavMeshAgent
+        var navAgent = GetComponent<NavMeshAgent>();
+        if (navAgent != null)
+        {
+            navAgent.speed = moveSpeed;
+        }
+    }
+
+    /// <summary>
+    /// Public method để áp dụng giá trị từ Inspector (gọi từ bên ngoài sau khi SetSpecificEnemyType)
+    /// </summary>
+    public void ApplyInspectorValuesManual()
+    {
+        ApplyInspectorValues();
+        Debug.Log($"[EnemyScript] Applied inspector values manually: attackDamage={attackDamage}, maxHealth={maxHealth}");
     }
 }
 
