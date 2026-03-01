@@ -144,8 +144,7 @@ public class InventoryController : MonoBehaviour
         }
 
         // Kiểm tra PauseMenu có đang mở không
-        PauseMenuController pauseMenu = FindFirstObjectByType<PauseMenuController>();
-        bool isPauseMenuOpen = pauseMenu != null && pauseMenu.IsMenuOpen;
+        bool isPauseMenuOpen = false;
 
         // Chỉ lock cursor nếu PauseMenu KHÔNG mở
         if (!isPauseMenuOpen)

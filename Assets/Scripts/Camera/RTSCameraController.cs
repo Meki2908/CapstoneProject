@@ -484,8 +484,9 @@ namespace Unity.FantasyKingdom
         private void LockMouse(bool lockMouse)
         {
             // Kiểm tra PauseMenu có đang mở không
-            var pauseMenu = FindFirstObjectByType<PauseMenuController>();
-            if (pauseMenu != null && pauseMenu.IsMenuOpen)
+            bool isPauseMenuOpen = false;
+
+            if (isPauseMenuOpen)
             {
                 // PauseMenu đang mở - không lock cursor
                 return;
