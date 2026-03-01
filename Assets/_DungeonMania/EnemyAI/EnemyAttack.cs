@@ -175,7 +175,7 @@ public class EnemyAttack : MonoBehaviour {
         enemyScript.bowScript[magicIndex].DamageBow(damageStruct, hit);
         
         if (enemyScript.audioManager != null) {
-            enemyScript.audioManager.CommonEnemySound(2);
+        enemyScript.audioManager.CommonEnemySound(2);
         }
     }
     public void Skill(int hit){

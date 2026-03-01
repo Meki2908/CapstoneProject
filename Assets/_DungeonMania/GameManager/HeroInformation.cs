@@ -43,9 +43,9 @@ public class HeroInformation : MonoBehaviour {
         // Tìm EndGame với kiểm tra null
         endGame = GameObject.Find( "EndGame" );
         if (endGame != null) {
-            endGameScript = endGame.GetComponent<EndGame>();
+        endGameScript = endGame.GetComponent<EndGame>();
             if (endGameScript != null) {
-                endGame.SetActive(false);
+        endGame.SetActive(false);
             }
         } else {
             Debug.LogWarning("[HeroInformation] EndGame not found in scene");
@@ -55,13 +55,13 @@ public class HeroInformation : MonoBehaviour {
         menuUI = GameObject.Find("MenuUi");
         
         if (textPlayerExp != null)
-            experiencePoint = textPlayerExp.GetComponent<Text>();
+        experiencePoint = textPlayerExp.GetComponent<Text>();
         if (textPlayerGold != null)
-            gold = textPlayerGold.GetComponent<Text>();
+        gold = textPlayerGold.GetComponent<Text>();
         if (textPlayerScore != null)
-            score = textPlayerScore.GetComponent<Text>();
+        score = textPlayerScore.GetComponent<Text>();
         if (playerLevel != null)
-            playerLevelText = playerLevel.GetComponent<Text>();
+        playerLevelText = playerLevel.GetComponent<Text>();
             
         gameController = GetComponent<GameController>();
         CreatePlayer();

@@ -505,7 +505,7 @@ public class EnemyDetection : MonoBehaviour
             if (animator != null) {
                 var param = animator.parameters.FirstOrDefault(p => p.name == "isAttacking");
                 if (param != null) {
-                    isAttackingParam = animator.GetBool("isAttacking");
+            isAttackingParam = animator.GetBool("isAttacking");
                 }
             }
         } catch {
