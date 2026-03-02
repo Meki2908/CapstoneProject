@@ -23,6 +23,12 @@ public class PlayerHealth : MonoBehaviour
 
     private float baseMaxHealth; // Store base health for equipment bonus calculation
 
+    // Hệ thống chống stunlock — thời gian bất tử sau khi bị đánh
+    [Header("Hit Cooldown (chống stunlock)")]
+    [Tooltip("Thời gian bất tử sau khi bị đánh (giây) — player vẫn nhận damage nhưng không bị dừng hành động")]
+    [SerializeField] private float hitCooldown = 1.5f;
+    private float lastHitTime = -10f; // Thời điểm bị đánh lần cuối
+
     public float CurrentHealth => currentHealth;
     public float MaxHealth => maxHealth;
     public bool IsAlive => currentHealth > 0f;
@@ -234,17 +240,27 @@ public class PlayerHealth : MonoBehaviour
             return; // Exit early - don't trigger get hit if dead
         }
 
+        // === CHỐNG STUNLOCK ===
+        // Nếu trong thời gian cooldown → vẫn nhận damage nhưng KHÔNG vào GetHitState
+        // Player có thể tiếp tục đánh/di chuyển bình thường
+        if (Time.time - lastHitTime < hitCooldown)
+        {
+            Debug.Log($"[PlayerHealth] Hit cooldown active ({hitCooldown - (Time.time - lastHitTime):F1}s left) — damage applied but no stun");
+            return; // Đã trừ máu ở trên, nhưng không dừng hành động player
+        }
+        
+        lastHitTime = Time.time; // Ghi nhận thời điểm bị đánh
+        
         // Store current state before transitioning to hit state
         if (character != null)
         {
             character.lastStateBeforeHit = character.movementSM.currentState;
         }
 
-        // Don't trigger animation here - let GetHitState handle it based on currentLocomotionState
-        // Transition to GetHitState if not already in DieState
+        // Chuyển sang GetHitState (chỉ lần đầu bị đánh, sau đó cooldown bảo vệ)
         if (character != null && character.movementSM != null && character.movementSM.currentState != character.dieState)
         {
-            Debug.Log($"[PlayerHealth] Changing state from {character.movementSM.currentState?.GetType().Name} to GetHitState. IsDashing={character.IsDashing}");
+            Debug.Log($"[PlayerHealth] Changing state to GetHitState. Next hit stun in {hitCooldown}s");
             character.movementSM.ChangeState(character.getHit);
         }
         else

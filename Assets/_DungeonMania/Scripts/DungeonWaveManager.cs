@@ -132,7 +132,21 @@ public class DungeonWaveManager : MonoBehaviour
                 player = playerObj.transform;
                 Debug.Log($"[DungeonWave] Found player: {playerObj.name}");
             }
+            else
+            {
+                Debug.LogError("[DungeonWave] PLAYER NOT FOUND! Enemy sẽ không tìm được target!");
+            }
         }
+
+        // LOG: Kiểm tra tất cả references
+        Debug.Log($"[DungeonWave] === REFERENCE CHECK ===\n" +
+            $"  player: {(player != null ? player.name : "NULL!")}\n" +
+            $"  enemyNewPrefab: {(enemyNewPrefab != null ? enemyNewPrefab.name : "NULL!")}\n" +
+            $"  waveNotificationUI: {(waveNotificationUI != null ? "OK" : "NULL")}\n" +
+            $"  waveNameText: {(waveNameText != null ? "OK" : "NULL")}\n" +
+            $"  countdownUI: {(countdownUI != null ? "OK" : "NULL")}\n" +
+            $"  countdownText: {(countdownText != null ? "OK" : "NULL")}\n" +
+            $"  statusText: {(statusText != null ? "OK" : "NULL")}");
 
         // Tính tổng số enemy mỗi wave
         CalculateTotalEnemiesPerWave();
@@ -140,11 +154,154 @@ public class DungeonWaveManager : MonoBehaviour
         // THIẾT LẬP CÁC REFERENCES CẦN THIẾT CHO DUNGEONMANIA (SAU KHI TÌM ĐƯỢC PLAYER)
         SetupPlayerReference();
 
+        // ĐẢM BẢO tất cả parent objects của UI đều active (GUI_Dungeon có thể bị tắt mặc định)
+        EnsureUIParentsActive();
+
         // Ẩn tất cả UI
         HideAllUI();
 
         // Bắt đầu dungeon
         StartDungeon();
+    }
+
+    /// <summary>
+    /// Đảm bảo tất cả parent objects trong hierarchy của UI elements đều active
+    /// GUI_Dungeon hoặc Panels_GUI_Play có thể bị tắt mặc định trong Inspector
+    /// Nếu parent bị tắt, SetActive(true) trên child sẽ KHÔNG hiện UI
+    /// </summary>
+    private void EnsureUIParentsActive()
+    {
+        // Collect tất cả UI references để check parent chain
+        GameObject[] uiElements = new GameObject[] {
+            waveNotificationUI,
+            countdownUI,
+            dungeonCompleteUI,
+            dungeonFailedUI,
+            waveNameText != null ? waveNameText.gameObject : null,
+            countdownText != null ? countdownText.gameObject : null,
+            expRewardText != null ? expRewardText.gameObject : null,
+            statusText != null ? statusText.gameObject : null
+        };
+
+        foreach (GameObject ui in uiElements)
+        {
+            if (ui == null) continue;
+
+            // Đi ngược lên parent chain và bật tất cả
+            Transform parent = ui.transform.parent;
+            while (parent != null)
+            {
+                if (!parent.gameObject.activeSelf)
+                {
+                    Debug.Log($"[DungeonWave] Activating disabled parent: {parent.name}");
+                    parent.gameObject.SetActive(true);
+                }
+
+                // Dừng khi gặp Canvas (không bật parent ngoài Canvas)
+                if (parent.GetComponent<Canvas>() != null)
+                    break;
+
+                parent = parent.parent;
+            }
+        }
+
+        Debug.Log("[DungeonWave] UI parent chain activated");
+
+        // === CANVAS FIX AND DIAGNOSTIC ===
+        FixAndDiagnoseCanvas();
+    }
+
+    /// <summary>
+    /// Tìm và SỬA CÁC VẤN ĐỀ CANVAS phổ biến gây UI active nhưng không hiển thị:
+    /// 1. Canvas renderMode = ScreenSpaceCamera nhưng camera NULL → chuyển sang Overlay
+    /// 2. CanvasGroup alpha = 0 → set alpha = 1
+    /// 3. Canvas disabled → enabled
+    /// 4. Sorting order quá thấp → tăng lên
+    /// </summary>
+    private void FixAndDiagnoseCanvas()
+    {
+        if (waveNotificationUI == null) return;
+
+        // Tìm Canvas chứa UI
+        Canvas canvas = waveNotificationUI.GetComponentInParent<Canvas>();
+        if (canvas != null)
+        {
+            Debug.Log($"[DungeonWave] === CANVAS DIAGNOSTIC ===\n" +
+                $"  Canvas: {canvas.gameObject.name}\n" +
+                $"  renderMode: {canvas.renderMode}\n" +
+                $"  sortingOrder: {canvas.sortingOrder}\n" +
+                $"  enabled: {canvas.enabled}\n" +
+                $"  worldCamera: {(canvas.worldCamera != null ? canvas.worldCamera.name : "NULL")}");
+
+            // === FIX 1: Canvas renderMode ===
+            // Nếu Canvas dùng ScreenSpaceCamera nhưng KHÔNG có camera → không render gì
+            if (canvas.renderMode == RenderMode.ScreenSpaceCamera && canvas.worldCamera == null)
+            {
+                Debug.LogWarning("[DungeonWave] FIX: Canvas is ScreenSpaceCamera but camera is NULL! Switching to ScreenSpaceOverlay");
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            }
+
+            // === FIX 2: Canvas bị disabled ===
+            if (!canvas.enabled)
+            {
+                Debug.LogWarning("[DungeonWave] FIX: Canvas was disabled! Enabling...");
+                canvas.enabled = true;
+            }
+
+            // === FIX 3: Sorting order - đảm bảo dungeon UI render trên các UI khác ===
+            if (canvas.sortingOrder < 10)
+            {
+                Debug.Log($"[DungeonWave] FIX: Setting Canvas sortingOrder from {canvas.sortingOrder} to 100");
+                canvas.sortingOrder = 100;
+            }
+
+            // === FIX 4: Kiểm tra và fix CanvasGroup alpha ===
+            CanvasGroup[] groups = waveNotificationUI.GetComponentsInParent<CanvasGroup>(true);
+            foreach (var group in groups)
+            {
+                if (group.alpha < 0.01f)
+                {
+                    Debug.LogWarning($"[DungeonWave] FIX: CanvasGroup on '{group.gameObject.name}' has alpha={group.alpha}! Setting to 1");
+                    group.alpha = 1f;
+                }
+                Debug.Log($"[DungeonWave] CanvasGroup on '{group.gameObject.name}': alpha={group.alpha}");
+            }
+        }
+        else
+        {
+            Debug.LogWarning("[DungeonWave] NO Canvas found in parent chain! Creating overlay Canvas...");
+            // Tạo Canvas mới nếu không tìm thấy
+            Canvas newCanvas = waveNotificationUI.transform.root.gameObject.AddComponent<Canvas>();
+            newCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            newCanvas.sortingOrder = 100;
+            waveNotificationUI.transform.root.gameObject.AddComponent<UnityEngine.UI.GraphicRaycaster>();
+        }
+
+        // Check RectTransform
+        RectTransform rect = waveNotificationUI.GetComponent<RectTransform>();
+        if (rect != null)
+        {
+            Debug.Log($"[DungeonWave] WaveNotification: pos={rect.anchoredPosition}, size={rect.sizeDelta}, scale={rect.localScale}");
+            
+            // === FIX 5: Scale bằng 0 ===
+            if (rect.localScale.x < 0.01f || rect.localScale.y < 0.01f)
+            {
+                Debug.LogWarning("[DungeonWave] FIX: WaveNotification scale is nearly 0! Setting to 1,1,1");
+                rect.localScale = Vector3.one;
+            }
+        }
+
+        // Check text
+        if (waveNameText != null)
+        {
+            Debug.Log($"[DungeonWave] WaveNameText: color={waveNameText.color}, fontSize={waveNameText.fontSize}, enabled={waveNameText.enabled}");
+            // Fix alpha = 0 trên text
+            if (waveNameText.color.a < 0.01f)
+            {
+                Debug.LogWarning("[DungeonWave] FIX: WaveNameText color alpha is 0! Setting to white");
+                waveNameText.color = Color.white;
+            }
+        }
     }
 
     /// <summary>
@@ -253,6 +410,8 @@ public class DungeonWaveManager : MonoBehaviour
             yield break;
         }
 
+        Debug.Log($"[DungeonWave] === Starting Wave Sequence for Wave {currentWave} ===");
+
         // === HIỂN THỊ THÔNG BÁO WAVE ===
         ShowWaveNotification(currentWave);
         
@@ -266,7 +425,11 @@ public class DungeonWaveManager : MonoBehaviour
         float timer = waveCountdownTime;
         while (timer > 0)
         {
-            countdownText.text = Mathf.Ceil(timer).ToString();
+            // NULL CHECK: Tránh crash nếu UI bị mất reference sau merge
+            if (countdownText != null)
+            {
+                countdownText.text = Mathf.Ceil(timer).ToString();
+            }
             yield return new WaitForSeconds(1f);
             timer--;
         }
@@ -275,8 +438,10 @@ public class DungeonWaveManager : MonoBehaviour
         isCountingDown = false;
 
         // === BẮT ĐẦU WAVE ===
+        Debug.Log($"[DungeonWave] Spawning Wave {currentWave}...");
         SpawnWave(currentWave);
         OnWaveStarted?.Invoke(currentWave);
+        Debug.Log($"[DungeonWave] Wave {currentWave} spawned. enemiesAlive={enemiesAlive}, isWaveActive={isWaveActive}");
     }
 
     /// <summary>
@@ -708,12 +873,23 @@ public class DungeonWaveManager : MonoBehaviour
     /// </summary>
     public void OnEnemyKilled(int enemyType, int expValue)
     {
-        if (!isDungeonActive) return;
+        if (!isDungeonActive)
+        {
+            Debug.LogWarning($"[DungeonWave] OnEnemyKilled called but isDungeonActive=false! Ignoring.");
+            return;
+        }
 
         enemiesAlive--;
         totalExpGained += expValue;
 
-        Debug.Log($"[DungeonWave] Enemy type {enemyType} died. Còn lại: {enemiesAlive}. EXP: {expValue}");
+        Debug.Log($"[DungeonWave] Enemy type {enemyType} died. Còn lại: {enemiesAlive}. EXP: {expValue}. isWaveActive={isWaveActive}");
+
+        // Safety: Kiểm tra ngay khi enemy chết (không đợi Update)
+        if (enemiesAlive <= 0 && isWaveActive && !isCountingDown)
+        {
+            Debug.Log($"[DungeonWave] All enemies dead! Triggering OnWaveComplete from OnEnemyKilled");
+            OnWaveComplete();
+        }
     }
 
     // ===== UI METHODS =====
@@ -731,6 +907,8 @@ public class DungeonWaveManager : MonoBehaviour
     {
         if (waveNotificationUI)
         {
+            // Đảm bảo parent chain active
+            EnsureParentActive(waveNotificationUI);
             waveNotificationUI.SetActive(true);
             
             string waveName = "";
@@ -744,7 +922,12 @@ public class DungeonWaveManager : MonoBehaviour
             if (waveNameText)
                 waveNameText.text = waveName;
 
+            Debug.Log($"[DungeonWave] UI: Showing wave notification: {waveName} (activeInHierarchy={waveNotificationUI.activeInHierarchy})");
             StartCoroutine(HideWaveNotificationAfterDelay(2f));
+        }
+        else
+        {
+            Debug.LogWarning("[DungeonWave] UI: waveNotificationUI is NULL!");
         }
     }
 
@@ -758,8 +941,30 @@ public class DungeonWaveManager : MonoBehaviour
     {
         if (countdownUI)
         {
+            // Đảm bảo parent chain active
+            EnsureParentActive(countdownUI);
             countdownUI.SetActive(true);
-            countdownText.text = Mathf.Ceil(time).ToString();
+            if (countdownText != null)
+                countdownText.text = Mathf.Ceil(time).ToString();
+            Debug.Log($"[DungeonWave] UI: Showing countdown (activeInHierarchy={countdownUI.activeInHierarchy})");
+        }
+    }
+
+    /// <summary>
+    /// Đảm bảo parent chain của một GameObject cụ thể đều active
+    /// </summary>
+    private void EnsureParentActive(GameObject obj)
+    {
+        if (obj == null) return;
+        Transform parent = obj.transform.parent;
+        while (parent != null)
+        {
+            if (!parent.gameObject.activeSelf)
+            {
+                parent.gameObject.SetActive(true);
+            }
+            if (parent.GetComponent<Canvas>() != null) break;
+            parent = parent.parent;
         }
     }
 
@@ -772,10 +977,13 @@ public class DungeonWaveManager : MonoBehaviour
     {
         if (dungeonCompleteUI)
         {
+            EnsureParentActive(dungeonCompleteUI);
             dungeonCompleteUI.SetActive(true);
             
             if (expRewardText)
                 expRewardText.text = $"EXP nhận được: {totalExpGained}";
+            
+            Debug.Log($"[DungeonWave] UI: Showing dungeon complete (activeInHierarchy={dungeonCompleteUI.activeInHierarchy})");
         }
     }
 

@@ -9,6 +9,7 @@ public class Bow : MonoBehaviour {
     // Sử dụng bridge thay vì PlayerHelth trực tiếp
     DungeonManiaPlayerBridge playerBridge;
     int hit;
+    private bool hasLoggedCollision = false;
     
     // Flag để lazy init - Awake có thể chạy trước khi DungeonManiaPlayerBridge được setup
     private bool hasInitializedBridge = false;
@@ -96,6 +97,11 @@ public class Bow : MonoBehaviour {
     }
     
     private void OnParticleCollision(GameObject go){
+        if (!hasLoggedCollision) {
+            Debug.Log($"[Bow] OnParticleCollision triggered! hit={go.name}, layer={LayerMask.LayerToName(go.layer)}, tag={go.tag}, damage.damage={damage.damage}");
+            hasLoggedCollision = true;
+        }
+        
         // Lazy init: thử tìm bridge nếu chưa có
         if (playerBridge == null) {
             TrySetupPlayerReference();
@@ -121,7 +127,33 @@ public class Bow : MonoBehaviour {
     public void DamageBow(Damage d, int h){
         damage = d;
         hit = h;
-        //if(isSkill)transform.position = new Vector3(player.position.x, 6f, player.position.z);
-        ps.Play();
+        hasLoggedCollision = false;
+        
+        // Đảm bảo có tham chiếu player
+        if (player == null) TrySetupPlayerReference();
+        
+        Debug.Log($"[Bow] DamageBow called: damage={d.damage}, isSkill={isSkill}, ps={ps?.name ?? "NULL"}");
+        
+        if (isSkill && player != null) {
+            // Skill → spawn tại vị trí player, cao hơn 5m để thấy toàn bộ hiệu ứng
+            transform.position = new Vector3(player.position.x, player.position.y + 5f, player.position.z);
+            Debug.Log($"[Bow] Skill positioned at player: {transform.position}");
+        }
+        else if (!isSkill && player != null) {
+            // Bow thường → XOAY về hướng player để đạn bay trúng
+            // Nhắm vào giữa thân player (y + 1m) thay vì bắn thẳng → tránh bắn qua đầu
+            Vector3 targetPos = player.position + Vector3.up * 1f;
+            Vector3 direction = targetPos - transform.position;
+            if (direction.sqrMagnitude > 0.01f) {
+                transform.rotation = Quaternion.LookRotation(direction);
+            }
+            Debug.Log($"[Bow] Bow aimed at player center: {targetPos}");
+        }
+        
+        if (ps != null) {
+            ps.Play();
+        } else {
+            Debug.LogWarning("[Bow] ParticleSystem is null!");
+        }
     }
 }

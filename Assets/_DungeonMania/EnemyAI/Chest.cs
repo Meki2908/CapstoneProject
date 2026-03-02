@@ -98,8 +98,8 @@ public class Chest : MonoBehaviour {
             CheckBonus();
         } else {
             if (Application.internetReachability != NetworkReachability.NotReachable) {
-                if(/*AdsManager.CheckAds()*/ 1==2) CheckBonus();
-                else StartCoroutine(Gold());
+                // AdsManager đã bị tắt → luôn dùng Gold
+                StartCoroutine(Gold());
             } 
             else StartCoroutine(Gold());
         }

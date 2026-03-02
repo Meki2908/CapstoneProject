@@ -36,7 +36,7 @@ namespace Artsystack.ArtsystackGui
                 if (instance == null)
                 {
                     // Tìm instance đã có trong scene
-                    instance = FindObjectOfType<LoadingScreenManager>();
+                    instance = FindFirstObjectByType<LoadingScreenManager>();
                 }
                 return instance;
             }

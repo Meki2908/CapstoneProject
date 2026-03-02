@@ -43,7 +43,7 @@ namespace Artsystack.ArtsystackGui
             get
             {
                 if (instance == null)
-                    instance = FindObjectOfType<PauseMenuManager>();
+                    instance = FindFirstObjectByType<PauseMenuManager>();
                 return instance;
             }
         }

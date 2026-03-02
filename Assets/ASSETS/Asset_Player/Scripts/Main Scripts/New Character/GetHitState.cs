@@ -5,7 +5,7 @@ public class GetHitState : State
     bool dash;
     bool jump;
     bool toBaseMove;
-    float hitDuration = 0.5f; // Duration of hit state before allowing transition to base move
+    float hitDuration = 0.2f; // Thời gian stun ngắn — player hồi phục nhanh
     float hitTimer;
 
     private WeaponController weaponController;
@@ -63,44 +63,8 @@ public class GetHitState : State
             }
         }
 
-        // If we are performing any skill or timeline, decide whether to cancel it.
-        // Do NOT cancel if the player is currently invulnerable (e.g., ultimate).
-        var skillLockComp = character.GetComponent<SkillLock>();
-        var ph = character.GetComponent<PlayerHealth>();
-        if (skillLockComp != null && skillLockComp.isPerformingSkill)
-        {
-            bool playerInv = ph != null && ph.IsInvulnerable();
-            if (!playerInv)
-            {
-                // Force end skill lock
-                skillLockComp.AE_UnlockCCAndDisableRootMotion();
-
-                // Stop any PlayableDirector timelines on player (ultimate/camera) to prevent timeline continuing while hit
-                var directors = character.GetComponents<UnityEngine.Playables.PlayableDirector>();
-                foreach (var d in directors)
-                {
-                    if (d != null && d.state == UnityEngine.Playables.PlayState.Playing)
-                        d.Stop();
-                }
-
-                // Call CancelSkill on known skill scripts to ensure they clean up
-                var mage = character.GetComponent<MageSkills>();
-                if (mage != null) mage.CancelSkill();
-                var axe = character.GetComponent<AxeSkill>();
-                if (axe != null) axe.CancelSkill();
-                var sword = character.GetComponentInChildren<SwordSkills>();
-                if (sword != null)
-                {
-                    // SwordSkills may not have CancelSkill, but try by name
-                    try { sword.SendMessage("CancelSkill", SendMessageOptions.DontRequireReceiver); } catch { }
-                }
-            }
-            else
-            {
-                // Player is invulnerable (ultimate) — do not interrupt skill or timeline.
-                Debug.Log("[GetHitState] Player is invulnerable during skill; not cancelling timeline/skill.");
-            }
-        }
+        // KHÔNG cancel skill/timeline khi bị hit
+        // Player chỉ bị flinch nhẹ, vẫn tiếp tục đánh thường và skill bình thường
     }
 
     private void DisableWeaponLayersForBaseHit()

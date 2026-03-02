@@ -187,8 +187,15 @@ public class EnemyAttack : MonoBehaviour {
         enemyScript.skillScript.DamageBow(damageStruct, hit);
     }
     void HitSkill(){
-        if(enemyScript.enemyManager.generalEffects[3]){
-            enemyScript.enemyManager.generalEffects[3].transform.position = new Vector3 (transform.position.x - 0.5f, transform.position.y, transform.position.z);
+        if(enemyScript.enemyManager != null && 
+           enemyScript.enemyManager.generalEffects != null && 
+           enemyScript.enemyManager.generalEffects.Length > 3 &&
+           enemyScript.enemyManager.generalEffects[3]){
+            // Spawn skill effect tại vị trí PLAYER thay vì enemy
+            Vector3 targetPos = enemyScript.target != null ? 
+                enemyScript.target.position : transform.position;
+            enemyScript.enemyManager.generalEffects[3].transform.position = 
+                new Vector3(targetPos.x, targetPos.y + 0.5f, targetPos.z);
             enemyScript.enemyManager.generalEffects[3].Play();
         }
     }

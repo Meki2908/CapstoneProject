@@ -20706,7 +20706,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0.07}
-  m_LocalScale: {x: 2, y: 2, z: 2}
+  m_LocalScale: {x: 1.5, y: 1.5, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1981453739219014029}
@@ -20798,13 +20798,11 @@ MonoBehaviour:
   wait: 0
   alive: 0
   enemyName: Enemy
-  maxHealth: 100
   attackDamage: 20
   armorValue: 5
   magicValue: 0
   critChance: 10
   accuracy: 50
-  expReward: 100
   goldReward: 10
   scoreReward: 100
   attackDistanceOverride: 1.5
@@ -40747,6 +40745,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 0}
     - target: {fileID: 198174953248088352, guid: 4d46a88382f3c124c93b73ffeb016270, type: 3}
+      propertyPath: InitialModule.startSize.scalar
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 198174953248088352, guid: 4d46a88382f3c124c93b73ffeb016270, type: 3}
       propertyPath: CollisionModule.collidesWith.m_Bits
       value: 2304
       objectReference: {fileID: 0}
@@ -41030,15 +41032,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 400084, guid: 5499d56fcf9d4b54d84b29ec634fe78c, type: 3}
       propertyPath: m_LocalScale.x
-      value: 2
+      value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 400084, guid: 5499d56fcf9d4b54d84b29ec634fe78c, type: 3}
       propertyPath: m_LocalScale.y
-      value: 2
+      value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 400084, guid: 5499d56fcf9d4b54d84b29ec634fe78c, type: 3}
       propertyPath: m_LocalScale.z
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 400084, guid: 5499d56fcf9d4b54d84b29ec634fe78c, type: 3}
       propertyPath: m_LocalPosition.x
@@ -41163,13 +41165,11 @@ MonoBehaviour:
   wait: 0
   alive: 0
   enemyName: Enemy
-  maxHealth: 100
   attackDamage: 10
   armorValue: 5
   magicValue: 0
   critChance: 10
   accuracy: 50
-  expReward: 100
   goldReward: 10
   scoreReward: 100
   attackDistanceOverride: 1.5
@@ -41531,6 +41531,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 198496346754094010, guid: c970a13f2161f4a4ab26ff5009e6e0da, type: 3}
+      propertyPath: InitialModule.startSize.scalar
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 198496346754094010, guid: c970a13f2161f4a4ab26ff5009e6e0da, type: 3}
       propertyPath: CollisionModule.collidesWith.m_Bits
       value: 2304
       objectReference: {fileID: 0}
@@ -41673,6 +41677,14 @@ PrefabInstance:
     - target: {fileID: 198222295729407914, guid: 346ba3a1eaf376a4ca0795fa2bf70d7f, type: 3}
       propertyPath: playOnAwake
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 198222295729407914, guid: 346ba3a1eaf376a4ca0795fa2bf70d7f, type: 3}
+      propertyPath: InitialModule.size3D
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 198222295729407914, guid: 346ba3a1eaf376a4ca0795fa2bf70d7f, type: 3}
+      propertyPath: InitialModule.startSize.scalar
+      value: 0.3
       objectReference: {fileID: 0}
     - target: {fileID: 198222295729407914, guid: 346ba3a1eaf376a4ca0795fa2bf70d7f, type: 3}
       propertyPath: CollisionModule.collidesWith.m_Bits
@@ -42063,15 +42075,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 400082, guid: 054ea6a5c40f27744b3740285b2fc3f8, type: 3}
       propertyPath: m_LocalScale.x
-      value: 2
+      value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 400082, guid: 054ea6a5c40f27744b3740285b2fc3f8, type: 3}
       propertyPath: m_LocalScale.y
-      value: 2
+      value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 400082, guid: 054ea6a5c40f27744b3740285b2fc3f8, type: 3}
       propertyPath: m_LocalScale.z
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 400082, guid: 054ea6a5c40f27744b3740285b2fc3f8, type: 3}
       propertyPath: m_LocalPosition.x
@@ -42222,13 +42234,11 @@ MonoBehaviour:
   wait: 0
   alive: 0
   enemyName: Enemy
-  maxHealth: 100
   attackDamage: 10
   armorValue: 5
   magicValue: 0
   critChance: 10
   accuracy: 50
-  expReward: 100
   goldReward: 10
   scoreReward: 100
   attackDistanceOverride: 1.5
@@ -42578,15 +42588,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 400074, guid: 7025f65d06ce62040ab731feae765567, type: 3}
       propertyPath: m_LocalScale.x
-      value: 2
+      value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 400074, guid: 7025f65d06ce62040ab731feae765567, type: 3}
       propertyPath: m_LocalScale.y
-      value: 2
+      value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 400074, guid: 7025f65d06ce62040ab731feae765567, type: 3}
       propertyPath: m_LocalScale.z
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 400074, guid: 7025f65d06ce62040ab731feae765567, type: 3}
       propertyPath: m_LocalPosition.x
@@ -42737,13 +42747,11 @@ MonoBehaviour:
   wait: 0
   alive: 0
   enemyName: Enemy
-  maxHealth: 100
   attackDamage: 10
   armorValue: 5
   magicValue: 0
   critChance: 10
   accuracy: 50
-  expReward: 100
   goldReward: 10
   scoreReward: 100
   attackDistanceOverride: 1.5
@@ -43061,15 +43069,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 400084, guid: 3cf8ed06ad0b8d64bb4fe9a7f8f6ca3a, type: 3}
       propertyPath: m_LocalScale.x
-      value: 2
+      value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 400084, guid: 3cf8ed06ad0b8d64bb4fe9a7f8f6ca3a, type: 3}
       propertyPath: m_LocalScale.y
-      value: 2
+      value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 400084, guid: 3cf8ed06ad0b8d64bb4fe9a7f8f6ca3a, type: 3}
       propertyPath: m_LocalScale.z
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 400084, guid: 3cf8ed06ad0b8d64bb4fe9a7f8f6ca3a, type: 3}
       propertyPath: m_LocalPosition.x
@@ -43228,13 +43236,11 @@ MonoBehaviour:
   wait: 0
   alive: 0
   enemyName: Enemy
-  maxHealth: 100
   attackDamage: 10
   armorValue: 5
   magicValue: 0
   critChance: 10
   accuracy: 50
-  expReward: 100
   goldReward: 10
   scoreReward: 100
   attackDistanceOverride: 1.5
@@ -43548,15 +43554,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 400086, guid: 50ce470e58f1841438e3bf654166776e, type: 3}
       propertyPath: m_LocalScale.x
-      value: 2
+      value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 400086, guid: 50ce470e58f1841438e3bf654166776e, type: 3}
       propertyPath: m_LocalScale.y
-      value: 2
+      value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 400086, guid: 50ce470e58f1841438e3bf654166776e, type: 3}
       propertyPath: m_LocalScale.z
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 400086, guid: 50ce470e58f1841438e3bf654166776e, type: 3}
       propertyPath: m_LocalPosition.x
@@ -43740,20 +43746,18 @@ MonoBehaviour:
   wait: 0
   alive: 0
   enemyName: Enemy
-  maxHealth: 100
   attackDamage: 20
   armorValue: 5
   magicValue: 0
   critChance: 10
   accuracy: 50
-  expReward: 100
   goldReward: 10
   scoreReward: 100
   attackDistanceOverride: 1.5
   moveSpeed: 5
   isBoss: 0
   enemyType: 0
-  specificEnemyType: 0
+  specificEnemyType: 1
   boss: 0
   bow:
   - {fileID: 1855398992696360791}
@@ -44198,6 +44202,18 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 198638067863406644, guid: 1301d7e969ef5404f925a74e1d1093b8, type: 3}
+      propertyPath: InitialModule.startSize.scalar
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 198638067863406644, guid: 1301d7e969ef5404f925a74e1d1093b8, type: 3}
+      propertyPath: InitialModule.startSizeY.scalar
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 198638067863406644, guid: 1301d7e969ef5404f925a74e1d1093b8, type: 3}
+      propertyPath: InitialModule.startSizeZ.scalar
+      value: 0.75
+      objectReference: {fileID: 0}
+    - target: {fileID: 198638067863406644, guid: 1301d7e969ef5404f925a74e1d1093b8, type: 3}
       propertyPath: CollisionModule.collidesWith.m_Bits
       value: 2304
       objectReference: {fileID: 0}
@@ -44458,21 +44474,141 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 6
       objectReference: {fileID: 0}
+    - target: {fileID: 400000, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: -0.47930837
+      objectReference: {fileID: 0}
+    - target: {fileID: 400000, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: -1.0036864
+      objectReference: {fileID: 0}
+    - target: {fileID: 400000, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 157.89186
+      objectReference: {fileID: 0}
+    - target: {fileID: 400002, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0.5145669
+      objectReference: {fileID: 0}
+    - target: {fileID: 400002, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: -20.530903
+      objectReference: {fileID: 0}
+    - target: {fileID: 400002, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 5.028486
+      objectReference: {fileID: 0}
+    - target: {fileID: 400004, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: -8.635377
+      objectReference: {fileID: 0}
+    - target: {fileID: 400004, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: -21.30267
+      objectReference: {fileID: 0}
+    - target: {fileID: 400004, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: -9.7560835
+      objectReference: {fileID: 0}
+    - target: {fileID: 400006, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: -21.07481
+      objectReference: {fileID: 0}
+    - target: {fileID: 400006, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: -8.058465
+      objectReference: {fileID: 0}
+    - target: {fileID: 400006, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: -22.432827
+      objectReference: {fileID: 0}
+    - target: {fileID: 400010, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0.07497716
+      objectReference: {fileID: 0}
+    - target: {fileID: 400010, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: -18.2349
+      objectReference: {fileID: 0}
+    - target: {fileID: 400010, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: -154.93977
+      objectReference: {fileID: 0}
+    - target: {fileID: 400038, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 31.992067
+      objectReference: {fileID: 0}
+    - target: {fileID: 400038, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 37.26638
+      objectReference: {fileID: 0}
+    - target: {fileID: 400038, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 15.140213
+      objectReference: {fileID: 0}
+    - target: {fileID: 400066, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: -0.071018636
+      objectReference: {fileID: 0}
+    - target: {fileID: 400066, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 168.28522
+      objectReference: {fileID: 0}
+    - target: {fileID: 400066, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 8.452377
+      objectReference: {fileID: 0}
+    - target: {fileID: 400068, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: -0.8159354
+      objectReference: {fileID: 0}
+    - target: {fileID: 400068, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: -5.4376764
+      objectReference: {fileID: 0}
+    - target: {fileID: 400068, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 9.232696
+      objectReference: {fileID: 0}
+    - target: {fileID: 400070, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: -4.5761013
+      objectReference: {fileID: 0}
+    - target: {fileID: 400070, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: -0.83920276
+      objectReference: {fileID: 0}
+    - target: {fileID: 400070, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 17.337137
+      objectReference: {fileID: 0}
+    - target: {fileID: 400072, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: -12.111633
+      objectReference: {fileID: 0}
+    - target: {fileID: 400072, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 2.0201788
+      objectReference: {fileID: 0}
+    - target: {fileID: 400072, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 26.073301
+      objectReference: {fileID: 0}
     - target: {fileID: 400082, guid: 2579ec83d296f564381920e405d36f54, type: 3}
       propertyPath: m_RootOrder
       value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 400082, guid: 2579ec83d296f564381920e405d36f54, type: 3}
       propertyPath: m_LocalScale.x
-      value: 2
+      value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 400082, guid: 2579ec83d296f564381920e405d36f54, type: 3}
       propertyPath: m_LocalScale.y
-      value: 2
+      value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 400082, guid: 2579ec83d296f564381920e405d36f54, type: 3}
       propertyPath: m_LocalScale.z
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 400082, guid: 2579ec83d296f564381920e405d36f54, type: 3}
       propertyPath: m_LocalPosition.x
@@ -44667,20 +44803,18 @@ MonoBehaviour:
   wait: 0
   alive: 0
   enemyName: Enemy
-  maxHealth: 100
-  attackDamage: 10
+  attackDamage: 20
   armorValue: 5
-  magicValue: 0
+  magicValue: 20
   critChance: 10
   accuracy: 50
-  expReward: 100
   goldReward: 10
   scoreReward: 100
   attackDistanceOverride: 1.5
   moveSpeed: 3.5
   isBoss: 0
   enemyType: 3
-  specificEnemyType: 0
+  specificEnemyType: 5
   boss: 0
   bow:
   - {fileID: 1855230931426433790}
@@ -44861,6 +44995,10 @@ PrefabInstance:
     - target: {fileID: 198541533017677792, guid: f6851774d5c4f874a8898919daf26f9f, type: 3}
       propertyPath: playOnAwake
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 198541533017677792, guid: f6851774d5c4f874a8898919daf26f9f, type: 3}
+      propertyPath: InitialModule.startSize.scalar
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 198541533017677792, guid: f6851774d5c4f874a8898919daf26f9f, type: 3}
       propertyPath: CollisionModule.collidesWith.m_Bits
@@ -45136,6 +45274,26 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 0}
     - target: {fileID: 198133226849609478, guid: 199ba2ead65221d4286d5b715b8aef0f, type: 3}
+      propertyPath: InitialModule.size3D
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 198133226849609478, guid: 199ba2ead65221d4286d5b715b8aef0f, type: 3}
+      propertyPath: InitialModule.rotation3D
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 198133226849609478, guid: 199ba2ead65221d4286d5b715b8aef0f, type: 3}
+      propertyPath: InitialModule.startSize.scalar
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 198133226849609478, guid: 199ba2ead65221d4286d5b715b8aef0f, type: 3}
+      propertyPath: InitialModule.startSizeY.scalar
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 198133226849609478, guid: 199ba2ead65221d4286d5b715b8aef0f, type: 3}
+      propertyPath: InitialModule.startSizeZ.scalar
+      value: 3.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 198133226849609478, guid: 199ba2ead65221d4286d5b715b8aef0f, type: 3}
       propertyPath: CollisionModule.collidesWith.m_Bits
       value: 2304
       objectReference: {fileID: 0}
@@ -45338,7 +45496,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4692492331961232, guid: 76d29242e44bd1d4481337c8f53681ac, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4692492331961232, guid: 76d29242e44bd1d4481337c8f53681ac, type: 3}
       propertyPath: m_LocalPosition.z
@@ -45389,6 +45547,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 198148411779175982, guid: 76d29242e44bd1d4481337c8f53681ac, type: 3}
+      propertyPath: lengthInSec
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 198148411779175982, guid: 76d29242e44bd1d4481337c8f53681ac, type: 3}
       propertyPath: playOnAwake
       value: 0
       objectReference: {fileID: 0}
@@ -45414,7 +45576,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 198148411779175982, guid: 76d29242e44bd1d4481337c8f53681ac, type: 3}
       propertyPath: InitialModule.startSize.scalar
-      value: 0.06
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 198148411779175982, guid: 76d29242e44bd1d4481337c8f53681ac, type: 3}
       propertyPath: InitialModule.startSpeed.scalar
@@ -45426,7 +45588,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 198148411779175982, guid: 76d29242e44bd1d4481337c8f53681ac, type: 3}
       propertyPath: InitialModule.startLifetime.scalar
-      value: 1
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 198148411779175982, guid: 76d29242e44bd1d4481337c8f53681ac, type: 3}
       propertyPath: CollisionModule.collidesWith.m_Bits
@@ -45434,11 +45596,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 198148411779175982, guid: 76d29242e44bd1d4481337c8f53681ac, type: 3}
       propertyPath: InitialModule.startColor.maxColor.b
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 198148411779175982, guid: 76d29242e44bd1d4481337c8f53681ac, type: 3}
       propertyPath: InitialModule.startColor.maxColor.g
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 198148411779175982, guid: 76d29242e44bd1d4481337c8f53681ac, type: 3}
       propertyPath: InitialModule.startColor.maxColor.r
@@ -45613,6 +45775,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 198620100365262566, guid: 3c42b034bb8443e4fa9300af22f9fa12, type: 3}
+      propertyPath: InitialModule.startSize.scalar
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 198620100365262566, guid: 3c42b034bb8443e4fa9300af22f9fa12, type: 3}
       propertyPath: CollisionModule.collidesWith.m_Bits
       value: 2304
       objectReference: {fileID: 0}
@@ -45768,6 +45934,18 @@ PrefabInstance:
     - target: {fileID: 198137071761331392, guid: 90b685dd555e0c848806f1fb6209e1e9, type: 3}
       propertyPath: playOnAwake
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 198137071761331392, guid: 90b685dd555e0c848806f1fb6209e1e9, type: 3}
+      propertyPath: InitialModule.startSize.scalar
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 198137071761331392, guid: 90b685dd555e0c848806f1fb6209e1e9, type: 3}
+      propertyPath: InitialModule.startSizeY.scalar
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 198137071761331392, guid: 90b685dd555e0c848806f1fb6209e1e9, type: 3}
+      propertyPath: InitialModule.startSizeZ.scalar
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 198137071761331392, guid: 90b685dd555e0c848806f1fb6209e1e9, type: 3}
       propertyPath: CollisionModule.collidesWith.m_Bits
@@ -46174,15 +46352,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 400074, guid: 23f342eca69097a4c8a6aa2768f3dba2, type: 3}
       propertyPath: m_LocalScale.x
-      value: 2
+      value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 400074, guid: 23f342eca69097a4c8a6aa2768f3dba2, type: 3}
       propertyPath: m_LocalScale.y
-      value: 2
+      value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 400074, guid: 23f342eca69097a4c8a6aa2768f3dba2, type: 3}
       propertyPath: m_LocalScale.z
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 400074, guid: 23f342eca69097a4c8a6aa2768f3dba2, type: 3}
       propertyPath: m_LocalPosition.x
@@ -46308,13 +46486,11 @@ MonoBehaviour:
   wait: 0
   alive: 0
   enemyName: Enemy
-  maxHealth: 100
   attackDamage: 10
   armorValue: 5
   magicValue: 0
   critChance: 10
   accuracy: 50
-  expReward: 100
   goldReward: 10
   scoreReward: 100
   attackDistanceOverride: 1.5
@@ -46653,15 +46829,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 400084, guid: 6c6cc16502072914294f2e6eb306fb6d, type: 3}
       propertyPath: m_LocalScale.x
-      value: 2
+      value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 400084, guid: 6c6cc16502072914294f2e6eb306fb6d, type: 3}
       propertyPath: m_LocalScale.y
-      value: 2
+      value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 400084, guid: 6c6cc16502072914294f2e6eb306fb6d, type: 3}
       propertyPath: m_LocalScale.z
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 400084, guid: 6c6cc16502072914294f2e6eb306fb6d, type: 3}
       propertyPath: m_LocalPosition.x
@@ -46812,13 +46988,11 @@ MonoBehaviour:
   wait: 0
   alive: 0
   enemyName: Enemy
-  maxHealth: 100
   attackDamage: 10
   armorValue: 5
   magicValue: 0
   critChance: 10
   accuracy: 50
-  expReward: 100
   goldReward: 10
   scoreReward: 100
   attackDistanceOverride: 1.5
@@ -47124,15 +47298,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 400076, guid: 7ed88ba6cc3135a4890ffd42006802e0, type: 3}
       propertyPath: m_LocalScale.x
-      value: 2
+      value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 400076, guid: 7ed88ba6cc3135a4890ffd42006802e0, type: 3}
       propertyPath: m_LocalScale.y
-      value: 2
+      value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 400076, guid: 7ed88ba6cc3135a4890ffd42006802e0, type: 3}
       propertyPath: m_LocalScale.z
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 400076, guid: 7ed88ba6cc3135a4890ffd42006802e0, type: 3}
       propertyPath: m_LocalPosition.x
@@ -47301,13 +47475,11 @@ MonoBehaviour:
   wait: 0
   alive: 0
   enemyName: Enemy
-  maxHealth: 100
   attackDamage: 10
   armorValue: 5
   magicValue: 0
   critChance: 10
   accuracy: 50
-  expReward: 100
   goldReward: 10
   scoreReward: 100
   attackDistanceOverride: 1.5
@@ -47951,6 +48123,14 @@ PrefabInstance:
       value: 100
       objectReference: {fileID: 0}
     - target: {fileID: 198106893234946786, guid: dfabbd05c7735314e97de47b3d7695c4, type: 3}
+      propertyPath: InitialModule.startSize.scalar
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 198106893234946786, guid: dfabbd05c7735314e97de47b3d7695c4, type: 3}
+      propertyPath: InitialModule.startSize.minScalar
+      value: 0.1
+      objectReference: {fileID: 0}
+    - target: {fileID: 198106893234946786, guid: dfabbd05c7735314e97de47b3d7695c4, type: 3}
       propertyPath: CollisionModule.collidesWith.m_Bits
       value: 2099456
       objectReference: {fileID: 0}
@@ -48575,15 +48755,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 400076, guid: e2abc4effa6e87642ae3f4d560ac8191, type: 3}
       propertyPath: m_LocalScale.x
-      value: 2
+      value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 400076, guid: e2abc4effa6e87642ae3f4d560ac8191, type: 3}
       propertyPath: m_LocalScale.y
-      value: 2
+      value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 400076, guid: e2abc4effa6e87642ae3f4d560ac8191, type: 3}
       propertyPath: m_LocalScale.z
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 400076, guid: e2abc4effa6e87642ae3f4d560ac8191, type: 3}
       propertyPath: m_LocalPosition.x
@@ -48738,13 +48918,11 @@ MonoBehaviour:
   wait: 0
   alive: 0
   enemyName: Enemy
-  maxHealth: 100
   attackDamage: 10
   armorValue: 5
   magicValue: 0
   critChance: 10
   accuracy: 50
-  expReward: 100
   goldReward: 10
   scoreReward: 100
   attackDistanceOverride: 1.5
@@ -49032,6 +49210,10 @@ PrefabInstance:
     - target: {fileID: 198320143299794648, guid: 6dc968b09945e3845bdbf41de444f21c, type: 3}
       propertyPath: LightsModule.light
       value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 198320143299794648, guid: 6dc968b09945e3845bdbf41de444f21c, type: 3}
+      propertyPath: InitialModule.startSize.scalar
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 198320143299794648, guid: 6dc968b09945e3845bdbf41de444f21c, type: 3}
       propertyPath: CollisionModule.collidesWith.m_Bits

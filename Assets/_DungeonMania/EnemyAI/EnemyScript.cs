@@ -15,27 +15,25 @@ public class EnemyScript : MonoBehaviour {
     // ========================================
     // PUBLIC STATS - CÓ THỂ CHỈNH TRONG INSPECTOR
     // ========================================
-    [Header("=== ENEMY STATS (Editable) ===")]
+    [Header("=== ENEMY STATS (Chỉ số tấn công) ===")]
     [Tooltip("Tên enemy")]
     public string enemyName = "Enemy";
     
-    [Tooltip("Máu tối đa")]
-    public int maxHealth = 100;
-    [Tooltip("Sát thương tấn công")]
+    // MÁU và EXP được quản lý bởi TakeDamageTest, KHÔNG quản lý ở đây
+    
+    [Tooltip("Sát thương mỗi đòn đánh")]
     public int attackDamage = 10;
-    [Tooltip("Giáp")]
+    [Tooltip("Giáp (phòng thủ)")]
     public int armorValue = 5;
-    [Tooltip("Magic damage")]
+    [Tooltip("Sát thương phép cộng thêm")]
     public int magicValue = 0;
-    [Tooltip("Crit chance (%)")]
+    [Tooltip("Tỉ lệ chí mạng (%)")]
     public int critChance = 10;
-    [Tooltip("Accuracy (%)")]
-    public int accuracy = 50;
-    [Tooltip("EXP khi tiêu diệt")]
-    public int expReward = 100;
+    [Tooltip("Độ chính xác (%) - 100 = luôn đánh trúng full damage")]
+    public int accuracy = 100;
     [Tooltip("Gold khi tiêu diệt")]
     public int goldReward = 10;
-    [Tooltip("Score khi tiêu diệt")]
+    [Tooltip("Điểm khi tiêu diệt")]
     public int scoreReward = 100;
     [Tooltip("Khoảng cách tấn công")]
     public float attackDistanceOverride = 1.5f;
@@ -156,6 +154,35 @@ public class EnemyScript : MonoBehaviour {
             }
         }
 
+        // Setup skill script (Bow component trên Skill objects — dùng cho Lich skill attack)
+        if (skill != null && skill.Length > 0 && skillScript == null) {
+            for (int i = 0; i < skill.Length; i++) {
+                if (skill[i] == null) continue;
+                
+                // Tìm Bow script trên chính skill particle
+                skillScript = skill[i].GetComponent<Bow>();
+                
+                // Nếu không có, tìm trên parent (Skill object chứa Bow script)
+                if (skillScript == null && skill[i].transform.parent != null) {
+                    skillScript = skill[i].transform.parent.GetComponent<Bow>();
+                }
+                
+                // Tìm trong children
+                if (skillScript == null) {
+                    skillScript = skill[i].GetComponentInChildren<Bow>();
+                }
+                
+                if (skillScript != null) {
+                    Debug.Log($"[EnemyScript] Found Skill script on: {skillScript.gameObject.name}");
+                    break; // Chỉ cần 1 skillScript
+                }
+            }
+            
+            if (skillScript == null) {
+                Debug.LogWarning($"[EnemyScript] Skill script (Bow) not found on any skill particle! Skill attack won't work.");
+            }
+        }
+
         // Setup boss magic type
         switch(boss){
             case EnemyClass.Boss.None:
@@ -255,22 +282,29 @@ public class EnemyScript : MonoBehaviour {
         switch (specificEnemyType)
         {
             case SpecificEnemyType.Skeleton:
-            case SpecificEnemyType.SkeletonArcher:
                 enemyType = EnemyType.skelet;
+                attackDistanceOverride = 1.5f; // Melee
+                break;
+            case SpecificEnemyType.SkeletonArcher:
+                enemyType = EnemyType.archer; // Archer = ranged, KHÔNG phải skelet
+                attackDistanceOverride = 8f;   // RANGED — tấn công từ xa
                 break;
             case SpecificEnemyType.Orc:
             case SpecificEnemyType.Troll:
             case SpecificEnemyType.Guul:
                 enemyType = EnemyType.monster;
+                attackDistanceOverride = 2f;   // Melee
                 break;
             case SpecificEnemyType.Lich:
                 enemyType = EnemyType.lich;
+                attackDistanceOverride = 8f;   // RANGED — tấn công từ xa
                 break;
             case SpecificEnemyType.Stoneogre:
             case SpecificEnemyType.Golem:
             case SpecificEnemyType.Minotaur:
             case SpecificEnemyType.Ifrit:
                 enemyType = EnemyType.boss;
+                attackDistanceOverride = 2.5f; // Boss melee
                 // Cập nhật boss type
                 switch (specificEnemyType)
                 {
@@ -290,10 +324,21 @@ public class EnemyScript : MonoBehaviour {
                 break;
             case SpecificEnemyType.Demon:
                 enemyType = EnemyType.demon;
+                attackDistanceOverride = 3f;
                 break;
         }
         
-        Debug.Log($"[EnemyScript] Set specific type: {specificEnemyType}, category: {enemyType}");
+        // ÁP DỤNG NGAY attackDistance và stoppingDistance
+        // Vì OnEnable() đã chạy trước SetSpecificEnemyType()
+        if (enemy != null) {
+            enemy.distance = attackDistanceOverride;
+        }
+        attackDistance = attackDistanceOverride;
+        if (navMeshAgent != null) {
+            navMeshAgent.stoppingDistance = attackDistanceOverride;
+        }
+        
+        Debug.Log($"[EnemyScript] Set specific type: {specificEnemyType}, category: {enemyType}, attackDistance: {attackDistanceOverride}");
     }  
     void OnEnable () {
         // ÁP DỤNG GIÁ TRỊ TỪ INSPECTOR (chạy mỗi lần enemy được kích hoạt)
@@ -347,21 +392,9 @@ public class EnemyScript : MonoBehaviour {
         Distance();
         RotateToPlayer();
 
-        // Kiểm tra HeroInformation.player - nếu null thì dùng target (player object)
-        // Chỉ log warning một lần để tránh spam console
-        if (HeroInformation.player != null) {
-            enemy.UpdateEnemy();
-        } else {
-            // Chỉ log warning nếu chưa từng log (sử dụng static flag)
-            if (!hasLoggedHeroInfoWarning) {
-                Debug.Log("[EnemyScript] HeroInformation.player is null - using target as fallback (this is normal when not using DungeonMania player)");
-                hasLoggedHeroInfoWarning = true;
-            }
-            // Sử dụng target (player GameObject) nếu HeroInformation.player null
-            if (target != null) {
-                // Enemy vẫn hoạt động với target là player
-            }
-        }
+        // Stats được quản lý hoàn toàn bởi ApplyInspectorValues() trong OnEnable
+        // KHÔNG gọi UpdateEnemy() — HeroInformation không được sử dụng
+        // Damage = đúng giá trị attackDamage trong Inspector
 
         attackDistance = enemy.distance;
         yield return new WaitForSeconds ( 0.5f );
@@ -386,10 +419,6 @@ public class EnemyScript : MonoBehaviour {
     {
         if (enemy == null) return;
 
-        // Áp dụng health
-        enemy.helth.value = maxHealth;
-        enemy.mainHelth = maxHealth;
-        
         // Áp dụng attack
         enemy.attack.value = attackDamage;
         
@@ -398,6 +427,7 @@ public class EnemyScript : MonoBehaviour {
         
         // Áp dụng magic
         enemy.magic.value = magicValue;
+        enemy.magicValue = magicValue;
         
         // Áp dụng crit
         enemy.crit.value = critChance;
@@ -405,8 +435,7 @@ public class EnemyScript : MonoBehaviour {
         // Áp dụng accuracy
         enemy.accuracy.value = accuracy;
         
-        // Áp dụng rewards
-        enemy.experiance = expReward;
+        // Áp dụng rewards (gold, score — EXP do TakeDamageTest quản lý)
         enemy.gold = goldReward;
         enemy.score = scoreReward;
         
@@ -419,11 +448,13 @@ public class EnemyScript : MonoBehaviour {
         // Áp dụng boss flag
         enemy.isBoss = isBoss;
         
-        // Áp dụng move speed cho NavMeshAgent
-        var navAgent = GetComponent<NavMeshAgent>();
+        // Áp dụng move speed và stoppingDistance cho NavMeshAgent
+        var navAgent = GetComponent<UnityEngine.AI.NavMeshAgent>();
         if (navAgent != null)
         {
             navAgent.speed = moveSpeed;
+            // stoppingDistance = attackDistance để ranged enemies dừng đúng tầm bắn
+            navAgent.stoppingDistance = enemy.distance;
         }
     }
 
@@ -433,7 +464,7 @@ public class EnemyScript : MonoBehaviour {
     public void ApplyInspectorValuesManual()
     {
         ApplyInspectorValues();
-        Debug.Log($"[EnemyScript] Applied inspector values manually: attackDamage={attackDamage}, maxHealth={maxHealth}");
+        Debug.Log($"[EnemyScript] Applied inspector values manually: attackDamage={attackDamage}, attackDistance={attackDistanceOverride}");
     }
 }
 

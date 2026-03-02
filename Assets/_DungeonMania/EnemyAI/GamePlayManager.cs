@@ -58,7 +58,7 @@ public class GamePlayManager : MonoBehaviour {
         // Tìm DungeonWaveManager đã có trong scene (không tạo mới)
         if (useNewWaveSystem)
         {
-            dungeonWaveManager = FindObjectOfType<DungeonWaveManager>();
+            dungeonWaveManager = FindFirstObjectByType<DungeonWaveManager>();
             if (dungeonWaveManager == null)
             {
                 Debug.LogWarning("[GamePlayManager] DungeonWaveManager not found in scene! Please add it manually.");

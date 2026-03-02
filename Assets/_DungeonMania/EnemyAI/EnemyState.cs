@@ -7,14 +7,18 @@ public class EnemyState : MonoBehaviour{
     public bool isStop;
     int random;
     string anim;
-    int enemyType;
     bool isAIRunning = false; // Thêm biến để ngăn chặn nhiều coroutine chạy cùng lúc
 
     private void Start () {
         enemyScript = GetComponent<EnemyScript> ();
         if (enemyScript != null) {
             enemyScript.enemyAttack = GetComponent<EnemyAttack> ();
-            enemyType = (int)enemyScript.enemyType;
+            
+            // Set NavMeshAgent stoppingDistance = attackDistance 
+            // để ranged enemies dừng lại tại khoảng cách tấn công
+            if (enemyScript.navMeshAgent != null) {
+                enemyScript.navMeshAgent.stoppingDistance = enemyScript.attackDistance;
+            }
         }
     }
     void Update () {
@@ -43,26 +47,30 @@ public class EnemyState : MonoBehaviour{
 
         enemyScript.navMeshAgent.isStopped = true;
         enemyScript.animator.SetBool("run", false);
-        // Sửa: Dùng && thay vì & để kiểm tra logic đúng
+        
+        // Đọc trực tiếp từ enemyScript thay vì cached value
+        // Vì SetSpecificEnemyType() có thể thay đổi enemyType sau Start()
+        int currentEnemyType = (int)enemyScript.enemyType;
+        
         if(!enemyScript.attack && !enemyScript.hit){
             enemyScript.attack = true;
-            switch(enemyType){
-                case 0:
+            switch(currentEnemyType){
+                case 0: // skelet - melee
                  enemyScript.animator.Play("attack");
                 break;
-                case 1:
+                case 1: // archer - ranged
                  enemyScript.animator.Play("attack");
                 break;
-                case 2:
+                case 2: // monster - melee + skill
                  enemyScript.animator.Play(SelectAction(3));
                 break;
-                case 3:
-                 enemyScript.animator.Play("attack");
+                case 3: // lich - ranged + skill (40% skill, 60% attack)
+                 enemyScript.animator.Play(SelectAction(3));
                 break;
-                case 4:
+                case 4: // boss
                  enemyScript.animator.Play(SelectAction(5));
                 break;
-                case 5:
+                case 5: // demon
                  enemyScript.animator.Play(SelectAction(5));
                 break;
             }
