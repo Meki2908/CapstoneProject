@@ -63,17 +63,18 @@ public class DungeonManiaPlayerBridge : MonoBehaviour
         // Ensure minimum damage
         if (totalDamage < 1) totalDamage = 1;
 
-        Debug.Log($"[DungeonManiaPlayerBridge] Calling TakeDamage with {totalDamage} damage (forceHit=true)");
+        Debug.Log($"[DungeonManiaPlayerBridge] Calling TakeDamage with {totalDamage} damage (forceHit=false, respects dash)");
 
-        // Apply damage to player - force hit even if dashing
-        Vector3 hitPosition = Vector3.zero; // Could be improved to pass actual hit position
-        playerHealth.TakeDamage(totalDamage, hitPosition, true); // forceHitAnimation = true
+        // Apply damage to player — KHÔNG force hit để tôn trọng dash invincibility
+        Vector3 hitPosition = Vector3.zero;
+        playerHealth.TakeDamage(totalDamage, hitPosition, false); // forceHitAnimation = false → tôn trọng dash
 
-        // Trigger hit animation
-        if (animator != null && hitTriggerHash != 0)
-        {
-            animator.SetTrigger(hitTriggerHash);
-        }
+        // KHÔNG gọi SetTrigger ở đây nữa — GetHitState.Enter() đã xử lý animation
+        // Gọi double trigger có thể gây lỗi animator transition (auto-dash bug)
+        // if (animator != null && hitTriggerHash != 0)
+        // {
+        //     animator.SetTrigger(hitTriggerHash);
+        // }
 
         Debug.Log($"[DungeonManiaPlayerBridge] Player took {totalDamage} damage (physical: {damageStruct.damage}, elemental: {damageStruct.damageElemental}, crit: {damageStruct.crit})");
     }

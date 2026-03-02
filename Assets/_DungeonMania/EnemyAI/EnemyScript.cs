@@ -113,15 +113,18 @@ public class EnemyScript : MonoBehaviour {
     private void Awake () {
         enemy = new EnemyClass((int)enemyType);
 
-        // Tìm player với kiểm tra null
-        GameObject playerObj = GameObject.Find("player");
+        // ƯU TIÊN tìm player thật bằng tag "Player" (có DungeonManiaPlayerBridge)
+        // Fallback: tìm bằng tên "player" (child object)
+        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+        if (playerObj == null) {
+            playerObj = GameObject.Find("player");
+        }
+        
         if (playerObj != null) {
             target = playerObj.transform;
+            Debug.Log($"[EnemyScript] Found player target: {playerObj.name} (tag: {playerObj.tag})");
         } else {
-            Debug.LogWarning("[EnemyScript] Player not found! Using fallback.");
-            // Thử tìm bằng tag
-            playerObj = GameObject.FindGameObjectWithTag("Player");
-            if (playerObj != null) target = playerObj.transform;
+            Debug.LogWarning("[EnemyScript] Player not found by tag or name!");
         }
 
         // Setup bow scripts
@@ -187,19 +190,7 @@ public class EnemyScript : MonoBehaviour {
         }
 
         // Setup player manager với kiểm tra null
-        if (target != null) {
-            playerManager = target.GetComponent<PlayerManager>();
-            
-            // If PlayerManager not found, try to find DungeonManiaPlayerBridge
-            if (playerManager == null) {
-                DungeonManiaPlayerBridge bridge = target.GetComponent<DungeonManiaPlayerBridge>();
-                if (bridge != null) {
-                    // Create a temporary PlayerManager-like wrapper
-                    // We'll handle this differently - see below
-                    Debug.Log("[EnemyScript] Found DungeonManiaPlayerBridge, will use it for damage");
-                }
-            }
-        }
+        SetupPlayerManagerReference();
 
         // Setup component references
         enemyState = GetComponent<EnemyState> ();
@@ -214,6 +205,45 @@ public class EnemyScript : MonoBehaviour {
         }
 
         // KHÔNG set active false trong Awake - để RandomEnemy quản lý
+    }
+
+    /// <summary>
+    /// Setup PlayerManager/Bridge reference từ target
+    /// </summary>
+    private void SetupPlayerManagerReference()
+    {
+        if (target == null) return;
+        
+        playerManager = target.GetComponent<PlayerManager>();
+        
+        // If PlayerManager not found, try to find DungeonManiaPlayerBridge
+        if (playerManager == null) {
+            DungeonManiaPlayerBridge bridge = target.GetComponent<DungeonManiaPlayerBridge>();
+            if (bridge != null) {
+                Debug.Log("[EnemyScript] Found DungeonManiaPlayerBridge on player target");
+            } else {
+                // Nếu target là child "player", tìm bridge trên parent
+                if (target.parent != null) {
+                    bridge = target.parent.GetComponent<DungeonManiaPlayerBridge>();
+                    if (bridge != null) {
+                        // Dùng parent làm target thay vì child
+                        target = target.parent;
+                        Debug.Log("[EnemyScript] Found DungeonManiaPlayerBridge on parent, switched target to parent player");
+                    }
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Được gọi bởi DungeonWaveManager để set player target trực tiếp
+    /// </summary>
+    public void SetPlayerTarget(Transform playerTransform)
+    {
+        if (playerTransform == null) return;
+        target = playerTransform;
+        SetupPlayerManagerReference();
+        Debug.Log($"[EnemyScript] Player target set directly: {target.name}");
     }
     
     // Cập nhật specificEnemyType dựa trên index trong mảng enemy của RandomEnemy
@@ -284,14 +314,26 @@ public class EnemyScript : MonoBehaviour {
         EnemyEvent.AttackEvent -= Chase;
     }
     void Wait(){
+        if (navMeshAgent == null || animator == null) return;
         wait = true;
         navMeshAgent.isStopped = true;
         animator.SetBool("run", false);
     }
     void Chase(){
+        if (navMeshAgent == null || animator == null) return;
         wait = false;
         navMeshAgent.isStopped = false;
         animator.SetBool("run", true);
+    }
+    
+    /// <summary>
+    /// Được gọi TRỰC TIẾP bởi DungeonWaveManager để bắt đầu chase
+    /// Thay vì qua EnemyEvent.AttackEvent (broadcast tới TẤT CẢ enemy)
+    /// </summary>
+    public void StartChase()
+    {
+        Debug.Log($"[EnemyScript] StartChase called directly on {gameObject.name}");
+        Chase();
     }
     IEnumerator Delay(){
         // Kiểm tra null trước khi tiếp tục
@@ -326,10 +368,14 @@ public class EnemyScript : MonoBehaviour {
         delay = false;
     }
     public void RotateToPlayer(){
+        if (target == null) return;
         direction = target.position - transform.position;
-        transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(direction), 1f);
+        if (direction.sqrMagnitude > 0.001f) {
+            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(direction), 1f);
+        }
     }
     public void Distance(){
+        if (target == null || enemyState == null) return;
         enemyState.distance = Vector3.Distance(target.position, transform.position);
     }
 

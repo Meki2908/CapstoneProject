@@ -41113,6 +41113,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 100084, guid: 5499d56fcf9d4b54d84b29ec634fe78c, type: 3}
       insertIndex: -1
       addedObject: {fileID: 6833920111012319328}
+    - targetCorrespondingSourceObject: {fileID: 100084, guid: 5499d56fcf9d4b54d84b29ec634fe78c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1254538292292689766}
   m_SourcePrefab: {fileID: 100100000, guid: 5499d56fcf9d4b54d84b29ec634fe78c, type: 3}
 --- !u!1 &1981453737284768619 stripped
 GameObject:
@@ -41292,6 +41295,25 @@ MonoBehaviour:
   bossName: 
   healthBarColor: {r: 1, g: 0, b: 0, a: 1}
   expReward: 1000
+--- !u!114 &1254538292292689766
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1981453737284768619}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c96abf9a115d31748b998765d2eeb62d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  stuckTimeThreshold: 3
+  minMovementDistance: 0.5
+  maxDistanceFromPlayer: 5
+  warpSearchRadius: 15
+  warpDistanceFromPlayer: 5
+  warpCooldown: 8
+  maxWarpCount: 5
 --- !u!4 &1981453737284931403 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 400084, guid: 5499d56fcf9d4b54d84b29ec634fe78c, type: 3}
@@ -41595,6 +41617,18 @@ PrefabInstance:
     - target: {fileID: 4737389328110992, guid: 346ba3a1eaf376a4ca0795fa2bf70d7f, type: 3}
       propertyPath: m_RootOrder
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4737389328110992, guid: 346ba3a1eaf376a4ca0795fa2bf70d7f, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4737389328110992, guid: 346ba3a1eaf376a4ca0795fa2bf70d7f, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4737389328110992, guid: 346ba3a1eaf376a4ca0795fa2bf70d7f, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 4737389328110992, guid: 346ba3a1eaf376a4ca0795fa2bf70d7f, type: 3}
       propertyPath: m_LocalPosition.x
@@ -42112,6 +42146,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 100082, guid: 054ea6a5c40f27744b3740285b2fc3f8, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1288842173575675012}
+    - targetCorrespondingSourceObject: {fileID: 100082, guid: 054ea6a5c40f27744b3740285b2fc3f8, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3584688254320976109}
   m_SourcePrefab: {fileID: 100100000, guid: 054ea6a5c40f27744b3740285b2fc3f8, type: 3}
 --- !u!1 &1981453737562475106 stripped
 GameObject:
@@ -42291,6 +42328,25 @@ MonoBehaviour:
   bossName: 
   healthBarColor: {r: 1, g: 0, b: 0, a: 1}
   expReward: 1000
+--- !u!114 &3584688254320976109
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1981453737562475106}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c96abf9a115d31748b998765d2eeb62d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  stuckTimeThreshold: 3
+  minMovementDistance: 0.5
+  maxDistanceFromPlayer: 5
+  warpSearchRadius: 15
+  warpDistanceFromPlayer: 5
+  warpCooldown: 8
+  maxWarpCount: 5
 --- !u!4 &1981453737562969666 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 400082, guid: 054ea6a5c40f27744b3740285b2fc3f8, type: 3}
@@ -42605,6 +42661,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 100074, guid: 7025f65d06ce62040ab731feae765567, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1234853421690215536}
+    - targetCorrespondingSourceObject: {fileID: 100074, guid: 7025f65d06ce62040ab731feae765567, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3447987093913227084}
   m_SourcePrefab: {fileID: 100100000, guid: 7025f65d06ce62040ab731feae765567, type: 3}
 --- !u!1 &1981453737577277606 stripped
 GameObject:
@@ -42784,6 +42843,25 @@ MonoBehaviour:
   bossName: 
   healthBarColor: {r: 1, g: 0, b: 0, a: 1}
   expReward: 1000
+--- !u!114 &3447987093913227084
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1981453737577277606}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c96abf9a115d31748b998765d2eeb62d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  stuckTimeThreshold: 3
+  minMovementDistance: 0.5
+  maxDistanceFromPlayer: 5
+  warpSearchRadius: 15
+  warpDistanceFromPlayer: 5
+  warpCooldown: 8
+  maxWarpCount: 5
 --- !u!4 &1981453737577575558 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 400074, guid: 7025f65d06ce62040ab731feae765567, type: 3}
@@ -43066,6 +43144,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 100084, guid: 3cf8ed06ad0b8d64bb4fe9a7f8f6ca3a, type: 3}
       insertIndex: -1
       addedObject: {fileID: 9200383593638890085}
+    - targetCorrespondingSourceObject: {fileID: 100084, guid: 3cf8ed06ad0b8d64bb4fe9a7f8f6ca3a, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8801963881572773565}
   m_SourcePrefab: {fileID: 100100000, guid: 3cf8ed06ad0b8d64bb4fe9a7f8f6ca3a, type: 3}
 --- !u!1 &1981453737595719412 stripped
 GameObject:
@@ -43245,6 +43326,25 @@ MonoBehaviour:
   bossName: 
   healthBarColor: {r: 1, g: 0, b: 0, a: 1}
   expReward: 1000
+--- !u!114 &8801963881572773565
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1981453737595719412}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c96abf9a115d31748b998765d2eeb62d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  stuckTimeThreshold: 3
+  minMovementDistance: 0.5
+  maxDistanceFromPlayer: 5
+  warpSearchRadius: 15
+  warpDistanceFromPlayer: 5
+  warpCooldown: 8
+  maxWarpCount: 5
 --- !u!4 &1981453737595818708 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 400084, guid: 3cf8ed06ad0b8d64bb4fe9a7f8f6ca3a, type: 3}
@@ -43542,6 +43642,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 100086, guid: 50ce470e58f1841438e3bf654166776e, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2598618395471517768}
+    - targetCorrespondingSourceObject: {fileID: 100086, guid: 50ce470e58f1841438e3bf654166776e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1052403781666288409}
   m_SourcePrefab: {fileID: 100100000, guid: 50ce470e58f1841438e3bf654166776e, type: 3}
 --- !u!1 &1981453737633395161 stripped
 GameObject:
@@ -43726,6 +43829,25 @@ MonoBehaviour:
   bossName: 
   healthBarColor: {r: 1, g: 0, b: 0, a: 1}
   expReward: 1000
+--- !u!114 &1052403781666288409
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1981453737633395161}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c96abf9a115d31748b998765d2eeb62d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  stuckTimeThreshold: 3
+  minMovementDistance: 0.5
+  maxDistanceFromPlayer: 5
+  warpSearchRadius: 15
+  warpDistanceFromPlayer: 5
+  warpCooldown: 8
+  maxWarpCount: 5
 --- !u!4 &1981453737633623545 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 400086, guid: 50ce470e58f1841438e3bf654166776e, type: 3}
@@ -44014,6 +44136,18 @@ PrefabInstance:
     - target: {fileID: 4318939935124346, guid: 1301d7e969ef5404f925a74e1d1093b8, type: 3}
       propertyPath: m_RootOrder
       value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 4318939935124346, guid: 1301d7e969ef5404f925a74e1d1093b8, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4318939935124346, guid: 1301d7e969ef5404f925a74e1d1093b8, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4318939935124346, guid: 1301d7e969ef5404f925a74e1d1093b8, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 4318939935124346, guid: 1301d7e969ef5404f925a74e1d1093b8, type: 3}
       propertyPath: m_LocalPosition.x
@@ -44423,6 +44557,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 100082, guid: 2579ec83d296f564381920e405d36f54, type: 3}
       insertIndex: -1
       addedObject: {fileID: 9075823082147508602}
+    - targetCorrespondingSourceObject: {fileID: 100082, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7075590327391894556}
   m_SourcePrefab: {fileID: 100100000, guid: 2579ec83d296f564381920e405d36f54, type: 3}
 --- !u!1 &1981453737875036455 stripped
 GameObject:
@@ -44609,6 +44746,25 @@ MonoBehaviour:
   bossName: 
   healthBarColor: {r: 1, g: 0, b: 0, a: 1}
   expReward: 1000
+--- !u!114 &7075590327391894556
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1981453737875036455}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c96abf9a115d31748b998765d2eeb62d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  stuckTimeThreshold: 3
+  minMovementDistance: 0.5
+  maxDistanceFromPlayer: 5
+  warpSearchRadius: 15
+  warpDistanceFromPlayer: 5
+  warpCooldown: 8
+  maxWarpCount: 5
 --- !u!4 &1981453737875391751 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 400082, guid: 2579ec83d296f564381920e405d36f54, type: 3}
@@ -44645,6 +44801,18 @@ PrefabInstance:
     - target: {fileID: 4562464733809718, guid: f6851774d5c4f874a8898919daf26f9f, type: 3}
       propertyPath: m_RootOrder
       value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 4562464733809718, guid: f6851774d5c4f874a8898919daf26f9f, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4562464733809718, guid: f6851774d5c4f874a8898919daf26f9f, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4562464733809718, guid: f6851774d5c4f874a8898919daf26f9f, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 4562464733809718, guid: f6851774d5c4f874a8898919daf26f9f, type: 3}
       propertyPath: m_LocalPosition.x
@@ -44774,6 +44942,18 @@ PrefabInstance:
       value: 6
       objectReference: {fileID: 0}
     - target: {fileID: 4010747606481394, guid: 5c860473f6aec0742861a2be958fbc70, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4010747606481394, guid: 5c860473f6aec0742861a2be958fbc70, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4010747606481394, guid: 5c860473f6aec0742861a2be958fbc70, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4010747606481394, guid: 5c860473f6aec0742861a2be958fbc70, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
       objectReference: {fileID: 0}
@@ -44894,6 +45074,18 @@ PrefabInstance:
     - target: {fileID: 4738368735309472, guid: 199ba2ead65221d4286d5b715b8aef0f, type: 3}
       propertyPath: m_RootOrder
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4738368735309472, guid: 199ba2ead65221d4286d5b715b8aef0f, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4738368735309472, guid: 199ba2ead65221d4286d5b715b8aef0f, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4738368735309472, guid: 199ba2ead65221d4286d5b715b8aef0f, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 4738368735309472, guid: 199ba2ead65221d4286d5b715b8aef0f, type: 3}
       propertyPath: m_LocalPosition.x
@@ -45523,15 +45715,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4712672407335628, guid: 90b685dd555e0c848806f1fb6209e1e9, type: 3}
       propertyPath: m_LocalScale.x
-      value: 1.3888894
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 4712672407335628, guid: 90b685dd555e0c848806f1fb6209e1e9, type: 3}
       propertyPath: m_LocalScale.y
-      value: 1.3888888
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 4712672407335628, guid: 90b685dd555e0c848806f1fb6209e1e9, type: 3}
       propertyPath: m_LocalScale.z
-      value: 1.3888894
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 4712672407335628, guid: 90b685dd555e0c848806f1fb6209e1e9, type: 3}
       propertyPath: m_LocalPosition.x
@@ -46061,6 +46253,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 100074, guid: 23f342eca69097a4c8a6aa2768f3dba2, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1926857875272125556}
+    - targetCorrespondingSourceObject: {fileID: 100074, guid: 23f342eca69097a4c8a6aa2768f3dba2, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5393750815406453401}
   m_SourcePrefab: {fileID: 100100000, guid: 23f342eca69097a4c8a6aa2768f3dba2, type: 3}
 --- !u!4 &1981453738774650645 stripped
 Transform:
@@ -46245,6 +46440,25 @@ MonoBehaviour:
   bossName: 
   healthBarColor: {r: 1, g: 0, b: 0, a: 1}
   expReward: 1000
+--- !u!114 &5393750815406453401
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1981453738775135029}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c96abf9a115d31748b998765d2eeb62d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  stuckTimeThreshold: 3
+  minMovementDistance: 0.5
+  maxDistanceFromPlayer: 5
+  warpSearchRadius: 15
+  warpDistanceFromPlayer: 5
+  warpCooldown: 8
+  maxWarpCount: 5
 --- !u!1001 &1981453738804752548
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -46522,6 +46736,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 100084, guid: 6c6cc16502072914294f2e6eb306fb6d, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3818340757877286388}
+    - targetCorrespondingSourceObject: {fileID: 100084, guid: 6c6cc16502072914294f2e6eb306fb6d, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7192675723745351372}
   m_SourcePrefab: {fileID: 100100000, guid: 6c6cc16502072914294f2e6eb306fb6d, type: 3}
 --- !u!1 &1981453738804655696 stripped
 GameObject:
@@ -46701,6 +46918,25 @@ MonoBehaviour:
   bossName: 
   healthBarColor: {r: 1, g: 0, b: 0, a: 1}
   expReward: 1000
+--- !u!114 &7192675723745351372
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1981453738804655696}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c96abf9a115d31748b998765d2eeb62d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  stuckTimeThreshold: 3
+  minMovementDistance: 0.5
+  maxDistanceFromPlayer: 5
+  warpSearchRadius: 15
+  warpDistanceFromPlayer: 5
+  warpCooldown: 8
+  maxWarpCount: 5
 --- !u!4 &1981453738804882032 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 400084, guid: 6c6cc16502072914294f2e6eb306fb6d, type: 3}
@@ -46967,6 +47203,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 100076, guid: 7ed88ba6cc3135a4890ffd42006802e0, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1236016989435016665}
+    - targetCorrespondingSourceObject: {fileID: 100076, guid: 7ed88ba6cc3135a4890ffd42006802e0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7441578203788286425}
   m_SourcePrefab: {fileID: 100100000, guid: 7ed88ba6cc3135a4890ffd42006802e0, type: 3}
 --- !u!1 &1981453738820298958 stripped
 GameObject:
@@ -47146,6 +47385,25 @@ MonoBehaviour:
   bossName: 
   healthBarColor: {r: 1, g: 0, b: 0, a: 1}
   expReward: 1000
+--- !u!114 &7441578203788286425
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1981453738820298958}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c96abf9a115d31748b998765d2eeb62d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  stuckTimeThreshold: 3
+  minMovementDistance: 0.5
+  maxDistanceFromPlayer: 5
+  warpSearchRadius: 15
+  warpDistanceFromPlayer: 5
+  warpCooldown: 8
+  maxWarpCount: 5
 --- !u!4 &1981453738820728046 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 400076, guid: 7ed88ba6cc3135a4890ffd42006802e0, type: 3}
@@ -47841,6 +48099,18 @@ PrefabInstance:
       value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 4118756434896196, guid: cfc911e7da8eb62499dff1c810e59571, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4118756434896196, guid: cfc911e7da8eb62499dff1c810e59571, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4118756434896196, guid: cfc911e7da8eb62499dff1c810e59571, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4118756434896196, guid: cfc911e7da8eb62499dff1c810e59571, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
       objectReference: {fileID: 0}
@@ -48384,6 +48654,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 100076, guid: e2abc4effa6e87642ae3f4d560ac8191, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1335145691378686894}
+    - targetCorrespondingSourceObject: {fileID: 100076, guid: e2abc4effa6e87642ae3f4d560ac8191, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2614667757904015890}
   m_SourcePrefab: {fileID: 100100000, guid: e2abc4effa6e87642ae3f4d560ac8191, type: 3}
 --- !u!1 &1981453739209936326 stripped
 GameObject:
@@ -48563,6 +48836,25 @@ MonoBehaviour:
   bossName: 
   healthBarColor: {r: 1, g: 0, b: 0, a: 1}
   expReward: 1000
+--- !u!114 &2614667757904015890
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1981453739209936326}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c96abf9a115d31748b998765d2eeb62d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  stuckTimeThreshold: 3
+  minMovementDistance: 0.5
+  maxDistanceFromPlayer: 5
+  warpSearchRadius: 15
+  warpDistanceFromPlayer: 5
+  warpCooldown: 8
+  maxWarpCount: 5
 --- !u!4 &1981453739210166758 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 400076, guid: e2abc4effa6e87642ae3f4d560ac8191, type: 3}

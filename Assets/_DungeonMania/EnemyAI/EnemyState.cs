@@ -85,10 +85,20 @@ public class EnemyState : MonoBehaviour{
                     enemyScript.Distance();
                 }
 
+                // LUÔN update NavMeshAgent destination khi có target (không chỉ khi anim "run")
+                // Đảm bảo enemy luôn đuổi theo vị trí HIỆN TẠI của player
+                if (enemyScript.navMeshAgent != null && enemyScript.target != null && !enemyScript.navMeshAgent.isStopped) {
+                    enemyScript.navMeshAgent.destination = enemyScript.target.position;
+                }
+
                 if(enemyScript.enemyState.distance > enemyScript.attackDistance){
                     if(!enemyScript.attack && !enemyScript.hit){
                         if (enemyScript.navMeshAgent != null) {
                             enemyScript.navMeshAgent.isStopped = false;
+                            // Update destination ngay khi bắt đầu chase
+                            if (enemyScript.target != null) {
+                                enemyScript.navMeshAgent.destination = enemyScript.target.position;
+                            }
                         }
                         if (enemyScript.animator != null) {
                             enemyScript.animator.SetBool("run", true);
@@ -104,9 +114,6 @@ public class EnemyState : MonoBehaviour{
                     if(enemyScript.anim.IsName("Base Layer.hit")) enemyScript.animator.SetBool("hit", false);
                     if(enemyScript.anim.IsName("Base Layer.knock")) enemyScript.animator.SetBool("knock", false);
                     if(enemyScript.anim.IsName("Base Layer.idle")){enemyScript.attack = false; enemyScript.hit = false;}
-                    if(enemyScript.anim.IsName("Base Layer.run") && enemyScript.navMeshAgent != null && enemyScript.target != null) {
-                        enemyScript.navMeshAgent.destination = enemyScript.target.position;
-                    }
 
                     // Reset attack flag sau khi animation attack kết thúc
                     if(enemyScript.anim.IsName("Base Layer.attack") || enemyScript.anim.IsName("attack")) {

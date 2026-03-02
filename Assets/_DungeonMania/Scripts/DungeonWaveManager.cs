@@ -423,7 +423,8 @@ public class DungeonWaveManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Spawn 1 enemy từ EnemyNew prefab (CÁCH A - ĐƠN GIẢN)
+    /// Spawn 1 enemy từ EnemyNew prefab
+    /// FIX: Không dùng static event broadcast nữa — gọi trực tiếp trên instance
     /// </summary>
     private void SpawnEnemyFromEnemyNew()
     {
@@ -441,30 +442,67 @@ public class DungeonWaveManager : MonoBehaviour
         // === QUAN TRỌNG: Tắt tất cả enemy con trong prefab ===
         DisableAllChildEnemies(enemy);
         
-        // Thiết lập SelectEnemyPos với vị trí spawn cho tất cả các enemy
-        // Mỗi lần spawn sẽ tạo mới để tránh bị ghi đè
+        // Thiết lập SelectEnemyPos với vị trí spawn
         SetupSelectEnemyPosForAllEnemies(spawnPos);
         
         // Thêm EnemyWaveTracker
         EnemyWaveTracker tracker = enemy.AddComponent<EnemyWaveTracker>();
         tracker.waveManager = this;
         
-        // KHÔNG gọi Enable() trực tiếp ở đây!
-        // RandomEnemy.OnEnable() đã đăng ký event handler cho EnableEvent
-        // Khi gọi EnemyEventSystem(0), nó sẽ gọi RandomEnemy.Enable() tự động
-        // Nếu gọi cả hai sẽ bị gọi 2 lần!
+        // === FIX: GỌI TRỰC TIẾP trên instance, KHÔNG broadcast static event ===
+        // Static event EnemyEvent.EnemyEventSystem(0/2) sẽ fire trên TẤT CẢ enemy đã subscribe
+        // Điều này khiến enemy trước đó bị re-trigger Enable() → reset vị trí, animation
+        RandomEnemy randomEnemy = enemy.GetComponent<RandomEnemy>();
+        if (randomEnemy != null)
+        {
+            // Gọi Enable trực tiếp trên instance này (không broadcast)
+            randomEnemy.EnableDirect();
+        }
 
-        // KÍCH HOẠT ENEMY EVENT ĐỂ ĐẢM BẢO AI CHẠY
-        // Gọi event để kích hoạt AI của tất cả enemy
-        // Case 0 = EnableEvent (gọi RandomEnemy.Enable()), Case 2 = AttackEvent (bắt đầu chase)
-        EnemyEvent.EnemyEventSystem(0); // EnableEvent - kích hoạt hệ thống và chọn enemy
-        EnemyEvent.EnemyEventSystem(2); // AttackEvent - bắt đầu chase (gọi Chase())
-
-        // SAU KHI enemy bên trong đã được kích hoạt bởi RandomEnemy.Enable()
+        // SAU KHI enemy bên trong đã được kích hoạt
         // Thêm EnemyDeathBridge vào enemy bên TRONG (không phải EnemyNew parent)
         AddEnemyDeathBridgeToActiveEnemy(enemy);
 
-        Debug.Log($"[DungeonWave] Spawned EnemyNew at {spawnPos} - AI activated");
+        // === Set player target + Start Chase trực tiếp cho enemy ===
+        SetPlayerTargetAndChaseForActiveEnemy(enemy);
+
+        Debug.Log($"[DungeonWave] Spawned EnemyNew at {spawnPos} - AI activated (direct call)");
+    }
+
+    /// <summary>
+    /// Set player target + bắt đầu chase TRỰC TIẾP cho enemy đang active
+    /// Thay vì dùng EnemyEvent.AttackEvent (broadcast tới TẤT CẢ enemy)
+    /// </summary>
+    private void SetPlayerTargetAndChaseForActiveEnemy(GameObject enemyNew)
+    {
+        if (player == null) return;
+        
+        RandomEnemy randomEnemy = enemyNew.GetComponent<RandomEnemy>();
+        if (randomEnemy == null || randomEnemy.enemys == null) return;
+
+        // Tìm enemy đang active
+        for (int i = 0; i < randomEnemy.enemys.Length; i++)
+        {
+            if (randomEnemy.enemys[i] != null && randomEnemy.enemys[i].activeSelf)
+            {
+                EnemyScript enemyScript = randomEnemy.enemys[i].GetComponent<EnemyScript>();
+                if (enemyScript != null)
+                {
+                    // Set player target trực tiếp
+                    enemyScript.SetPlayerTarget(player);
+                    
+                    // Bắt đầu chase TRỰC TIẾP (không qua EnemyEvent.AttackEvent broadcast)
+                    enemyScript.StartChase();
+                    
+                    // Thêm Stuck Detection để tự warp khi bị kẹt trên terrain lồi lõm
+                    if (randomEnemy.enemys[i].GetComponent<EnemyStuckDetection>() == null)
+                    {
+                        randomEnemy.enemys[i].AddComponent<EnemyStuckDetection>();
+                    }
+                }
+                break; // Chỉ set cho enemy đang active
+            }
+        }
     }
 
     /// <summary>

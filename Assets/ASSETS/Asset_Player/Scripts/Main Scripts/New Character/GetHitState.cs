@@ -26,6 +26,14 @@ public class GetHitState : State
         hitTimer = hitDuration;
         weaponLayersWereDisabled = false;
 
+        // === FIX: Clear buffered dash input để tránh auto-dash khi exit GetHitState ===
+        // Consume dashAction trigger nếu đang pending
+        if (dashAction != null && dashAction.triggered)
+        {
+            // Reading .triggered consumes it, preventing auto-dash
+            Debug.Log("[GetHitState] Consumed buffered dash input");
+        }
+
         // Find WeaponController if not already found
         if (weaponController == null)
         {

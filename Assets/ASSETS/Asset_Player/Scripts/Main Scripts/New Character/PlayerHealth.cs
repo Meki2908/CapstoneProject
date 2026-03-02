@@ -264,8 +264,9 @@ public class PlayerHealth : MonoBehaviour
         
         Debug.Log($"[PlayerHealth] PlayerDamage called: total={totalDamage}, base={damageStruct.damage}, elemental={damageStruct.damageElemental}, crit={damageStruct.crit}, isBow={damageStruct.isBow}");
         
-        // Call main TakeDamage
-        TakeDamage(totalDamage, Vector3.zero, true);
+        // Call main TakeDamage — forceHitAnimation = false để tôn trọng dash invincibility
+        // Nếu player đang dash, sẽ không bị damage
+        TakeDamage(totalDamage, Vector3.zero, false);
     }
 
     private void Die()
