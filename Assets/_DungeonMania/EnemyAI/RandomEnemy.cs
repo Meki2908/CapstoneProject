@@ -45,6 +45,16 @@ public class RandomEnemy : MonoBehaviour{
     }
     }
     
+    /// <summary>
+    /// Được gọi TRỰC TIẾP bởi DungeonWaveManager thay vì qua static event
+    /// Tránh broadcast tới tất cả enemy đã subscribe
+    /// </summary>
+    public void EnableDirect()
+    {
+        Debug.Log($"[RandomEnemy] EnableDirect called on {gameObject.name}");
+        Enable();
+    }
+    
     // Hệ thống wave mới
     // Wave 1-3: Skelet (Skeleton + skeleton_archer) - index 0,1
     // Wave 4: Skelet + Lich - index 0,1,5

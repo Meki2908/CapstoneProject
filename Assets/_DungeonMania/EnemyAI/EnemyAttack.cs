@@ -6,13 +6,53 @@ public class EnemyAttack : MonoBehaviour {
     Damage damageStruct;
     EnemyAttackEffects attackEffects;
     
+    // Cache bridge reference để không phải tìm lại mỗi lần attack
+    private DungeonManiaPlayerBridge cachedBridge;
+    private bool hasSearchedBridge = false;
+    
     private void Start(){
         enemyScript = GetComponent<EnemyScript> ();
         // Tìm EnemyAttackEffects
         attackEffects = GetComponent<EnemyAttackEffects>();
         if (attackEffects == null)
             attackEffects = GetComponentInChildren<EnemyAttackEffects>();
+        
+        // Cache bridge reference ngay từ Start
+        FindAndCacheBridge();
     }
+    
+    /// <summary>
+    /// Tìm và cache DungeonManiaPlayerBridge
+    /// </summary>
+    private void FindAndCacheBridge()
+    {
+        if (cachedBridge != null) return;
+        
+        // Tìm trên target
+        if (enemyScript != null && enemyScript.target != null) {
+            cachedBridge = enemyScript.target.GetComponent<DungeonManiaPlayerBridge>();
+            
+            // Thử parent nếu target là child
+            if (cachedBridge == null && enemyScript.target.parent != null) {
+                cachedBridge = enemyScript.target.parent.GetComponent<DungeonManiaPlayerBridge>();
+            }
+        }
+        
+        // Fallback: tìm bằng tag
+        if (cachedBridge == null) {
+            GameObject playerByTag = GameObject.FindGameObjectWithTag("Player");
+            if (playerByTag != null) {
+                cachedBridge = playerByTag.GetComponent<DungeonManiaPlayerBridge>();
+            }
+        }
+        
+        hasSearchedBridge = true;
+        
+        if (cachedBridge != null) {
+            Debug.Log($"[EnemyAttack] Cached DungeonManiaPlayerBridge on {cachedBridge.gameObject.name}");
+        }
+    }
+    
     public void StartAction(string anim){
         if(HeroInformation.alive && enemyScript != null){
             if(!enemyScript.attack && !enemyScript.enemyState.isStop){
@@ -32,53 +72,26 @@ public class EnemyAttack : MonoBehaviour {
             return;
         }
 
-        Debug.Log($"[EnemyAttack] DamageToPlayer called. playerManager={(enemyScript.playerManager != null ? "exists" : "null")}, target={(enemyScript.target != null ? enemyScript.target.name : "null")}");
-
         // Check if using DungeonManiaPlayerBridge (user's player system)
         if (enemyScript.playerManager == null) {
-            // Try to find DungeonManiaPlayerBridge on the player
-            if (enemyScript.target != null) {
-                // enemyScript.target is likely the "player" (lowercase) child object
-                // We need to find the actual parent Player object
-                GameObject targetGameObj = enemyScript.target.gameObject;
-                
-                // If target is a child (like "player"), try to find bridge on parent or by tag
-                DungeonManiaPlayerBridge bridge = targetGameObj.GetComponent<DungeonManiaPlayerBridge>();
-                
-                // If not found on target, try parent (actual Player)
-                if (bridge == null && targetGameObj.transform.parent != null) {
-                    bridge = targetGameObj.transform.parent.GetComponent<DungeonManiaPlayerBridge>();
-                }
-                
-                // If still not found, try finding by tag
-                GameObject playerByTag = null;
-                if (bridge == null) {
-                    playerByTag = GameObject.FindGameObjectWithTag("Player");
-                    Debug.Log($"[EnemyAttack] Search by tag 'Player': {(playerByTag != null ? playerByTag.name : "NOT FOUND")}");
-                    if (playerByTag != null) {
-                        bridge = playerByTag.GetComponent<DungeonManiaPlayerBridge>();
-                        Debug.Log($"[EnemyAttack] Bridge on tag player: {(bridge != null ? "YES" : "NO")}");
-                    }
-                }
-                
-                Debug.Log($"[EnemyAttack] Found bridge on player: {(bridge != null ? "YES" : "NO")}. Target: {targetGameObj.name}, Parent: {(targetGameObj.transform.parent != null ? targetGameObj.transform.parent.name : "null")}, TagPlayer: {(playerByTag != null ? playerByTag.name : "null")}");
-                
-                if (bridge != null) {
-                    if (enemyScript.enemyState.distance <= enemyScript.attackDistance) {
-                        // Gọi particle effects trước khi gây damage
-                        if (attackEffects != null) attackEffects.PlayBowAttack();
-                        
-                        damageStruct = D();
-                        Debug.Log($"[EnemyAttack] Calling bridge.PlayerDamage. Distance: {enemyScript.enemyState.distance}, attackDistance: {enemyScript.attackDistance}");
-                        bridge.PlayerDamage(damageStruct, hit);
-                        return;
-                    } else {
-                        Debug.Log($"[EnemyAttack] Distance too far: {enemyScript.enemyState.distance} > {enemyScript.attackDistance}");
-                    }
-                }
+            // Dùng cached bridge (tìm lại nếu chưa tìm)
+            if (!hasSearchedBridge || cachedBridge == null) {
+                FindAndCacheBridge();
             }
-            Debug.LogWarning("[EnemyAttack] DamageToPlayer: No player manager or bridge found!");
-            return; // No player manager or bridge found
+            
+            if (cachedBridge != null) {
+                if (enemyScript.enemyState.distance <= enemyScript.attackDistance) {
+                    // Gọi particle effects trước khi gây damage
+                    if (attackEffects != null) attackEffects.PlayBowAttack();
+                    
+                    damageStruct = D();
+                    cachedBridge.PlayerDamage(damageStruct, hit);
+                    return;
+                }
+            } else {
+                Debug.LogWarning("[EnemyAttack] DamageToPlayer: No player manager or bridge found!");
+            }
+            return;
         }
 
         // Original DungeonMania player system
@@ -94,35 +107,20 @@ public class EnemyAttack : MonoBehaviour {
 
         // Check if using DungeonManiaPlayerBridge (user's player system)
         if (enemyScript.playerManager == null) {
-            if (enemyScript.target != null) {
-                // enemyScript.target is likely the "player" (lowercase) child object
-                // We need to find the actual parent Player object
-                GameObject targetGameObj = enemyScript.target.gameObject;
+            // Dùng cached bridge
+            if (!hasSearchedBridge || cachedBridge == null) {
+                FindAndCacheBridge();
+            }
+            
+            if (cachedBridge != null) {
+                // Gọi skill effects trước khi gây damage
+                if (attackEffects != null) attackEffects.PlaySkillAttack();
                 
-                // If not found on target, try parent (actual Player)
-                DungeonManiaPlayerBridge bridge = targetGameObj.GetComponent<DungeonManiaPlayerBridge>();
-                if (bridge == null && targetGameObj.transform.parent != null) {
-                    bridge = targetGameObj.transform.parent.GetComponent<DungeonManiaPlayerBridge>();
-                }
-                
-                // If still not found, try finding by tag
-                if (bridge == null) {
-                    GameObject playerByTag = GameObject.FindGameObjectWithTag("Player");
-                    if (playerByTag != null) {
-                        bridge = playerByTag.GetComponent<DungeonManiaPlayerBridge>();
-                    }
-                }
-                
-                if (bridge != null) {
-                    // Gọi skill effects trước khi gây damage
-                    if (attackEffects != null) attackEffects.PlaySkillAttack();
-                    
-                    damageStruct = D();
-                    damageStruct.damage += enemyScript.enemy.attack.value;
-                    damageStruct.damageElemental += enemyScript.enemy.magicValue;
-                    bridge.PlayerDamage(damageStruct, hit);
-                    return;
-                }
+                damageStruct = D();
+                damageStruct.damage += enemyScript.enemy.attack.value;
+                damageStruct.damageElemental += enemyScript.enemy.magicValue;
+                cachedBridge.PlayerDamage(damageStruct, hit);
+                return;
             }
             return;
         }

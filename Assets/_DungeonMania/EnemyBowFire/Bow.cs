@@ -10,6 +10,9 @@ public class Bow : MonoBehaviour {
     DungeonManiaPlayerBridge playerBridge;
     int hit;
     
+    // Flag để lazy init - Awake có thể chạy trước khi DungeonManiaPlayerBridge được setup
+    private bool hasInitializedBridge = false;
+    
 	void Awake () {
         // Tìm particle trên object này
         ps = GetComponent<ParticleSystem>();
@@ -34,33 +37,70 @@ public class Bow : MonoBehaviour {
             Debug.LogWarning("[Bow] No ParticleSystem found! Make sure ParticleSystem is a child of this object.");
         }
         
-        SetupPlayerReference();
+        // Thử tìm bridge ngay, nhưng không báo lỗi nếu chưa tìm thấy (lazy init sau)
+        TrySetupPlayerReference();
 	}
     
-    private void SetupPlayerReference() {
-        // Tìm player object (chữ thường) hoặc object có tag Player
-        GameObject playerObj = GameObject.Find("player");
+    /// <summary>
+    /// Thử tìm player và bridge. Gọi được nhiều lần (lazy init).
+    /// Trả về true nếu đã tìm thấy bridge.
+    /// </summary>
+    private bool TrySetupPlayerReference() {
+        if (hasInitializedBridge && playerBridge != null) return true;
+        
+        // ƯU TIÊN tìm player thật bằng tag "Player"
+        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
         if (playerObj == null) {
-            playerObj = GameObject.FindGameObjectWithTag("Player");
+            playerObj = GameObject.Find("player");
         }
         
         if (playerObj != null) {
             player = playerObj.transform;
-            // Tìm DungeonManiaPlayerBridge thay vì PlayerHelth
+            
+            // Tìm DungeonManiaPlayerBridge trên chính player
             playerBridge = playerObj.GetComponent<DungeonManiaPlayerBridge>();
-            if (playerBridge == null) {
-                // Fallback: thử tìm PlayerHealth và tạo bridge tạm
-                PlayerHealth playerHealth = playerObj.GetComponent<PlayerHealth>();
-                if (playerHealth != null) {
-                    Debug.LogWarning("[Bow] PlayerHealth found but no DungeonManiaPlayerBridge! Please add DungeonManiaPlayerBridge to player.");
+            
+            // Nếu không tìm thấy, thử tìm trên parent
+            if (playerBridge == null && playerObj.transform.parent != null) {
+                playerBridge = playerObj.transform.parent.GetComponent<DungeonManiaPlayerBridge>();
+                if (playerBridge != null) {
+                    player = playerObj.transform.parent;
                 }
             }
-        } else {
-            Debug.LogWarning("[Bow] Player not found!");
+            
+            // Nếu vẫn không tìm thấy, thử tìm trên toàn bộ hierarchy (GetComponentInParent)
+            if (playerBridge == null) {
+                playerBridge = playerObj.GetComponentInParent<DungeonManiaPlayerBridge>();
+                if (playerBridge != null) {
+                    player = playerBridge.transform;
+                }
+            }
+            
+            // Fallback cuối: FindAnyObjectByType (tìm trong toàn scene)
+            if (playerBridge == null) {
+                playerBridge = Object.FindAnyObjectByType<DungeonManiaPlayerBridge>();
+                if (playerBridge != null) {
+                    player = playerBridge.transform;
+                    Debug.Log($"[Bow] Found DungeonManiaPlayerBridge via FindAnyObjectByType on {playerBridge.gameObject.name}");
+                }
+            }
+            
+            if (playerBridge != null) {
+                hasInitializedBridge = true;
+                Debug.Log($"[Bow] Successfully found DungeonManiaPlayerBridge on {playerBridge.gameObject.name}");
+                return true;
+            }
         }
+        
+        return false;
     }
     
     private void OnParticleCollision(GameObject go){
+        // Lazy init: thử tìm bridge nếu chưa có
+        if (playerBridge == null) {
+            TrySetupPlayerReference();
+        }
+        
         // Sử dụng bridge để gây damage
         if (playerBridge != null) {
             // Chuyển đổi Damage struct sang Damage struct của DungeonMania
@@ -74,7 +114,7 @@ public class Bow : MonoBehaviour {
             bowDamage.spellID = damage.spellID;
             playerBridge.PlayerDamage(bowDamage, hit);
         } else {
-            Debug.LogWarning("[Bow] PlayerBridge not found! Cannot deal damage.");
+            Debug.LogWarning("[Bow] PlayerBridge still not found during collision! Cannot deal damage.");
         }
     }
     
