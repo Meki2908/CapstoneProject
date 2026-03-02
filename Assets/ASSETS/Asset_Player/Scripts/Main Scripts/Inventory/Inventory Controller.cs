@@ -192,6 +192,9 @@ public class InventoryController : MonoBehaviour
 
     private void DisableCameraControls()
     {
+        // Tự tìm nếu chưa gắn trong Inspector
+        if (inputProvider == null)
+            inputProvider = FindFirstObjectByType<CinemachineInputProvider>();
         if (inputProvider == null) return;
 
         if (!fixedCinemachineVersion)
@@ -262,6 +265,12 @@ public class InventoryController : MonoBehaviour
             {
                 skillMap.Disable();
                 Debug.Log("[InventoryController] Disabled Skill action map");
+            }
+
+            // Giữ Inventory action luôn enabled để nhấn I để đóng inventory
+            if (inventoryToggleAction != null)
+            {
+                inventoryToggleAction.Enable();
             }
 
             // Note: UI action map (if exists) will remain enabled for button clicks

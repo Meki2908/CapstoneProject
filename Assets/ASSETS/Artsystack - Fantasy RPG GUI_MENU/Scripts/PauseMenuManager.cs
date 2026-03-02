@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using UnityEngine.InputSystem;
 
 namespace Artsystack.ArtsystackGui
 {
@@ -15,6 +16,9 @@ namespace Artsystack.ArtsystackGui
         [Header("Pause Panel")]
         [SerializeField] private GameObject panel_PopUpPause;
 
+        [Header("HUD Panel (HP, Inventory,...)")]
+        [SerializeField] private GameObject panel_HUD;
+
         [Header("Pause Buttons - Theo ten trong Hierarchy")]
         [SerializeField] private Button btn_Continue;       // Panel_PopUp_Pause > Btn_Continue
         [SerializeField] private Button btn_SaveGame;      // Panel_PopUp_Pause > Btn_Save Game
@@ -23,16 +27,13 @@ namespace Artsystack.ArtsystackGui
 
         [Header("Settings Panel")]
         [SerializeField] private GameObject panel_GUISettings;
-        [SerializeField] private Button button_Close;      // Panel_GUISetting > Button_Close
-
-        [Header("Exit Panel")]
-        [SerializeField] private GameObject panel_Exit;
-        [SerializeField] private Button button_ConfirmExit;
-        [SerializeField] private Button button_CancelExit;
 
         [Header("Settings")]
         [SerializeField] private string mainMenuSceneName = "MainMenu";
         [SerializeField] private bool cursorVisibleOnPause = true;
+
+        [Header("Input System")]
+        [SerializeField] private InputActionReference openMenuAction;
 
         private static PauseMenuManager instance;
         private bool isPaused = false;
@@ -51,18 +52,49 @@ namespace Artsystack.ArtsystackGui
         {
             if (instance != null && instance != this)
             {
-                Destroy(gameObject);
+                this.enabled = false; // Chỉ tắt component, không xóa
                 return;
             }
             instance = this;
 
             if (panel_PopUpPause != null)
                 panel_PopUpPause.SetActive(false);
+
+            // Subscribe to OpenMenu action
+            if (openMenuAction != null && openMenuAction.action != null)
+            {
+                openMenuAction.action.Enable();
+                openMenuAction.action.performed += OnOpenMenuPerformed;
+            }
+        }
+
+        private void OnDestroy()
+        {
+            // Unsubscribe to prevent memory leaks
+            if (openMenuAction != null && openMenuAction.action != null)
+            {
+                openMenuAction.action.performed -= OnOpenMenuPerformed;
+            }
+        }
+
+        private void OnOpenMenuPerformed(InputAction.CallbackContext context)
+        {
+            TogglePause();
         }
 
         private void Start()
         {
             SetupButtonListeners();
+
+            // Bật HUD panel + tất cả children (bị tắt mặc định trong Inspector)
+            if (panel_HUD != null)
+            {
+                panel_HUD.SetActive(true);
+                foreach (Transform child in panel_HUD.transform)
+                {
+                    child.gameObject.SetActive(true);
+                }
+            }
         }
 
         private void SetupButtonListeners()
@@ -77,16 +109,7 @@ namespace Artsystack.ArtsystackGui
                 btn_Setting.onClick.AddListener(OpenSettings);
 
             if (btn_Exit != null)
-                btn_Exit.onClick.AddListener(ShowExitConfirm);
-
-            if (button_Close != null)
-                button_Close.onClick.AddListener(CloseSettings);
-
-            if (button_ConfirmExit != null)
-                button_ConfirmExit.onClick.AddListener(ConfirmExit);
-
-            if (button_CancelExit != null)
-                button_CancelExit.onClick.AddListener(CancelExit);
+                btn_Exit.onClick.AddListener(ExitToMainMenu);
         }
 
         public void PauseGame()
@@ -97,6 +120,13 @@ namespace Artsystack.ArtsystackGui
 
             if (panel_PopUpPause != null)
                 panel_PopUpPause.SetActive(true);
+
+            // Ẩn HUD khi pause
+            if (panel_HUD != null)
+                panel_HUD.SetActive(false);
+
+            // Tắt PlayerInput để UI buttons nhận được click
+            SetPlayerInput(false);
 
             if (cursorVisibleOnPause)
             {
@@ -113,6 +143,36 @@ namespace Artsystack.ArtsystackGui
             Time.timeScale = 1f;
             Cursor.visible = false;
             Cursor.lockState = CursorLockMode.Locked;
+
+            // Bật lại PlayerInput khi resume
+            SetPlayerInput(true);
+
+            // Hiện lại HUD khi resume
+            if (panel_HUD != null)
+                panel_HUD.SetActive(true);
+        }
+
+        private void SetPlayerInput(bool enabled)
+        {
+            var character = FindFirstObjectByType<Character>();
+            if (character != null && character.playerInput != null && character.playerInput.actions != null)
+            {
+                // Tắt/bật Player action map (movement, combat, attack...)
+                var playerMap = character.playerInput.actions.FindActionMap("Player");
+                if (playerMap != null)
+                {
+                    if (enabled) playerMap.Enable();
+                    else playerMap.Disable();
+                }
+
+                // Tắt/bật Skill action map
+                var skillMap = character.playerInput.actions.FindActionMap("Skill");
+                if (skillMap != null)
+                {
+                    if (enabled) skillMap.Enable();
+                    else skillMap.Disable();
+                }
+            }
         }
 
         public void TogglePause()
@@ -130,11 +190,20 @@ namespace Artsystack.ArtsystackGui
         {
             if (panel_PopUpPause != null)
                 panel_PopUpPause.SetActive(false);
-            if (panel_GUISettings != null)
+
+            // Gọi SettingsManager để khởi tạo đúng (tab, load settings)
+            var settingsManager = FindFirstObjectByType<SettingsManager>();
+            if (settingsManager != null)
+            {
+                settingsManager.OpenSettings();
+            }
+            else if (panel_GUISettings != null)
+            {
                 panel_GUISettings.SetActive(true);
+            }
         }
 
-        private void CloseSettings()
+        public void CloseSettings()
         {
             if (panel_GUISettings != null)
                 panel_GUISettings.SetActive(false);
@@ -142,43 +211,18 @@ namespace Artsystack.ArtsystackGui
                 panel_PopUpPause.SetActive(true);
         }
 
-        private void ShowExitConfirm()
-        {
-            if (panel_PopUpPause != null)
-                panel_PopUpPause.SetActive(false);
-            if (panel_Exit != null)
-                panel_Exit.SetActive(true);
-        }
-
-        private void ConfirmExit()
+        private void ExitToMainMenu()
         {
             Time.timeScale = 1f;
-            #if UNITY_EDITOR
-            UnityEditor.EditorApplication.isPlaying = false;
-            #else
-            Application.Quit();
-            #endif
-        }
-
-        private void CancelExit()
-        {
-            if (panel_Exit != null)
-                panel_Exit.SetActive(false);
-            if (panel_PopUpPause != null)
-                panel_PopUpPause.SetActive(true);
+            Cursor.visible = true;
+            Cursor.lockState = CursorLockMode.None;
+            SceneManager.LoadScene(mainMenuSceneName);
         }
 
         private void HideAllPanels()
         {
             if (panel_PopUpPause != null) panel_PopUpPause.SetActive(false);
             if (panel_GUISettings != null) panel_GUISettings.SetActive(false);
-            if (panel_Exit != null) panel_Exit.SetActive(false);
-        }
-
-        private void Update()
-        {
-            if (Input.GetKeyDown(KeyCode.Escape))
-                TogglePause();
         }
 
         public bool IsPaused => isPaused;

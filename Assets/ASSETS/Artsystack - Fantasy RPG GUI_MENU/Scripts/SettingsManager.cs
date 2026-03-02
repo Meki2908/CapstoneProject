@@ -204,6 +204,10 @@ namespace Artsystack.ArtsystackGui
             SettingHoverInfo.SetInfoPanel(panel_InfoRight, text_InfoTitle, text_InfoDescription);
             if (panel_InfoRight != null) panel_InfoRight.SetActive(false);
 
+            // Đảm bảo Settings panel tắt khi bắt đầu
+            if (panel_GUISettings != null)
+                panel_GUISettings.SetActive(false);
+
             RestoreDefaultKeyBindings(); // Initialize key bindings with defaults
             LoadSettings();
             SetupEventListeners();
@@ -886,12 +890,21 @@ namespace Artsystack.ArtsystackGui
                 ApplySettings();
             }
             
-            // Ẩn Settings và hiển thị Menu chính
+            // Ẩn Settings
             if (panel_GUISettings != null)
                 panel_GUISettings.SetActive(false);
             
-            if (panel_GUIGame != null)
+            // Nếu đang trong gameplay (có PauseMenuManager) → quay về Pause panel
+            var pauseManager = PauseMenuManager.Instance;
+            if (pauseManager != null && pauseManager.IsPaused)
+            {
+                pauseManager.CloseSettings();
+            }
+            else if (panel_GUIGame != null)
+            {
+                // Quay về lobby menu
                 panel_GUIGame.SetActive(true);
+            }
             
             hasUnsavedChanges = false;
             UpdateBottomButtonsState();
@@ -1122,6 +1135,14 @@ namespace Artsystack.ArtsystackGui
             if (panel_GUISettings != null)
             {
                 panel_GUISettings.SetActive(true);
+
+                // Bật tất cả child panels (Middle, Right Side, Controller_Button,...)
+                // để các panel bị tắt trong Inspector vẫn hiện đúng
+                foreach (Transform child in panel_GUISettings.transform)
+                {
+                    child.gameObject.SetActive(true);
+                }
+
                 // Default to Gameplay panel
                 SwitchToPanel(panel_Gameplay);
                 // Load current values

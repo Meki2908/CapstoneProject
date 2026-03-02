@@ -31,6 +31,13 @@ namespace Artsystack.ArtsystackGui
 
         private void Start()
         {
+            // Nếu đang trong gameplay (có Character/Player) → tắt script này
+            if (FindFirstObjectByType<Character>() != null)
+            {
+                this.enabled = false;
+                return;
+            }
+
             InitializeMenu();
         }
 
@@ -83,8 +90,16 @@ namespace Artsystack.ArtsystackGui
         {
             HideAllPanels();
             
-            if (panel_GUISettings != null)
+            // Gọi SettingsManager để bật đúng (child panels + tab mặc định)
+            var settingsManager = FindFirstObjectByType<SettingsManager>();
+            if (settingsManager != null)
+            {
+                settingsManager.OpenSettings();
+            }
+            else if (panel_GUISettings != null)
+            {
                 panel_GUISettings.SetActive(true);
+            }
         }
 
         /// <summary>
