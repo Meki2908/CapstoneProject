@@ -324,6 +324,12 @@ public class PlayerHealth : MonoBehaviour
     /// </summary>
     private void UpdateHealthText()
     {
+        // Tự tìm lại healthText nếu bị null (sau scene transition)
+        if (healthText == null && autoFindHealthText)
+        {
+            FindHealthText();
+        }
+        
         if (healthText != null)
         {
             healthText.text = $"{Mathf.CeilToInt(currentHealth)}/{Mathf.CeilToInt(maxHealth)}";

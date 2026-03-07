@@ -1,9 +1,11 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 using System.Collections;
 
 /// <summary>
 /// Manages the player health bar UI with fill bar and delayed damage bar
+/// Tự động tìm lại PlayerHealth sau scene transition
 /// </summary>
 public class HealthBarUI : MonoBehaviour
 {
@@ -29,8 +31,26 @@ public class HealthBarUI : MonoBehaviour
     private float targetHealthFill = 1f;
     private float currentDelayedFill = 1f;
     private Coroutine delayedDamageCoroutine;
+    
+    // Track last known health to detect changes via polling
+    private float lastKnownHealth = -1f;
+    private float lastKnownMaxHealth = -1f;
+
+    private void Awake()
+    {
+        // Subscribe vào scene loaded event
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
 
     private void Start()
+    {
+        InitializeHealthBar();
+    }
+
+    /// <summary>
+    /// Khởi tạo health bar — tìm PlayerHealth và subscribe events
+    /// </summary>
+    private void InitializeHealthBar()
     {
         // Auto-find PlayerHealth
         if (autoFindPlayerHealth)
@@ -52,12 +72,84 @@ public class HealthBarUI : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Callback khi scene mới được load — luôn tìm lại PlayerHealth
+    /// </summary>
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        Debug.Log($"[HealthBarUI] Scene loaded: {scene.name}. Re-finding PlayerHealth...");
+        // Chờ vài frame để mọi thứ khởi tạo xong
+        StartCoroutine(ReconnectAfterSceneLoad());
+    }
+
+    private IEnumerator ReconnectAfterSceneLoad()
+    {
+        // Chờ 3 frame để đảm bảo PlayerHealth.Start() đã chạy xong
+        yield return null;
+        yield return null;
+        yield return null;
+        
+        // Tìm lại PlayerHealth
+        UnsubscribeFromHealthEvents();
+        playerHealth = null;
+        FindPlayerHealth();
+        
+        if (playerHealth != null)
+        {
+            // Sync health bar ngay lập tức
+            float healthPercent = playerHealth.CurrentHealth / playerHealth.MaxHealth;
+            targetHealthFill = healthPercent;
+            currentDelayedFill = healthPercent;
+            lastKnownHealth = playerHealth.CurrentHealth;
+            lastKnownMaxHealth = playerHealth.MaxHealth;
+            
+            if (healthFillBar != null)
+            {
+                healthFillBar.fillAmount = healthPercent;
+                UpdateHealthBarColor(healthPercent);
+            }
+            if (delayedDamageBar != null)
+            {
+                delayedDamageBar.fillAmount = healthPercent;
+            }
+            
+            Debug.Log($"[HealthBarUI] Reconnected to PlayerHealth after scene load. HP={playerHealth.CurrentHealth}/{playerHealth.MaxHealth}");
+        }
+        else
+        {
+            Debug.LogWarning("[HealthBarUI] Could not find PlayerHealth after scene load!");
+        }
+    }
+
     private void Update()
     {
         // Update delayed damage bar
         if (delayedDamageBar != null && playerHealth != null)
         {
             UpdateDelayedDamageBar();
+        }
+
+        // === FALLBACK: Polling mỗi frame ===
+        // Nếu event không hoạt động (stale reference, race condition), 
+        // polling sẽ đảm bảo health bar luôn đồng bộ
+        if (playerHealth != null && playerHealth.IsAlive)
+        {
+            float currentHP = playerHealth.CurrentHealth;
+            float maxHP = playerHealth.MaxHealth;
+            
+            // Chỉ update khi HP thay đổi (so sánh với giá trị cũ)
+            if (!Mathf.Approximately(currentHP, lastKnownHealth) || !Mathf.Approximately(maxHP, lastKnownMaxHealth))
+            {
+                lastKnownHealth = currentHP;
+                lastKnownMaxHealth = maxHP;
+                UpdateHealthBar(currentHP, maxHP);
+            }
+        }
+        
+        // Auto-reconnect nếu playerHealth bị null
+        if (playerHealth == null && autoFindPlayerHealth)
+        {
+            FindPlayerHealth();
         }
     }
 
@@ -76,6 +168,7 @@ public class HealthBarUI : MonoBehaviour
                 if (playerHealth != null)
                 {
                     SubscribeToHealthEvents();
+                    Debug.Log($"[HealthBarUI] Found PlayerHealth on '{playerObject.name}' by tag. HP={playerHealth.CurrentHealth}/{playerHealth.MaxHealth}");
                     return;
                 }
             }
@@ -86,6 +179,7 @@ public class HealthBarUI : MonoBehaviour
         if (playerHealth != null)
         {
             SubscribeToHealthEvents();
+            Debug.Log($"[HealthBarUI] Found PlayerHealth on '{playerHealth.gameObject.name}' by FindFirstObjectByType. HP={playerHealth.CurrentHealth}/{playerHealth.MaxHealth}");
         }
         else
         {
@@ -100,14 +194,19 @@ public class HealthBarUI : MonoBehaviour
     {
         if (playerHealth != null)
         {
+            // Unsubscribe trước để tránh duplicate
+            playerHealth.OnHealthChanged -= OnHealthChanged;
+            playerHealth.OnPlayerDied -= OnPlayerDied;
+            
+            // Subscribe mới
             playerHealth.OnHealthChanged += OnHealthChanged;
             playerHealth.OnPlayerDied += OnPlayerDied;
 
             // Initialize with current health
-            // Set targetHealthFill to current health percentage
-            // But DON'T start animation - just sync the values
-            float currentHealthPercent = playerHealth.CurrentHealth / playerHealth.MaxHealth;
+            float currentHealthPercent = playerHealth.MaxHealth > 0 ? playerHealth.CurrentHealth / playerHealth.MaxHealth : 1f;
             targetHealthFill = currentHealthPercent;
+            lastKnownHealth = playerHealth.CurrentHealth;
+            lastKnownMaxHealth = playerHealth.MaxHealth;
 
             // Update health bar immediately without animation
             if (healthFillBar != null)
@@ -138,12 +237,14 @@ public class HealthBarUI : MonoBehaviour
     }
 
     /// <summary>
-    /// Called when player health changes
+    /// Called when player health changes (via event)
     /// </summary>
     private void OnHealthChanged(float currentHealth)
     {
         if (playerHealth != null)
         {
+            lastKnownHealth = currentHealth;
+            lastKnownMaxHealth = playerHealth.MaxHealth;
             UpdateHealthBar(currentHealth, playerHealth.MaxHealth);
         }
     }
@@ -188,8 +289,6 @@ public class HealthBarUI : MonoBehaviour
         }
 
         // Damage received: update health bar immediately, delay the delayed bar
-        // IMPORTANT: Save the current delayed fill BEFORE updating target
-        // This ensures we start animation from the correct position
         float previousDelayedFill = currentDelayedFill;
         targetHealthFill = newTargetHealthFill;
 
@@ -197,18 +296,13 @@ public class HealthBarUI : MonoBehaviour
         if (healthFillBar != null)
         {
             healthFillBar.fillAmount = targetHealthFill;
-            // Update color based on health percentage
             UpdateHealthBarColor(targetHealthFill);
         }
 
         // Start delayed damage bar animation
-        // Use the previous delayed fill value, not the current delayed bar value
-        // This ensures it starts from where it was, not where it is now
         if (delayedDamageBar != null)
         {
-            // Restore the previous value to ensure animation starts correctly
             currentDelayedFill = previousDelayedFill;
-            // Make sure delayed bar is at the previous position too
             delayedDamageBar.fillAmount = currentDelayedFill;
             StartDelayedDamageAnimation();
         }
@@ -221,15 +315,12 @@ public class HealthBarUI : MonoBehaviour
     {
         if (healthFillBar == null) return;
 
-        // Change color based on threshold
         if (healthPercentage > lowHealthThreshold)
         {
-            // HP > 40%: Green
             healthFillBar.color = healthyColor;
         }
         else
         {
-            // HP <= 40%: Red
             healthFillBar.color = lowHealthColor;
         }
     }
@@ -239,28 +330,22 @@ public class HealthBarUI : MonoBehaviour
     /// </summary>
     private void StartDelayedDamageAnimation()
     {
-        // Stop existing coroutine if running
         if (delayedDamageCoroutine != null)
         {
             StopCoroutine(delayedDamageCoroutine);
             delayedDamageCoroutine = null;
         }
 
-        // Only start animation if there's actually a difference
-        // currentDelayedFill should already be set correctly in UpdateHealthBar
         if (currentDelayedFill > targetHealthFill)
         {
-            // Ensure delayed bar is at the starting position
             if (delayedDamageBar != null)
             {
                 delayedDamageBar.fillAmount = currentDelayedFill;
             }
-            // Start new delayed damage animation
             delayedDamageCoroutine = StartCoroutine(DelayedDamageCoroutine());
         }
         else
         {
-            // If already at or below target, set immediately
             currentDelayedFill = targetHealthFill;
             if (delayedDamageBar != null)
             {
@@ -274,10 +359,8 @@ public class HealthBarUI : MonoBehaviour
     /// </summary>
     private IEnumerator DelayedDamageCoroutine()
     {
-        // Wait for delay
         yield return new WaitForSeconds(delayedDamageDelay);
 
-        // Animate delayed bar following the main bar
         while (currentDelayedFill > targetHealthFill)
         {
             currentDelayedFill = Mathf.MoveTowards(
@@ -294,7 +377,6 @@ public class HealthBarUI : MonoBehaviour
             yield return null;
         }
 
-        // Ensure final value is set
         currentDelayedFill = targetHealthFill;
         if (delayedDamageBar != null)
         {
@@ -307,7 +389,7 @@ public class HealthBarUI : MonoBehaviour
     /// </summary>
     private void UpdateDelayedDamageBar()
     {
-        // This is handled by coroutine, but kept for manual updates if needed
+        // Handled by coroutine
     }
 
     /// <summary>
@@ -315,13 +397,8 @@ public class HealthBarUI : MonoBehaviour
     /// </summary>
     public void SetPlayerHealth(PlayerHealth health)
     {
-        // Unsubscribe from old health
         UnsubscribeFromHealthEvents();
-
-        // Set new health
         playerHealth = health;
-
-        // Subscribe to new health
         if (playerHealth != null)
         {
             SubscribeToHealthEvents();
@@ -334,6 +411,7 @@ public class HealthBarUI : MonoBehaviour
     public void RefreshPlayerHealth()
     {
         UnsubscribeFromHealthEvents();
+        playerHealth = null;
         FindPlayerHealth();
     }
 
@@ -348,11 +426,11 @@ public class HealthBarUI : MonoBehaviour
     private void OnDestroy()
     {
         UnsubscribeFromHealthEvents();
+        SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
     private void OnDisable()
     {
-        // Stop coroutine when disabled
         if (delayedDamageCoroutine != null)
         {
             StopCoroutine(delayedDamageCoroutine);
@@ -360,4 +438,3 @@ public class HealthBarUI : MonoBehaviour
         }
     }
 }
-

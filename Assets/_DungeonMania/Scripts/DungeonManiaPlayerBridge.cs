@@ -39,9 +39,29 @@ public class DungeonManiaPlayerBridge : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Re-find PlayerHealth mỗi khi object được bật (scene transition, pooling)
+    /// </summary>
+    private void OnEnable()
+    {
+        if (playerHealth == null)
+        {
+            playerHealth = GetComponent<PlayerHealth>();
+            if (playerHealth == null)
+                playerHealth = GetComponentInChildren<PlayerHealth>();
+            if (playerHealth == null)
+                playerHealth = GetComponentInParent<PlayerHealth>();
+                
+            if (playerHealth != null)
+                Debug.Log($"[DungeonManiaPlayerBridge] OnEnable: Re-found PlayerHealth on {playerHealth.gameObject.name}");
+            else
+                Debug.LogError("[DungeonManiaPlayerBridge] OnEnable: PlayerHealth STILL NULL! Player sẽ không nhận damage!");
+        }
+    }
+
     private void Start()
     {
-        Debug.Log($"[DungeonManiaPlayerBridge] Initialized on {gameObject.name}. PlayerHealth={(playerHealth != null ? "found" : "null")}");
+        Debug.Log($"[DungeonManiaPlayerBridge] Initialized on {gameObject.name}. PlayerHealth={(playerHealth != null ? $"found (HP={playerHealth.CurrentHealth}/{playerHealth.MaxHealth})" : "NULL")}");
     }
 
     /// <summary>
@@ -51,10 +71,20 @@ public class DungeonManiaPlayerBridge : MonoBehaviour
     {
         Debug.Log($"[DungeonManiaPlayerBridge] PlayerDamage called! damage={damageStruct.damage}, elemental={damageStruct.damageElemental}, crit={damageStruct.crit}");
 
+        // Tự tìm lại PlayerHealth nếu bị null (stale reference sau scene transition)
         if (playerHealth == null)
         {
-            Debug.LogWarning("[DungeonManiaPlayerBridge] PlayerHealth is null!");
-            return;
+            Debug.LogWarning("[DungeonManiaPlayerBridge] PlayerHealth is null! Trying to re-find...");
+            playerHealth = GetComponent<PlayerHealth>();
+            if (playerHealth == null) playerHealth = GetComponentInChildren<PlayerHealth>();
+            if (playerHealth == null) playerHealth = GetComponentInParent<PlayerHealth>();
+            
+            if (playerHealth == null)
+            {
+                Debug.LogError("[DungeonManiaPlayerBridge] PlayerHealth is STILL NULL after re-search! Cannot apply damage.");
+                return;
+            }
+            Debug.Log($"[DungeonManiaPlayerBridge] Re-found PlayerHealth on {playerHealth.gameObject.name}");
         }
 
         // Calculate total damage
@@ -63,20 +93,15 @@ public class DungeonManiaPlayerBridge : MonoBehaviour
         // Ensure minimum damage
         if (totalDamage < 1) totalDamage = 1;
 
-        Debug.Log($"[DungeonManiaPlayerBridge] Calling TakeDamage with {totalDamage} damage (forceHit=false, respects dash)");
+        float hpBefore = playerHealth.CurrentHealth;
 
-        // Apply damage to player — KHÔNG force hit để tôn trọng dash invincibility
+        // Apply damage to player
         Vector3 hitPosition = Vector3.zero;
-        playerHealth.TakeDamage(totalDamage, hitPosition, false); // forceHitAnimation = false → tôn trọng dash
+        playerHealth.TakeDamage(totalDamage, hitPosition, false);
+        
+        float hpAfter = playerHealth.CurrentHealth;
 
-        // KHÔNG gọi SetTrigger ở đây nữa — GetHitState.Enter() đã xử lý animation
-        // Gọi double trigger có thể gây lỗi animator transition (auto-dash bug)
-        // if (animator != null && hitTriggerHash != 0)
-        // {
-        //     animator.SetTrigger(hitTriggerHash);
-        // }
-
-        Debug.Log($"[DungeonManiaPlayerBridge] Player took {totalDamage} damage (physical: {damageStruct.damage}, elemental: {damageStruct.damageElemental}, crit: {damageStruct.crit})");
+        Debug.Log($"[DungeonManiaPlayerBridge] Damage applied: {totalDamage} (phys:{damageStruct.damage} elem:{damageStruct.damageElemental} crit:{damageStruct.crit}) | HP: {hpBefore} → {hpAfter}");
     }
 
     /// <summary>
