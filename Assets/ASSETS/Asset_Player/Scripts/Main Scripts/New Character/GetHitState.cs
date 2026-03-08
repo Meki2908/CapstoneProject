@@ -5,6 +5,7 @@ public class GetHitState : State
     bool dash;
     bool jump;
     bool toBaseMove;
+    bool toggleWeapon; // NEW: cho phép rút/cất vũ khí khi đang bị đánh
     float hitDuration = 0.1f; // Thời gian stun rất ngắn — player hồi phục gần như ngay lập tức
     float hitTimer;
 
@@ -23,6 +24,7 @@ public class GetHitState : State
         dash = false;
         jump = false;
         toBaseMove = false;
+        toggleWeapon = false;
         hitTimer = hitDuration;
         weaponLayersWereDisabled = false;
 
@@ -127,6 +129,12 @@ public class GetHitState : State
         {
             jump = true;
         }
+
+        // NEW: cho phép rút/cất/đổi vũ khí khi đang bị đánh
+        if (toggleWeaponAction.triggered)
+        {
+            toggleWeapon = true;
+        }
     }
 
     public override void LogicUpdate()
@@ -142,8 +150,28 @@ public class GetHitState : State
             toBaseMove = true;
         }
 
-        // Priority: Dash > Jump > Resume Attack > BaseMove
-        if (dash)
+        // Priority: ToggleWeapon > Dash > Jump > Resume Attack > BaseMove
+        if (toggleWeapon)
+        {
+            // Chuyển về locomotion state ngay lập tức, BaseMoveState sẽ xử lý toggle
+            // Set flag trên locomotion state để nó biết cần toggle
+            var locomotion = character.currentLocomotionState;
+            if (locomotion is BaseMoveState baseMoveState)
+            {
+                if (character.isWeaponDrawn)
+                {
+                    baseMoveState.sheathWeapon = true;
+                    baseMoveState.drawWeapon = false;
+                }
+                else
+                {
+                    baseMoveState.drawWeapon = true;
+                    baseMoveState.sheathWeapon = false;
+                }
+            }
+            stateMachine.ChangeState(locomotion);
+        }
+        else if (dash)
         {
             stateMachine.ChangeState(character.dashing);
         }
