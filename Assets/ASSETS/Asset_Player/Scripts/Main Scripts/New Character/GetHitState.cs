@@ -5,7 +5,7 @@ public class GetHitState : State
     bool dash;
     bool jump;
     bool toBaseMove;
-    float hitDuration = 0.2f; // Thời gian stun ngắn — player hồi phục nhanh
+    float hitDuration = 0.1f; // Thời gian stun rất ngắn — player hồi phục gần như ngay lập tức
     float hitTimer;
 
     private WeaponController weaponController;

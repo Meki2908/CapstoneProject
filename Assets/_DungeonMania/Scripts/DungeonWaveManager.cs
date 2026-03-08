@@ -365,24 +365,7 @@ public class DungeonWaveManager : MonoBehaviour
             OnWaveComplete();
         }
 
-        // Debug: Nhấn K để kill tất cả enemy (test)
-        if (Input.GetKeyDown(KeyCode.K))
-        {
-            KillAllEnemiesForTest();
-        }
-        
-        // Debug: Nhấn N để next wave (test)
-        if (Input.GetKeyDown(KeyCode.N))
-        {
-            ForceNextWave();
-        }
-        
-        // Debug: Nhấn 1-5 để jump to wave (test)
-        if (Input.GetKeyDown(KeyCode.Alpha1)) GoToWave(1);
-        if (Input.GetKeyDown(KeyCode.Alpha2)) GoToWave(2);
-        if (Input.GetKeyDown(KeyCode.Alpha3)) GoToWave(3);
-        if (Input.GetKeyDown(KeyCode.Alpha4)) GoToWave(4);
-        if (Input.GetKeyDown(KeyCode.Alpha5)) GoToWave(5);
+        // Debug keys removed (were: K=kill all, N=next wave, 1-5=jump to wave)
     }
 
     // ===== DUNGEON FLOW =====

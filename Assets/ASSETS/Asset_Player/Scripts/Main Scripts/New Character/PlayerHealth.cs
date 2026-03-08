@@ -26,7 +26,7 @@ public class PlayerHealth : MonoBehaviour
     // Hệ thống chống stunlock — thời gian bất tử sau khi bị đánh
     [Header("Hit Cooldown (chống stunlock)")]
     [Tooltip("Thời gian bất tử sau khi bị đánh (giây) — player vẫn nhận damage nhưng không bị dừng hành động")]
-    [SerializeField] private float hitCooldown = 1.5f;
+    [SerializeField] private float hitCooldown = 0.8f;
     private float lastHitTime = -10f; // Thời điểm bị đánh lần cuối
 
     public float CurrentHealth => currentHealth;
@@ -219,10 +219,6 @@ public class PlayerHealth : MonoBehaviour
             float defense = EquipmentManager.Instance.GetTotalDefenseBonus();
             finalDamage = Mathf.Max(0f, damage - defense); // Defense reduces damage (flat reduction)
             Debug.Log($"[PlayerHealth] Damage calculation: original={damage}, defense={defense}, final={finalDamage}");
-
-            // TEMPORARY: Disable defense to test if that's the issue
-            // Comment out this line to re-enable defense
-            finalDamage = damage;
         }
 
         currentHealth -= finalDamage;
