@@ -93,11 +93,13 @@ public class GetHitState : State
     {
         if (!weaponLayersWereDisabled) return;
 
-        // The WeaponController manages layer weights automatically
-        // When we exit GetHitState and return to currentLocomotionState,
-        // the WeaponController will already have the correct layer weights
-        // We just need to reset the flag
         weaponLayersWereDisabled = false;
+
+        // Actually restore weapon layers via WeaponController
+        if (weaponController != null)
+        {
+            weaponController.ReapplyWeaponLayers();
+        }
     }
 
     private void SetLayerWeightSafe(int layer, float weight)
