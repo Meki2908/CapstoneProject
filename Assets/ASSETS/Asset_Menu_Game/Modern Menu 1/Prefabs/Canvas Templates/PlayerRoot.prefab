@@ -1701,7 +1701,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 5936574298784278731}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 6000932636666014970}
+        m_TargetAssemblyTypeName: DungeonWaveManager, Assembly-CSharp
+        m_MethodName: ReturnToMainMap
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &3741985081866896221
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3596,7 +3608,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 7290235889623887665}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 6000932636666014970}
+        m_TargetAssemblyTypeName: DungeonWaveManager, Assembly-CSharp
+        m_MethodName: ReturnToMainMap
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &390157342730671602
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7349,7 +7373,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 5460012550851106347}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 6000932636666014970}
+        m_TargetAssemblyTypeName: DungeonWaveManager, Assembly-CSharp
+        m_MethodName: RestartDungeon
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &5843255991343229082
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7873,6 +7909,9 @@ MonoBehaviour:
   dungeonName: Sa Mac Dungeon
   totalWaves: 5
   mapType: 0
+  mainMapSceneName: Map_Chinh
+  returnDelayOnWin: 5
+  returnDelayOnLose: 3
   spawnRadius: 20
   minDistanceFromPlayer: 5
   obstacleLayer:
@@ -12382,7 +12421,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 5197379201925120270}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 6000932636666014970}
+        m_TargetAssemblyTypeName: DungeonWaveManager, Assembly-CSharp
+        m_MethodName: ReturnToMainMap
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1363685818950054436
 MonoBehaviour:
   m_ObjectHideFlags: 0
