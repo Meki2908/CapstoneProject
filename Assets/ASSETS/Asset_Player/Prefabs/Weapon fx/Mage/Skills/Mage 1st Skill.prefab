@@ -537,12 +537,12 @@ SphereCollider:
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 64
   m_ExcludeLayers:
     serializedVersion: 2
     m_Bits: 297
   m_LayerOverridePriority: 1
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
@@ -561,6 +561,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ImpactLife: 0.75
+  enableBlocking: 1
 --- !u!114 &6169012554549663579
 MonoBehaviour:
   m_ObjectHideFlags: 0

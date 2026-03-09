@@ -192,6 +192,13 @@ public class PlayerHealth : MonoBehaviour
     {
         if (!IsAlive) return; // Already dead, ignore damage
 
+        // Shield đang active → chặn toàn bộ damage
+        if (ShieldActivate.IsShieldActive && !forceHitAnimation)
+        {
+            Debug.Log("[PlayerHealth] Shield active — damage blocked!");
+            return;
+        }
+
         // If invulnerable (e.g., ultimate), ignore damage (unless forced)
         if (isInvulnerable && !forceHitAnimation)
         {
