@@ -143,7 +143,7 @@ namespace Unity.FantasyKingdom
 
         private void OnDestroy()
         {
-            urp.gpuResidentDrawerMode = GPUResidentDrawerMode.InstancedDrawing;
+            urp.gpuResidentDrawerMode = GPUResidentDrawerMode.Disabled; // Forward renderer doesn't support Forward+ / GPUResidentDrawer
             urp.renderScale = 1.0f; // Always restore full resolution on destroy
             drawCallsRecorder.Dispose();
             verticesRecorder.Dispose();
