@@ -503,7 +503,7 @@ public class TakeDamageTest : MonoBehaviour
         // Visual feedback
         if (hitEffect != null)
         {
-            var hit = Instantiate(hitEffect, transform.position, Quaternion.identity);
+            var hit = Instantiate(hitEffect, transform.position + Vector3.up * 1.2f, Quaternion.identity);
             Destroy(hit, hitEffectLifetime);
         }
 

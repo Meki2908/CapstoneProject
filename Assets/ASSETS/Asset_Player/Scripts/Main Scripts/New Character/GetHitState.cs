@@ -181,6 +181,10 @@ public class GetHitState : State
         }
         else if (toBaseMove)
         {
+            // Khi thoát khỏi GetHit, tạm thời khóa dash trong một khoảng rất ngắn
+            // để tránh việc input dash bị buffer khiến player auto-dash
+            character.dashLockUntil = Time.time + 0.1f; // 0.1s sau khi hết hit mới cho phép dash lại
+
             // Try to resume attack state if we were attacking before getting hit
             if (ShouldResumeAttack())
             {

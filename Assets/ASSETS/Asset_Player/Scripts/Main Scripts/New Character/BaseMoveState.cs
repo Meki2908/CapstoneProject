@@ -80,7 +80,8 @@ public class BaseMoveState : State
         {
             sprint = false; // Reset sprint flag when conditions aren't met
         }
-        if (dashAction.triggered)
+        // Dash chỉ được phép khi không bị khóa (vd: ngay sau khi thoát GetHitState)
+        if (Time.time >= character.dashLockUntil && dashAction.triggered)
         {
             dash = true;
         }
