@@ -17,6 +17,7 @@ public class SkillDamageHelper : MonoBehaviour
     [Header("Skill Settings")]
     [SerializeField] private AbilityInput skillInput = AbilityInput.E;
     [SerializeField] private bool isUltimate = false;
+    [SerializeField] private AudioSource impactAudioSource;
     [Header("Hurtbox Settings")]
     [Tooltip("If true, only colliders on the specified layer mask will be considered enemy hurtboxes.")]
     [SerializeField] private bool requireHurtboxLayer = false;
@@ -24,6 +25,14 @@ public class SkillDamageHelper : MonoBehaviour
     [SerializeField] private LayerMask enemyHurtboxLayer = ~0;
 
     private bool hasHit = false;
+
+    private void Awake()
+    {
+        if (impactAudioSource == null)
+        {
+            impactAudioSource = GetComponentInParent<AudioSource>();
+        }
+    }
 
     private void OnTriggerEnter(Collider other)
     {
@@ -55,6 +64,7 @@ public class SkillDamageHelper : MonoBehaviour
             }
 
             Debug.Log($"[SkillDamageHelper] {gameObject.name} hit {other.name} for {damage} skill damage ({weaponType})");
+            TryPlayMageImpactSfx();
 
             hasHit = true;
 
@@ -97,6 +107,7 @@ public class SkillDamageHelper : MonoBehaviour
             }
 
             Debug.Log($"[SkillDamageHelper] {gameObject.name} hit {collision.collider.name} for {damage} skill damage ({weaponType})");
+            TryPlayMageImpactSfx();
 
             hasHit = true;
 
@@ -119,6 +130,14 @@ public class SkillDamageHelper : MonoBehaviour
     {
         skillInput = input;
         isUltimate = ultimate;
+    }
+
+    private void TryPlayMageImpactSfx()
+    {
+        if (weaponType == WeaponType.Mage)
+        {
+            SoundManager.PlayMageProjectileHit(impactAudioSource, 1f);
+        }
     }
 }
 

@@ -7,16 +7,25 @@ public class DamageDealer : MonoBehaviour
     [SerializeField] float weaponDamage = 10f;      // dmg
     [SerializeField] float hitRadius = 0.3f;        // bán kính SphereCast
     [SerializeField] LayerMask targetLayer;         // kẻ địch nằm layer nào
+    [Header("Audio")]
+    [SerializeField] private AudioSource hitAudioSource;
     [Header("Debug")]
     [SerializeField] bool debugDamage = false;
 
     bool canDealDamage;
+    bool hasPlayedHitSfxInCurrentSwing;
     List<GameObject> hasDealtDamage;
 
     void Start()
     {
         canDealDamage = false;
+        hasPlayedHitSfxInCurrentSwing = false;
         hasDealtDamage = new List<GameObject>();
+
+        if (hitAudioSource == null)
+        {
+            hitAudioSource = GetComponentInParent<AudioSource>();
+        }
     }
 
     void Update()
@@ -62,6 +71,7 @@ public class DamageDealer : MonoBehaviour
     public void StartDealDamage()
     {
         canDealDamage = true;
+        hasPlayedHitSfxInCurrentSwing = false;
         hasDealtDamage.Clear(); // reset list cho mỗi cú vung
     }
 
@@ -151,8 +161,25 @@ public class DamageDealer : MonoBehaviour
             if (wc2 != null && wc2.GetCurrentWeapon() != null) currentWeaponType = wc2.GetCurrentWeapon().weaponType;
 
             enemy.TakeDamage(finalDamage, currentWeaponType, isCrit);
+            TryPlayWeaponHitSfx(currentWeaponType);
             hasDealtDamage.Add(rootGo);
             if (isCrit) Debug.Log($"[DamageDealer] Critical hit! Damage: {finalDamage} (multiplier: {critDamageMultiplier:F2}x)");
         }
+    }
+
+    private void TryPlayWeaponHitSfx(WeaponType weaponType)
+    {
+        if (hasPlayedHitSfxInCurrentSwing)
+        {
+            return;
+        }
+
+        if (weaponType != WeaponType.Sword && weaponType != WeaponType.Axe)
+        {
+            return;
+        }
+
+        SoundManager.PlayMeleeHit(weaponType, hitAudioSource, 1f);
+        hasPlayedHitSfxInCurrentSwing = true;
     }
 }

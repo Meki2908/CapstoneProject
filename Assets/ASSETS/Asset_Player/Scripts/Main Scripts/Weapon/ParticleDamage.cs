@@ -7,14 +7,17 @@ public class ProjectileDamage : MonoBehaviour
 {
     [SerializeField] float damage = 10f;
     [SerializeField] bool debugMode = false;
+    [SerializeField] private AudioSource impactAudioSource;
 
     private float baseDamage;
     private EquipmentSystem equipmentSystem;
     private WeaponController weaponController;
+    private bool hasPlayedImpactSfx;
 
     private void Awake()
     {
         baseDamage = damage;
+        hasPlayedImpactSfx = false;
         // Find EquipmentSystem and WeaponController
         equipmentSystem = GetComponentInParent<EquipmentSystem>();
         if (equipmentSystem == null)
@@ -26,6 +29,11 @@ public class ProjectileDamage : MonoBehaviour
         if (weaponController == null)
         {
             weaponController = FindFirstObjectByType<WeaponController>();
+        }
+
+        if (impactAudioSource == null)
+        {
+            impactAudioSource = GetComponentInParent<AudioSource>();
         }
     }
 
@@ -104,6 +112,7 @@ public class ProjectileDamage : MonoBehaviour
             
             // Pass weapon type (Mage) and crit status
             enemy.TakeDamage(finalDamage, WeaponType.Mage, isCrit);
+            PlayImpactSfxOnce();
         }
     }
 
@@ -135,6 +144,18 @@ public class ProjectileDamage : MonoBehaviour
             
             // Pass weapon type (Mage) and crit status
             enemy.TakeDamage(finalDamage, WeaponType.Mage, isCrit);
+            PlayImpactSfxOnce();
         }
+    }
+
+    private void PlayImpactSfxOnce()
+    {
+        if (hasPlayedImpactSfx)
+        {
+            return;
+        }
+
+        SoundManager.PlayMageProjectileHit(impactAudioSource, 1f);
+        hasPlayedImpactSfx = true;
     }
 }
