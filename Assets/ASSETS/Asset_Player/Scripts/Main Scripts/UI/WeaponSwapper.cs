@@ -169,8 +169,11 @@ public class WeaponSwapper : MonoBehaviour
         }
 
         if (weaponController == null)
+            weaponController = FindFirstObjectByType<WeaponController>();
+
+        if (weaponController == null)
         {
-            Debug.LogError("[WeaponSwapper] WeaponController not found!");
+            Debug.LogError("[WeaponSwapper] WeaponController not found! Make sure it exists in the scene.");
             return;
         }
 
