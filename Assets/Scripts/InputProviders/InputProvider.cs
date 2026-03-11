@@ -106,6 +106,13 @@ namespace Unity.FantasyKingdom
         void OnEnable()
         {
             EnhancedTouchSupport.Enable();
+
+            if (_inputActionAsset == null)
+            {
+                Debug.LogWarning("[InputProvider] _inputActionAsset not assigned in Inspector!");
+                return;
+            }
+
             _inputActionAsset.Enable();
 
             if(rotationMouseButton == MouseButton.Left) _rotationMouseButtonControl = Mouse.current?.leftButton;
