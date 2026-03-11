@@ -115,6 +115,11 @@ public class InventoryController : MonoBehaviour
         RefreshInventoryUI();
 
         // Show inventory
+        if (inventory == null)
+        {
+            Debug.LogWarning("[InventoryController] inventory reference is null or destroyed!");
+            return;
+        }
         inventory.SetActive(true);
         isInventoryOpen = true;
 

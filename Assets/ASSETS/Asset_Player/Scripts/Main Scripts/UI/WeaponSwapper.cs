@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Events;
 using TMPro;
 
 public class WeaponSwapper : MonoBehaviour
@@ -34,6 +35,10 @@ public class WeaponSwapper : MonoBehaviour
     [SerializeField] private WeaponController weaponController;
     [SerializeField] private Character character;
     [SerializeField] private EnemyDetection enemyDetection;
+
+    [Header("Tutorial Callback")]
+    [Tooltip("Gán TutorialTextDisplay.OnWeaponChanged vào đây trong Inspector")]
+    public UnityEvent OnWeaponSwapped;
 
     private WeaponType pendingWeaponType;
 
@@ -164,8 +169,11 @@ public class WeaponSwapper : MonoBehaviour
         }
 
         if (weaponController == null)
+            weaponController = FindFirstObjectByType<WeaponController>();
+
+        if (weaponController == null)
         {
-            Debug.LogError("[WeaponSwapper] WeaponController not found!");
+            Debug.LogError("[WeaponSwapper] WeaponController not found! Make sure it exists in the scene.");
             return;
         }
 
@@ -178,6 +186,9 @@ public class WeaponSwapper : MonoBehaviour
 
         // Switch weapon
         weaponController.EquipWeapon(targetWeapon);
+
+        // Notify tutorial (hoặc bất kỳ listener nào)
+        OnWeaponSwapped?.Invoke();
 
         // Hide confirmation dialog
         if (confirmationDialog != null)

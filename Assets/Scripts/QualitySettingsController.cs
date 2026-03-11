@@ -24,33 +24,29 @@ namespace Unity.FantasyKingdom
 
         void Awake()
         {
-            _inputProvider = InputProviderholder.GetComponent<IInputProvider>();
+            if (InputProviderholder != null)
+                _inputProvider = InputProviderholder.GetComponent<IInputProvider>();
+
             urpAssets = new UniversalRenderPipelineAsset[QualitySettings.names.Length];
             for (int i = 0; i < QualitySettings.names.Length; i++)
-            {
                 urpAssets[i] = QualitySettings.GetRenderPipelineAssetAt(i) as UniversalRenderPipelineAsset;
-            }
-            if(QualitySettings.count<2)
-            {
-                QualitySettingsButton.SetActive(false);
-            }
-            QualitySettingsText.text = $"Quality Level:\n{QualitySettings.names[QualitySettings.GetQualityLevel()]}";
-            int currentQualityLevel = QualitySettings.GetQualityLevel();
-            currentQualityLevelName = QualitySettings.names[currentQualityLevel];
+
+            if (QualitySettings.count < 2)
+                if (QualitySettingsButton != null) QualitySettingsButton.SetActive(false);
+
+            if (QualitySettingsText != null)
+                QualitySettingsText.text = $"Quality Level:\n{QualitySettings.names[QualitySettings.GetQualityLevel()]}";
+
+            currentQualityLevelName = QualitySettings.names[QualitySettings.GetQualityLevel()];
         }
 
 
 
         void Update()
         {
-            if(_inputProvider.CycleQualityUpButton())
-            {
-                CycleQuality(1);
-            }
-            if(_inputProvider.CycleQualityDownButton())
-            {
-                CycleQuality(-1 + QualitySettings.count);
-            }
+            if (_inputProvider == null) return;
+            if(_inputProvider.CycleQualityUpButton()) CycleQuality(1);
+            if(_inputProvider.CycleQualityDownButton()) CycleQuality(-1 + QualitySettings.count);
         }
 
         void UpdateURPAsset(int qualityLevel)

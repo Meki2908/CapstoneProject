@@ -78,14 +78,16 @@ namespace Unity.FantasyKingdom
             {
                 HeightPass = fullScreenFeatures[0];
                 _originalHeightFog = HeightPass.passMaterial;
-                HeightPass.passMaterial = new Material(_originalHeightFog);
+                if (_originalHeightFog != null) HeightPass.passMaterial = new Material(_originalHeightFog);
+                else Debug.LogWarning("[FogController] HeightFog passMaterial is null – assign it in URP Renderer Feature.");
             }
             
             if (fullScreenFeatures.Count >= 2)
             {
                 CubePass = fullScreenFeatures[1];
                 _originalCubeFog = CubePass.passMaterial;
-                CubePass.passMaterial = new Material(_originalCubeFog);
+                if (_originalCubeFog != null) CubePass.passMaterial = new Material(_originalCubeFog);
+                else Debug.LogWarning("[FogController] CubeFog passMaterial is null – assign it in URP Renderer Feature.");
             }
 
             camController.OnZoomHandled += HandleZoomLerp;
@@ -114,8 +116,8 @@ namespace Unity.FantasyKingdom
         private void HandleZoomLerp(object sender,OnZoomHandledEventArgs args)
         {
             float t = args.zoomDelta;
-            HeightPass.passMaterial.Lerp(args.prevHeight, args.height,t);
-            CubePass.passMaterial.Lerp(args.prevCube, args.cube, t);
+            if (HeightPass?.passMaterial != null) HeightPass.passMaterial.Lerp(args.prevHeight, args.height, t);
+            if (CubePass?.passMaterial   != null) CubePass.passMaterial.Lerp(args.prevCube, args.cube, t);
             
             // The assumption is that volume for level 0 has priority 0 configured in the scene, level 1 has pri 1, etc.
             // This way when going up we need to only fade in the target volume. When going down we need to only fade out the current volume.
@@ -191,8 +193,8 @@ namespace Unity.FantasyKingdom
             while (time < LerpTime)
             {
                 float t = time / LerpTime;
-                HeightPass.passMaterial.Lerp(fromHeight, toHeight, t);
-                CubePass.passMaterial.Lerp(fromCube, toCube, t);
+                if (HeightPass?.passMaterial != null) HeightPass.passMaterial.Lerp(fromHeight, toHeight, t);
+                if (CubePass?.passMaterial   != null) CubePass.passMaterial.Lerp(fromCube, toCube, t);
                 
                 // freeCamVolume has higher priority than all the other volumes, so we just fade it in or out
                 freeCamVolume.weight = settingsIndex == 1 ? Mathf.Lerp(0, 1, t) : Mathf.Lerp(1, 0, t);
@@ -229,10 +231,10 @@ namespace Unity.FantasyKingdom
             for (int i = 0; i < QualitySettings.names.Length; i++)
             {
                 urpAssets[i] = QualitySettings.GetRenderPipelineAssetAt(i) as UniversalRenderPipelineAsset;
+                if (urpAssets[i] == null) continue; // skip nếu quality level không có URP asset
+
                 var renderer = urpAssets[i].GetRenderer(0);
-
                 var property = typeof(ScriptableRenderer).GetProperty("rendererFeatures", BindingFlags.NonPublic | BindingFlags.Instance);
-
                 features = property.GetValue(renderer) as List<ScriptableRendererFeature>;
                 
                 var fullScreenFeatures = new List<FullScreenPassRendererFeature>();
