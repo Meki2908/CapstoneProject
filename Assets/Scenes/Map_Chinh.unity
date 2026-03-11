@@ -6175,6 +6175,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -10036,6 +10037,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -13151,7 +13153,7 @@ GameObject:
   - component: {fileID: 610643793}
   - component: {fileID: 610643792}
   - component: {fileID: 610643791}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Terrain
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -18742,6 +18744,10 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4640406747926217427, guid: 0a1af9bb30e98b54fba0c43adea94ce1, type: 3}
+      propertyPath: CollideAgainst.m_Bits
+      value: 8
+      objectReference: {fileID: 0}
     - target: {fileID: 6039037309642713428, guid: 0a1af9bb30e98b54fba0c43adea94ce1, type: 3}
       propertyPath: m_LocalRotation.w
       value: 0.9267343
@@ -18764,19 +18770,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7542521313094387615, guid: 0a1af9bb30e98b54fba0c43adea94ce1, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.0069358004
+      value: 0.005454162
       objectReference: {fileID: 0}
     - target: {fileID: 7542521313094387615, guid: 0a1af9bb30e98b54fba0c43adea94ce1, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0.0005203717
+      value: -0.00040920876
       objectReference: {fileID: 0}
     - target: {fileID: 7542521313094387615, guid: 0a1af9bb30e98b54fba0c43adea94ce1, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0.9971732
+      value: 0.9971824
       objectReference: {fileID: 0}
     - target: {fileID: 7542521313094387615, guid: 0a1af9bb30e98b54fba0c43adea94ce1, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.07481483
+      value: 0.07481549
       objectReference: {fileID: 0}
     - target: {fileID: 8099459259307610459, guid: 0a1af9bb30e98b54fba0c43adea94ce1, type: 3}
       propertyPath: m_AnchorMax.y
@@ -18794,6 +18800,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: -603.80994
       objectReference: {fileID: 0}
+    - target: {fileID: 8488192272985251069, guid: 0a1af9bb30e98b54fba0c43adea94ce1, type: 3}
+      propertyPath: cameraToggleInputAction
+      value: 
+      objectReference: {fileID: 5332187280894006851, guid: 052faaac586de48259a63d0c4782560b, type: 3}
     - target: {fileID: 8519385091480049045, guid: 0a1af9bb30e98b54fba0c43adea94ce1, type: 3}
       propertyPath: m_IsActive
       value: 1
@@ -21243,6 +21253,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -21725,6 +21736,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -22048,6 +22060,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -22184,6 +22197,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -29433,7 +29447,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: c747e62359494344e953ac4bbf8e5f51, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: c747e62359494344e953ac4bbf8e5f51, type: 3}
   m_PlayOnAwake: 0
   m_Volume: 0.1
@@ -29603,7 +29617,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: be0043f3cd319e94ba492465bc92eee9, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: be0043f3cd319e94ba492465bc92eee9, type: 3}
   m_PlayOnAwake: 0
   m_Volume: 0
@@ -37092,6 +37106,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -44266,6 +44281,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -44349,7 +44365,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: c0624300f5222c248818b32e128c2c8a, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: c0624300f5222c248818b32e128c2c8a, type: 3}
   m_PlayOnAwake: 0
   m_Volume: 0.4
@@ -45010,6 +45026,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -45146,7 +45163,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1695314847}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Terrain_Uncropped_Transform
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -45965,6 +45982,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -57704,6 +57722,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -58659,6 +58678,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0

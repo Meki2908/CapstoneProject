@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System;
@@ -122,8 +122,7 @@ public class DemoAOEskills : MonoBehaviour
             if (Screen.dpi < 200) dpiScale = 1;
             else dpiScale = Screen.dpi / 200f;
             if (pos.x < 380 * dpiScale && Screen.height - pos.y < 250 * dpiScale) return;
-            Cursor.visible = false;
-            Cursor.lockState = CursorLockMode.Locked;
+            // Cursor control removed - managed by CameraCursor.cs (ALT toggle)
             x += (float)(Input.GetAxis("Mouse X") * xRotate * 0.02);
             y -= (float)(Input.GetAxis("Mouse Y") * yRotate * 0.02);
             y = ClampAngle(y, yMinLimit, yMaxLimit);
@@ -131,11 +130,6 @@ public class DemoAOEskills : MonoBehaviour
             var position = rotation * new Vector3(0, 0, -currDistance) + Holder.position;
             transform.rotation = rotation;
             transform.position = position;
-        }
-        else
-        {
-            Cursor.visible = true;
-            Cursor.lockState = CursorLockMode.None;
         }
 
         if (prevDistance != currDistance)
