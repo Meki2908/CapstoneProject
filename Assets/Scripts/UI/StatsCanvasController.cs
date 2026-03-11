@@ -30,7 +30,7 @@ namespace Unity.FantasyKingdom
         List<long> drawCallCountSamples = new List<long>();
 
         const int sampleCount = 30;
-        const float renderScale = 0.5f;
+        const float renderScale = 1.0f; // Full resolution (was 0.5f = half res, causing pixelated graphics)
         ProfilerRecorder drawCallsRecorder;
         ProfilerRecorder verticesRecorder;
         ProfilerRecorder cpuMainThreaTimeRecorder;
@@ -143,8 +143,8 @@ namespace Unity.FantasyKingdom
 
         private void OnDestroy()
         {
-            urp.gpuResidentDrawerMode = GPUResidentDrawerMode.InstancedDrawing;
-            urp.renderScale = renderScale;
+            urp.gpuResidentDrawerMode = GPUResidentDrawerMode.Disabled; // Forward renderer doesn't support Forward+ / GPUResidentDrawer
+            urp.renderScale = 1.0f; // Always restore full resolution on destroy
             drawCallsRecorder.Dispose();
             verticesRecorder.Dispose();
             cpuMainThreaTimeRecorder.Dispose();

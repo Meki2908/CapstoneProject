@@ -200,7 +200,10 @@ public class MageSkills : MonoBehaviour
             var follow = v.GetComponent<FollowPlayer>();
             if (follow == null) follow = v.AddComponent<FollowPlayer>();
             follow.offset = ev.spawnRule.localOffset; // Use spawn offset as follow offset
-            // Don't destroy - let FollowPlayer manage lifetime
+            // ShieldActivate trên prefab tự quản lý NavMeshObstacle + chặn damage
+
+            // Destroy sau duration (ShieldActivate.OnDestroy sẽ reset IsShieldActive)
+            Destroy(v, ability.vfxDuration > 0 ? ability.vfxDuration : vfxDuration);
         }
         else
         {

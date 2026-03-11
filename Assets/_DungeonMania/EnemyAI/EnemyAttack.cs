@@ -22,6 +22,15 @@ public class EnemyAttack : MonoBehaviour {
     }
     
     /// <summary>
+    /// Reset cache khi enemy được bật lại (pooling/scene transition)
+    /// </summary>
+    private void OnEnable()
+    {
+        cachedBridge = null;
+        hasSearchedBridge = false;
+    }
+    
+    /// <summary>
     /// Tìm và cache DungeonManiaPlayerBridge
     /// </summary>
     private void FindAndCacheBridge()
@@ -74,19 +83,29 @@ public class EnemyAttack : MonoBehaviour {
 
         // Check if using DungeonManiaPlayerBridge (user's player system)
         if (enemyScript.playerManager == null) {
-            // Dùng cached bridge (tìm lại nếu chưa tìm)
-            if (!hasSearchedBridge || cachedBridge == null) {
+            // Luôn tìm lại bridge nếu chưa có
+            if (cachedBridge == null) {
                 FindAndCacheBridge();
             }
             
             if (cachedBridge != null) {
-                if (enemyScript.enemyState.distance <= enemyScript.attackDistance) {
-                    // Gọi particle effects trước khi gây damage
+                // Tính distance trực tiếp thay vì dùng cached value (có thể stale sau scene transition)
+                float actualDistance = 999f;
+                if (enemyScript.target != null) {
+                    actualDistance = Vector3.Distance(enemyScript.target.position, transform.position);
+                }
+                
+                // Nếu animation đánh đang chạy = enemy đủ gần → gây damage
+                // Dùng attackDistance * 1.5 để cho phép sai số
+                float maxDamageRange = enemyScript.attackDistance * 1.5f;
+                if (actualDistance <= maxDamageRange) {
                     if (attackEffects != null) attackEffects.PlayBowAttack();
                     
                     damageStruct = D();
                     cachedBridge.PlayerDamage(damageStruct, hit);
                     return;
+                } else {
+                    Debug.Log($"[EnemyAttack] DamageToPlayer: Too far! dist={actualDistance:F1}, maxRange={maxDamageRange:F1}");
                 }
             } else {
                 Debug.LogWarning("[EnemyAttack] DamageToPlayer: No player manager or bridge found!");
@@ -107,8 +126,8 @@ public class EnemyAttack : MonoBehaviour {
 
         // Check if using DungeonManiaPlayerBridge (user's player system)
         if (enemyScript.playerManager == null) {
-            // Dùng cached bridge
-            if (!hasSearchedBridge || cachedBridge == null) {
+            // Luôn tìm lại bridge nếu chưa có
+            if (cachedBridge == null) {
                 FindAndCacheBridge();
             }
             

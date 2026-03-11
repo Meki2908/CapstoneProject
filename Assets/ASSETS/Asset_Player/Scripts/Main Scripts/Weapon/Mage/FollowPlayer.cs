@@ -9,7 +9,7 @@ public class FollowPlayer : MonoBehaviour
     [Tooltip("Target to follow (auto find player if null)")]
     public Transform target;
     [Tooltip("Follow speed (0 = instant, 1 = smooth)")]
-    public float followSpeed = 0.1f;
+    public float followSpeed = 1f;
     [Tooltip("Offset from target")]
     public Vector3 offset = Vector3.zero;
 

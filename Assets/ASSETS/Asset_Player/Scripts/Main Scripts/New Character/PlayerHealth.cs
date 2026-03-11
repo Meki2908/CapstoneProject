@@ -26,7 +26,7 @@ public class PlayerHealth : MonoBehaviour
     // Hệ thống chống stunlock — thời gian bất tử sau khi bị đánh
     [Header("Hit Cooldown (chống stunlock)")]
     [Tooltip("Thời gian bất tử sau khi bị đánh (giây) — player vẫn nhận damage nhưng không bị dừng hành động")]
-    [SerializeField] private float hitCooldown = 1.5f;
+    [SerializeField] private float hitCooldown = 0.8f;
     private float lastHitTime = -10f; // Thời điểm bị đánh lần cuối
 
     public float CurrentHealth => currentHealth;
@@ -192,6 +192,13 @@ public class PlayerHealth : MonoBehaviour
     {
         if (!IsAlive) return; // Already dead, ignore damage
 
+        // Shield đang active → chặn toàn bộ damage
+        if (ShieldActivate.IsShieldActive && !forceHitAnimation)
+        {
+            Debug.Log("[PlayerHealth] Shield active — damage blocked!");
+            return;
+        }
+
         // If invulnerable (e.g., ultimate), ignore damage (unless forced)
         if (isInvulnerable && !forceHitAnimation)
         {
@@ -219,10 +226,6 @@ public class PlayerHealth : MonoBehaviour
             float defense = EquipmentManager.Instance.GetTotalDefenseBonus();
             finalDamage = Mathf.Max(0f, damage - defense); // Defense reduces damage (flat reduction)
             Debug.Log($"[PlayerHealth] Damage calculation: original={damage}, defense={defense}, final={finalDamage}");
-
-            // TEMPORARY: Disable defense to test if that's the issue
-            // Comment out this line to re-enable defense
-            finalDamage = damage;
         }
 
         currentHealth -= finalDamage;
@@ -324,6 +327,12 @@ public class PlayerHealth : MonoBehaviour
     /// </summary>
     private void UpdateHealthText()
     {
+        // Tự tìm lại healthText nếu bị null (sau scene transition)
+        if (healthText == null && autoFindHealthText)
+        {
+            FindHealthText();
+        }
+        
         if (healthText != null)
         {
             healthText.text = $"{Mathf.CeilToInt(currentHealth)}/{Mathf.CeilToInt(maxHealth)}";

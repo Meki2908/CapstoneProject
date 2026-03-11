@@ -246,6 +246,15 @@ public class WeaponController : MonoBehaviour
         SetLayerWeightSafe(mageLayer, (typeInt == (int)WeaponType.Mage) ? 1f : 0f);
     }
 
+    /// <summary>
+    /// Public API to re-apply weapon layer weights.
+    /// Called by GetHitState after hit stun ends to restore correct layers.
+    /// </summary>
+    public void ReapplyWeaponLayers()
+    {
+        ApplyWeaponLayersAndParams();
+    }
+
     private void SetLayerWeightSafe(int layer, float weight)
     {
         if (layer >= 0 && layer < animator.layerCount)

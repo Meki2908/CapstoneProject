@@ -73,6 +73,7 @@ public class Character : MonoBehaviour
     //public bool isInCombatState { get; set; }
     public bool isWeaponDrawn { get; set; }
     public bool IsDashing { get; set; } // For invincibility frame during dash
+    public float dashLockUntil = 0f; // Thời điểm trước đó dash bị khóa (để tránh auto-dash sau khi bị hit)
 
     private int originalLayer; // Store original layer before dash
     private const int NOTHING_LAYER = 0; // Unity's "Nothing" layer index

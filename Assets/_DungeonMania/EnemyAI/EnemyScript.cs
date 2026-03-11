@@ -342,6 +342,20 @@ public class EnemyScript : MonoBehaviour {
         Debug.Log($"[EnemyScript] Set specific type: {specificEnemyType}, category: {enemyType}, attackDistance: {attackDistanceOverride}");
     }  
     void OnEnable () {
+        // Re-find player nếu target bị null (sau scene transition hoặc pooling)
+        if (target == null)
+        {
+            GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+            if (playerObj == null) {
+                playerObj = GameObject.Find("player");
+            }
+            if (playerObj != null) {
+                target = playerObj.transform;
+                Debug.Log($"[EnemyScript] OnEnable: Re-found player target: {playerObj.name}");
+            }
+            SetupPlayerManagerReference();
+        }
+        
         // ÁP DỤNG GIÁ TRỊ TỪ INSPECTOR (chạy mỗi lần enemy được kích hoạt)
         ApplyInspectorValues();
 

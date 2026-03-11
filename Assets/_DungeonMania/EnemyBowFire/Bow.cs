@@ -43,6 +43,17 @@ public class Bow : MonoBehaviour {
 	}
     
     /// <summary>
+    /// Reset cache khi enemy được bật lại (pooling/scene transition)
+    /// </summary>
+    private void OnEnable()
+    {
+        hasInitializedBridge = false;
+        playerBridge = null;
+        player = null;
+        TrySetupPlayerReference();
+    }
+    
+    /// <summary>
     /// Thử tìm player và bridge. Gọi được nhiều lần (lazy init).
     /// Trả về true nếu đã tìm thấy bridge.
     /// </summary>

@@ -5,7 +5,8 @@ public class GetHitState : State
     bool dash;
     bool jump;
     bool toBaseMove;
-    float hitDuration = 0.2f; // Thời gian stun ngắn — player hồi phục nhanh
+    bool toggleWeapon; // NEW: cho phép rút/cất vũ khí khi đang bị đánh
+    float hitDuration = 0.1f; // Thời gian stun rất ngắn — player hồi phục gần như ngay lập tức
     float hitTimer;
 
     private WeaponController weaponController;
@@ -23,6 +24,7 @@ public class GetHitState : State
         dash = false;
         jump = false;
         toBaseMove = false;
+        toggleWeapon = false;
         hitTimer = hitDuration;
         weaponLayersWereDisabled = false;
 
@@ -93,11 +95,13 @@ public class GetHitState : State
     {
         if (!weaponLayersWereDisabled) return;
 
-        // The WeaponController manages layer weights automatically
-        // When we exit GetHitState and return to currentLocomotionState,
-        // the WeaponController will already have the correct layer weights
-        // We just need to reset the flag
         weaponLayersWereDisabled = false;
+
+        // Actually restore weapon layers via WeaponController
+        if (weaponController != null)
+        {
+            weaponController.ReapplyWeaponLayers();
+        }
     }
 
     private void SetLayerWeightSafe(int layer, float weight)
@@ -125,6 +129,12 @@ public class GetHitState : State
         {
             jump = true;
         }
+
+        // NEW: cho phép rút/cất/đổi vũ khí khi đang bị đánh
+        if (toggleWeaponAction.triggered)
+        {
+            toggleWeapon = true;
+        }
     }
 
     public override void LogicUpdate()
@@ -140,8 +150,28 @@ public class GetHitState : State
             toBaseMove = true;
         }
 
-        // Priority: Dash > Jump > Resume Attack > BaseMove
-        if (dash)
+        // Priority: ToggleWeapon > Dash > Jump > Resume Attack > BaseMove
+        if (toggleWeapon)
+        {
+            // Chuyển về locomotion state ngay lập tức, BaseMoveState sẽ xử lý toggle
+            // Set flag trên locomotion state để nó biết cần toggle
+            var locomotion = character.currentLocomotionState;
+            if (locomotion is BaseMoveState baseMoveState)
+            {
+                if (character.isWeaponDrawn)
+                {
+                    baseMoveState.sheathWeapon = true;
+                    baseMoveState.drawWeapon = false;
+                }
+                else
+                {
+                    baseMoveState.drawWeapon = true;
+                    baseMoveState.sheathWeapon = false;
+                }
+            }
+            stateMachine.ChangeState(locomotion);
+        }
+        else if (dash)
         {
             stateMachine.ChangeState(character.dashing);
         }
@@ -151,6 +181,10 @@ public class GetHitState : State
         }
         else if (toBaseMove)
         {
+            // Khi thoát khỏi GetHit, tạm thời khóa dash trong một khoảng rất ngắn
+            // để tránh việc input dash bị buffer khiến player auto-dash
+            character.dashLockUntil = Time.time + 0.1f; // 0.1s sau khi hết hit mới cho phép dash lại
+
             // Try to resume attack state if we were attacking before getting hit
             if (ShouldResumeAttack())
             {

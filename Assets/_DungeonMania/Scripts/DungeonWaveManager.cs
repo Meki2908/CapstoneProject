@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 using TMPro;
 using System;
 
@@ -14,6 +15,14 @@ public class DungeonWaveManager : MonoBehaviour
     public int totalWaves = 5;
     [Tooltip("Map type: 0=Desert, 1=Swamp, 2=Hell")]
     public int mapType = 0;
+    
+    [Header("=== SCENE TRANSITION ===")]
+    [Tooltip("Tên scene map chính để quay về")]
+    public string mainMapSceneName = "Map_Chinh";
+    [Tooltip("Thời gian chờ trước khi tự động quay về map khi THẮNG (giây)")]
+    public float returnDelayOnWin = 5f;
+    [Tooltip("Thời gian chờ trước khi tự động quay về map khi THUA (giây)")]
+    public float returnDelayOnLose = 3f;
 
     [Header("=== SPAWN SETTINGS ===")]
     [Tooltip("Bán kính spawn enemy xung quanh player")]
@@ -329,6 +338,19 @@ public class DungeonWaveManager : MonoBehaviour
             playerLower.transform.position = player.position;
             playerLower.transform.rotation = player.rotation;
         }
+        
+        // Đăng ký nhận sự kiện player chết để hiện UI thua + quay về map
+        if (player != null)
+        {
+            PlayerHealth ph = player.GetComponent<PlayerHealth>();
+            if (ph == null) ph = player.GetComponentInChildren<PlayerHealth>();
+            if (ph != null)
+            {
+                ph.OnPlayerDied -= OnPlayerDied; // Tránh đăng ký 2 lần
+                ph.OnPlayerDied += OnPlayerDied;
+                Debug.Log("[DungeonWave] Subscribed to PlayerHealth.OnPlayerDied");
+            }
+        }
 
         Debug.Log("[DungeonWave] Player reference ready for enemies");
     }
@@ -343,24 +365,7 @@ public class DungeonWaveManager : MonoBehaviour
             OnWaveComplete();
         }
 
-        // Debug: Nhấn K để kill tất cả enemy (test)
-        if (Input.GetKeyDown(KeyCode.K))
-        {
-            KillAllEnemiesForTest();
-        }
-        
-        // Debug: Nhấn N để next wave (test)
-        if (Input.GetKeyDown(KeyCode.N))
-        {
-            ForceNextWave();
-        }
-        
-        // Debug: Nhấn 1-5 để jump to wave (test)
-        if (Input.GetKeyDown(KeyCode.Alpha1)) GoToWave(1);
-        if (Input.GetKeyDown(KeyCode.Alpha2)) GoToWave(2);
-        if (Input.GetKeyDown(KeyCode.Alpha3)) GoToWave(3);
-        if (Input.GetKeyDown(KeyCode.Alpha4)) GoToWave(4);
-        if (Input.GetKeyDown(KeyCode.Alpha5)) GoToWave(5);
+        // Debug keys removed (were: K=kill all, N=next wave, 1-5=jump to wave)
     }
 
     // ===== DUNGEON FLOW =====
@@ -981,10 +986,13 @@ public class DungeonWaveManager : MonoBehaviour
             dungeonCompleteUI.SetActive(true);
             
             if (expRewardText)
-                expRewardText.text = $"EXP nhận được: {totalExpGained}";
+                expRewardText.text = $"EXP: +{totalExpGained}";
             
             Debug.Log($"[DungeonWave] UI: Showing dungeon complete (activeInHierarchy={dungeonCompleteUI.activeInHierarchy})");
         }
+        
+        // Tự động quay về map chính sau delay
+        StartCoroutine(AutoReturnToMap(returnDelayOnWin));
     }
 
     private void ShowDungeonFailed()
@@ -993,6 +1001,19 @@ public class DungeonWaveManager : MonoBehaviour
         {
             dungeonFailedUI.SetActive(true);
         }
+        
+        // Tự động quay về map chính sau delay
+        StartCoroutine(AutoReturnToMap(returnDelayOnLose));
+    }
+    
+    /// <summary>
+    /// Tự động quay về map chính sau thời gian chờ
+    /// </summary>
+    private IEnumerator AutoReturnToMap(float delay)
+    {
+        Debug.Log($"[DungeonWave] Sẽ quay về {mainMapSceneName} sau {delay}s...");
+        yield return new WaitForSecondsRealtime(delay); // Dùng RealTime để không bị ảnh hưởng bởi Time.timeScale
+        ReturnToMainMap();
     }
 
     // ===== PUBLIC METHODS =====
@@ -1002,19 +1023,19 @@ public class DungeonWaveManager : MonoBehaviour
     /// </summary>
     public void ReturnToMainMap()
     {
-        // TODO: Load scene main map
-        // SceneManager.LoadScene("MainMap");
-        Debug.Log("[DungeonWave] Quay về main map...");
+        Debug.Log($"[DungeonWave] Đang quay về {mainMapSceneName}...");
+        Time.timeScale = 1f; // Đảm bảo game không bị pause
+        SceneManager.LoadScene(mainMapSceneName);
     }
 
     /// <summary>
-    /// Restart dungeon
+    /// Restart dungeon (chơi lại)
     /// </summary>
     public void RestartDungeon()
     {
-        // Reload scene hiện tại
-        // SceneManager.LoadScene(SceneManager.GetActiveScene().name);
         Debug.Log("[DungeonWave] Restart dungeon...");
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
     // ===== DEBUG / TEST =====
