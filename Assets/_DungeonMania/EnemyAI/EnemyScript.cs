@@ -202,8 +202,9 @@ public class EnemyScript : MonoBehaviour {
         }
 
         // Setup NavMeshAgent
-        navMeshAgent = GetComponent<NavMeshAgent> ();
-        if (navMeshAgent != null) {
+        navMeshAgent = GetComponent<NavMeshAgent>();
+        if (navMeshAgent != null && navMeshAgent.isOnNavMesh)
+        {
             navMeshAgent.isStopped = true;
         }
 
@@ -361,13 +362,13 @@ public class EnemyScript : MonoBehaviour {
     void Wait(){
         if (navMeshAgent == null || animator == null) return;
         wait = true;
-        navMeshAgent.isStopped = true;
+        if (navMeshAgent.isOnNavMesh) navMeshAgent.isStopped = true;
         animator.SetBool("run", false);
     }
     void Chase(){
         if (navMeshAgent == null || animator == null) return;
         wait = false;
-        navMeshAgent.isStopped = false;
+        if (navMeshAgent.isOnNavMesh) navMeshAgent.isStopped = false;
         animator.SetBool("run", true);
     }
     

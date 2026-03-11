@@ -1,96 +1,187 @@
 ﻿using UnityEngine;
-using TMPro;  // Để sử dụng TextMeshPro
+using TMPro;
+using System.Collections;
 
 public class TutorialTextDisplay : MonoBehaviour
 {
-    public TMP_Text tutorialText;  // Tham chiếu đến TMP_Text UI
-    private string[] tutorialSteps;  // Các bước nhiệm vụ
-    private int currentStep = 0;  // Để theo dõi bước hiện tại
+    [Header("UI Reference")]
+    public TMP_Text tutorialText;
+
+    [Header("Quest Integration")]
+    [Tooltip("Kéo GameObject chứa TutorialQuestFinisher vào đây")]
+    public TutorialQuestFinisher questFinisher;
+
+    [Header("Return Prompt UI")]
+    [Tooltip("Panel hiện dòng 'Press F to return' sau Congratulations, ẩn lúc đầu")]
+    public GameObject returnPromptPanel;
+
+    // ─── Tutorial Steps ────────────────────────────────────────────────────
+    // Thứ tự bước:
+    // 0  – Press Space to jump
+    // 1  – Press E to equip your weapon
+    // 2  – Press right mouse button to roll
+    // 3  – Press left mouse button to attack
+    // 4  – Press E on the dummy to use Special Skill 1
+    // 5  – Press R on the dummy to use Special Skill 2
+    // 6  – Press T on the dummy to use Special Skill 3
+    // 7  – Press Q to use your Ultimate Skill
+    // 8  – Press E to sheathe your weapon
+    // 9  – Press I to open your inventory
+    // 10 – Choose a different weapon (press 1 or 2)
+    // 11 – Congratulations! → hiện prompt 'Press F to return'
+
+    private readonly string[] tutorialSteps =
+    {
+        "Press Space to jump",
+        "Press Tab to equip your weapon",
+        "Press Right Mouse Button to roll",
+        "Press Left Mouse Button to attack",
+        "Press E on the dummy to use Special Skill 1",
+        "Press R on the dummy to use Special Skill 2",
+        "Press T on the dummy to use Special Skill 3",
+        "Press Q to use your Ultimate Skill",
+        "Press Tab to sheathe your weapon",
+        "Press I to open your inventory",
+        "Choose a different weapon — press 1 or 2",
+        "Congratulations! You have completed the tutorial!"
+    };
+
+    private int  _currentStep    = 0;
+    private bool _completed      = false;
+    private bool _waitingReturn  = false;   // Đang chờ F để thoát
+
+    // ─────────────────────────────────────────────────────────────────────
 
     void Start()
     {
-        // Các nhiệm vụ sẽ xuất hiện lần lượt
-       tutorialSteps = new string[]
-{
-    "Press   Space   to   jump",  // Task 1: Jump
-    "Press   right   mouse   button   to   roll",  // Task 2: Roll
-    "Press   left   mouse   button   to   attack",  // Task 3: Attack
-    "Press   E   on   the   dummy   to   use   the   first   special   skill",  // Task 4: Special skill E
-    "Press   R   on   the   dummy   to   use   the   second   special   skill",  // Task 5: Special skill R
-    "Press   T   on   the   dummy   to   use   the   third   special   skill ",  // Task 6: Special skill T
-    "Press   Q   to   use   the   ultimate   skill",  // Task 7: Ultimate skill
-    "You   have   completed   the   tutorial!"  // Completion message
-};
-
-        // Hiển thị nhiệm vụ đầu tiên ngay mà không thay đổi currentStep
-        tutorialText.text = tutorialSteps[currentStep];
-
+        if (returnPromptPanel) returnPromptPanel.SetActive(false);
+        ShowStep(0);
     }
 
     void Update()
     {
-        // Kiểm tra các thao tác người chơi có thể thực hiện
-
-        // Nhiệm vụ 1: Space để nhảy
-        if (currentStep == 0 && Input.GetKeyDown(KeyCode.Space))
+        // Khi đến màn hình Congratulations, chờ F để thoát
+        if (_waitingReturn)
         {
-            ShowNextTutorialText();  // Chuyển qua nhiệm vụ tiếp theo
+            if (Input.GetKeyDown(KeyCode.F)) TriggerReturn();
+            return;
         }
 
-        // Nhiệm vụ 2: Chuột phải để lăn
-        if (currentStep == 1 && Input.GetMouseButtonDown(1))  // Chuột phải (Button 1) để lăn
-        {
-            ShowNextTutorialText();  // Chuyển qua nhiệm vụ tiếp theo
-        }
+        if (_completed) return;
 
-        // Nhiệm vụ 3: Chuột trái để đánh thường
-        if (currentStep == 2 && Input.GetMouseButtonDown(0))  // Chuột trái (Button 0) để đánh thường
+        switch (_currentStep)
         {
-            ShowNextTutorialText();  // Chuyển qua nhiệm vụ tiếp theo
-        }
+            // Bước 0: Space để nhảy
+            case 0:
+                if (Input.GetKeyDown(KeyCode.Space)) Advance();
+                break;
 
-        // Nhiệm vụ 4: Ấn E để sử dụng skill đặc biệt thứ nhất
-        if (currentStep == 3 && Input.GetKeyDown(KeyCode.E))
-        {
-            ShowNextTutorialText();  // Chuyển qua nhiệm vụ tiếp theo
-        }
+            // Bước 1: Tab để rút vũ khí
+            case 1:
+                if (Input.GetKeyDown(KeyCode.Tab)) Advance();
+                break;
 
-        // Nhiệm vụ 5: Ấn R để sử dụng skill đặc biệt thứ hai
-        if (currentStep == 4 && Input.GetKeyDown(KeyCode.R))
-        {
-            ShowNextTutorialText();  // Chuyển qua nhiệm vụ tiếp theo
-        }
+            // Bước 2: Chuột phải để lăn
+            case 2:
+                if (Input.GetMouseButtonDown(1)) Advance();
+                break;
 
-        // Nhiệm vụ 6: Ấn T để sử dụng skill đặc biệt thứ ba
-        if (currentStep == 5 && Input.GetKeyDown(KeyCode.T))
-        {
-            ShowNextTutorialText();  // Chuyển qua nhiệm vụ tiếp theo
-        }
+            // Bước 3: Chuột trái để tấn công
+            case 3:
+                if (Input.GetMouseButtonDown(0)) Advance();
+                break;
 
-        // Nhiệm vụ 7: Ấn Q để sử dụng chiêu cuối
-        if (currentStep == 6 && Input.GetKeyDown(KeyCode.Q))
-        {
-            ShowNextTutorialText();  // Chuyển qua nhiệm vụ tiếp theo
-        }
-        if (currentStep == 7 && Input.GetKeyDown(KeyCode.O))
-        {
-            ShowNextTutorialText();  // Chuyển qua nhiệm vụ tiếp theo
+            // Bước 4: E - skill 1
+            case 4:
+                if (Input.GetKeyDown(KeyCode.E)) Advance();
+                break;
+
+            // Bước 5: R - skill 2
+            case 5:
+                if (Input.GetKeyDown(KeyCode.R)) Advance();
+                break;
+
+            // Bước 6: T - skill 3
+            case 6:
+                if (Input.GetKeyDown(KeyCode.T)) Advance();
+                break;
+
+            // Bước 7: Q - Ultimate
+            case 7:
+                if (Input.GetKeyDown(KeyCode.Q)) Advance();
+                break;
+
+            // Bước 8: Tab để cất vũ khí
+            case 8:
+                if (Input.GetKeyDown(KeyCode.Tab)) Advance();
+                break;
+
+            // Bước 9: I để mở inventory
+            case 9:
+                if (Input.GetKeyDown(KeyCode.I)) Advance();
+                break;
+
+            // Bước 10: Đợi event từ WeaponSwapper.OnWeaponSwapped
+            // (Không detect phím – sử dụng chuột trong Inventory UI)
+            // Bước 11: Congratulations – tự hoàn thành sau delay
+            // (Không cần input, được xử lý trong Advance())
         }
     }
 
-    // Hàm này sẽ hiển thị từng nhiệm vụ khi người chơi hoàn thành
-    public void ShowNextTutorialText()
+    // ─────────────────────────────────────────────────────────────────────
+
+    void Advance()
     {
-        // Nếu còn nhiệm vụ, tiếp tục
-        if (currentStep < tutorialSteps.Length)
+        _currentStep++;
+
+        if (_currentStep >= tutorialSteps.Length)
         {
-            currentStep++;  // Tăng bước lên sau khi chuyển sang nhiệm vụ tiếp theo
-            tutorialText.text = tutorialSteps[currentStep];  // Cập nhật TMP_Text với nhiệm vụ tiếp theo
+            // Đã qua tất cả bước → hiện bước cuối và wrap up
+            _currentStep = tutorialSteps.Length - 1;
         }
-        else
+
+        ShowStep(_currentStep);
+
+        // Đến bước "Congratulations" → hiện prompt và chờ F
+        if (_currentStep == tutorialSteps.Length - 1)
         {
-            // Nếu không còn nhiệm vụ nào, hiển thị thông báo hoàn thành
-            tutorialText.text = "Bạn đã hoàn thành tutorial!";
+            _completed     = true;
+            _waitingReturn = true;
+
+            // Hiện dòng "Press F to return"
+            if (returnPromptPanel) returnPromptPanel.SetActive(true);
         }
     }
+
+    void ShowStep(int index)
+    {
+        if (tutorialText != null)
+            tutorialText.text = tutorialSteps[index];
+    }
+
+    void TriggerReturn()
+    {
+        _waitingReturn = false;
+        if (returnPromptPanel) returnPromptPanel.SetActive(false);
+
+        if (questFinisher != null)
+            questFinisher.FinishTutorial();
+        else
+            Debug.LogWarning("[TutorialTextDisplay] QuestFinisher chưa được gán!");
+    }
+
+    // ─── Public API ───────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Gọi từ WeaponSwapper.OnWeaponSwapped event khi player đổi vũ khí bằng chuột.
+    /// Chỉ hoạt động nếu đang ở bước 10 ("Choose a different weapon").
+    /// </summary>
+    public void OnWeaponChanged()
+    {
+        if (_currentStep == 10 && !_completed)
+            Advance();
+    }
+
+    /// <summary>Bỏ qua bước hiện tại – có thể gọi từ button "Skip" trong UI</summary>
+    public void ShowNextTutorialText() => Advance();
 }
