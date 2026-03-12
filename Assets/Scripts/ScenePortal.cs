@@ -1,7 +1,5 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.Rendering;
-using UnityEngine.Rendering.Universal;
 using TMPro;
 
 /// <summary>
@@ -183,18 +181,6 @@ public class ScenePortal : MonoBehaviour
         {
             // Đảm bảo game không bị pause
             Time.timeScale = 1f;
-            
-            // === FIX: Reset URP shadow settings trước khi chuyển scene ===
-            // FogController ở map chính set các giá trị shadow theo camera zoom
-            // Các giá trị persist trên URP asset global → dungeon kế thừa sai
-            var urpAsset = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
-            if (urpAsset != null)
-            {
-                urpAsset.shadowDistance = 50f;          // Max Distance gốc
-                urpAsset.shadowCascadeCount = 4;        // Cascade Count (nhiều cascade = bóng nét hơn)
-                urpAsset.cascadeBorder = 0.2f;          // Last Border
-                Debug.Log($"[ScenePortal] Reset URP shadow settings before scene transition");
-            }
             
             SceneManager.LoadScene(targetSceneName);
         }
