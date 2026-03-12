@@ -100,8 +100,8 @@ public class DungeonManiaPlayerBridge : MonoBehaviour
         playerHealth.TakeDamage(totalDamage, hitPosition, false);
         
         float hpAfter = playerHealth.CurrentHealth;
-
-        Debug.Log($"[DungeonManiaPlayerBridge] Damage applied: {totalDamage} (phys:{damageStruct.damage} elem:{damageStruct.damageElemental} crit:{damageStruct.crit}) | HP: {hpBefore} → {hpAfter}");
+        float actualDamage = hpBefore - hpAfter;
+        Debug.Log($"[DungeonManiaPlayerBridge] Damage applied: {actualDamage} (raw:{totalDamage}, phys:{damageStruct.damage} elem:{damageStruct.damageElemental} crit:{damageStruct.crit}) | HP: {hpBefore} → {hpAfter}");
     }
 
     /// <summary>

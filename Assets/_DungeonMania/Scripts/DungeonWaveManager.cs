@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using TMPro;
 using System;
+using Unity.Cinemachine;
 
 public class DungeonWaveManager : MonoBehaviour
 {
@@ -53,6 +54,9 @@ public class DungeonWaveManager : MonoBehaviour
     [Tooltip("Số lượng Demon mỗi wave")]
     public int[] demonCount = { 0, 0, 0, 0, 1 };
     
+    [Tooltip("Số lượng Monster (Orc, Troll, Guul) mỗi wave")]
+    public int[] monsterCount = { 0, 0, 0, 0, 0 };
+    
     [Tooltip("Tổng số enemy mỗi wave (tự tính)")]
     public int[] totalEnemiesPerWave;
 
@@ -94,6 +98,7 @@ public class DungeonWaveManager : MonoBehaviour
     private int currentLichCount = 0;
     private int currentBossCount = 0;
     private int currentDemonCount = 0;
+    private int currentMonsterCount = 0;
     
     // Static instance for global access
     public static DungeonWaveManager Instance;
@@ -382,7 +387,8 @@ public class DungeonWaveManager : MonoBehaviour
             int liches = i < lichCount.Length ? lichCount[i] : 0;
             int bosses = i < bossCount.Length ? bossCount[i] : 0;
             int demons = i < demonCount.Length ? demonCount[i] : 0;
-            totalEnemiesPerWave[i] = skelets + liches + bosses + demons;
+            int monsters = i < monsterCount.Length ? monsterCount[i] : 0;
+            totalEnemiesPerWave[i] = skelets + liches + bosses + demons + monsters;
         }
     }
 
@@ -477,34 +483,101 @@ public class DungeonWaveManager : MonoBehaviour
     /// </summary>
     private IEnumerator DelayBeforeNextWave()
     {
-        if (waveDelayTime > 0)
+        if (waveDelayTime > 0 && statusText != null)
         {
             statusText.text = $"Wave {currentWave} hoàn thành! Chuẩn bị wave {currentWave + 1}...";
             statusText.gameObject.SetActive(true);
             yield return new WaitForSeconds(waveDelayTime);
             statusText.gameObject.SetActive(false);
         }
+        else if (waveDelayTime > 0)
+        {
+            // statusText null nhưng vẫn cần delay
+            yield return new WaitForSeconds(waveDelayTime);
+        }
+
+        // Hồi đầy máu cho player khi sang wave mới
+        HealPlayerFull();
 
         // Bắt đầu wave tiếp theo
         StartCoroutine(StartWaveSequence());
     }
 
     /// <summary>
+    /// Hồi đầy máu player giữa các wave
+    /// </summary>
+    private void HealPlayerFull()
+    {
+        if (player == null) return;
+
+        PlayerHealth ph = player.GetComponent<PlayerHealth>();
+        if (ph == null) ph = player.GetComponentInChildren<PlayerHealth>();
+        
+        if (ph != null)
+        {
+            ph.ResetHealth();
+            Debug.Log("[DungeonWave] Player đã được hồi đầy máu cho wave mới!");
+        }
+    }
+
+    /// <summary>
     /// Khi player chết
     /// </summary>
+    [Header("=== DEATH ANIMATION ===")]
+    [Tooltip("Thời gian chờ animation chết của player trước khi hiện GUI Failed (khớp với DieState.dieDuration)")]
+    public float deathAnimationDelay = 3f;
+
     public void OnPlayerDied()
     {
         if (!isDungeonActive || isDungeonComplete) return;
 
-        Debug.Log("[DungeonWave] Player đã chết!");
+        Debug.Log("[DungeonWave] Player đã chết! Đợi animation chết xong...");
         
+        isDungeonActive = false;
+
+        // === NGAY LẬP TỨC: Chặn input nhưng KHÔNG tắt CharacterController ===
+        // DieState.PhysicsUpdate() cần CharacterController để chạy gravity cho animation chết
+        if (player != null)
+        {
+            // Tắt PlayerInput → player không nhận input di chuyển/tấn công
+            UnityEngine.InputSystem.PlayerInput pi = player.GetComponent<UnityEngine.InputSystem.PlayerInput>();
+            if (pi != null)
+            {
+                pi.enabled = false;
+                Debug.Log("[DungeonWave] PlayerInput DISABLED");
+            }
+        }
+
+        // Chặn xoay camera (mouse) nhưng camera vẫn follow player cho animation chết
+        DisableCameraRotation();
+        
+        // Đợi animation chết chạy xong rồi mới hiện GUI
+        StartCoroutine(DelayedDungeonFailed());
+    }
+
+    /// <summary>
+    /// Đợi animation chết chạy xong rồi mới dừng enemy + hiện GUI Failed
+    /// </summary>
+    private IEnumerator DelayedDungeonFailed()
+    {
+        // Đợi animation chết player chạy xong (3s = DieState.dieDuration)
+        yield return new WaitForSeconds(deathAnimationDelay);
+
+        Debug.Log("[DungeonWave] Animation chết xong → hiện GUI Failed");
+
+        // Animation xong → giờ mới tắt CharacterController (an toàn)
+        if (player != null)
+        {
+            CharacterController cc = player.GetComponent<CharacterController>();
+            if (cc != null) cc.enabled = false;
+        }
+
         // Dừng tất cả enemy
         StopAllEnemies();
 
         // Hiển thị UI thua
         ShowDungeonFailed();
         
-        isDungeonActive = false;
         OnDungeonFailed?.Invoke();
     }
 
@@ -517,6 +590,16 @@ public class DungeonWaveManager : MonoBehaviour
         isDungeonActive = false;
 
         Debug.Log($"[DungeonWave] Dungeon {dungeonName} hoàn thành! Tổng EXP: {totalExpGained}");
+
+        // Khóa player không cho di chuyển/đánh khi GUI Complete hiện
+        if (player != null)
+        {
+            UnityEngine.InputSystem.PlayerInput pi = player.GetComponent<UnityEngine.InputSystem.PlayerInput>();
+            if (pi != null) pi.enabled = false;
+
+            CharacterController cc = player.GetComponent<CharacterController>();
+            if (cc != null) cc.enabled = false;
+        }
 
         // Hiển thị UI thắng
         ShowDungeonComplete();
@@ -539,15 +622,16 @@ public class DungeonWaveManager : MonoBehaviour
         currentLichCount = waveIdx < lichCount.Length ? lichCount[waveIdx] : 0;
         currentBossCount = waveIdx < bossCount.Length ? bossCount[waveIdx] : 0;
         currentDemonCount = waveIdx < demonCount.Length ? demonCount[waveIdx] : 0;
+        currentMonsterCount = waveIdx < monsterCount.Length ? monsterCount[waveIdx] : 0;
 
-        int totalEnemies = currentSkeletCount + currentLichCount + currentBossCount + currentDemonCount;
+        int totalEnemies = currentSkeletCount + currentLichCount + currentBossCount + currentDemonCount + currentMonsterCount;
         enemiesAlive = totalEnemies;
 
-        Debug.Log($"[DungeonWave] Wave {waveIndex}: Skelet={currentSkeletCount} Lich={currentLichCount} Boss={currentBossCount} Demon={currentDemonCount} (Tổng: {totalEnemies})");
+        Debug.Log($"[DungeonWave] Wave {waveIndex}: Skelet={currentSkeletCount} Monster={currentMonsterCount} Lich={currentLichCount} Boss={currentBossCount} Demon={currentDemonCount} (Tổng: {totalEnemies})");
 
         // === CẤU HÌNH GAMEPLAY MANAGER (CÁCH A) ===
-        // enemyType[0] = skelet (archers trong code cũ), [1] = monster (không dùng), [2] = lich, [3] = boss, [4] = demon
-        ConfigureGamePlayManager(currentSkeletCount, 0, currentLichCount, currentBossCount, currentDemonCount);
+        // enemyType[0] = skelet, [1] = monster, [2] = lich, [3] = boss, [4] = demon
+        ConfigureGamePlayManager(currentSkeletCount, currentMonsterCount, currentLichCount, currentBossCount, currentDemonCount);
 
         // Spawn từng enemy một
         for (int i = 0; i < totalEnemies; i++)
@@ -589,7 +673,7 @@ public class DungeonWaveManager : MonoBehaviour
         GamePlayManager.level.enemyType[3] = bosses;  // Boss
         GamePlayManager.level.enemyType[4] = demons;   // Demon
 
-        Debug.Log($"[DungeonWave] GamePlayManager configured: Skelet={skelets} Lich={liches} Boss={bosses} Demon={demons}");
+        Debug.Log($"[DungeonWave] GamePlayManager configured: Skelet={skelets} Monster={monsters} Lich={liches} Boss={bosses} Demon={demons}");
     }
 
     /// <summary>
@@ -892,6 +976,8 @@ public class DungeonWaveManager : MonoBehaviour
         // Safety: Kiểm tra ngay khi enemy chết (không đợi Update)
         if (enemiesAlive <= 0 && isWaveActive && !isCountingDown)
         {
+            // === FIX: Set isWaveActive = false NGAY để Update() không gọi OnWaveComplete() lần nữa ===
+            isWaveActive = false;
             Debug.Log($"[DungeonWave] All enemies dead! Triggering OnWaveComplete from OnEnemyKilled");
             OnWaveComplete();
         }
@@ -973,6 +1059,43 @@ public class DungeonWaveManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Force Canvas chứa UI lên trên mọi UI khác + đảm bảo có GraphicRaycaster để click được
+    /// </summary>
+    private void EnsureCanvasOnTop(GameObject uiObj, int order)
+    {
+        if (uiObj == null) return;
+
+        // Tìm Canvas gần nhất
+        Canvas canvas = uiObj.GetComponentInParent<Canvas>();
+        if (canvas != null)
+        {
+            canvas.overrideSorting = true;
+            canvas.sortingOrder = order;
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+
+            // Đảm bảo có GraphicRaycaster để button clickable
+            if (canvas.GetComponent<UnityEngine.UI.GraphicRaycaster>() == null)
+                canvas.gameObject.AddComponent<UnityEngine.UI.GraphicRaycaster>();
+
+            Debug.Log($"[DungeonWave] Canvas '{canvas.gameObject.name}' → sortingOrder={order}, Overlay mode");
+        }
+        else
+        {
+            // Không có Canvas → tạo mới trên parent gốc
+            Canvas newCanvas = uiObj.transform.root.gameObject.GetComponent<Canvas>();
+            if (newCanvas == null)
+                newCanvas = uiObj.transform.root.gameObject.AddComponent<Canvas>();
+            newCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            newCanvas.sortingOrder = order;
+
+            if (newCanvas.GetComponent<UnityEngine.UI.GraphicRaycaster>() == null)
+                newCanvas.gameObject.AddComponent<UnityEngine.UI.GraphicRaycaster>();
+
+            Debug.LogWarning($"[DungeonWave] Created Canvas on '{newCanvas.gameObject.name}' → sortingOrder={order}");
+        }
+    }
+
     private void HideCountdown()
     {
         if (countdownUI) countdownUI.SetActive(false);
@@ -980,30 +1103,56 @@ public class DungeonWaveManager : MonoBehaviour
 
     private void ShowDungeonComplete()
     {
+        // Unlock cursor để player click button trên UI
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+
+        // Tắt toàn bộ camera — đứng yên khi GUI hiện
+        DisableCameraFull();
+
         if (dungeonCompleteUI)
         {
             EnsureParentActive(dungeonCompleteUI);
             dungeonCompleteUI.SetActive(true);
+            
+            // Force Canvas lên trên mọi UI khác
+            EnsureCanvasOnTop(dungeonCompleteUI, 500);
             
             if (expRewardText)
                 expRewardText.text = $"EXP: +{totalExpGained}";
             
             Debug.Log($"[DungeonWave] UI: Showing dungeon complete (activeInHierarchy={dungeonCompleteUI.activeInHierarchy})");
         }
-        
-        // Tự động quay về map chính sau delay
-        StartCoroutine(AutoReturnToMap(returnDelayOnWin));
+
+        // Ẩn các UI có thể chặn click
+        if (waveNotificationUI) waveNotificationUI.SetActive(false);
+        if (countdownUI) countdownUI.SetActive(false);
     }
 
     private void ShowDungeonFailed()
     {
+        // Unlock cursor để player click button trên UI
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+
+        // Tắt toàn bộ camera — đứng yên khi GUI hiện
+        DisableCameraFull();
+
         if (dungeonFailedUI)
         {
+            // Đảm bảo parent chain active
+            EnsureParentActive(dungeonFailedUI);
             dungeonFailedUI.SetActive(true);
+
+            // Force Canvas lên trên mọi UI khác (Notification=100, Wave=100)
+            EnsureCanvasOnTop(dungeonFailedUI, 500);
+
+            Debug.Log($"[DungeonWave] UI: Showing dungeon failed (activeInHierarchy={dungeonFailedUI.activeInHierarchy})");
         }
-        
-        // Tự động quay về map chính sau delay
-        StartCoroutine(AutoReturnToMap(returnDelayOnLose));
+
+        // Ẩn các UI có thể chặn click
+        if (waveNotificationUI) waveNotificationUI.SetActive(false);
+        if (countdownUI) countdownUI.SetActive(false);
     }
     
     /// <summary>
@@ -1024,7 +1173,9 @@ public class DungeonWaveManager : MonoBehaviour
     public void ReturnToMainMap()
     {
         Debug.Log($"[DungeonWave] Đang quay về {mainMapSceneName}...");
-        Time.timeScale = 1f; // Đảm bảo game không bị pause
+        ResetPlayerControls(); // Bật lại input + controller trước khi chuyển scene
+        EnableCameraInput();
+        Time.timeScale = 1f;
         SceneManager.LoadScene(mainMapSceneName);
     }
 
@@ -1034,8 +1185,27 @@ public class DungeonWaveManager : MonoBehaviour
     public void RestartDungeon()
     {
         Debug.Log("[DungeonWave] Restart dungeon...");
+        ResetPlayerControls(); // Bật lại input + controller trước khi restart
+        EnableCameraInput();
         Time.timeScale = 1f;
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+
+    /// <summary>
+    /// Bật lại CharacterController + PlayerInput cho player
+    /// Phòng trường hợp player dùng DontDestroyOnLoad hoặc respawn tại chỗ
+    /// </summary>
+    private void ResetPlayerControls()
+    {
+        if (player == null) return;
+
+        CharacterController cc = player.GetComponent<CharacterController>();
+        if (cc != null) cc.enabled = true;
+
+        UnityEngine.InputSystem.PlayerInput pi = player.GetComponent<UnityEngine.InputSystem.PlayerInput>();
+        if (pi != null) pi.enabled = true;
+
+        Debug.Log("[DungeonWave] Player controls RESET");
     }
 
     // ===== DEBUG / TEST =====
@@ -1102,6 +1272,95 @@ public class DungeonWaveManager : MonoBehaviour
     public bool IsWaveActive => isWaveActive;
     public int TotalExpGained => totalExpGained;
 
+    /// <summary>
+    /// [MỨC NHẸ] Chỉ chặn XOAY camera (mouse input) — camera vẫn FOLLOW player
+    /// Dùng khi: animation chết đang chạy, cần camera theo dõi player nhưng không xoay
+    /// </summary>
+    private void DisableCameraRotation()
+    {
+        // Tắt tất cả CinemachineInputProvider + input actions → chặn mouse xoay
+        var providers = FindObjectsByType<CinemachineInputProvider>(FindObjectsSortMode.None);
+        foreach (var provider in providers)
+        {
+            provider.XYAxis.action?.Disable();
+            provider.ZAxis.action?.Disable();
+            provider.enabled = false;
+        }
+
+        // Tắt CameraCursor để nó không re-enable camera khi nhấn ALT
+        var cameraCursors = FindObjectsByType<MovementSystem.CameraCursor>(FindObjectsSortMode.None);
+        foreach (var cc in cameraCursors)
+        {
+            cc.enabled = false;
+        }
+
+        // KHÔNG tắt CinemachineBrain/CinemachineCamera → camera vẫn follow player
+        Debug.Log($"[DungeonWave] Camera ROTATION disabled (providers={providers.Length}) — camera vẫn follow player");
+    }
+
+    /// <summary>
+    /// [MỨC NẶNG] Chặn TOÀN BỘ camera — camera đứng yên hoàn toàn
+    /// Dùng khi: GUI Complete/Failed đang hiện, không cần camera di chuyển nữa
+    /// </summary>
+    private void DisableCameraFull()
+    {
+        // 1. Tắt CinemachineBrain — camera hoàn toàn đứng yên
+        var brain = FindFirstObjectByType<CinemachineBrain>();
+        if (brain != null)
+        {
+            brain.enabled = false;
+        }
+
+        // 2. Tắt tất cả CinemachineCamera
+        var cameras = FindObjectsByType<CinemachineCamera>(FindObjectsSortMode.None);
+        foreach (var cam in cameras)
+        {
+            cam.enabled = false;
+        }
+
+        // 3. Tắt input (nếu chưa tắt từ DisableCameraRotation)
+        var providers = FindObjectsByType<CinemachineInputProvider>(FindObjectsSortMode.None);
+        foreach (var provider in providers)
+        {
+            provider.XYAxis.action?.Disable();
+            provider.ZAxis.action?.Disable();
+            provider.enabled = false;
+        }
+
+        var cameraCursors = FindObjectsByType<MovementSystem.CameraCursor>(FindObjectsSortMode.None);
+        foreach (var cc in cameraCursors)
+        {
+            cc.enabled = false;
+        }
+
+        Debug.Log("[DungeonWave] Camera FULLY disabled — camera đứng yên hoàn toàn");
+    }
+
+    /// <summary>
+    /// Bật lại toàn bộ camera input khi quay về map hoặc restart
+    /// </summary>
+    private void EnableCameraInput()
+    {
+        var brain = FindFirstObjectByType<CinemachineBrain>();
+        if (brain != null) brain.enabled = true;
+
+        var cameras = FindObjectsByType<CinemachineCamera>(FindObjectsSortMode.None);
+        foreach (var cam in cameras) cam.enabled = true;
+
+        var providers = FindObjectsByType<CinemachineInputProvider>(FindObjectsSortMode.None);
+        foreach (var provider in providers)
+        {
+            provider.enabled = true;
+            provider.XYAxis.action?.Enable();
+            provider.ZAxis.action?.Enable();
+        }
+
+        var cameraCursors = FindObjectsByType<MovementSystem.CameraCursor>(FindObjectsSortMode.None);
+        foreach (var cc in cameraCursors) cc.enabled = true;
+
+        Debug.Log("[DungeonWave] Camera input ENABLED");
+    }
+
     // ===== CÁC PHƯƠNG THỨC CHO GAMEPLAY MANAGER =====
 
     /// <summary>
@@ -1118,11 +1377,12 @@ public class DungeonWaveManager : MonoBehaviour
     /// <summary>
     /// Lấy số lượng enemy theo từng loại cho wave hiện tại
     /// </summary>
-    public void GetEnemyCounts(out int skeletOut, out int lichOut, out int bossOut, out int demonOut)
+    public void GetEnemyCounts(out int skeletOut, out int monsterOut, out int lichOut, out int bossOut, out int demonOut)
     {
         int waveIdx = Mathf.Clamp(currentWave - 1, 0, totalWaves - 1);
         
         skeletOut = waveIdx < skeletCount.Length ? skeletCount[waveIdx] : 0;
+        monsterOut = waveIdx < monsterCount.Length ? monsterCount[waveIdx] : 0;
         lichOut = waveIdx < lichCount.Length ? lichCount[waveIdx] : 0;
         bossOut = waveIdx < bossCount.Length ? bossCount[waveIdx] : 0;
         demonOut = waveIdx < demonCount.Length ? demonCount[waveIdx] : 0;
@@ -1131,9 +1391,10 @@ public class DungeonWaveManager : MonoBehaviour
     /// <summary>
     /// Lấy số lượng enemy còn lại có thể spawn (dùng trong RandomEnemy - KHÔNG reset counters)
     /// </summary>
-    public void GetRemainingEnemyCounts(out int skeletOut, out int lichOut, out int bossOut, out int demonOut)
+    public void GetRemainingEnemyCounts(out int skeletOut, out int monsterOut, out int lichOut, out int bossOut, out int demonOut)
     {
         skeletOut = Mathf.Max(0, currentSkeletCount - GamePlayManager.archers);
+        monsterOut = Mathf.Max(0, currentMonsterCount - GamePlayManager.monsteres);
         lichOut = Mathf.Max(0, currentLichCount - GamePlayManager.lich);
         bossOut = Mathf.Max(0, currentBossCount - GamePlayManager.boss);
         demonOut = Mathf.Max(0, currentDemonCount - GamePlayManager.demon);

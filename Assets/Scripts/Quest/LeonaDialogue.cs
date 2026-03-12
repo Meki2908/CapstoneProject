@@ -42,25 +42,32 @@ public class LeonaDialogue : MonoBehaviour
     [Header("── Dialogue: Quest 1 (Available → Accept) ──")]
     [TextArea(2, 4)]
     public string[] quest1AcceptLines = {
-        "Oh, a new adventurer! Welcome to this land.",
-        "I'm Leona — a guide for warriors who wish to challenge the Dungeon.",
-        "Would you like me to guide you through the basics first?",
-        "Great! Complete the training and then head to the Dungeon Gate to the North. Good luck!"
+        "Oh, a new adventurer! Welcome. I am Leona.",
+        "I will help you start your journey in this world.",
+        "First, let's learn the basics of combat in the training area.",
+        "Look for me near the large red tree in the city if you need further guidance! Good luck!"
     };
 
-    [Header("── Dialogue: Quest 2 (Chỉ đường đến cổng dungeon) ──")]
+    [Header("── Dialogue: Quest 2 (Desert Dungeon) ──")]
     [TextArea(2, 4)]
     public string[] quest2GuideLines = {
         "You've completed the training — well done!",
-        "Now it's time for the real challenge.",
-        "The Dungeon Gate is to the North. Follow the marker and step through when you're ready.",
-        "I'll be cheering for you! Let's go!"
+        "Now it's time for the real challenge in the Desert.",
+        "Use the glowing teleport points on the map to reach the Dungeon Gate.",
+        "I'll be rooting for you. Go now!"
     };
 
     [Header("── Dialogue: Quest 2 đã Active (nhắc đường) ──")]
     [TextArea(2, 4)]
     public string[] quest2ReminderLines = {
         "The Dungeon Gate is to the North. Don't keep it waiting!"
+    };
+
+    [Header("── Dialogue: Mặc định (Khi lỗi hoặc xong hết) ──")]
+    [TextArea(2, 4)]
+    public string[] defaultLines = {
+        "Stay safe out there, adventurer!",
+        "The world is full of mysteries yet to be found."
     };
 
     // ─── Settings ─────────────────────────────────────────────────────────
@@ -78,7 +85,7 @@ public class LeonaDialogue : MonoBehaviour
     bool     _isTyping   = false;
     bool     _playerNear = false;
 
-    enum DialogueMode { Quest1Accept, Quest2Guide, Quest2Reminder, None }
+    enum DialogueMode { Quest1Accept, Quest2Guide, Quest2Reminder, Default, None }
     DialogueMode _mode = DialogueMode.None;
 
     // ─────────────────────────────────────────────────────────────────────
@@ -108,9 +115,14 @@ public class LeonaDialogue : MonoBehaviour
 
         if (_isOpen)
         {
-            if (IsFPressed()) OnNextClicked();
+            if (IsFPressed()) 
+            {
+                Debug.Log("[LeonaDialogue] F pressed while dialogue open → OnNextClicked()");
+                OnNextClicked();
+            }
             return;
         }
+
         if (IsFPressed())
         {
             Debug.Log("[LeonaDialogue] F pressed → calling OpenDialogue()");
@@ -124,11 +136,22 @@ public class LeonaDialogue : MonoBehaviour
     {
         Debug.Log($"[LeonaDialogue] OnTriggerEnter: {other.name} tag={other.tag}");
         if (!other.CompareTag(playerTag)) return;
+        
         _playerNear = true;
-        if (promptPanel)
+        if (promptPanel != null)
+        {
             promptPanel.SetActive(true);
+            var parentCanvas = promptPanel.GetComponentInParent<Canvas>();
+            if (parentCanvas != null && !parentCanvas.enabled)
+            {
+                Debug.LogWarning($"[LeonaDialogue] Cảnh báo: '{parentCanvas.name}' (Canvas cha của promptPanel) đang bị TẮT (enabled=false)! Giao diện sẽ không hiện.");
+            }
+            Debug.Log($"[LeonaDialogue] Đã hiện promptPanel ({promptPanel.name})");
+        }
         else
-            Debug.LogWarning("[LeonaDialogue] promptPanel is NULL – assign it in Inspector!");
+        {
+            Debug.LogWarning("[LeonaDialogue] promptPanel is NULL – Hãy kéo thả object gợi ý 'Nhấn F' vào Inspector!");
+        }
     }
 
     void OnTriggerExit(Collider other)
@@ -145,11 +168,11 @@ public class LeonaDialogue : MonoBehaviour
         _mode = PickMode();
         _activeLines = GetLines(_mode);
 
-        Debug.Log($"[LeonaDialogue] OpenDialogue → mode={_mode}, lines={(  _activeLines?.Length ?? 0)}");
+        Debug.Log($"[LeonaDialogue] OpenDialogue → mode={_mode}, linesCount={(_activeLines?.Length ?? 0)}");
 
         if (_activeLines == null || _activeLines.Length == 0)
         {
-            Debug.LogWarning($"[LeonaDialogue] No lines for mode {_mode} – dialogue blocked!");
+            Debug.LogWarning($"[LeonaDialogue] KHÔNG CÓ HỘI THOẠI cho mode {_mode}! Kiểm tra lại mảng string trong Inspector hoặc logic QuestManager.");
             return;
         }
 
@@ -157,7 +180,17 @@ public class LeonaDialogue : MonoBehaviour
         _lineIndex = 0;
 
         if (promptPanel)   promptPanel.SetActive(false);
-        if (dialoguePanel) dialoguePanel.SetActive(true);
+        
+        if (dialoguePanel != null)
+        {
+            dialoguePanel.SetActive(true);
+            if (dialogueCanvas != null) dialogueCanvas.enabled = true;
+        }
+        else
+        {
+            Debug.LogError("[LeonaDialogue] dialoguePanel is NULL! Không thể hiện hội thoại.");
+            return;
+        }
 
         Cursor.visible   = true;
         Cursor.lockState = CursorLockMode.None;
@@ -177,19 +210,26 @@ public class LeonaDialogue : MonoBehaviour
         var q2 = QuestManager.Instance.GetState(2);
         Debug.Log($"[LeonaDialogue] PickMode → q1={q1}, q2={q2}");
 
-        // Quest 1 chưa hoàn thành → Leona giới thiệu và gửi sang tutorial
+        // TRƯỜNG HỢP ĐẶC BIỆT: Nếu cả 2 đều Locked -> Ép về Quest1 để Player có thể bắt đầu
+        if (q1 == QuestManager.QuestState.Locked && q2 == QuestManager.QuestState.Locked)
+        {
+            Debug.Log("[LeonaDialogue] Cả 2 quest đều Locked -> Ép về Quest1Accept để bắt đầu game.");
+            return DialogueMode.Quest1Accept;
+        }
+
+        // Quest 1 chưa hoàn thành -> Giao tiếp nạp Quest 1
         if (q1 == QuestManager.QuestState.Available || q1 == QuestManager.QuestState.Active)
             return DialogueMode.Quest1Accept;
 
-        // Quest 1 đã xong - kiểm tra Quest 2
+        // Quest 1 đã xong
         if (q1 == QuestManager.QuestState.Completed)
         {
-            // Quest 2 chưa được accept → thử accept và nhắc đường
+            // Nếu quest 2 chưa hoàn thành -> Nhắc nhở/Giao quest 2
             if (q2 != QuestManager.QuestState.Completed)
                 return DialogueMode.Quest2Reminder;
         }
 
-        return DialogueMode.None;
+        return DialogueMode.Default;
     }
 
     string[] GetLines(DialogueMode mode)
@@ -199,7 +239,8 @@ public class LeonaDialogue : MonoBehaviour
             case DialogueMode.Quest1Accept:   return quest1AcceptLines;
             case DialogueMode.Quest2Guide:    return quest2GuideLines;
             case DialogueMode.Quest2Reminder: return quest2ReminderLines;
-            default: return null;
+            case DialogueMode.Default:        return defaultLines;
+            default:                          return defaultLines; // Luôn trả về fallback thay vì null
         }
     }
 
@@ -265,17 +306,22 @@ public class LeonaDialogue : MonoBehaviour
         switch (_mode)
         {
             case DialogueMode.Quest1Accept:
-                // Hoàn thành Quest 1 + nhận Quest 2 ngay lập tức
                 if (QuestManager.Instance != null)
                 {
-                    QuestManager.Instance.CompleteQuest(1);
-                    QuestManager.Instance.AcceptQuest(2);
-                    Debug.Log("[LeonaDialogue] Quest 1 completed, Quest 2 accepted. Teleporting to Tutorial...");
+                    // Chào mừng -> Hoàn thành bước 'Gặp Leona' của Quest 1
+                    QuestManager.Instance.AdvanceStep(1);
+                    
+                    // Nếu Quest 1 thực sự xong -> Nhận Quest 2
+                    if (QuestManager.Instance.GetState(1) == QuestManager.QuestState.Completed)
+                    {
+                        QuestManager.Instance.AcceptQuest(2);
+                    }
+                    Debug.Log("[LeonaDialogue] Quest 1 advanced.");
                 }
                 // Teleport sang Tutorial để học kỹ năng
                 var teleporter = GetComponent<QuestSceneTeleporter>();
                 if (teleporter != null) teleporter.TeleportToScene();
-                else Debug.LogWarning("[LeonaDialogue] Không tìm thấy QuestSceneTeleporter!");
+                else Debug.LogWarning("[LeonaDialogue] QuestSceneTeleporter not found!");
                 break;
 
             case DialogueMode.Quest2Guide:

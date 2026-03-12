@@ -63,21 +63,38 @@ public class QuestManager : MonoBehaviour
         _states.Clear();
         _stepIndex.Clear();
 
+        if (quests == null || quests.Length == 0)
+        {
+            Debug.LogError("[QuestManager] 'Quests' array is EMPTY in Inspector! Please assign QuestData.");
+            return;
+        }
+
         int count = PlayerPrefs.GetInt(KEY_COUNT, 0);
+        Debug.Log($"[QuestManager] Initializing states from Prefs. QUEST_COUNT={count}");
 
         foreach (var qd in quests)
         {
+            if (qd == null) continue;
+
             int id  = qd.questID;
             int raw = PlayerPrefs.GetInt(QKey(id), 0);
 
             QuestState state;
             if      (raw == 2) state = QuestState.Completed;
             else if (raw == 1) state = QuestState.Active;
-            else if (id == 1 || count >= id - 1) state = QuestState.Available; // quest đầu luôn Available
+            else if (id == 1)  state = QuestState.Active; // New Game: Quest 1 is active by default
+            else if (count >= id - 1) state = QuestState.Available;
             else               state = QuestState.Locked;
 
             _states[id]   = state;
             _stepIndex[id] = (raw == 1) ? PlayerPrefs.GetInt(QKey(id) + "_STEP", 0) : 0;
+            
+            Debug.Log($"[QuestManager] Registered Quest {id} '{qd.questTitle}': {state}");
+        }
+        
+        if (quests.Length < 2) 
+        {
+            Debug.LogWarning("[QuestManager] Only " + quests.Length + " quests registered. If you are on the second quest, please make sure you added the second QuestData asset to the 'Quests' array in the Inspector!");
         }
     }
 
@@ -124,22 +141,34 @@ public class QuestManager : MonoBehaviour
     /// </summary>
     public bool AcceptQuest(int questID)
     {
-        if (GetState(questID) != QuestState.Available)
+        var qd = GetQuestData(questID);
+        if (qd == null)
         {
-            Debug.LogWarning($"[QuestManager] Quest {questID} không ở trạng thái Available.");
+            Debug.LogError($"[QuestManager] Cannot accept Quest {questID}: QuestData NOT FOUND in 'quests' array!\n" +
+                           $"GUIDE: Please create a new QuestData asset, set its Quest ID to {questID}, and drag it into the 'Quests' list on the QuestManager object in your scene.");
             return false;
+        }
+
+        var currentState = GetState(questID);
+        if (currentState != QuestState.Available && currentState != QuestState.Locked) // Allow locked to be forced active in some cases
+        {
+            Debug.LogWarning($"[QuestManager] Quest {questID} is already {currentState}. Re-activating anyway.");
         }
 
         _states[questID]   = QuestState.Active;
         _stepIndex[questID] = 0;
 
-        // Đồng bộ PlayerPrefs
+        // Sync PlayerPrefs
         PlayerPrefs.SetInt(QKey(questID), 1);
         PlayerPrefs.SetInt(QKey(questID) + "_STEP", 0);
-        PlayerPrefs.SetInt(KEY_COUNT, questID);           // QUEST_COUNT = ID quest hiện tại
+        
+        // Update KEY_COUNT to ensure continuity
+        if (PlayerPrefs.GetInt(KEY_COUNT, 0) < questID)
+            PlayerPrefs.SetInt(KEY_COUNT, questID);
+            
         PlayerPrefs.Save();
 
-        Debug.Log($"[QuestManager] Đã nhận Quest {questID}");
+        Debug.Log($"[QuestManager] Successfully ACCEPTED Quest {questID}: {qd.questTitle}");
         OnQuestAccepted?.Invoke(questID);
         return true;
     }
