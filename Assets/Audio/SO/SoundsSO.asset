@@ -1,0 +1,164 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c9afd3923e6b4374fa6fb847aa293a77, type: 3}
+  m_Name: SoundsSO
+  m_EditorClassIdentifier: 
+  sounds:
+  - name: Sword_Normal_1
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: 6256290db9205854c9aacdb690a51d98, type: 3}
+  - name: Sword_Normal_2
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: bfe87beafe2801c44bc677a4097c3111, type: 3}
+  - name: Sword_Normal_3
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: aa00770b8a030ba4a92e151aa4d0b943, type: 3}
+  - name: Axe_Normal_1
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: dadeee722a8f9634ebc55ac13c223f39, type: 3}
+  - name: Axe_Normal_2
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: d8b5b96c16aae984dbd365803133fe6e, type: 3}
+  - name: Axe_Normal_3
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: ce6effd8c28976b49bb0cdec3e95936b, type: 3}
+  - name: Axe_Normal_4
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: 78cce888ae0e4754eb6dbf1c48707aee, type: 3}
+  - name: Sword_Hit
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  - name: Axe_Hit
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  - name: Mage_Normal_1
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  - name: Mage_Normal_2
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  - name: Mage_Normal_3
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  - name: Sword_Skill_E
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds: []
+  - name: Sword_Skill_R
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  - name: Sword_Skill_T
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  - name: Sword_Skill_Q
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  - name: Axe_Skill_E
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  - name: Axe_Skill_R
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  - name: Axe_Skill_T
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  - name: Axe_Skill_Q
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  - name: Mage_Skill_E
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  - name: Mage_Skill_R
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  - name: Mage_Skill_T
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  - name: Mage_Skill_Q
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  - name: Mage_Projectile_Hit
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  - name: Footstep_Default
+    volume: 1
+    mixer: {fileID: 6968042113699393676, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: b2c060ec174e729498d3348867f30f29, type: 3}
+    - {fileID: 8300000, guid: 3bd76f0348255464e8edd660a65839af, type: 3}
+  - name: Dash
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: b431eb0c454b01e4f9f3eccfa23c00b1, type: 3}
+  - name: Jump
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: 1d0cfbd833af4924a87ee3803e5559cd, type: 3}
+  - name: Land
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: c9d5a74bef5fa6449b7b8907cf988805, type: 3}
+  - name: Crouch_Move
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  - name: GetHit
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  - name: Die
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  sceneFootsteps:
+  - sceneName: MapSaMac
+    soundList:
+      name: 
+      volume: 1
+      mixer: {fileID: 6968042113699393676, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+      sounds:
+      - {fileID: 8300000, guid: 80d96d1f44d48df44b3ea787ff75605c, type: 3}
+      - {fileID: 8300000, guid: 1db5f2d3c03d75e4882f456376a60c92, type: 3}

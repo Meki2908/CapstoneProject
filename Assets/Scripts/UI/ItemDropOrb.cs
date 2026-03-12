@@ -184,6 +184,12 @@ public class ItemDropOrb : MonoBehaviour
         {
             InventoryManager.Instance.AddItem(itemSO, quantity, runtimeRarity);
             Debug.Log($"[ItemDrop] Added to inventory: {itemSO.itemName} [{runtimeRarity}] ×{quantity}");
+
+            // 1b. Track cho Dungeon Reward Screen
+            if (DungeonRewardUI.Instance != null)
+            {
+                DungeonRewardUI.Instance.TrackItem(itemSO, quantity, runtimeRarity);
+            }
         }
 
         // 2. Hiện notification

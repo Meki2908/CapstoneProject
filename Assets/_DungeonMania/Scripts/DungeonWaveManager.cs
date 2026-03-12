@@ -435,6 +435,10 @@ public class DungeonWaveManager : MonoBehaviour
         currentWave = 0;
         totalExpGained = 0;
 
+        // Reset Dungeon Reward tracking
+        if (DungeonRewardUI.Instance != null)
+            DungeonRewardUI.Instance.ResetTracking();
+
         Debug.Log($"[DungeonWave] Bắt đầu dungeon: {dungeonName}");
 
         // Bắt đầu wave đầu tiên
@@ -1216,6 +1220,13 @@ public class DungeonWaveManager : MonoBehaviour
 
         // Tắt toàn bộ camera — đứng yên khi GUI hiện
         DisableCameraFull();
+
+        // === HIỆN DUNGEON REWARD SCREEN (Genshin style) ===
+        if (DungeonRewardUI.Instance != null)
+        {
+            DungeonRewardUI.Instance.ShowRewards();
+            Debug.Log("[DungeonWave] Showing Dungeon Reward Screen");
+        }
 
         if (dungeonCompleteUI)
         {
