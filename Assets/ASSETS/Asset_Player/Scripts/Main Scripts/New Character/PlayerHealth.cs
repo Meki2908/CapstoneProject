@@ -220,12 +220,14 @@ public class PlayerHealth : MonoBehaviour
         }
 
         // Apply defense reduction from equipment
+        // Defense giảm damage nhưng TỐI ĐA 90% — player luôn nhận ít nhất 10% damage gốc
         float finalDamage = damage;
         if (EquipmentManager.Instance != null)
         {
             float defense = EquipmentManager.Instance.GetTotalDefenseBonus();
-            finalDamage = Mathf.Max(0f, damage - defense); // Defense reduces damage (flat reduction)
-            Debug.Log($"[PlayerHealth] Damage calculation: original={damage}, defense={defense}, final={finalDamage}");
+            float reduced = Mathf.Min(defense, damage * 0.9f); // Defense chặn tối đa 90% damage
+            finalDamage = Mathf.Max(damage * 0.1f, damage - reduced); // Luôn nhận ít nhất 10%
+            Debug.Log($"[PlayerHealth] Damage calculation: original={damage}, defense={defense}, reduced={reduced}, final={finalDamage}");
         }
 
         currentHealth -= finalDamage;
