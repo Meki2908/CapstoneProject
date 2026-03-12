@@ -5,18 +5,20 @@ using System.IO;
 using System.Linq;
 
 /// <summary>
-/// Serializable data structure for inventory items
+/// Serializable data structure for inventory items — lưu cả rarity
 /// </summary>
 [System.Serializable]
 public class InventoryItemData
 {
     public int itemId;
     public int amount;
+    public int rarity; // Rarity enum as int
 
-    public InventoryItemData(int id, int amt)
+    public InventoryItemData(int id, int amt, int rar = 0)
     {
         itemId = id;
         amount = amt;
+        rarity = rar;
     }
 }
 
@@ -37,6 +39,7 @@ public class InventorySaveData
 /// <summary>
 /// Singleton manager for inventory system with JSON save/load
 /// Handles item addition, removal, and persistence
+/// Hỗ trợ Runtime Rarity: cùng 1 item có thể tồn tại nhiều rarity khác nhau
 /// </summary>
 public class InventoryManager : MonoBehaviour
 {
@@ -46,7 +49,7 @@ public class InventoryManager : MonoBehaviour
     [SerializeField] private string saveFileName = "inventory.json";
 
     [Header("Item Database")]
-    [Tooltip("Folder path in Resources where Item ScriptableObjects are stored (e.g., 'Items' for Resources/Items/)")]
+    [Tooltip("Folder path in Resources where Item ScriptableObjects are stored")]
     [SerializeField] private string itemResourcePath = "Items";
     [Tooltip("If not using Resources, manually assign all Item ScriptableObjects here")]
     [SerializeField] private Item[] itemDatabase;
@@ -55,21 +58,43 @@ public class InventoryManager : MonoBehaviour
     [Tooltip("Items available for random testing")]
     [SerializeField] private Item[] testItems;
 
-    // Internal data
-    private Dictionary<int, int> inventoryItems = new Dictionary<int, int>(); // itemId -> amount
-    private Dictionary<int, Item> itemLookup = new Dictionary<int, Item>(); // itemId -> Item SO
+    // Key = (itemId * 100 + rarity) → unique key per item+rarity combo
+    private Dictionary<int, int> inventoryItems = new Dictionary<int, int>();
+    private Dictionary<int, Item> itemLookup = new Dictionary<int, Item>();
 
     // Events
-    public event Action<int, int> OnItemAdded; // itemId, amount
-    public event Action<int, int> OnItemRemoved; // itemId, amount
+    public event Action<int, int, Rarity> OnItemAddedWithRarity; // itemId, amount, rarity
+    public event Action<int, int> OnItemAdded; // backward compat
+    public event Action<int, int> OnItemRemoved;
     public event Action OnInventoryChanged;
+
+    /// <summary>
+    /// Tạo unique key từ itemId + rarity
+    /// </summary>
+    public static int MakeKey(int itemId, Rarity rarity)
+    {
+        return itemId * 100 + (int)rarity;
+    }
+
+    public static int MakeKey(int itemId, int rarityInt)
+    {
+        return itemId * 100 + rarityInt;
+    }
+
+    /// <summary>
+    /// Tách key thành itemId và rarity
+    /// </summary>
+    public static void SplitKey(int key, out int itemId, out Rarity rarity)
+    {
+        itemId = key / 100;
+        rarity = (Rarity)(key % 100);
+    }
 
     private void Awake()
     {
         if (Instance == null)
         {
             Instance = this;
-            // Ensure we're on a root GameObject before calling DontDestroyOnLoad
             if (transform.parent != null)
             {
                 transform.SetParent(null);
@@ -84,14 +109,10 @@ public class InventoryManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Initialize the item database lookup
-    /// </summary>
     private void InitializeItemDatabase()
     {
         itemLookup.Clear();
 
-        // First, try to load from Resources if path is specified
         if (!string.IsNullOrEmpty(itemResourcePath))
         {
             Item[] resourcesItems = Resources.LoadAll<Item>(itemResourcePath);
@@ -105,7 +126,6 @@ public class InventoryManager : MonoBehaviour
             Debug.Log($"[InventoryManager] Loaded {resourcesItems.Length} items from Resources/{itemResourcePath}");
         }
 
-        // Then, add manually assigned items
         if (itemDatabase != null && itemDatabase.Length > 0)
         {
             foreach (Item item in itemDatabase)
@@ -118,7 +138,6 @@ public class InventoryManager : MonoBehaviour
             Debug.Log($"[InventoryManager] Added {itemDatabase.Length} items from manually assigned database");
         }
 
-        // Also add test items to lookup
         if (testItems != null && testItems.Length > 0)
         {
             foreach (Item item in testItems)
@@ -134,26 +153,19 @@ public class InventoryManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Add item to inventory with probability check
+    /// Add item với runtime rarity
     /// </summary>
-    /// <param name="itemId">ID of the item to add</param>
-    /// <param name="amount">Amount to add</param>
-    /// <param name="probability">Probability (0.0 to 1.0) - if random value is greater than probability, item won't be added</param>
-    /// <returns>True if item was added, false if probability check failed</returns>
-    public bool AddItem(int itemId, int amount, float probability = 1.0f)
+    public bool AddItem(int itemId, int amount, Rarity rarity, float probability = 1.0f)
     {
-        // Probability check
         if (probability < 1.0f)
         {
             float randomValue = UnityEngine.Random.Range(0f, 1f);
             if (randomValue > probability)
             {
-                Debug.Log($"[InventoryManager] Item {itemId} failed probability check ({randomValue:F2} > {probability:F2})");
                 return false;
             }
         }
 
-        // Check if item exists in database
         if (!itemLookup.ContainsKey(itemId))
         {
             Debug.LogWarning($"[InventoryManager] Item with ID {itemId} not found in database!");
@@ -161,230 +173,251 @@ public class InventoryManager : MonoBehaviour
         }
 
         Item item = itemLookup[itemId];
+        int key = MakeKey(itemId, rarity);
 
-        // Add to inventory
-        if (inventoryItems.ContainsKey(itemId))
+        if (inventoryItems.ContainsKey(key))
         {
-            // If stackable, add to existing stack (respecting max stack size)
             if (item.isStackable)
             {
-                int currentAmount = inventoryItems[itemId];
+                int currentAmount = inventoryItems[key];
                 int newAmount = currentAmount + amount;
-                
-                // Check max stack size
                 if (item.maxStackSize > 0 && newAmount > item.maxStackSize)
                 {
-                    // If exceeds max stack, create new stack or cap at max
-                    // For simplicity, we'll just cap it (you can modify this logic)
                     newAmount = item.maxStackSize;
-                    Debug.Log($"[InventoryManager] Item {item.itemName} reached max stack size ({item.maxStackSize})");
                 }
-                
-                inventoryItems[itemId] = newAmount;
+                inventoryItems[key] = newAmount;
             }
             else
             {
-                // Not stackable, just add as separate entry (or you can handle differently)
-                inventoryItems[itemId] += amount;
+                inventoryItems[key] += amount;
             }
         }
         else
         {
-            inventoryItems[itemId] = amount;
+            inventoryItems[key] = amount;
         }
 
-        Debug.Log($"[InventoryManager] Added {amount}x {item.itemName} (ID: {itemId}) to inventory");
-        
-        // Trigger events
+        Debug.Log($"[InventoryManager] Added {amount}x {item.itemName} [{rarity}] (ID:{itemId}) to inventory");
+
         OnItemAdded?.Invoke(itemId, amount);
+        OnItemAddedWithRarity?.Invoke(itemId, amount, rarity);
         OnInventoryChanged?.Invoke();
 
-        // Save inventory
         SaveInventory();
-
-        // Refresh UI if InventoryController exists
         RefreshInventoryUI();
 
         return true;
     }
 
     /// <summary>
-    /// Add item using Item ScriptableObject reference
+    /// Add item bằng ID — backward compat (dùng SO rarity)
     /// </summary>
-    public bool AddItem(Item item, int amount, float probability = 1.0f)
+    public bool AddItem(int itemId, int amount, float probability = 1.0f)
     {
-        if (item == null)
-        {
-            Debug.LogWarning("[InventoryManager] Cannot add null item!");
-            return false;
-        }
-        return AddItem(item.id, amount, probability);
+        Rarity r = itemLookup.ContainsKey(itemId) ? itemLookup[itemId].rarity : Rarity.Common;
+        return AddItem(itemId, amount, r, probability);
     }
 
     /// <summary>
-    /// Remove item from inventory
+    /// Add item bằng Item SO — backward compat (dùng SO rarity)
     /// </summary>
-    public bool RemoveItem(int itemId, int amount)
+    public bool AddItem(Item item, int amount, float probability = 1.0f)
     {
-        if (!inventoryItems.ContainsKey(itemId))
+        if (item == null) return false;
+        return AddItem(item.id, amount, item.rarity, probability);
+    }
+
+    /// <summary>
+    /// Add item bằng Item SO + runtime rarity
+    /// </summary>
+    public bool AddItem(Item item, int amount, Rarity rarity, float probability = 1.0f)
+    {
+        if (item == null) return false;
+        return AddItem(item.id, amount, rarity, probability);
+    }
+
+    /// <summary>
+    /// Remove item với rarity cụ thể
+    /// </summary>
+    public bool RemoveItem(int itemId, int amount, Rarity rarity)
+    {
+        int key = MakeKey(itemId, rarity);
+        if (!inventoryItems.ContainsKey(key))
         {
-            Debug.LogWarning($"[InventoryManager] Item {itemId} not found in inventory!");
+            Debug.LogWarning($"[InventoryManager] Item {itemId} [{rarity}] not found in inventory!");
             return false;
         }
 
-        int currentAmount = inventoryItems[itemId];
+        int currentAmount = inventoryItems[key];
         int newAmount = currentAmount - amount;
 
         if (newAmount <= 0)
         {
-            inventoryItems.Remove(itemId);
+            inventoryItems.Remove(key);
         }
         else
         {
-            inventoryItems[itemId] = newAmount;
+            inventoryItems[key] = newAmount;
         }
 
-        Debug.Log($"[InventoryManager] Removed {amount}x item {itemId} from inventory");
-
-        // Trigger events
         OnItemRemoved?.Invoke(itemId, amount);
         OnInventoryChanged?.Invoke();
-
-        // Save inventory
         SaveInventory();
-
-        // Refresh UI
         RefreshInventoryUI();
 
         return true;
     }
 
     /// <summary>
-    /// Get amount of specific item in inventory
+    /// Remove item — backward compat (tìm key đầu tiên match itemId)
     /// </summary>
-    public int GetItemAmount(int itemId)
+    public bool RemoveItem(int itemId, int amount)
     {
-        if (inventoryItems.ContainsKey(itemId))
+        foreach (var kvp in inventoryItems)
         {
-            return inventoryItems[itemId];
+            int id; Rarity r;
+            SplitKey(kvp.Key, out id, out r);
+            if (id == itemId)
+            {
+                return RemoveItem(itemId, amount, r);
+            }
         }
-        return 0;
+        return false;
     }
 
     /// <summary>
-    /// Get all items in inventory as list of (Item, amount) pairs
+    /// Get amount of specific item (tổng tất cả rarity)
     /// </summary>
-    public List<(Item item, int amount)> GetAllItems()
+    public int GetItemAmount(int itemId)
     {
-        List<(Item, int)> result = new List<(Item, int)>();
-        
+        int total = 0;
         foreach (var kvp in inventoryItems)
         {
-            if (itemLookup.ContainsKey(kvp.Key))
+            int id; Rarity r;
+            SplitKey(kvp.Key, out id, out r);
+            if (id == itemId) total += kvp.Value;
+        }
+        return total;
+    }
+
+    /// <summary>
+    /// Get amount of specific item + rarity
+    /// </summary>
+    public int GetItemAmount(int itemId, Rarity rarity)
+    {
+        int key = MakeKey(itemId, rarity);
+        return inventoryItems.ContainsKey(key) ? inventoryItems[key] : 0;
+    }
+
+    /// <summary>
+    /// Get all items in inventory as list of (Item, amount, rarity)
+    /// </summary>
+    public List<(Item item, int amount, Rarity rarity)> GetAllItemsWithRarity()
+    {
+        var result = new List<(Item, int, Rarity)>();
+
+        foreach (var kvp in inventoryItems)
+        {
+            int id; Rarity r;
+            SplitKey(kvp.Key, out id, out r);
+            if (itemLookup.ContainsKey(id))
             {
-                result.Add((itemLookup[kvp.Key], kvp.Value));
+                result.Add((itemLookup[id], kvp.Value, r));
             }
         }
-        
+
         return result;
     }
 
     /// <summary>
-    /// Get Item ScriptableObject by ID
+    /// Get all items — backward compat (gộp tất cả rarity)
     /// </summary>
+    public List<(Item item, int amount)> GetAllItems()
+    {
+        var merged = new Dictionary<int, int>();
+        foreach (var kvp in inventoryItems)
+        {
+            int id; Rarity r;
+            SplitKey(kvp.Key, out id, out r);
+            if (merged.ContainsKey(id))
+                merged[id] += kvp.Value;
+            else
+                merged[id] = kvp.Value;
+        }
+
+        var result = new List<(Item, int)>();
+        foreach (var kvp in merged)
+        {
+            if (itemLookup.ContainsKey(kvp.Key))
+                result.Add((itemLookup[kvp.Key], kvp.Value));
+        }
+        return result;
+    }
+
     public Item GetItemById(int itemId)
     {
-        if (itemLookup.ContainsKey(itemId))
-        {
-            return itemLookup[itemId];
-        }
-        return null;
+        return itemLookup.ContainsKey(itemId) ? itemLookup[itemId] : null;
     }
 
-    /// <summary>
-    /// Check if item exists in inventory
-    /// </summary>
     public bool HasItem(int itemId)
     {
-        return inventoryItems.ContainsKey(itemId) && inventoryItems[itemId] > 0;
+        return GetItemAmount(itemId) > 0;
     }
 
-    /// <summary>
-    /// Refresh inventory UI by finding InventoryController and calling its refresh method
-    /// </summary>
     private void RefreshInventoryUI()
     {
         InventoryController inventoryController = FindFirstObjectByType<InventoryController>();
         if (inventoryController != null)
         {
-            // Call a method to refresh UI (we'll need to add this to InventoryController)
             inventoryController.RefreshInventoryUI();
         }
     }
 
     #region Test Methods
 
-    /// <summary>
-    /// Add a random item from test items (for testing purposes)
-    /// Can be called from UI button OnClick
-    /// </summary>
     public void AddRandomItem()
     {
         Item[] itemsToUse = null;
 
-        // First, try to use test items
         if (testItems != null && testItems.Length > 0)
-        {
             itemsToUse = testItems;
-        }
-        // If no test items, try to use item database
         else if (itemDatabase != null && itemDatabase.Length > 0)
-        {
             itemsToUse = itemDatabase;
-        }
-        // If still no items, try to use items from lookup (already loaded items)
         else if (itemLookup != null && itemLookup.Count > 0)
-        {
             itemsToUse = itemLookup.Values.ToArray();
-        }
 
         if (itemsToUse == null || itemsToUse.Length == 0)
         {
-            Debug.LogWarning("[InventoryManager] No items available! Please assign items to 'Test Items' or 'Item Database' in Inspector, or use the Editor buttons to auto-find items.");
+            Debug.LogWarning("[InventoryManager] No items available!");
             return;
         }
 
-        // Filter out null items
         Item[] validItems = itemsToUse.Where(item => item != null).ToArray();
-        
-        if (validItems.Length == 0)
-        {
-            Debug.LogWarning("[InventoryManager] No valid items found!");
-            return;
-        }
+        if (validItems.Length == 0) return;
 
-        // Pick random item
         Item randomItem = validItems[UnityEngine.Random.Range(0, validItems.Length)];
-        int randomAmount = UnityEngine.Random.Range(1, 4); // Random amount between 1-3
+        int randomAmount = UnityEngine.Random.Range(1, 4);
 
-        AddItem(randomItem, randomAmount, 1.0f);
-        Debug.Log($"[InventoryManager] Added random item: {randomItem.itemName} x{randomAmount}");
+        // Random rarity cho test
+        Rarity randomRarity = (Rarity)UnityEngine.Random.Range(0, 5);
+
+        AddItem(randomItem, randomAmount, randomRarity);
+        Debug.Log($"[InventoryManager] Added random: {randomItem.itemName} [{randomRarity}] x{randomAmount}");
     }
 
     #endregion
 
     #region Save/Load
 
-    /// <summary>
-    /// Save inventory to JSON file
-    /// </summary>
     private void SaveInventory()
     {
         InventorySaveData saveData = new InventorySaveData();
-        
+
         foreach (var kvp in inventoryItems)
         {
-            saveData.items.Add(new InventoryItemData(kvp.Key, kvp.Value));
+            int id; Rarity r;
+            SplitKey(kvp.Key, out id, out r);
+            saveData.items.Add(new InventoryItemData(id, kvp.Value, (int)r));
         }
 
         string json = JsonUtility.ToJson(saveData, true);
@@ -393,7 +426,6 @@ public class InventoryManager : MonoBehaviour
         try
         {
             File.WriteAllText(filePath, json);
-            Debug.Log($"[InventoryManager] Saved inventory to {filePath}");
         }
         catch (Exception e)
         {
@@ -401,16 +433,13 @@ public class InventoryManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Load inventory from JSON file
-    /// </summary>
     private void LoadInventory()
     {
         string filePath = Path.Combine(Application.persistentDataPath, saveFileName);
 
         if (!File.Exists(filePath))
         {
-            Debug.Log($"[InventoryManager] No save file found at {filePath}, starting with empty inventory");
+            Debug.Log($"[InventoryManager] No save file found, starting empty");
             return;
         }
 
@@ -424,9 +453,10 @@ public class InventoryManager : MonoBehaviour
                 inventoryItems.Clear();
                 foreach (var itemData in saveData.items)
                 {
-                    inventoryItems[itemData.itemId] = itemData.amount;
+                    int key = MakeKey(itemData.itemId, itemData.rarity);
+                    inventoryItems[key] = itemData.amount;
                 }
-                Debug.Log($"[InventoryManager] Loaded {inventoryItems.Count} item types from {filePath}");
+                Debug.Log($"[InventoryManager] Loaded {inventoryItems.Count} item slots from save");
             }
         }
         catch (Exception e)
@@ -435,9 +465,6 @@ public class InventoryManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Clear all items from inventory (for testing)
-    /// </summary>
     public void ClearInventory()
     {
         inventoryItems.Clear();
@@ -448,4 +475,3 @@ public class InventoryManager : MonoBehaviour
 
     #endregion
 }
-

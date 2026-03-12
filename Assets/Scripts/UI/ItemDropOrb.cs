@@ -15,6 +15,8 @@ public class ItemDropOrb : MonoBehaviour
     public int quantity = 1;
     [Tooltip("Item ScriptableObject từ inventory system (null = chỉ hiện notification, không thêm vào inventory)")]
     public Item itemSO;
+    [HideInInspector]
+    public Rarity runtimeRarity = Rarity.Common; // Runtime rarity cho inventory
 
     [Header("=== Movement ===")]
     [SerializeField] private float scatterForce = 3f;
@@ -26,7 +28,7 @@ public class ItemDropOrb : MonoBehaviour
 
     [Header("=== Magnet ===")]
     [SerializeField] private float magnetRadius = 4f;
-    [SerializeField] private float magnetSpeed = 8f;
+    [SerializeField] private float magnetSpeed = 4f;
     [SerializeField] private float pickupRadius = 0.8f;
 
     [Header("=== Lifetime ===")]
@@ -177,11 +179,11 @@ public class ItemDropOrb : MonoBehaviour
     // === NHẶT ITEM ===
     private void OnPickup()
     {
-        // 1. Thêm vào inventory nếu có Item SO
+        // 1. Thêm vào inventory nếu có Item SO — dùng runtime rarity
         if (itemSO != null && InventoryManager.Instance != null)
         {
-            InventoryManager.Instance.AddItem(itemSO, quantity);
-            Debug.Log($"[ItemDrop] Added to inventory: {itemSO.itemName} ×{quantity}");
+            InventoryManager.Instance.AddItem(itemSO, quantity, runtimeRarity);
+            Debug.Log($"[ItemDrop] Added to inventory: {itemSO.itemName} [{runtimeRarity}] ×{quantity}");
         }
 
         // 2. Hiện notification
@@ -191,7 +193,7 @@ public class ItemDropOrb : MonoBehaviour
             ItemPickupNotification.Instance.ShowNotification(itemName, icon, rarity, quantity);
         }
 
-        Debug.Log($"[ItemDrop] Picked up: {itemName} ×{quantity} ({rarity})");
+        Debug.Log($"[ItemDrop] Picked up: {itemName} [{runtimeRarity}] ×{quantity}");
         Destroy(gameObject);
     }
 
@@ -605,18 +607,37 @@ public class ItemDropOrb : MonoBehaviour
     /// </summary>
     public void Setup(Item item, int qty = 1)
     {
+        Setup(item, item.rarity, qty);
+    }
+
+    /// <summary>
+    /// Setup với runtime rarity — rarity khác SO rarity
+    /// </summary>
+    public void Setup(Item item, Rarity rtRarity, int qty = 1)
+    {
         itemSO = item;
         itemName = item.itemName;
         itemIcon = item.icon;
         quantity = qty;
+        runtimeRarity = rtRarity;
 
-        // Map Rarity (Item.cs) → ItemRarity (orb system)
-        switch (item.rarity)
+        // Map Rarity → ItemRarity cho visual
+        rarity = RarityToItemRarity(rtRarity);
+    }
+
+    /// <summary>
+    /// Convert Rarity enum → ItemRarity enum
+    /// </summary>
+    public static ItemRarity RarityToItemRarity(Rarity r)
+    {
+        switch (r)
         {
-            case Rarity.Common: rarity = ItemRarity.Common; break;
-            case Rarity.Epic: rarity = ItemRarity.Epic; break;
-            case Rarity.Legendary: rarity = ItemRarity.Legendary; break;
-            default: rarity = ItemRarity.Common; break;
+            case Rarity.Common:    return ItemRarity.Common;
+            case Rarity.Uncommon:  return ItemRarity.Uncommon;
+            case Rarity.Epic:      return ItemRarity.Epic;
+            case Rarity.Legendary: return ItemRarity.Legendary;
+            case Rarity.Mythic:    return ItemRarity.Mythic;
+            default:               return ItemRarity.Common;
         }
     }
 }

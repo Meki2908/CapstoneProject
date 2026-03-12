@@ -118,6 +118,14 @@ public class ShieldActivate : MonoBehaviour
         AddHitObject(center + dir * worldRadius);
     }
 
+    private void OnDisable()
+    {
+        if (enableBlocking)
+        {
+            IsShieldActive = false;
+        }
+    }
+
     private void OnDestroy()
     {
         if (enableBlocking)
@@ -125,5 +133,14 @@ public class ShieldActivate : MonoBehaviour
             IsShieldActive = false;
             Debug.Log("[ShieldActivate] Shield deactivated!");
         }
+    }
+
+    /// <summary>
+    /// Emergency reset — gọi khi shield flag bị stuck
+    /// </summary>
+    public static void ForceReset()
+    {
+        IsShieldActive = false;
+        Debug.LogWarning("[ShieldActivate] Force reset IsShieldActive = false");
     }
 }
