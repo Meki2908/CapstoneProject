@@ -885,7 +885,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 64118892}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a2c328e3464e5d2468ec2837c75a9721, type: 3}
+  m_Script: {fileID: 11500000, guid: 7a0271fc156deaf40b4ef41edd7b6bad, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   soundDatabase: {fileID: 11400000, guid: 802c940bffe72b94a9730a02735a3c0d, type: 2}
@@ -9058,6 +9058,9 @@ MonoBehaviour:
   - I'll be cheering for you! Let's go!
   quest2ReminderLines:
   - The Dungeon Gate is to the North. Don't keep it waiting!
+  defaultLines:
+  - Stay safe out there, adventurer!
+  - The world is full of mysteries yet to be found.
   typewriterEffect: 1
   typewriterSpeed: 0.03
   playerTag: Player
@@ -23862,13 +23865,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c1ffd36f27d57640bfdf0a58bdf6e45, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  targetSceneName: MapSaMac
-  teleportKey: 122
-  promptUI: {fileID: 1112126938}
-  promptText: {fileID: 946141672}
-  promptMessage: 'Press Z to Teleport '
-  portalEffect: {fileID: 0}
+  portalCanvas: {fileID: 0}
+  playerTag: Player
   teleportDelay: 0.5
+  portalEffect: {fileID: 0}
 --- !u!1001 &1042744330
 PrefabInstance:
   m_ObjectHideFlags: 0

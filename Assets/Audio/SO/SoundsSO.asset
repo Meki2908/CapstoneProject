@@ -9,7 +9,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 407a46c2dd407374e904231972cae10a, type: 3}
+  m_Script: {fileID: 11500000, guid: c9afd3923e6b4374fa6fb847aa293a77, type: 3}
   m_Name: SoundsSO
   m_EditorClassIdentifier: 
   sounds:
@@ -30,54 +30,52 @@ MonoBehaviour:
     - {fileID: 8300000, guid: aa00770b8a030ba4a92e151aa4d0b943, type: 3}
   - name: Axe_Normal_1
     volume: 1
-    mixer: {fileID: 0}
-    sounds: []
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: dadeee722a8f9634ebc55ac13c223f39, type: 3}
   - name: Axe_Normal_2
     volume: 1
-    mixer: {fileID: 0}
-    sounds: []
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: d8b5b96c16aae984dbd365803133fe6e, type: 3}
   - name: Axe_Normal_3
     volume: 1
-    mixer: {fileID: 0}
-    sounds: []
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: ce6effd8c28976b49bb0cdec3e95936b, type: 3}
   - name: Axe_Normal_4
     volume: 1
-    mixer: {fileID: 0}
-    sounds: []
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: 78cce888ae0e4754eb6dbf1c48707aee, type: 3}
   - name: Sword_Hit
     volume: 1
-    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    mixer: {fileID: 0}
     sounds: []
   - name: Mage_Normal_1
     volume: 1
-    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
-    sounds:
-    - {fileID: 8300000, guid: 714b2c987b8ff49469b6af44a2806f17, type: 3}
+    mixer: {fileID: 0}
+    sounds: []
   - name: Mage_Normal_2
     volume: 1
-    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
-    sounds:
-    - {fileID: 8300000, guid: d34b7dbfd209a87499ee7eb608cbf051, type: 3}
+    mixer: {fileID: 0}
+    sounds: []
   - name: Mage_Normal_3
     volume: 1
-    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
-    sounds:
-    - {fileID: 8300000, guid: da31d0e7d8682234dbd9dc147ce675fa, type: 3}
+    mixer: {fileID: 0}
+    sounds: []
   - name: Sword_Skill_E
     volume: 1
     mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
-    sounds:
-    - {fileID: 8300000, guid: dd64114c1b56a26409620e33df2269f2, type: 3}
+    sounds: []
   - name: Sword_Skill_R
     volume: 1
-    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
-    sounds:
-    - {fileID: 8300000, guid: ac0059fc066b7d245b0391d37a476b54, type: 3}
+    mixer: {fileID: 0}
+    sounds: []
   - name: Sword_Skill_T
     volume: 1
-    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
-    sounds:
-    - {fileID: 8300000, guid: 56904fd880701304ea063a6be9992c82, type: 3}
+    mixer: {fileID: 0}
+    sounds: []
   - name: Sword_Skill_Q
     volume: 1
     mixer: {fileID: 0}
@@ -85,23 +83,19 @@ MonoBehaviour:
   - name: Axe_Skill_E
     volume: 1
     mixer: {fileID: 0}
-    sounds:
-    - {fileID: 8300000, guid: 962c44222de43bc4b9e52c204d09fa10, type: 3}
-    - {fileID: 8300000, guid: ecf02381a1a388746847331d49963b35, type: 3}
+    sounds: []
   - name: Axe_Skill_R
     volume: 1
-    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    mixer: {fileID: 0}
     sounds: []
   - name: Axe_Skill_T
     volume: 1
-    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
-    sounds:
-    - {fileID: 8300000, guid: a0cf8a7d818682a449c574c2a2b78e34, type: 3}
+    mixer: {fileID: 0}
+    sounds: []
   - name: Axe_Skill_Q
     volume: 1
-    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
-    sounds:
-    - {fileID: 8300000, guid: 9543ca1c08ec4ce4f81577cc2330daac, type: 3}
+    mixer: {fileID: 0}
+    sounds: []
   - name: Mage_Skill_E
     volume: 1
     mixer: {fileID: 0}
@@ -120,9 +114,8 @@ MonoBehaviour:
     sounds: []
   - name: Mage_Projectile_Hit
     volume: 1
-    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
-    sounds:
-    - {fileID: 8300000, guid: 3182ccd399c90b84a907390067ed55f5, type: 3}
+    mixer: {fileID: 0}
+    sounds: []
   - name: Footstep_Default
     volume: 1
     mixer: {fileID: 6968042113699393676, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
@@ -153,6 +146,54 @@ MonoBehaviour:
     mixer: {fileID: 0}
     sounds: []
   - name: Die
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  - name: Sword_Skill_E_2
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  - name: Sword_Skill_R_2
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  - name: Sword_Skill_T_2
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  - name: Sword_Skill_Q_2
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  - name: Axe_Skill_E_2
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  - name: Axe_Skill_R_2
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  - name: Axe_Skill_T_2
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  - name: Axe_Skill_Q_2
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  - name: Mage_Skill_E_2
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  - name: Mage_Skill_R_2
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  - name: Mage_Skill_T_2
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+  - name: Mage_Skill_Q_2
     volume: 1
     mixer: {fileID: 0}
     sounds: []

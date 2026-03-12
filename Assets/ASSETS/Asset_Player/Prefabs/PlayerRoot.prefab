@@ -6117,7 +6117,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3366980736962046046}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.00040920914, y: 0.9971824, z: 0.07481555, w: 0.0054541626}
+  m_LocalRotation: {x: -0.000045621353, y: 0.99719715, z: 0.07481662, w: 0.00060806726}
   m_LocalPosition: {x: 0.09847164, y: 0.5019555, z: 0.89343166}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -7719,6 +7719,7 @@ MonoBehaviour:
   useKey: 40
   autoFindPlayerHealth: 1
   playerHealth: {fileID: 0}
+  healVFXPrefab: {fileID: 0}
 --- !u!1 &4234847724820843981
 GameObject:
   m_ObjectHideFlags: 0
@@ -8315,7 +8316,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 4256775418727665715}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d52643b7fc356c648878b311fb4875c7, type: 3}
+  m_Script: {fileID: 11500000, guid: 716ecda890833f843b1eb238411b310b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   localSource: {fileID: 272874436037373347}
@@ -13385,6 +13386,7 @@ MonoBehaviour:
   lichCount: 0000000000000000000000000100000000000000
   bossCount: 0000000000000000000000000100000002000000
   demonCount: 0000000000000000000000000000000001000000
+  monsterCount: 0000000000000000000000000000000000000000
   totalEnemiesPerWave: 
   enemyNewPrefab: {fileID: 1979783443647161850, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
   player: {fileID: 5765210846976593404}
@@ -13396,6 +13398,7 @@ MonoBehaviour:
   dungeonFailedUI: {fileID: 149271436972047442}
   expRewardText: {fileID: 3590393406812595015}
   statusText: {fileID: 3517967665821432914}
+  deathAnimationDelay: 3
 --- !u!114 &7916833514117021855
 MonoBehaviour:
   m_ObjectHideFlags: 0
