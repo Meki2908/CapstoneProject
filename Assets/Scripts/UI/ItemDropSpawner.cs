@@ -321,28 +321,28 @@ public class ItemDropSpawner : MonoBehaviour
 
         int type = enemyScript != null ? (int)enemyScript.enemyType : 0;
 
-        // Weights: Common, Uncommon, Epic, Legendary, Mythic
+        // Weights: Common, Uncommon, Rare, Epic, Legendary, Mythic
         float[] weights;
         switch (type)
         {
             case 0: // Skeleton
             case 1: // Archer
-                weights = new float[] { 60, 30, 8, 2, 0 };
+                weights = new float[] { 55, 25, 12, 6, 2, 0 };
                 break;
             case 2: // Monster
-                weights = new float[] { 40, 35, 18, 5, 2 };
+                weights = new float[] { 35, 25, 18, 14, 5, 3 };
                 break;
             case 3: // Lich
-                weights = new float[] { 20, 30, 30, 15, 5 };
+                weights = new float[] { 15, 20, 25, 22, 13, 5 };
                 break;
             case 4: // Boss
-                weights = new float[] { 5, 15, 35, 30, 15 };
+                weights = new float[] { 5, 10, 15, 30, 25, 15 };
                 break;
             case 5: // Demon
-                weights = new float[] { 0, 5, 25, 40, 30 };
+                weights = new float[] { 0, 5, 10, 25, 35, 25 };
                 break;
             default:
-                weights = new float[] { 50, 30, 15, 4, 1 };
+                weights = new float[] { 45, 25, 15, 10, 4, 1 };
                 break;
         }
 

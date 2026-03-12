@@ -33,6 +33,9 @@ public class QuestSceneTeleporter : MonoBehaviour
         yield return new WaitForSeconds(delayBeforeLoad);
 
         Debug.Log($"[QuestSceneTeleporter] Loading scene: {targetScene}");
-        SceneManager.LoadScene(targetScene);
+        if (SceneTransitionManager.Instance != null)
+            SceneTransitionManager.Instance.GoToScene(targetScene, "Đang chuyển cảnh...");
+        else
+            SceneManager.LoadScene(targetScene);
     }
 }

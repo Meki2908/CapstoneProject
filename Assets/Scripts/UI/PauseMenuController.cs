@@ -47,6 +47,7 @@ public class PauseMenuController : MonoBehaviour
     private bool wasInventoryActive = true;
     private bool wasHPActive = true;
     private bool wasDungeonWaveUIActive = false;
+    private bool wasCountdownUIActive = false;
     
     void Awake()
     {
@@ -401,6 +402,7 @@ public class PauseMenuController : MonoBehaviour
         }
         if (dwm != null && dwm.countdownUI != null)
         {
+            wasCountdownUIActive = dwm.countdownUI.activeSelf;
             dwm.countdownUI.SetActive(false);
         }
     }
@@ -414,6 +416,10 @@ public class PauseMenuController : MonoBehaviour
         if (dwm != null && dwm.waveNotificationUI != null)
         {
             dwm.waveNotificationUI.SetActive(wasDungeonWaveUIActive);
+        }
+        if (dwm != null && dwm.countdownUI != null)
+        {
+            dwm.countdownUI.SetActive(wasCountdownUIActive);
         }
     }
     

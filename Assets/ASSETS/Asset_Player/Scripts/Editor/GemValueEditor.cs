@@ -20,9 +20,12 @@ public class GemValueEditor : EditorWindow
         EditorGUILayout.HelpBox(
             "This tool will automatically set gemValuePercent for all gem items based on their rarity.\n" +
             "Values:\n" +
-            "Common: Speed 1-2%, CD 5-10%, Dmg 10-15%\n" +
+            "Common: Speed 1-2%, CD 5-8%, Dmg 8-12%\n" +
+            "Uncommon: Speed 2-5%, CD 8-12%, Dmg 12-18%\n" +
+            "Rare: Speed 3-7%, CD 10-15%, Dmg 15-22%\n" +
             "Epic: Speed 5-10%, CD 15-20%, Dmg 25-30%\n" +
-            "Legendary: Speed 20-30%, CD 40-50%, Dmg 50-60%",
+            "Legendary: Speed 15-25%, CD 30-40%, Dmg 40-50%\n" +
+            "Mythic: Speed 25-35%, CD 45-55%, Dmg 55-70%",
             MessageType.Info
         );
 
@@ -73,8 +76,24 @@ public class GemValueEditor : EditorWindow
                             switch (item.gemType)
                             {
                                 case GemType.MovementSpeed: value = 0.02f; break;
-                                case GemType.CooldownReduction: value = 0.10f; break;
-                                case GemType.Damage: value = 0.15f; break;
+                                case GemType.CooldownReduction: value = 0.08f; break;
+                                case GemType.Damage: value = 0.12f; break;
+                            }
+                            break;
+                        case Rarity.Uncommon:
+                            switch (item.gemType)
+                            {
+                                case GemType.MovementSpeed: value = 0.05f; break;
+                                case GemType.CooldownReduction: value = 0.12f; break;
+                                case GemType.Damage: value = 0.18f; break;
+                            }
+                            break;
+                        case Rarity.Rare:
+                            switch (item.gemType)
+                            {
+                                case GemType.MovementSpeed: value = 0.07f; break;
+                                case GemType.CooldownReduction: value = 0.15f; break;
+                                case GemType.Damage: value = 0.22f; break;
                             }
                             break;
                         case Rarity.Epic:
@@ -88,9 +107,17 @@ public class GemValueEditor : EditorWindow
                         case Rarity.Legendary:
                             switch (item.gemType)
                             {
-                                case GemType.MovementSpeed: value = 0.30f; break;
-                                case GemType.CooldownReduction: value = 0.50f; break;
-                                case GemType.Damage: value = 0.60f; break;
+                                case GemType.MovementSpeed: value = 0.25f; break;
+                                case GemType.CooldownReduction: value = 0.40f; break;
+                                case GemType.Damage: value = 0.50f; break;
+                            }
+                            break;
+                        case Rarity.Mythic:
+                            switch (item.gemType)
+                            {
+                                case GemType.MovementSpeed: value = 0.35f; break;
+                                case GemType.CooldownReduction: value = 0.55f; break;
+                                case GemType.Damage: value = 0.70f; break;
                             }
                             break;
                     }

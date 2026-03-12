@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.SceneManagement;  // Để sử dụng SceneManagement
 
 public class TriggerCanvas : MonoBehaviour
@@ -39,7 +39,10 @@ public class TriggerCanvas : MonoBehaviour
         if (isInTriggerZone && Input.GetKeyDown(KeyCode.F))
         {
             // Chuyển sang Scene mới
-            SceneManager.LoadScene(sceneName);
+            if (SceneTransitionManager.Instance != null)
+                SceneTransitionManager.Instance.GoToScene(sceneName, "Đang chuyển cảnh...");
+            else
+                SceneManager.LoadScene(sceneName);
         }
     }
 }

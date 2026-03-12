@@ -46,7 +46,10 @@ public class SceneTeleportButton : MonoBehaviour
             Cursor.visible = false;
             Cursor.lockState = CursorLockMode.Locked;
 
-            SceneManager.LoadScene(targetSceneName);
+            if (SceneTransitionManager.Instance != null)
+                SceneTransitionManager.Instance.GoToScene(targetSceneName, "Đang chuyển vùng...");
+            else
+                SceneManager.LoadScene(targetSceneName);
         }
         else
         {

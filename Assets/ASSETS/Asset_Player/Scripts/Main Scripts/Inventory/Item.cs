@@ -1,7 +1,7 @@
 using UnityEngine;
 
 public enum ItemType { Equipment, Consumable, Material, Gems }
-public enum Rarity { Common, Uncommon, Epic, Legendary, Mythic }
+public enum Rarity { Common, Uncommon, Rare, Epic, Legendary, Mythic }
 public enum GemType { MovementSpeed, CooldownReduction, Damage }
 public enum EquipmentSlotType { Head, Body, Legs, Accessory }
 
@@ -65,6 +65,7 @@ public class Item : ScriptableObject
         {
             case Rarity.Common:    return 1.0f;
             case Rarity.Uncommon:  return 1.5f;
+            case Rarity.Rare:      return 1.75f;
             case Rarity.Epic:      return 2.0f;
             case Rarity.Legendary: return 3.0f;
             case Rarity.Mythic:    return 5.0f;
@@ -89,6 +90,7 @@ public class Item : ScriptableObject
         {
             case Rarity.Common:    return "#FFFFFF"; // Trắng
             case Rarity.Uncommon:  return "#00FF00"; // Xanh lá
+            case Rarity.Rare:      return "#3498DB"; // Xanh dương
             case Rarity.Epic:      return "#9B59B6"; // Tím
             case Rarity.Legendary: return "#FFD700"; // Vàng
             case Rarity.Mythic:    return "#FF4444"; // Đỏ
@@ -128,6 +130,14 @@ public class Item : ScriptableObject
                     case GemType.MovementSpeed: min = 0.02f; max = 0.05f; break;
                     case GemType.CooldownReduction: min = 0.08f; max = 0.12f; break;
                     case GemType.Damage: min = 0.12f; max = 0.18f; break;
+                }
+                break;
+            case Rarity.Rare:
+                switch (gemType)
+                {
+                    case GemType.MovementSpeed: min = 0.03f; max = 0.07f; break;
+                    case GemType.CooldownReduction: min = 0.10f; max = 0.15f; break;
+                    case GemType.Damage: min = 0.15f; max = 0.22f; break;
                 }
                 break;
             case Rarity.Epic:

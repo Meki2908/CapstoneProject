@@ -27191,6 +27191,7 @@ GameObject:
   - component: {fileID: 6544144954998574600}
   - component: {fileID: 7395996711300719956}
   - component: {fileID: 2243221323192493820}
+  - component: {fileID: 6553412158127813921}
   m_Layer: 5
   m_Name: Canvas_Menu
   m_TagString: Untagged
@@ -27458,6 +27459,26 @@ MonoBehaviour:
   mainMenuSceneName: UI_Game
   cursorVisibleOnPause: 1
   openMenuAction: {fileID: 5750602332980554053, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+--- !u!114 &6553412158127813921
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6154244371206602844}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b4cebbabe3fe254a953ae2bbc4b0c27, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mainMapScene: Map_Chinh
+  dungeonSaMacScene: MapSaMac
+  uiGameScene: UI_Game
+  loadingPanel: {fileID: 7606869318059233761}
+  loadingBar: {fileID: 2110950498298947439}
+  loadingText: {fileID: 7889148062182485870}
+  fadeSpeed: 2
+  defaultLoadingMessage: Loading...
 --- !u!1 &6204518640334523787
 GameObject:
   m_ObjectHideFlags: 0
@@ -32924,7 +32945,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 9015790023497601386}
-  - component: {fileID: 3066923905154973567}
   m_Layer: 5
   m_Name: Panel_GUILoading
   m_TagString: Untagged
@@ -32955,23 +32975,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: -65.06055}
   m_SizeDelta: {x: -1920.0001, y: -949.87964}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &3066923905154973567
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7606869318059233761}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d0b148fe25e99eb48b9724523833bab1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_Delegates:
-  - eventID: 4
-    callback:
-      m_PersistentCalls:
-        m_Calls: []
 --- !u!1 &7682792597669530580
 GameObject:
   m_ObjectHideFlags: 0

@@ -227,9 +227,12 @@ public class ItemPickupNotificationTest : MonoBehaviour
     {
         switch (r)
         {
-            case Rarity.Common: return ItemRarity.Common;
-            case Rarity.Epic: return ItemRarity.Epic;
+            case Rarity.Common:    return ItemRarity.Common;
+            case Rarity.Uncommon:  return ItemRarity.Uncommon;
+            case Rarity.Rare:      return ItemRarity.Rare;
+            case Rarity.Epic:      return ItemRarity.Epic;
             case Rarity.Legendary: return ItemRarity.Legendary;
+            case Rarity.Mythic:    return ItemRarity.Mythic;
             default: return ItemRarity.Common;
         }
     }
