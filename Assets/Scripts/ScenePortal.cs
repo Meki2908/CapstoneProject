@@ -11,10 +11,13 @@ using TMPro;
 public class ScenePortal : MonoBehaviour
 {
     [Header("=== UI REFERENCES ===")]
-    [Tooltip("Danh sách các UI có thể chọn")]
+    [Tooltip("UI mặc định sẽ hiển thị. Nếu bạn chỉ có 1 UI, hãy kéo vào đây.")]
+    public GameObject portalCanvas;
+
+    [Tooltip("Danh sách các UI khác (dùng khi bạn muốn mỗi cổng hiện 1 UI khác nhau)")]
     public GameObject[] availableUIs;
     
-    [Tooltip("Chỉ số của UI được chọn hiện tại (0, 1, 2, ...)")]
+    [Tooltip("Chỉ số của UI trong mảng availableUIs sẽ được chọn (nếu dùng mảng)")]
     public int selectedUIIndex = 0;
 
     [Header("=== SETTINGS ===")]
@@ -31,14 +34,8 @@ public class ScenePortal : MonoBehaviour
 
     void Start()
     {
-        // Ẩn tất cả UI lúc đầu
-        if (availableUIs != null)
-        {
-            foreach (var ui in availableUIs)
-            {
-                if (ui != null) ui.SetActive(false);
-            }
-        }
+        // Ẩn tất cả UI lúc đầu để tránh bị hiện đè
+        HideAllUIs();
 
         if (portalEffect != null)
         {
@@ -48,6 +45,19 @@ public class ScenePortal : MonoBehaviour
         // Tự động thiết lập Trigger nếu chưa có
         Collider col = GetComponent<Collider>();
         if (col != null) col.isTrigger = true;
+    }
+
+    private void HideAllUIs()
+    {
+        if (portalCanvas != null) portalCanvas.SetActive(false);
+        
+        if (availableUIs != null)
+        {
+            foreach (var ui in availableUIs)
+            {
+                if (ui != null) ui.SetActive(false);
+            }
+        }
     }
 
     private void OnTriggerEnter(Collider other)
@@ -70,42 +80,49 @@ public class ScenePortal : MonoBehaviour
 
     public void OpenPortalUI()
     {
-        if (availableUIs != null && selectedUIIndex >= 0 && selectedUIIndex < availableUIs.Length)
+        GameObject uiToShow = GetCurrentUI();
+
+        if (uiToShow != null)
         {
-            GameObject selectedUI = availableUIs[selectedUIIndex];
-            if (selectedUI != null)
-            {
-                selectedUI.SetActive(true);
-                
-                // Hiển thị chuột để chọn
-                Cursor.visible = true;
-                Cursor.lockState = CursorLockMode.None;
-            }
-            else
-            {
-                Debug.LogWarning($"[ScenePortal] UI tại index {selectedUIIndex} đang bị trống!");
-            }
+            uiToShow.SetActive(true);
+            
+            // Hiển thị chuột để chọn
+            Cursor.visible = true;
+            Cursor.lockState = CursorLockMode.None;
         }
         else
         {
-            Debug.LogWarning("[ScenePortal] Chưa gán availableUIs hoặc index không hợp lệ!");
+            Debug.LogWarning("[ScenePortal] Không tìm thấy UI nào để hiển thị! Hãy gán portalCanvas hoặc availableUIs.");
         }
     }
 
     public void ClosePortalUI()
     {
-        if (availableUIs != null && selectedUIIndex >= 0 && selectedUIIndex < availableUIs.Length)
+        GameObject uiToHide = GetCurrentUI();
+
+        if (uiToHide != null)
         {
-            GameObject selectedUI = availableUIs[selectedUIIndex];
-            if (selectedUI != null)
+            uiToHide.SetActive(false);
+            
+            // Khóa lại chuột để chơi tiếp
+            Cursor.visible = false;
+            Cursor.lockState = CursorLockMode.Locked;
+        }
+    }
+
+    private GameObject GetCurrentUI()
+    {
+        // Ưu tiên dùng mảng nếu có phần tử
+        if (availableUIs != null && availableUIs.Length > 0)
+        {
+            if (selectedUIIndex >= 0 && selectedUIIndex < availableUIs.Length)
             {
-                selectedUI.SetActive(false);
-                
-                // Khóa lại chuột để chơi tiếp
-                Cursor.visible = false;
-                Cursor.lockState = CursorLockMode.Locked;
+                return availableUIs[selectedUIIndex];
             }
         }
+        
+        // Nếu mảng trống hoặc index sai, dùng portalCanvas đơn lẻ
+        return portalCanvas;
     }
 
     /// <summary>
