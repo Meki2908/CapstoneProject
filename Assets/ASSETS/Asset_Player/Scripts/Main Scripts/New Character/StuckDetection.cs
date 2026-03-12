@@ -38,7 +38,8 @@ public class StuckDetection : MonoBehaviour
         if (character == null || controller == null) return;
 
         // Skip if already dashing or in certain states
-        if (character.IsDashing || character.movementSM.currentState == character.getHit) return;
+        // Skip if already dashing or in certain states
+        if (character.IsDashing || character.movementSM == null || character.movementSM.currentState == null || character.movementSM.currentState == character.getHit) return;
 
         DetectStuckCondition();
         HandleStuckEscape();

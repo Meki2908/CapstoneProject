@@ -115,20 +115,34 @@ public class PortalUIController : MonoBehaviour
             return;
         }
 
-        Debug.Log($"[Portal] Đang dịch chuyển Player {currentPlayer.name} đến {destination.name}...");
+        Debug.Log($"[Portal] Đang dịch chuyển Player {currentPlayer.name} từ {currentPlayer.position} đến {destination.name} tại {destination.position}...");
+
+        // Tìm CharacterController trên currentPlayer hoặc các con/cha của nó
+        CharacterController cc = currentPlayer.GetComponent<CharacterController>();
+        if (cc == null) cc = currentPlayer.GetComponentInChildren<CharacterController>();
+        if (cc == null) cc = currentPlayer.GetComponentInParent<CharacterController>();
+
+        // Nếu tìm thấy CC ở cha/con, cập nhật currentPlayer thành object đó để dịch chuyển đúng object gốc
+        if (cc != null && cc.transform != currentPlayer)
+        {
+            Debug.Log($"[Portal] Tìm thấy CharacterController trên {cc.name}, chuyển mục tiêu dịch chuyển sang object này.");
+            currentPlayer = cc.transform;
+        }
 
         // Vô hiệu hóa CharacterController trước khi thay đổi Position
-        CharacterController cc = currentPlayer.GetComponent<CharacterController>();
         if (cc != null) cc.enabled = false;
 
         // Dịch chuyển
         currentPlayer.position = destination.position;
         currentPlayer.rotation = destination.rotation;
 
+        // Đảm bảo Unity cập nhật vị trí vật lý ngay lập tức
+        Physics.SyncTransforms();
+
         // Bật lại CharacterController
         if (cc != null) cc.enabled = true;
 
         ClosePortalMenu();
-        Debug.Log("[Portal] Dịch chuyển hoàn tất.");
+        Debug.Log($"[Portal] Dịch chuyển hoàn tất. Vị trí hiện tại: {currentPlayer.position}");
     }
 }

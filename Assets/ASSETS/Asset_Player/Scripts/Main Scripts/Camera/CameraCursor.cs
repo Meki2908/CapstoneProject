@@ -58,7 +58,6 @@ namespace MovementSystem
         {
             if (startHidden)
             {
-                // Delay 1 frame để đảm bảo scene đã khởi tạo xong
                 StartCoroutine(DelayedForceHideCursor());
             }
         }
@@ -77,7 +76,7 @@ namespace MovementSystem
             isCursorHidden = true;
             Cursor.visible = false;
             Cursor.lockState = CursorLockMode.Locked;
-            SetCinemachineInput(true); // Enable camera input khi cursor ẩn
+            SetCinemachineInput(true);
         }
 
         private void Update()
@@ -136,7 +135,6 @@ namespace MovementSystem
         /// </summary>
         private void SetCinemachineInput(bool enableInput)
         {
-            // Tự tìm lại inputProvider nếu bị null (sau scene transition)
             if (inputProvider == null)
             {
                 inputProvider = FindFirstObjectByType<CinemachineInputProvider>();
