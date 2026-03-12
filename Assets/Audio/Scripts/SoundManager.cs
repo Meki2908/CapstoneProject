@@ -71,7 +71,13 @@ public class SoundManager : MonoBehaviour
 
     public static void PlaySkill(WeaponType weaponType, AbilityInput input, AudioSource source = null, float volume = 1f)
     {
-        SoundType soundType = GetSkillSoundType(weaponType, input);
+        PlaySkill(weaponType, input, 0, source, volume);
+    }
+
+    /// <param name="phase">0 = first sound in motion, 1 = second sound (e.g. double slash)</param>
+    public static void PlaySkill(WeaponType weaponType, AbilityInput input, int phase, AudioSource source = null, float volume = 1f)
+    {
+        SoundType soundType = GetSkillSoundType(weaponType, input, phase);
         PlaySound(soundType, source, volume);
     }
 
@@ -83,7 +89,7 @@ public class SoundManager : MonoBehaviour
                 PlaySound(SoundType.Sword_Hit, source, volume);
                 break;
             case WeaponType.Axe:
-                PlaySound(SoundType.Axe_Hit, source, volume);
+                PlaySound(SoundType.Sword_Hit, source, volume);
                 break;
         }
     }
@@ -169,39 +175,40 @@ public class SoundManager : MonoBehaviour
         }
     }
 
-    private static SoundType GetSkillSoundType(WeaponType weaponType, AbilityInput input)
+    private static SoundType GetSkillSoundType(WeaponType weaponType, AbilityInput input, int phase = 0)
     {
+        bool usePhase2 = phase != 0;
         switch (weaponType)
         {
             case WeaponType.Sword:
                 return input switch
                 {
-                    AbilityInput.E => SoundType.Sword_Skill_E,
-                    AbilityInput.R => SoundType.Sword_Skill_R,
-                    AbilityInput.T => SoundType.Sword_Skill_T,
-                    AbilityInput.Q_Ultimate => SoundType.Sword_Skill_Q,
-                    _ => SoundType.Sword_Skill_E
+                    AbilityInput.E => usePhase2 ? SoundType.Sword_Skill_E_2 : SoundType.Sword_Skill_E,
+                    AbilityInput.R => usePhase2 ? SoundType.Sword_Skill_R_2 : SoundType.Sword_Skill_R,
+                    AbilityInput.T => usePhase2 ? SoundType.Sword_Skill_T_2 : SoundType.Sword_Skill_T,
+                    AbilityInput.Q_Ultimate => usePhase2 ? SoundType.Sword_Skill_Q_2 : SoundType.Sword_Skill_Q,
+                    _ => usePhase2 ? SoundType.Sword_Skill_E_2 : SoundType.Sword_Skill_E
                 };
             case WeaponType.Axe:
                 return input switch
                 {
-                    AbilityInput.E => SoundType.Axe_Skill_E,
-                    AbilityInput.R => SoundType.Axe_Skill_R,
-                    AbilityInput.T => SoundType.Axe_Skill_T,
-                    AbilityInput.Q_Ultimate => SoundType.Axe_Skill_Q,
-                    _ => SoundType.Axe_Skill_E
+                    AbilityInput.E => usePhase2 ? SoundType.Axe_Skill_E_2 : SoundType.Axe_Skill_E,
+                    AbilityInput.R => usePhase2 ? SoundType.Axe_Skill_R_2 : SoundType.Axe_Skill_R,
+                    AbilityInput.T => usePhase2 ? SoundType.Axe_Skill_T_2 : SoundType.Axe_Skill_T,
+                    AbilityInput.Q_Ultimate => usePhase2 ? SoundType.Axe_Skill_Q_2 : SoundType.Axe_Skill_Q,
+                    _ => usePhase2 ? SoundType.Axe_Skill_E_2 : SoundType.Axe_Skill_E
                 };
             case WeaponType.Mage:
                 return input switch
                 {
-                    AbilityInput.E => SoundType.Mage_Skill_E,
-                    AbilityInput.R => SoundType.Mage_Skill_R,
-                    AbilityInput.T => SoundType.Mage_Skill_T,
-                    AbilityInput.Q_Ultimate => SoundType.Mage_Skill_Q,
-                    _ => SoundType.Mage_Skill_E
+                    AbilityInput.E => usePhase2 ? SoundType.Mage_Skill_E_2 : SoundType.Mage_Skill_E,
+                    AbilityInput.R => usePhase2 ? SoundType.Mage_Skill_R_2 : SoundType.Mage_Skill_R,
+                    AbilityInput.T => usePhase2 ? SoundType.Mage_Skill_T_2 : SoundType.Mage_Skill_T,
+                    AbilityInput.Q_Ultimate => usePhase2 ? SoundType.Mage_Skill_Q_2 : SoundType.Mage_Skill_Q,
+                    _ => usePhase2 ? SoundType.Mage_Skill_E_2 : SoundType.Mage_Skill_E
                 };
             default:
-                return SoundType.Sword_Skill_E;
+                return usePhase2 ? SoundType.Sword_Skill_E_2 : SoundType.Sword_Skill_E;
         }
     }
 }

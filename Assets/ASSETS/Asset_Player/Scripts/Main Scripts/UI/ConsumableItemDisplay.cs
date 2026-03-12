@@ -33,6 +33,10 @@ public class ConsumableItemDisplay : MonoBehaviour
     [SerializeField] private bool autoFindPlayerHealth = true;
     [SerializeField] private PlayerHealth playerHealth;
 
+    [Header("Heal VFX")]
+    [Tooltip("Kéo mDAX_Heal.prefab từ FX/DAX/Magic Packs Vol1/Prefabs/+Heal - 6/Mobile/")]
+    [SerializeField] private GameObject healVFXPrefab;
+
     // Internal state
     private float currentCooldown = 0f;
     private bool isOnCooldown = false;
@@ -174,13 +178,6 @@ public class ConsumableItemDisplay : MonoBehaviour
             return;
         }
 
-        // Check if player is at full health
-        if (playerHealth.CurrentHealth >= playerHealth.MaxHealth)
-        {
-            Debug.Log("[ConsumableItemDisplay] Player is already at full health!");
-            return;
-        }
-
         // Check if we have health potions
         if (InventoryManager.Instance == null)
         {
@@ -212,6 +209,12 @@ public class ConsumableItemDisplay : MonoBehaviour
 
         // Remove one potion from inventory
         InventoryManager.Instance.RemoveItem(healthPotionItemId, 1);
+
+        // === HIỆU ỨNG HỒI MÁU ===
+        if (playerHealth != null)
+        {
+            HealingVFX.Play(playerHealth.transform, healVFXPrefab);
+        }
 
         // Start cooldown
         isOnCooldown = true;

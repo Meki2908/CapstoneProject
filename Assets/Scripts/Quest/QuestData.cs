@@ -7,16 +7,16 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "QuestData", menuName = "Quest/QuestData", order = 0)]
 public class QuestData : ScriptableObject
 {
-    [Header("Thông tin cơ bản")]
-    public int questID;             // Phải khớp với số 1..5 trong PlayerPrefs QUEST_N
+    [Header("Basic Information")]
+    public int questID;             // Must match Quest ID 1..5
     public string questTitle;
     [TextArea(2, 4)]
     public string questDescription;
 
-    [Header("Các bước nhiệm vụ")]
-    public QuestStep[] steps;       // Các bước tuần tự của nhiệm vụ
+    [Header("Quest Steps")]
+    public QuestStep[] steps;       // Sequential steps for the quest
 
-    [Header("Phần thưởng")]
+    [Header("Rewards")]
     public int rewardGold;
     public int rewardExp;
 }
@@ -27,11 +27,11 @@ public class QuestData : ScriptableObject
 [System.Serializable]
 public class QuestStep
 {
-    public string stepTitle;        // Tiêu đề bước
+    public string stepTitle;        // Step Title
     [TextArea(1, 3)]
-    public string instruction;      // Hướng dẫn hiển thị cho người chơi
+    public string instruction;      // Instruction shown to player
 
     [Header("Objective Marker")]
-    public string targetTag;        // Tag của GameObject cần đến/tương tác (VD: "NPC_Leona", "DungeonGate")
-    public string targetSceneName;  // Tên scene nếu cần (rỗng nếu cùng scene)
+    public string targetTag;        // Target GameObject tag (e.g., "NPC_Leona")
+    public string targetSceneName;  // Scene name (empty if same scene)
 }

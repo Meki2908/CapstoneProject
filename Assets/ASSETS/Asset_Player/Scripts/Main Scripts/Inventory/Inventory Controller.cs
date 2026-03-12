@@ -447,11 +447,11 @@ public class InventoryController : MonoBehaviour
         }
         currentItemUIs.Clear();
 
-        // Get all items from InventoryManager
-        var allItems = InventoryManager.Instance.GetAllItems();
+        // Get all items with rarity from InventoryManager
+        var allItems = InventoryManager.Instance.GetAllItemsWithRarity();
 
-        // Create UI for each item
-        foreach (var (item, amount) in allItems)
+        // Create UI for each item+rarity combo
+        foreach (var (item, amount, rarity) in allItems)
         {
             if (item == null) continue;
 
@@ -460,12 +460,11 @@ public class InventoryController : MonoBehaviour
 
             if (itemUI != null)
             {
-                itemUI.Initialize(item, amount, this);
+                itemUI.Initialize(item, amount, this, rarity);
                 currentItemUIs.Add(itemUI);
             }
             else
             {
-                Debug.LogWarning($"[InventoryController] ItemUI component not found on prefab for {item.itemName}!");
                 Destroy(itemUIObject);
             }
         }
@@ -475,8 +474,6 @@ public class InventoryController : MonoBehaviour
         {
             UpdateItemRemoveButtons();
         }
-
-        Debug.Log($"[InventoryController] Refreshed inventory UI - {allItems.Count} item types displayed");
     }
 
     private void OnDestroy()

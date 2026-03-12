@@ -493,7 +493,7 @@ namespace Unity.FantasyKingdom
             }
             
             Cursor.lockState = lockMouse ? CursorLockMode.Locked : CursorLockMode.None;
-            // Cursor.visible managed by CameraCursor.cs (ALT toggle) - không set ở đây
+            Cursor.visible = lockMouse ? false : true;
         }
 
         public float Remap(float value, float from1, float to1, float from2, float to2)

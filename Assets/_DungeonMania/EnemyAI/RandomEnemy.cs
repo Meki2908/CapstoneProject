@@ -70,16 +70,16 @@ public class RandomEnemy : MonoBehaviour{
         }
         
         // Sử dụng GetRemainingEnemyCounts để KHÔNG reset counters
-        int skeletCount, lichCount, bossCount, demonCount;
-        DungeonWaveManager.Instance.GetRemainingEnemyCounts(out skeletCount, out lichCount, out bossCount, out demonCount);
+        int skeletCount, monsterCount, lichCount, bossCount, demonCount;
+        DungeonWaveManager.Instance.GetRemainingEnemyCounts(out skeletCount, out monsterCount, out lichCount, out bossCount, out demonCount);
         
         // KHÔNG reset counters ở đây nữa - đã được ConfigureGamePlayManager reset rồi
-        // GamePlayManager.archers, boss, lich, demon đã được theo dõi trong EnemyChooseNewWave
+        // GamePlayManager.archers, monsteres, boss, lich, demon đã được theo dõi trong EnemyChooseNewWave
         
-        EnemyChooseNewWave(skeletCount, lichCount, bossCount, demonCount);
+        EnemyChooseNewWave(skeletCount, monsterCount, lichCount, bossCount, demonCount);
     }
     
-    void EnemyChooseNewWave(int skeletCount, int lichCount, int bossCount, int demonCount)
+    void EnemyChooseNewWave(int skeletCount, int monsterCount, int lichCount, int bossCount, int demonCount)
     {
         // Kiểm tra bounds cho mảng enemy trước
         if (enemys == null || enemys.Length == 0) {
@@ -90,7 +90,7 @@ public class RandomEnemy : MonoBehaviour{
         // Reset index về giá trị mặc định an toàn
         index = 0;
 
-        // Ưu tiên theo thứ tự: Demon > Boss > Lich > Skelet
+        // Ưu tiên theo thứ tự: Demon > Boss > Lich > Monster > Skelet
         // Demon: index 10
         if (GamePlayManager.demon < demonCount) {
             index = 10; // Demon
@@ -106,6 +106,11 @@ public class RandomEnemy : MonoBehaviour{
             index = 5;
             GamePlayManager.lich++;
         }
+        // Monster: index 2-4 (Orc, Troll, Guul)
+        else if (GamePlayManager.monsteres < monsterCount) {
+            index = Random.Range(2, 5); // Random giữa Orc, Troll, Guul
+            GamePlayManager.monsteres++;
+        }
         // Skelet: index 0-1 (Skeleton, skeleton_archer)
         else if (GamePlayManager.archers < skeletCount) {
             index = Random.Range(0, 2); // Random giữa Skeleton và Archer
@@ -113,12 +118,12 @@ public class RandomEnemy : MonoBehaviour{
         }
         else {
             // Fallback: Chọn enemy ngẫu nhiên nếu tất cả các loại đều đạt giới hạn
-            // Ưu tiên chọn từ các loại đã có trong wave
             List<int> availableIndices = new List<int>();
             
             if (demonCount > 0) availableIndices.Add(10);
             if (bossCount > 0) availableIndices.AddRange(new int[] {6, 7, 8, 9});
             if (lichCount > 0) availableIndices.Add(5);
+            if (monsterCount > 0) availableIndices.AddRange(new int[] {2, 3, 4});
             if (skeletCount > 0) availableIndices.AddRange(new int[] {0, 1});
             
             if (availableIndices.Count > 0) {

@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.InputSystem;
 public class Character : MonoBehaviour
 {
@@ -155,6 +155,8 @@ public class Character : MonoBehaviour
 
     private void Update()
     {
+        if (movementSM == null || movementSM.currentState == null) return;
+
         movementSM.currentState.HandleInput();
 
         movementSM.currentState.LogicUpdate();

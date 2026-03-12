@@ -21,6 +21,7 @@ public class ItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     [Header("Item Data")]
     private Item itemData;
     private int itemAmount = 1;
+    private Rarity runtimeRarity = Rarity.Common; // Runtime rarity
 
     // Reference to inventory controller for removal
     private InventoryController inventoryController;
@@ -61,9 +62,18 @@ public class ItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     /// </summary>
     public void Initialize(Item item, int amount, InventoryController controller)
     {
+        Initialize(item, amount, controller, item.rarity);
+    }
+
+    /// <summary>
+    /// Initialize with runtime rarity
+    /// </summary>
+    public void Initialize(Item item, int amount, InventoryController controller, Rarity rarity)
+    {
         itemData = item;
         itemAmount = amount;
         inventoryController = controller;
+        runtimeRarity = rarity;
 
         UpdateUI();
     }
@@ -84,7 +94,8 @@ public class ItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         // Update name
         if (itemNameText != null)
         {
-            itemNameText.text = itemData.itemName;
+            string color = Item.GetRarityColorHex(runtimeRarity);
+            itemNameText.text = $"<color={color}>{itemData.itemName}</color>";
         }
 
         // Update amount (only show if stackable and amount > 1)
@@ -150,6 +161,14 @@ public class ItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     public int GetItemAmount()
     {
         return itemAmount;
+    }
+
+    /// <summary>
+    /// Get the runtime rarity
+    /// </summary>
+    public Rarity GetRuntimeRarity()
+    {
+        return runtimeRarity;
     }
 
     /// <summary>

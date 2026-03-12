@@ -418,6 +418,7 @@ public class EnemyScript : MonoBehaviour {
     public void RotateToPlayer(){
         if (target == null) return;
         direction = target.position - transform.position;
+        direction.y = 0f; // Chỉ xoay ngang — tránh enemy nghiêng/ngã khi player nhảy
         if (direction.sqrMagnitude > 0.001f) {
             transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(direction), 1f);
         }

@@ -110,6 +110,15 @@ public class EnemyDeathBridge : MonoBehaviour
         }
         
         // Hủy enemy sau khi chết (với delay nhỏ để hoàn thành animation nếu có)
+        // === SPAWN ITEM DROPS (Genshin-style) ===
+        var dropSpawner = GetComponent<ItemDropSpawner>();
+        if (dropSpawner == null) dropSpawner = GetComponentInParent<ItemDropSpawner>();
+        if (dropSpawner != null)
+        {
+            dropSpawner.SpawnDrops(transform.position);
+            Debug.Log("[EnemyDeathBridge] Item drops spawned!");
+        }
+
         StartCoroutine(DestroyEnemyAfterDelay());
     }
     
