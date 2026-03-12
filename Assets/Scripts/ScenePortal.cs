@@ -113,6 +113,8 @@ public class ScenePortal : MonoBehaviour
     {
         if (SceneTransitionManager.Instance != null)
         {
+            // Ẩn portal UI trước khi chuyển
+            ClosePortalUI();
             // SceneTransitionManager tự có fade → không cần delay thêm
             SceneTransitionManager.Instance.GoToScene(sceneName, "Đang chuyển vùng...");
         }

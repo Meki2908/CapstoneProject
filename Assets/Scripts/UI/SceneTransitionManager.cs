@@ -156,20 +156,25 @@ public class SceneTransitionManager : MonoBehaviour
         // FIX #3: Tìm lại loading panel trong scene mới
         ForceRefreshLoadingPanel();
 
-        // FIX #18: Phải Show panel mới (alpha=1) trước khi FadeOut
-        // Panel cũ đã bị destroy khi scene load, panel mới mặc định ẩn
         if (loadingPanel != null)
         {
+            // FIX #18: Show panel mới (alpha=1) trước FadeOut
             loadingPanel.SetActive(true);
             if (fadeCanvasGroup != null)
-                fadeCanvasGroup.alpha = 1f; // Che toàn bộ scene mới
+                fadeCanvasGroup.alpha = 1f;
+
+            Debug.Log("[SceneTransition] Panel mới tìm thấy → FadeOut...");
+
+            // Fade out loading screen
+            yield return StartCoroutine(FadeOut());
+
+            // Ẩn loading panel
+            HideLoadingPanel();
         }
-
-        // Fade out loading screen
-        yield return StartCoroutine(FadeOut());
-
-        // Ẩn loading panel
-        HideLoadingPanel();
+        else
+        {
+            Debug.LogWarning("[SceneTransition] Không tìm thấy panel mới sau scene load → skip FadeOut");
+        }
 
         // FIX #4: Chỉ set cursor nếu cần
         if (restoreCursorAfterLoad)
@@ -179,6 +184,7 @@ public class SceneTransitionManager : MonoBehaviour
         }
 
         isTransitioning = false;
+        Debug.Log($"[SceneTransition] Chuyển scene hoàn tất: {sceneName}");
     }
 
     // ===== LOADING PANEL =====
