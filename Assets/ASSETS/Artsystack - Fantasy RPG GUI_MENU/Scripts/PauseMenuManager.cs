@@ -216,7 +216,10 @@ namespace Artsystack.ArtsystackGui
             Time.timeScale = 1f;
             Cursor.visible = true;
             Cursor.lockState = CursorLockMode.None;
-            SceneManager.LoadScene(mainMenuSceneName);
+            if (SceneTransitionManager.Instance != null)
+                SceneTransitionManager.Instance.GoToScene(mainMenuSceneName, "Đang quay về menu...");
+            else
+                SceneManager.LoadScene(mainMenuSceneName);
         }
 
         private void HideAllPanels()

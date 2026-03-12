@@ -60,6 +60,9 @@ public class TutorialQuestFinisher : MonoBehaviour
 
         yield return new WaitForSeconds(delay);
         Debug.Log($"[TutorialFinisher] Loading scene: {returnScene}");
-        SceneManager.LoadScene(returnScene);
+        if (SceneTransitionManager.Instance != null)
+            SceneTransitionManager.Instance.GoToScene(returnScene, "Đang quay về bản đồ...");
+        else
+            SceneManager.LoadScene(returnScene);
     }
 }

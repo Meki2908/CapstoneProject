@@ -111,8 +111,15 @@ public class ScenePortal : MonoBehaviour
 
     private System.Collections.IEnumerator TeleportRoutine(string sceneName)
     {
-        // Có thể thêm hiệu ứng Fade Out ở đây
-        yield return new WaitForSeconds(teleportDelay);
-        SceneManager.LoadScene(sceneName);
+        if (SceneTransitionManager.Instance != null)
+        {
+            // SceneTransitionManager tự có fade → không cần delay thêm
+            SceneTransitionManager.Instance.GoToScene(sceneName, "Đang chuyển vùng...");
+        }
+        else
+        {
+            yield return new WaitForSeconds(teleportDelay);
+            SceneManager.LoadScene(sceneName);
+        }
     }
 }

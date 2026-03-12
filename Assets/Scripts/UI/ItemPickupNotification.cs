@@ -162,8 +162,12 @@ public class ItemPickupNotification : MonoBehaviour
         ItemRarity mapped;
         switch (item.rarity)
         {
-            case Rarity.Epic: mapped = ItemRarity.Epic; break;
+            case Rarity.Common:    mapped = ItemRarity.Common; break;
+            case Rarity.Uncommon:  mapped = ItemRarity.Uncommon; break;
+            case Rarity.Rare:      mapped = ItemRarity.Rare; break;
+            case Rarity.Epic:      mapped = ItemRarity.Epic; break;
             case Rarity.Legendary: mapped = ItemRarity.Legendary; break;
+            case Rarity.Mythic:    mapped = ItemRarity.Mythic; break;
             default: mapped = ItemRarity.Common; break;
         }
         ShowNotification(item.itemName, item.icon, mapped, quantity);

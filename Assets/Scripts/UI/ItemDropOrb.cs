@@ -576,7 +576,7 @@ public class ItemDropOrb : MonoBehaviour
         {
             case ItemRarity.Common: return new Color(0.8f, 0.8f, 0.8f);
             case ItemRarity.Uncommon: return new Color(0.3f, 0.9f, 0.4f);
-            case ItemRarity.Rare: return new Color(0.3f, 0.6f, 1f);
+            case ItemRarity.Rare:     return new Color(0.3f, 0.6f, 1f);
             case ItemRarity.Epic: return new Color(0.7f, 0.3f, 1f);
             case ItemRarity.Legendary: return new Color(1f, 0.75f, 0.2f);
             default: return Color.white;
@@ -593,7 +593,7 @@ public class ItemDropOrb : MonoBehaviour
         {
             case ItemRarity.Common: return 0.5f;
             case ItemRarity.Uncommon: return 0.8f;
-            case ItemRarity.Rare: return 1.2f;
+            case ItemRarity.Rare:     return 1.0f;
             case ItemRarity.Epic: return 1.6f;
             case ItemRarity.Legendary: return 2.0f;
             default: return 1f;
@@ -641,6 +641,7 @@ public class ItemDropOrb : MonoBehaviour
         {
             case Rarity.Common:    return ItemRarity.Common;
             case Rarity.Uncommon:  return ItemRarity.Uncommon;
+            case Rarity.Rare:      return ItemRarity.Rare;
             case Rarity.Epic:      return ItemRarity.Epic;
             case Rarity.Legendary: return ItemRarity.Legendary;
             case Rarity.Mythic:    return ItemRarity.Mythic;

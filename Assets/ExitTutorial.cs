@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.SceneManagement;  // Để sử dụng SceneManagement
 
 public class SceneSwitcher : MonoBehaviour
@@ -21,7 +21,10 @@ public class SceneSwitcher : MonoBehaviour
         if (!string.IsNullOrEmpty(sceneName))
         {
             // Chuyển đến scene có tên đã chỉ định
-            SceneManager.LoadScene(sceneName);
+            if (SceneTransitionManager.Instance != null)
+                SceneTransitionManager.Instance.GoToScene(sceneName, "Đang chuyển cảnh...");
+            else
+                SceneManager.LoadScene(sceneName);
         }
     }
 }

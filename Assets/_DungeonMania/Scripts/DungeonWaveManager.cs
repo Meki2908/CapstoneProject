@@ -600,7 +600,7 @@ public class DungeonWaveManager : MonoBehaviour
     private IEnumerator DelayedDungeonFailed()
     {
         // Đợi animation chết player chạy xong (3s = DieState.dieDuration)
-        yield return new WaitForSeconds(deathAnimationDelay);
+        yield return new WaitForSecondsRealtime(deathAnimationDelay);
 
         Debug.Log("[DungeonWave] Animation chết xong → hiện GUI Failed");
 
@@ -646,7 +646,7 @@ public class DungeonWaveManager : MonoBehaviour
 
     private System.Collections.IEnumerator DelayedShowCompleteUI()
     {
-        yield return new WaitForSeconds(3f);
+        yield return new WaitForSecondsRealtime(3f);
 
         // Ẩn UI_HP và UI_Inventory của player
         HidePlayerUIOnComplete();
@@ -709,6 +709,40 @@ public class DungeonWaveManager : MonoBehaviour
             if (found != null) return found;
         }
         return null;
+    }
+
+    /// <summary>
+    /// Bật lại UI player đã bị ẩn khi complete dungeon
+    /// </summary>
+    private void RestorePlayerUI()
+    {
+        string[] uiNames = { "UI_HP_Invetory", "UI_HP_Inventory", "UI_HP", "UI_Invetory", "UI_Inventory" };
+
+        Transform searchRoot = player;
+        if (searchRoot == null)
+        {
+            GameObject pr = GameObject.Find("PlayerRoot");
+            if (pr != null) searchRoot = pr.transform;
+        }
+
+        if (searchRoot != null)
+        {
+            foreach (string n in uiNames)
+            {
+                Transform t = FindInChildren(searchRoot, n);
+                if (t != null) { t.gameObject.SetActive(true); Debug.Log($"[DungeonWave] Restored {n}"); return; }
+            }
+        }
+
+        // Tìm inactive objects trong scene (đã bị SetActive(false))
+        foreach (GameObject root in UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects())
+        {
+            foreach (string n in uiNames)
+            {
+                Transform t = FindInChildren(root.transform, n);
+                if (t != null) { t.gameObject.SetActive(true); Debug.Log($"[DungeonWave] Restored {n} (scene)"); return; }
+            }
+        }
     }
 
     // ===== SPAWNING SYSTEM (CÁCH A - HỆ THỐNG MỚI) =====
@@ -956,6 +990,7 @@ public class DungeonWaveManager : MonoBehaviour
         {
             case Rarity.Common:    return 0.60f; // 60%
             case Rarity.Uncommon:  return 0.45f; // 45%
+            case Rarity.Rare:      return 0.38f; // 38%
             case Rarity.Epic:      return 0.30f; // 30%
             case Rarity.Legendary: return 0.15f; // 15%
             case Rarity.Mythic:    return 0.05f; // 5%
@@ -1351,10 +1386,29 @@ public class DungeonWaveManager : MonoBehaviour
     public void ReturnToMainMap()
     {
         Debug.Log($"[DungeonWave] Đang quay về {mainMapSceneName}...");
-        ResetPlayerControls(); // Bật lại input + controller trước khi chuyển scene
+        
+        // Cleanup: ẩn reward panel nếu đang mở
+        if (DungeonRewardUI.Instance != null)
+        {
+            DungeonRewardUI.Instance.HideRewardPanel();
+        }
+
+        // Restore player UI (HP/Inventory) bị ẩn khi complete
+        RestorePlayerUI();
+
+        ResetPlayerControls();
         EnableCameraInput();
         Time.timeScale = 1f;
-        SceneManager.LoadScene(mainMapSceneName);
+
+        // Dùng SceneTransitionManager (có loading screen)
+        if (SceneTransitionManager.Instance != null)
+        {
+            SceneTransitionManager.Instance.GoToScene(mainMapSceneName, "Đang quay về bản đồ...");
+        }
+        else
+        {
+            SceneManager.LoadScene(mainMapSceneName);
+        }
     }
 
     /// <summary>
@@ -1363,10 +1417,29 @@ public class DungeonWaveManager : MonoBehaviour
     public void RestartDungeon()
     {
         Debug.Log("[DungeonWave] Restart dungeon...");
-        ResetPlayerControls(); // Bật lại input + controller trước khi restart
+
+        // Cleanup reward UI
+        if (DungeonRewardUI.Instance != null)
+        {
+            DungeonRewardUI.Instance.HideRewardPanel();
+        }
+
+        // Restore player UI
+        RestorePlayerUI();
+
+        ResetPlayerControls();
         EnableCameraInput();
         Time.timeScale = 1f;
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+
+        string currentScene = SceneManager.GetActiveScene().name;
+        if (SceneTransitionManager.Instance != null)
+        {
+            SceneTransitionManager.Instance.GoToScene(currentScene, "Đang khởi động lại dungeon...");
+        }
+        else
+        {
+            SceneManager.LoadScene(currentScene);
+        }
     }
 
     /// <summary>

@@ -69,6 +69,12 @@ public class DungeonRewardUI : MonoBehaviour
         }
     }
 
+    private void OnDestroy()
+    {
+        if (Instance == this)
+            Instance = null;
+    }
+
     /// <summary>
     /// Gọi khi player nhặt item trong dungeon — track lại
     /// </summary>

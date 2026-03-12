@@ -140,22 +140,27 @@ namespace Artsystack.ArtsystackGui
 
         private IEnumerator LoadGameScene()
         {
-            // Hiển thị loading
+            // Dùng SceneTransitionManager nếu có
+            if (SceneTransitionManager.Instance != null)
+            {
+                SceneTransitionManager.Instance.GoToScene(gameSceneName, "Đang tải game...");
+                isGameRunning = true;
+                yield break;
+            }
+
+            // Fallback: hiển thị loading panel tự quản lý
             if (panel_Loading != null)
                 panel_Loading.SetActive(true);
 
-            // Load scene bất đồng bộ
             AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(gameSceneName);
 
             while (!asyncLoad.isDone)
             {
-                // Cập nhật loading progress nếu cần
                 yield return null;
             }
 
             isGameRunning = true;
             
-            // Ẩn cursor nếu cần
             if (!showCursorOnPlay)
             {
                 Cursor.visible = false;
