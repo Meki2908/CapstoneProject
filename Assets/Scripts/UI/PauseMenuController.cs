@@ -46,6 +46,7 @@ public class PauseMenuController : MonoBehaviour
     // Lưu trạng thái UI trước khi ẩn
     private bool wasInventoryActive = true;
     private bool wasHPActive = true;
+    private bool wasDungeonWaveUIActive = false;
     
     void Awake()
     {
@@ -344,8 +345,10 @@ public class PauseMenuController : MonoBehaviour
         {
             wasHPActive = uiHP.activeSelf;
             uiHP.SetActive(false);
-            Debug.Log("[PauseMenu] Hidden UI_HP");
         }
+
+        // Ẩn Dungeon Wave UI
+        HideDungeonWaveUI();
     }
     
     /// <summary>
@@ -362,8 +365,10 @@ public class PauseMenuController : MonoBehaviour
         if (uiHP != null)
         {
             uiHP.SetActive(wasHPActive);
-            Debug.Log($"[PauseMenu] Restored UI_HP: {wasHPActive}");
         }
+
+        // Khôi phục Dungeon Wave UI
+        RestoreDungeonWaveUI();
     }
     
     /// <summary>
@@ -381,6 +386,35 @@ public class PauseMenuController : MonoBehaviour
                 return result;
         }
         return null;
+    }
+
+    /// <summary>
+    /// Ẩn Dungeon Wave UI khi pause
+    /// </summary>
+    private void HideDungeonWaveUI()
+    {
+        DungeonWaveManager dwm = FindFirstObjectByType<DungeonWaveManager>();
+        if (dwm != null && dwm.waveNotificationUI != null)
+        {
+            wasDungeonWaveUIActive = dwm.waveNotificationUI.activeSelf;
+            dwm.waveNotificationUI.SetActive(false);
+        }
+        if (dwm != null && dwm.countdownUI != null)
+        {
+            dwm.countdownUI.SetActive(false);
+        }
+    }
+
+    /// <summary>
+    /// Khôi phục Dungeon Wave UI khi resume
+    /// </summary>
+    private void RestoreDungeonWaveUI()
+    {
+        DungeonWaveManager dwm = FindFirstObjectByType<DungeonWaveManager>();
+        if (dwm != null && dwm.waveNotificationUI != null)
+        {
+            dwm.waveNotificationUI.SetActive(wasDungeonWaveUIActive);
+        }
     }
     
     // Gọi từ button Resume

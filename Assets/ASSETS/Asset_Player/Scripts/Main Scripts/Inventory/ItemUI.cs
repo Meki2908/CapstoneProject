@@ -187,7 +187,7 @@ public class ItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     {
         if (useTooltip && ItemTooltipManager.Instance != null && itemData != null)
         {
-            ItemTooltipManager.Instance.ShowTooltip(itemData);
+            ItemTooltipManager.Instance.ShowTooltip(itemData, runtimeRarity);
         }
     }
 

@@ -207,6 +207,12 @@ public class DungeonWaveManager : MonoBehaviour
         // Ẩn tất cả UI
         HideAllUI();
 
+        // Reset reward tracking cho dungeon mới
+        if (DungeonRewardUI.Instance != null)
+        {
+            DungeonRewardUI.Instance.ClearTrackedItems();
+        }
+
         // Bắt đầu dungeon
         StartDungeon();
     }
@@ -435,10 +441,6 @@ public class DungeonWaveManager : MonoBehaviour
         currentWave = 0;
         totalExpGained = 0;
 
-        // Reset Dungeon Reward tracking
-        if (DungeonRewardUI.Instance != null)
-            DungeonRewardUI.Instance.ResetTracking();
-
         Debug.Log($"[DungeonWave] Bắt đầu dungeon: {dungeonName}");
 
         // Bắt đầu wave đầu tiên
@@ -638,10 +640,75 @@ public class DungeonWaveManager : MonoBehaviour
             if (cc != null) cc.enabled = false;
         }
 
+        // Delay 3 giây rồi mới hiện GUI
+        StartCoroutine(DelayedShowCompleteUI());
+    }
+
+    private System.Collections.IEnumerator DelayedShowCompleteUI()
+    {
+        yield return new WaitForSeconds(3f);
+
+        // Ẩn UI_HP và UI_Inventory của player
+        HidePlayerUIOnComplete();
+
         // Hiển thị UI thắng
         ShowDungeonComplete();
-        
+
+        // Hiển thị Reward Panel
+        if (DungeonRewardUI.Instance != null)
+        {
+            DungeonRewardUI.Instance.ShowRewardPanel();
+        }
+
         OnDungeonCompleted?.Invoke();
+    }
+
+    /// <summary>
+    /// Ẩn UI_HP và UI_Inventory khi dungeon hoàn thành
+    /// </summary>
+    private void HidePlayerUIOnComplete()
+    {
+        string[] uiNames = { "UI_HP_Invetory", "UI_HP_Inventory", "UI_HP", "UI_Invetory", "UI_Inventory" };
+
+        // Cách 1: Tìm trong player hierarchy (recursive)
+        Transform searchRoot = player;
+        if (searchRoot == null)
+        {
+            GameObject pr = GameObject.Find("PlayerRoot");
+            if (pr != null) searchRoot = pr.transform;
+        }
+
+        if (searchRoot != null)
+        {
+            foreach (string n in uiNames)
+            {
+                Transform t = FindInChildren(searchRoot, n);
+                if (t != null) { t.gameObject.SetActive(false); Debug.Log($"[DungeonWave] Hidden {n} (in player)"); return; }
+            }
+        }
+
+        // Cách 2: Fallback — tìm toàn scene
+        foreach (string n in uiNames)
+        {
+            GameObject go = GameObject.Find(n);
+            if (go != null) { go.SetActive(false); Debug.Log($"[DungeonWave] Hidden {n} (scene)"); return; }
+        }
+
+        Debug.LogWarning("[DungeonWave] Could not find UI_HP_Invetory to hide!");
+    }
+
+    /// <summary>
+    /// Tìm child theo tên trong toàn bộ hierarchy (recursive)
+    /// </summary>
+    private Transform FindInChildren(Transform parent, string name)
+    {
+        if (parent.name == name) return parent;
+        foreach (Transform child in parent)
+        {
+            Transform found = FindInChildren(child, name);
+            if (found != null) return found;
+        }
+        return null;
     }
 
     // ===== SPAWNING SYSTEM (CÁCH A - HỆ THỐNG MỚI) =====
@@ -1220,13 +1287,6 @@ public class DungeonWaveManager : MonoBehaviour
 
         // Tắt toàn bộ camera — đứng yên khi GUI hiện
         DisableCameraFull();
-
-        // === HIỆN DUNGEON REWARD SCREEN (Genshin style) ===
-        if (DungeonRewardUI.Instance != null)
-        {
-            DungeonRewardUI.Instance.ShowRewards();
-            Debug.Log("[DungeonWave] Showing Dungeon Reward Screen");
-        }
 
         if (dungeonCompleteUI)
         {

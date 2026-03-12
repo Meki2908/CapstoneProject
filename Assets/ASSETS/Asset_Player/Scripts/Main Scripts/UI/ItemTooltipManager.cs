@@ -26,6 +26,7 @@ public class ItemTooltipManager : MonoBehaviour
     private RectTransform canvasRectTransform;
     private RectTransform tooltipRectTransform;
     private Item currentItem;
+    private Rarity currentRarity;
     private bool isShowing = false;
 
     private void Awake()
@@ -93,10 +94,19 @@ public class ItemTooltipManager : MonoBehaviour
     /// </summary>
     public void ShowTooltip(Item item)
     {
+        ShowTooltip(item, item.rarity);
+    }
+
+    /// <summary>
+    /// Show tooltip with runtime rarity (scaled stats)
+    /// </summary>
+    public void ShowTooltip(Item item, Rarity rarity)
+    {
         if (item == null || tooltipText == null || tooltipPanel == null) return;
 
         currentItem = item;
-        string tooltipContent = GetTooltipText(item);
+        currentRarity = rarity;
+        string tooltipContent = GetTooltipText(item, rarity);
         
         if (string.IsNullOrEmpty(tooltipContent))
         {
@@ -110,7 +120,6 @@ public class ItemTooltipManager : MonoBehaviour
         tooltipPanel.SetActive(true);
         isShowing = true;
         
-        // Update position immediately
         UpdateTooltipPosition();
     }
 
@@ -194,23 +203,23 @@ public class ItemTooltipManager : MonoBehaviour
     /// <summary>
     /// Get formatted tooltip text based on item type
     /// </summary>
-    private string GetTooltipText(Item item)
+    private string GetTooltipText(Item item, Rarity rarity)
     {
-        if (item == null) return "";
+        if (item == null) return string.Empty;
 
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
 
-        // Item name and rarity
-        string rarityColor = GetRarityColor(item.rarity);
+        // Item name and rarity (dùng runtime rarity)
+        string rarityColor = GetRarityColor(rarity);
         sb.AppendLine($"<color={rarityColor}><b>{item.itemName}</b></color>");
-        sb.AppendLine($"<color=#888888>{item.rarity}</color>");
+        sb.AppendLine($"<color=#888888>{rarity}</color>");
         sb.AppendLine();
 
-        // Item type specific stats (description removed)
+        // Item type specific stats
         switch (item.itemType)
         {
             case ItemType.Equipment:
-                sb.AppendLine(GetEquipmentStats(item));
+                sb.AppendLine(GetEquipmentStats(item, rarity));
                 break;
             case ItemType.Gems:
                 sb.AppendLine(GetGemStats(item));
@@ -229,7 +238,9 @@ public class ItemTooltipManager : MonoBehaviour
     /// <summary>
     /// Get formatted equipment stats
     /// </summary>
-    private string GetEquipmentStats(Item item)
+    private string GetEquipmentStats(Item item) => GetEquipmentStats(item, item.rarity);
+
+    private string GetEquipmentStats(Item item, Rarity rarity)
     {
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
         
@@ -238,34 +249,34 @@ public class ItemTooltipManager : MonoBehaviour
 
         bool hasStats = false;
 
-        if (item.ScaledHPBonus(item.rarity) > 0f)
+        if (item.ScaledHPBonus(rarity) > 0f)
         {
-            sb.AppendLine($"<color=#00FF00>HP: +{item.ScaledHPBonus(item.rarity):F0}</color>");
+            sb.AppendLine($"<color=#00FF00>HP: +{item.ScaledHPBonus(rarity):F0}</color>");
             hasStats = true;
         }
-        if (item.ScaledDefenseBonus(item.rarity) > 0f)
+        if (item.ScaledDefenseBonus(rarity) > 0f)
         {
-            sb.AppendLine($"<color=#00AAFF>Defense: +{item.ScaledDefenseBonus(item.rarity):F0}</color>");
+            sb.AppendLine($"<color=#00AAFF>Defense: +{item.ScaledDefenseBonus(rarity):F0}</color>");
             hasStats = true;
         }
-        if (item.ScaledCritRateBonus(item.rarity) > 0f)
+        if (item.ScaledCritRateBonus(rarity) > 0f)
         {
-            sb.AppendLine($"<color=#FF00FF>Crit Rate: +{item.ScaledCritRateBonus(item.rarity) * 100f:F1}%</color>");
+            sb.AppendLine($"<color=#FF00FF>Crit Rate: +{item.ScaledCritRateBonus(rarity) * 100f:F1}%</color>");
             hasStats = true;
         }
-        if (item.ScaledCritDamageMultiplier(item.rarity) > 1f)
+        if (item.ScaledCritDamageMultiplier(rarity) > 1f)
         {
-            sb.AppendLine($"<color=#FF00FF>Crit Damage: +{(item.ScaledCritDamageMultiplier(item.rarity) - 1f) * 100f:F1}%</color>");
+            sb.AppendLine($"<color=#FF00FF>Crit Damage: +{(item.ScaledCritDamageMultiplier(rarity) - 1f) * 100f:F1}%</color>");
             hasStats = true;
         }
-        if (item.ScaledMovementSpeedBonus(item.rarity) > 0f)
+        if (item.ScaledMovementSpeedBonus(rarity) > 0f)
         {
-            sb.AppendLine($"<color=#00FFFF>Movement Speed: +{item.ScaledMovementSpeedBonus(item.rarity) * 100f:F1}%</color>");
+            sb.AppendLine($"<color=#00FFFF>Movement Speed: +{item.ScaledMovementSpeedBonus(rarity) * 100f:F1}%</color>");
             hasStats = true;
         }
-        if (item.ScaledAttackSpeedBonus(item.rarity) > 0f)
+        if (item.ScaledAttackSpeedBonus(rarity) > 0f)
         {
-            sb.AppendLine($"<color=#FFAA00>Attack Speed: +{item.ScaledAttackSpeedBonus(item.rarity) * 100f:F1}%</color>");
+            sb.AppendLine($"<color=#FFAA00>Attack Speed: +{item.ScaledAttackSpeedBonus(rarity) * 100f:F1}%</color>");
             hasStats = true;
         }
 

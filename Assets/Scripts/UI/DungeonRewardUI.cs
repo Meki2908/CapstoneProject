@@ -1,69 +1,59 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using System.Collections;
 using System.Collections.Generic;
 
 /// <summary>
-/// Dungeon Reward Screen — kiểu Genshin Impact
-/// Hiện popup khi hoàn thành dungeon, liệt kê items thu được
-/// Singleton — gọi DungeonRewardUI.Instance.ShowRewards(items)
+/// Dungeon Reward UI — Hiển thị tổng hợp item thu được khi hoàn thành dungeon
+/// Kiểu Genshin Impact domain reward screen
+/// Tự tạo UI bằng code, không cần setup prefab
 /// </summary>
 public class DungeonRewardUI : MonoBehaviour
 {
     public static DungeonRewardUI Instance { get; private set; }
 
-    [Header("=== UI References ===")]
-    [Tooltip("Root panel của reward screen (chứa tất cả)")]
-    [SerializeField] private GameObject rewardPanel;
-    [Tooltip("Title text (VD: 'Challenge Complete!')")]
-    [SerializeField] private TextMeshProUGUI titleText;
-    [Tooltip("Content container trong ScrollRect — nơi spawn item cards")]
-    [SerializeField] private Transform itemContainer;
-    [Tooltip("Prefab cho mỗi item card")]
-    [SerializeField] private GameObject rewardItemPrefab;
-    [Tooltip("Nút Claim / OK")]
-    [SerializeField] private Button claimButton;
-    [Tooltip("Overlay mờ phía sau popup")]
-    [SerializeField] private Image backgroundOverlay;
+    [Header("=== Settings ===")]
+    [Tooltip("Kích thước mỗi ô item")]
+    [SerializeField] private float slotSize = 100f;
+    [Tooltip("Khoảng cách giữa các ô")]
+    [SerializeField] private float slotSpacing = 10f;
+    [Tooltip("Chiều rộng panel")]
+    [SerializeField] private float panelWidth = 800f;
+    [Tooltip("Chiều cao panel")]
+    [SerializeField] private float panelHeight = 300f;
 
-    [Header("=== Animation ===")]
-    [SerializeField] private float fadeInDuration = 0.3f;
-    [SerializeField] private float cardAppearDelay = 0.1f;
-    [SerializeField] private float cardScaleUpDuration = 0.2f;
+    [Header("=== Custom Assets (kéo vào Inspector) ===")]
+    [Tooltip("Sprite nền panel chính (null = dùng màu mặc định)")]
+    [SerializeField] private Sprite panelBackgroundSprite;
+    [Tooltip("Sprite nền mỗi ô item (null = dùng màu mặc định)")]
+    [SerializeField] private Sprite slotBackgroundSprite;
+    [Tooltip("Sprite viền rarity mỗi ô (null = dùng màu mặc định)")]
+    [SerializeField] private Sprite slotBorderSprite;
+    [Tooltip("Image Type cho panel/slot sprites")]
+    [SerializeField] private Image.Type spriteImageType = Image.Type.Sliced;
 
-    [Header("=== Size Settings ===")]
-    [Tooltip("Kích thước popup (width x height)")]
-    [SerializeField] private Vector2 popupSize = new Vector2(800f, 400f);
-    [Tooltip("Kích thước mỗi item card (width x height)")]
-    [SerializeField] private Vector2 cardSize = new Vector2(120f, 150f);
-    [Tooltip("Khoảng cách giữa các card")]
-    [SerializeField] private float cardSpacing = 15f;
-    [Tooltip("Cỡ chữ tiêu đề")]
-    [SerializeField] private float titleFontSize = 32f;
-    [Tooltip("Cỡ chữ tên item")]
-    [SerializeField] private float itemNameFontSize = 12f;
-
-    [Header("=== Auto Create UI ===")]
-    [Tooltip("Tự tạo UI nếu chưa gắn references")]
-    [SerializeField] private bool autoCreateUI = true;
-
-    // Tracking items trong dungeon run
+    // Danh sách item thu được trong dungeon
     private List<RewardEntry> collectedItems = new List<RewardEntry>();
+
+    // UI references (tự tạo bằng code)
+    private Canvas rewardCanvas;
+    private GameObject panelRoot;
+    private GameObject contentContainer;
     private bool isShowing = false;
+    private int originalTooltipSortingOrder = 0; // lưu sortingOrder gốc
 
     [System.Serializable]
     public class RewardEntry
     {
         public Item item;
-        public int quantity;
         public Rarity rarity;
+        public int quantity;
 
-        public RewardEntry(Item i, int qty, Rarity r)
+        public RewardEntry(Item i, Rarity r, int q)
         {
             item = i;
-            quantity = qty;
             rarity = r;
+            quantity = q;
         }
     }
 
@@ -76,29 +66,17 @@ public class DungeonRewardUI : MonoBehaviour
         else
         {
             Destroy(gameObject);
-            return;
         }
-
-        if (autoCreateUI && rewardPanel == null)
-        {
-            CreateUI();
-        }
-
-        if (rewardPanel != null)
-            rewardPanel.SetActive(false);
-
-        if (claimButton != null)
-            claimButton.onClick.AddListener(OnClaimClicked);
     }
 
     /// <summary>
-    /// Ghi nhận item thu được trong dungeon (gọi khi nhặt item)
+    /// Gọi khi player nhặt item trong dungeon — track lại
     /// </summary>
-    public void TrackItem(Item item, int quantity, Rarity rarity)
+    public void TrackItem(Item item, Rarity rarity, int quantity)
     {
         if (item == null) return;
 
-        // Tìm entry đã tồn tại (cùng item + cùng rarity)
+        // Tìm xem đã có item+rarity này chưa
         var existing = collectedItems.Find(e => e.item.id == item.id && e.rarity == rarity);
         if (existing != null)
         {
@@ -106,405 +84,413 @@ public class DungeonRewardUI : MonoBehaviour
         }
         else
         {
-            collectedItems.Add(new RewardEntry(item, quantity, rarity));
+            collectedItems.Add(new RewardEntry(item, rarity, quantity));
         }
 
-        Debug.Log($"[DungeonReward] Tracked: {item.itemName} [{rarity}] x{quantity}");
+        Debug.Log($"[DungeonReward] Tracked: {item.itemName} [{rarity}] x{quantity} (total types: {collectedItems.Count})");
     }
 
     /// <summary>
-    /// Ghi nhận EXP thu được
+    /// Xóa danh sách item (khi bắt đầu dungeon mới)
     /// </summary>
-    public void TrackEXP(int amount)
+    public void ClearTrackedItems()
     {
-        // EXP không phải Item SO — tạo entry đặc biệt
-        var existing = collectedItems.Find(e => e.item == null);
-        if (existing != null)
+        collectedItems.Clear();
+    }
+
+    /// <summary>
+    /// Hiển thị Reward Panel
+    /// </summary>
+    public void ShowRewardPanel()
+    {
+        if (isShowing) return;
+
+        CreateRewardUI();
+        isShowing = true;
+
+        // Raise tooltip canvas lên trên reward canvas
+        RaiseTooltipCanvas(true);
+
+        // Hiện cursor
+        Cursor.visible = true;
+        Cursor.lockState = CursorLockMode.None;
+    }
+
+    /// <summary>
+    /// Ẩn Reward Panel
+    /// </summary>
+    public void HideRewardPanel()
+    {
+        if (!isShowing) return;
+
+        // Restore tooltip canvas sortingOrder
+        RaiseTooltipCanvas(false);
+
+        if (panelRoot != null)
         {
-            existing.quantity += amount;
+            Destroy(panelRoot);
+        }
+        if (rewardCanvas != null)
+        {
+            Destroy(rewardCanvas.gameObject);
+        }
+
+        isShowing = false;
+    }
+
+    /// <summary>
+    /// Tạo toàn bộ UI bằng code
+    /// </summary>
+    private void CreateRewardUI()
+    {
+        // Xóa UI cũ nếu có
+        if (rewardCanvas != null) Destroy(rewardCanvas.gameObject);
+
+        // === CANVAS ===
+        GameObject canvasGO = new GameObject("DungeonRewardCanvas");
+        rewardCanvas = canvasGO.AddComponent<Canvas>();
+        rewardCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        rewardCanvas.sortingOrder = 999; // Luôn hiện trên cùng
+        canvasGO.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        canvasGO.GetComponent<CanvasScaler>().referenceResolution = new Vector2(1920, 1080);
+        canvasGO.AddComponent<GraphicRaycaster>();
+
+        // === DIMMED BACKGROUND ===
+        GameObject dimBG = CreateUIElement("DimBackground", canvasGO.transform);
+        RectTransform dimRT = dimBG.GetComponent<RectTransform>();
+        dimRT.anchorMin = Vector2.zero;
+        dimRT.anchorMax = Vector2.one;
+        dimRT.sizeDelta = Vector2.zero;
+        Image dimImg = dimBG.AddComponent<Image>();
+        dimImg.color = new Color(0, 0, 0, 0.6f);
+
+        // === MAIN PANEL ===
+        panelRoot = CreateUIElement("RewardPanel", canvasGO.transform);
+        RectTransform panelRT = panelRoot.GetComponent<RectTransform>();
+        panelRT.anchorMin = new Vector2(0.5f, 0.5f);
+        panelRT.anchorMax = new Vector2(0.5f, 0.5f);
+        panelRT.sizeDelta = new Vector2(panelWidth, panelHeight);
+        panelRT.anchoredPosition = Vector2.zero;
+
+        Image panelBG = panelRoot.AddComponent<Image>();
+        if (panelBackgroundSprite != null)
+        {
+            panelBG.sprite = panelBackgroundSprite;
+            panelBG.type = spriteImageType;
+            panelBG.color = Color.white;
         }
         else
         {
-            collectedItems.Add(new RewardEntry(null, amount, Rarity.Common));
-        }
-    }
-
-    /// <summary>
-    /// Reset tracking (gọi khi bắt đầu dungeon mới)
-    /// </summary>
-    public void ResetTracking()
-    {
-        collectedItems.Clear();
-        Debug.Log("[DungeonReward] Tracking reset");
-    }
-
-    /// <summary>
-    /// Hiện reward screen với items đã track
-    /// </summary>
-    public void ShowRewards()
-    {
-        ShowRewards(collectedItems);
-    }
-
-    /// <summary>
-    /// Hiện reward screen với custom item list
-    /// </summary>
-    public void ShowRewards(List<RewardEntry> items)
-    {
-        if (isShowing) return;
-        isShowing = true;
-
-        // Show panel
-        if (rewardPanel != null)
-            rewardPanel.SetActive(true);
-
-        // Pause game
-        Time.timeScale = 0f;
-
-        // Show cursor
-        Cursor.visible = true;
-        Cursor.lockState = CursorLockMode.None;
-
-        // Clear old items
-        if (itemContainer != null)
-        {
-            foreach (Transform child in itemContainer)
-            {
-                Destroy(child.gameObject);
-            }
+            panelBG.color = new Color(0.08f, 0.08f, 0.15f, 0.95f);
         }
 
-        // Spawn item cards
-        StartCoroutine(SpawnItemCards(items));
-    }
-
-    private IEnumerator SpawnItemCards(List<RewardEntry> items)
-    {
-        if (items == null || items.Count == 0)
-        {
-            // Hiện "No items" nếu trống
-            if (titleText != null)
-                titleText.text = "Challenge Complete!\nNo rewards this time.";
-            yield break;
-        }
-
-        if (titleText != null)
-            titleText.text = "Challenge Complete!";
-
-        // Animate từng card xuất hiện
-        for (int i = 0; i < items.Count; i++)
-        {
-            var entry = items[i];
-            if (rewardItemPrefab != null && itemContainer != null)
-            {
-                GameObject cardGO = Instantiate(rewardItemPrefab, itemContainer);
-                DungeonRewardItemUI card = cardGO.GetComponent<DungeonRewardItemUI>();
-
-                if (card != null)
-                {
-                    if (entry.item != null)
-                    {
-                        card.Setup(entry.item.itemName, entry.item.icon, entry.rarity, entry.quantity);
-                    }
-                    else
-                    {
-                        // EXP entry
-                        card.Setup($"EXP +{entry.quantity}", null, Rarity.Common, entry.quantity);
-                    }
-                }
-
-                // Scale animation
-                cardGO.transform.localScale = Vector3.zero;
-                StartCoroutine(ScaleUpCard(cardGO.transform, cardScaleUpDuration));
-
-                // Delay trước card tiếp theo (dùng unscaled time vì game paused)
-                yield return new WaitForSecondsRealtime(cardAppearDelay);
-            }
-        }
-    }
-
-    private IEnumerator ScaleUpCard(Transform card, float duration)
-    {
-        float elapsed = 0f;
-        while (elapsed < duration)
-        {
-            elapsed += Time.unscaledDeltaTime;
-            float t = elapsed / duration;
-            // Ease out back effect (overshoot rồi bounce lại)
-            float scale = EaseOutBack(t);
-            if (card != null)
-                card.localScale = Vector3.one * scale;
-            yield return null;
-        }
-        if (card != null)
-            card.localScale = Vector3.one;
-    }
-
-    private float EaseOutBack(float t)
-    {
-        float c1 = 1.70158f;
-        float c3 = c1 + 1f;
-        return 1f + c3 * Mathf.Pow(t - 1f, 3f) + c1 * Mathf.Pow(t - 1f, 2f);
-    }
-
-    private void OnClaimClicked()
-    {
-        HideRewards();
-    }
-
-    public void HideRewards()
-    {
-        if (!isShowing) return;
-        isShowing = false;
-
-        if (rewardPanel != null)
-            rewardPanel.SetActive(false);
-
-        // Resume game
-        Time.timeScale = 1f;
-
-        // Lock cursor
-        Cursor.visible = false;
-        Cursor.lockState = CursorLockMode.Locked;
-
-        // Clear tracking
-        collectedItems.Clear();
-
-        Debug.Log("[DungeonReward] Reward screen closed");
-    }
-
-    // ========================================
-    // AUTO CREATE UI
-    // Tạo UI hoàn chỉnh bằng code nếu chưa gắn
-    // ========================================
-    private void CreateUI()
-    {
-        // Tìm Canvas
-        Canvas canvas = FindFirstObjectByType<Canvas>();
-        if (canvas == null)
-        {
-            Debug.LogWarning("[DungeonRewardUI] No Canvas found!");
-            return;
-        }
-
-        // === ROOT PANEL ===
-        rewardPanel = new GameObject("DungeonRewardPanel");
-        rewardPanel.transform.SetParent(canvas.transform, false);
-        RectTransform rootRT = rewardPanel.AddComponent<RectTransform>();
-        rootRT.anchorMin = Vector2.zero;
-        rootRT.anchorMax = Vector2.one;
-        rootRT.offsetMin = Vector2.zero;
-        rootRT.offsetMax = Vector2.zero;
-
-        // === BACKGROUND OVERLAY (mờ đen) ===
-        GameObject overlayGO = new GameObject("Overlay");
-        overlayGO.transform.SetParent(rewardPanel.transform, false);
-        RectTransform overlayRT = overlayGO.AddComponent<RectTransform>();
-        overlayRT.anchorMin = Vector2.zero;
-        overlayRT.anchorMax = Vector2.one;
-        overlayRT.offsetMin = Vector2.zero;
-        overlayRT.offsetMax = Vector2.zero;
-        backgroundOverlay = overlayGO.AddComponent<Image>();
-        backgroundOverlay.color = new Color(0f, 0f, 0f, 0.75f);
-
-        // === CENTER POPUP ===
-        GameObject popupGO = new GameObject("Popup");
-        popupGO.transform.SetParent(rewardPanel.transform, false);
-        RectTransform popupRT = popupGO.AddComponent<RectTransform>();
-        popupRT.anchorMin = new Vector2(0.5f, 0.5f);
-        popupRT.anchorMax = new Vector2(0.5f, 0.5f);
-        popupRT.sizeDelta = popupSize;
-        popupRT.anchoredPosition = Vector2.zero;
-        Image popupBg = popupGO.AddComponent<Image>();
-        popupBg.color = new Color(0.12f, 0.12f, 0.18f, 0.95f);
-
-        // Thêm Outline cho popup
-        var popupOutline = popupGO.AddComponent<Outline>();
-        popupOutline.effectColor = new Color(1f, 0.84f, 0f, 0.6f); // Gold border
-        popupOutline.effectDistance = new Vector2(2f, 2f);
-
-        // === TITLE ===
-        GameObject titleGO = new GameObject("Title");
-        titleGO.transform.SetParent(popupGO.transform, false);
-        RectTransform titleRT = titleGO.AddComponent<RectTransform>();
-        titleRT.anchorMin = new Vector2(0f, 0.75f);
-        titleRT.anchorMax = new Vector2(1f, 1f);
-        titleRT.offsetMin = new Vector2(20f, 0f);
-        titleRT.offsetMax = new Vector2(-20f, -10f);
-        titleText = titleGO.AddComponent<TextMeshProUGUI>();
-        titleText.text = "Challenge Complete!";
-        titleText.fontSize = titleFontSize;
-        titleText.fontStyle = FontStyles.Bold;
-        titleText.alignment = TextAlignmentOptions.Center;
-        titleText.color = new Color(1f, 0.84f, 0f); // Gold
-
-        // === SCROLL VIEW ===
-        GameObject scrollGO = new GameObject("ScrollView");
-        scrollGO.transform.SetParent(popupGO.transform, false);
-        RectTransform scrollRT = scrollGO.AddComponent<RectTransform>();
-        scrollRT.anchorMin = new Vector2(0f, 0.18f);
-        scrollRT.anchorMax = new Vector2(1f, 0.75f);
-        scrollRT.offsetMin = new Vector2(20f, 0f);
-        scrollRT.offsetMax = new Vector2(-20f, 0f);
-        Image scrollBg = scrollGO.AddComponent<Image>();
-        scrollBg.color = new Color(0f, 0f, 0f, 0.3f);
-        scrollGO.AddComponent<Mask>().showMaskGraphic = true;
+        // === SCROLL AREA (full height, no title) ===
+        GameObject scrollGO = CreateUIElement("ScrollArea", panelRoot.transform);
+        RectTransform scrollRT = scrollGO.GetComponent<RectTransform>();
+        scrollRT.anchorMin = new Vector2(0, 0.1f);
+        scrollRT.anchorMax = new Vector2(1, 0.95f);
+        scrollRT.sizeDelta = new Vector2(-40, 0);
+        scrollRT.anchoredPosition = Vector2.zero;
 
         ScrollRect scrollRect = scrollGO.AddComponent<ScrollRect>();
         scrollRect.horizontal = true;
         scrollRect.vertical = false;
-        scrollRect.movementType = ScrollRect.MovementType.Elastic;
-        scrollRect.elasticity = 0.1f;
-        scrollRect.scrollSensitivity = 20f;
+        scrollRect.scrollSensitivity = 30;
 
-        // === CONTENT (chứa item cards) ===
-        GameObject contentGO = new GameObject("Content");
-        contentGO.transform.SetParent(scrollGO.transform, false);
-        RectTransform contentRT = contentGO.AddComponent<RectTransform>();
-        contentRT.anchorMin = new Vector2(0f, 0f);
-        contentRT.anchorMax = new Vector2(0f, 1f);
-        contentRT.pivot = new Vector2(0f, 0.5f);
-        contentRT.offsetMin = new Vector2(10f, 10f);
-        contentRT.offsetMax = new Vector2(0f, -10f);
+        // Bắt scroll chuột dọc → scroll ngang
+        HorizontalScrollCapture scrollCapture = scrollGO.AddComponent<HorizontalScrollCapture>();
+        scrollCapture.Setup(scrollRect);
 
-        // Horizontal Layout Group
-        HorizontalLayoutGroup hlg = contentGO.AddComponent<HorizontalLayoutGroup>();
-        hlg.spacing = cardSpacing;
-        hlg.padding = new RectOffset(10, 10, 5, 5);
-        hlg.childAlignment = TextAnchor.MiddleLeft;
-        hlg.childControlWidth = false;
-        hlg.childControlHeight = true;
-        hlg.childForceExpandWidth = false;
-        hlg.childForceExpandHeight = true;
+        // Mask
+        Image scrollBG = scrollGO.AddComponent<Image>();
+        scrollBG.color = new Color(0, 0, 0, 0.01f);
+        scrollGO.AddComponent<Mask>().showMaskGraphic = false;
 
-        // Content Size Fitter (để scroll hoạt động)
-        ContentSizeFitter csf = contentGO.AddComponent<ContentSizeFitter>();
-        csf.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
-        csf.verticalFit = ContentSizeFitter.FitMode.Unconstrained;
+        // === CONTENT CONTAINER (horizontal) ===
+        GameObject contentGO = CreateUIElement("Content", scrollGO.transform);
+        RectTransform contentRT = contentGO.GetComponent<RectTransform>();
+        contentRT.anchorMin = new Vector2(0, 0);
+        contentRT.anchorMax = new Vector2(0, 1);
+        contentRT.pivot = new Vector2(0, 0.5f);
+        contentRT.anchoredPosition = Vector2.zero;
+
+        HorizontalLayoutGroup layout = contentGO.AddComponent<HorizontalLayoutGroup>();
+        layout.spacing = slotSpacing;
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.padding = new RectOffset(20, 20, 10, 10);
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = false;
+        layout.childControlWidth = false;
+        layout.childControlHeight = false;
+
+        ContentSizeFitter fitter = contentGO.AddComponent<ContentSizeFitter>();
+        fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+        fitter.verticalFit = ContentSizeFitter.FitMode.Unconstrained;
 
         scrollRect.content = contentRT;
-        itemContainer = contentGO.transform;
+        contentContainer = contentGO;
 
-        // === CLAIM BUTTON ===
-        GameObject btnGO = new GameObject("ClaimButton");
-        btnGO.transform.SetParent(popupGO.transform, false);
-        RectTransform btnRT = btnGO.AddComponent<RectTransform>();
-        btnRT.anchorMin = new Vector2(0.3f, 0.02f);
-        btnRT.anchorMax = new Vector2(0.7f, 0.15f);
-        btnRT.offsetMin = Vector2.zero;
-        btnRT.offsetMax = Vector2.zero;
-        Image btnBg = btnGO.AddComponent<Image>();
-        btnBg.color = new Color(1f, 0.84f, 0f, 0.9f); // Gold
-        claimButton = btnGO.AddComponent<Button>();
-        claimButton.targetGraphic = btnBg;
+        // === HORIZONTAL SCROLLBAR ===
+        GameObject scrollbarGO = CreateUIElement("HScrollbar", scrollGO.transform);
+        RectTransform sbRT = scrollbarGO.GetComponent<RectTransform>();
+        sbRT.anchorMin = new Vector2(0, 0);
+        sbRT.anchorMax = new Vector2(1, 0);
+        sbRT.pivot = new Vector2(0.5f, 0);
+        sbRT.sizeDelta = new Vector2(0, 12);
+        sbRT.anchoredPosition = Vector2.zero;
 
-        // Button hover colors
-        ColorBlock cb = claimButton.colors;
-        cb.normalColor = new Color(1f, 0.84f, 0f, 0.9f);
-        cb.highlightedColor = new Color(1f, 0.9f, 0.3f, 1f);
-        cb.pressedColor = new Color(0.8f, 0.65f, 0f, 1f);
-        claimButton.colors = cb;
+        Image sbBG = scrollbarGO.AddComponent<Image>();
+        sbBG.color = new Color(0.15f, 0.15f, 0.25f, 0.8f);
 
-        // Button text
-        GameObject btnTextGO = new GameObject("Text");
-        btnTextGO.transform.SetParent(btnGO.transform, false);
-        RectTransform btnTextRT = btnTextGO.AddComponent<RectTransform>();
-        btnTextRT.anchorMin = Vector2.zero;
-        btnTextRT.anchorMax = Vector2.one;
-        btnTextRT.offsetMin = Vector2.zero;
-        btnTextRT.offsetMax = Vector2.zero;
-        TextMeshProUGUI btnText = btnTextGO.AddComponent<TextMeshProUGUI>();
-        btnText.text = "Claim All";
-        btnText.fontSize = 24;
-        btnText.fontStyle = FontStyles.Bold;
-        btnText.alignment = TextAlignmentOptions.Center;
-        btnText.color = new Color(0.1f, 0.1f, 0.15f);
+        Scrollbar scrollbar = scrollbarGO.AddComponent<Scrollbar>();
+        scrollbar.direction = Scrollbar.Direction.LeftToRight;
 
-        claimButton.onClick.AddListener(OnClaimClicked);
+        // Scrollbar handle
+        GameObject handleArea = CreateUIElement("HandleArea", scrollbarGO.transform);
+        RectTransform haRT = handleArea.GetComponent<RectTransform>();
+        haRT.anchorMin = Vector2.zero;
+        haRT.anchorMax = Vector2.one;
+        haRT.sizeDelta = Vector2.zero;
 
-        // === TẠO REWARD ITEM PREFAB ===
-        CreateRewardItemPrefab();
+        GameObject handleGO = CreateUIElement("Handle", handleArea.transform);
+        RectTransform hRT = handleGO.GetComponent<RectTransform>();
+        hRT.anchorMin = Vector2.zero;
+        hRT.anchorMax = Vector2.one;
+        hRT.sizeDelta = Vector2.zero;
 
-        rewardPanel.SetActive(false);
-        Debug.Log("[DungeonRewardUI] Auto-created UI successfully!");
+        Image handleImg = handleGO.AddComponent<Image>();
+        handleImg.color = new Color(0.5f, 0.5f, 0.6f, 0.9f);
+
+        scrollbar.handleRect = hRT;
+        scrollbar.targetGraphic = handleImg;
+        scrollRect.horizontalScrollbar = scrollbar;
+        scrollRect.horizontalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
+
+        // === POPULATE ITEMS ===
+        if (collectedItems.Count == 0)
+        {
+            // No items
+            GameObject noItemGO = CreateUIElement("NoItems", contentGO.transform);
+            TextMeshProUGUI noItemText = noItemGO.AddComponent<TextMeshProUGUI>();
+            noItemText.text = "Không có vật phẩm";
+            noItemText.fontSize = 24;
+            noItemText.alignment = TextAlignmentOptions.Center;
+            noItemText.color = Color.gray;
+            noItemGO.GetComponent<RectTransform>().sizeDelta = new Vector2(300, slotSize);
+        }
+        else
+        {
+            foreach (var entry in collectedItems)
+            {
+                CreateItemSlot(contentGO.transform, entry);
+            }
+        }
+
+        // === ITEM COUNT TEXT ===
+        GameObject countGO = CreateUIElement("ItemCount", panelRoot.transform);
+        RectTransform countRT = countGO.GetComponent<RectTransform>();
+        countRT.anchorMin = new Vector2(0, 0);
+        countRT.anchorMax = new Vector2(1, 0.15f);
+        countRT.sizeDelta = Vector2.zero;
+        countRT.anchoredPosition = Vector2.zero;
+
+        TextMeshProUGUI countText = countGO.AddComponent<TextMeshProUGUI>();
+        int totalItems = 0;
+        foreach (var e in collectedItems) totalItems += e.quantity;
+        countText.text = $"Tổng: {collectedItems.Count} loại, {totalItems} vật phẩm";
+        countText.fontSize = 18;
+        countText.alignment = TextAlignmentOptions.Center;
+        countText.color = new Color(0.7f, 0.7f, 0.7f);
     }
 
-    private void CreateRewardItemPrefab()
+    /// <summary>
+    /// Tạo 1 ô item slot
+    /// </summary>
+    private void CreateItemSlot(Transform parent, RewardEntry entry)
     {
-        // Tạo prefab tại runtime
-        rewardItemPrefab = new GameObject("RewardItemCard");
-        rewardItemPrefab.SetActive(false); // Deactivate template
+        if (entry.item == null) return;
 
-        RectTransform cardRT = rewardItemPrefab.AddComponent<RectTransform>();
-        cardRT.sizeDelta = cardSize;
+        string rarityColor = Item.GetRarityColorHex(entry.rarity);
+        Color borderColor;
+        ColorUtility.TryParseHtmlString(rarityColor, out borderColor);
 
-        // Card background
-        Image cardBg = rewardItemPrefab.AddComponent<Image>();
-        cardBg.color = new Color(0.2f, 0.2f, 0.28f, 0.9f);
+        // === SLOT ROOT (border) ===
+        GameObject slotGO = CreateUIElement($"Slot_{entry.item.itemName}", parent);
+        RectTransform slotRT = slotGO.GetComponent<RectTransform>();
+        slotRT.sizeDelta = new Vector2(slotSize, slotSize + 35);
 
-        // Rarity border (Outline)
-        Outline borderOutline = rewardItemPrefab.AddComponent<Outline>();
-        borderOutline.effectColor = Color.white;
-        borderOutline.effectDistance = new Vector2(2f, 2f);
+        LayoutElement le = slotGO.AddComponent<LayoutElement>();
+        le.preferredWidth = slotSize;
+        le.preferredHeight = slotSize + 35;
 
-        // Add DungeonRewardItemUI component
-        DungeonRewardItemUI itemUI = rewardItemPrefab.AddComponent<DungeonRewardItemUI>();
+        // Border image (rarity color)
+        Image borderImg = slotGO.AddComponent<Image>();
+        if (slotBorderSprite != null)
+        {
+            borderImg.sprite = slotBorderSprite;
+            borderImg.type = spriteImageType;
+        }
+        borderImg.color = borderColor;
+
+        // === INNER BG ===
+        GameObject innerGO = CreateUIElement("Inner", slotGO.transform);
+        RectTransform innerRT = innerGO.GetComponent<RectTransform>();
+        innerRT.anchorMin = Vector2.zero;
+        innerRT.anchorMax = Vector2.one;
+        innerRT.sizeDelta = new Vector2(-4, -4);
+        innerRT.anchoredPosition = Vector2.zero;
+
+        Image innerBG = innerGO.AddComponent<Image>();
+        if (slotBackgroundSprite != null)
+        {
+            innerBG.sprite = slotBackgroundSprite;
+            innerBG.type = spriteImageType;
+            innerBG.color = Color.white;
+        }
+        else
+        {
+            innerBG.color = new Color(0.12f, 0.12f, 0.2f, 0.95f);
+        }
 
         // === ICON ===
-        GameObject iconGO = new GameObject("Icon");
-        iconGO.transform.SetParent(rewardItemPrefab.transform, false);
-        RectTransform iconRT = iconGO.AddComponent<RectTransform>();
-        iconRT.anchorMin = new Vector2(0.15f, 0.35f);
-        iconRT.anchorMax = new Vector2(0.85f, 0.90f);
-        iconRT.offsetMin = Vector2.zero;
-        iconRT.offsetMax = Vector2.zero;
-        Image iconImg = iconGO.AddComponent<Image>();
-        iconImg.preserveAspect = true;
-        itemUI.iconImage = iconImg;
+        if (entry.item.icon != null)
+        {
+            GameObject iconGO = CreateUIElement("Icon", innerGO.transform);
+            RectTransform iconRT = iconGO.GetComponent<RectTransform>();
+            iconRT.anchorMin = new Vector2(0.1f, 0.25f);
+            iconRT.anchorMax = new Vector2(0.9f, 0.95f);
+            iconRT.sizeDelta = Vector2.zero;
+            iconRT.anchoredPosition = Vector2.zero;
 
-        // === QUANTITY ===
-        GameObject qtyGO = new GameObject("Quantity");
-        qtyGO.transform.SetParent(rewardItemPrefab.transform, false);
-        RectTransform qtyRT = qtyGO.AddComponent<RectTransform>();
-        qtyRT.anchorMin = new Vector2(0.5f, 0.85f);
-        qtyRT.anchorMax = new Vector2(1f, 1f);
-        qtyRT.offsetMin = Vector2.zero;
-        qtyRT.offsetMax = new Vector2(-5f, -2f);
-        TextMeshProUGUI qtyText = qtyGO.AddComponent<TextMeshProUGUI>();
-        qtyText.fontSize = 16;
-        qtyText.fontStyle = FontStyles.Bold;
-        qtyText.alignment = TextAlignmentOptions.TopRight;
-        qtyText.color = Color.white;
-        itemUI.quantityText = qtyText;
+            Image iconImg = iconGO.AddComponent<Image>();
+            iconImg.sprite = entry.item.icon;
+            iconImg.preserveAspect = true;
+            iconImg.raycastTarget = false; // Không chặn hover trên slot
+        }
 
-        // === NAME ===
-        GameObject nameGO = new GameObject("Name");
-        nameGO.transform.SetParent(rewardItemPrefab.transform, false);
-        RectTransform nameRT = nameGO.AddComponent<RectTransform>();
-        nameRT.anchorMin = new Vector2(0f, 0f);
-        nameRT.anchorMax = new Vector2(1f, 0.32f);
-        nameRT.offsetMin = new Vector2(5f, 2f);
-        nameRT.offsetMax = new Vector2(-5f, 0f);
+        // === QUANTITY TEXT ===
+        if (entry.quantity > 1)
+        {
+            GameObject qtyGO = CreateUIElement("Qty", innerGO.transform);
+            RectTransform qtyRT = qtyGO.GetComponent<RectTransform>();
+            qtyRT.anchorMin = new Vector2(0.5f, 0.95f);
+            qtyRT.anchorMax = new Vector2(1f, 1.15f);
+            qtyRT.sizeDelta = Vector2.zero;
+            qtyRT.anchoredPosition = Vector2.zero;
+
+            TextMeshProUGUI qtyText = qtyGO.AddComponent<TextMeshProUGUI>();
+            qtyText.text = $"x{entry.quantity}";
+            qtyText.fontSize = 16;
+            qtyText.alignment = TextAlignmentOptions.Right;
+            qtyText.color = Color.white;
+        }
+
+        // === NAME TEXT ===
+        GameObject nameGO = CreateUIElement("Name", innerGO.transform);
+        RectTransform nameRT = nameGO.GetComponent<RectTransform>();
+        nameRT.anchorMin = new Vector2(0, 0);
+        nameRT.anchorMax = new Vector2(1, 0.25f);
+        nameRT.sizeDelta = Vector2.zero;
+        nameRT.anchoredPosition = Vector2.zero;
+
         TextMeshProUGUI nameText = nameGO.AddComponent<TextMeshProUGUI>();
-        nameText.fontSize = itemNameFontSize;
-        nameText.alignment = TextAlignmentOptions.Bottom;
-        nameText.color = Color.white;
+        nameText.text = entry.item.itemName;
+        nameText.fontSize = 12;
+        nameText.alignment = TextAlignmentOptions.Center;
+        nameText.color = borderColor;
         nameText.enableWordWrapping = true;
         nameText.overflowMode = TextOverflowModes.Ellipsis;
-        itemUI.nameText = nameText;
+        nameText.raycastTarget = false; // Không chặn hover
 
-        // === RARITY BAR (dải màu dưới cùng) ===
-        GameObject barGO = new GameObject("RarityBar");
-        barGO.transform.SetParent(rewardItemPrefab.transform, false);
-        RectTransform barRT = barGO.AddComponent<RectTransform>();
-        barRT.anchorMin = new Vector2(0f, 0f);
-        barRT.anchorMax = new Vector2(1f, 0.04f);
-        barRT.offsetMin = Vector2.zero;
-        barRT.offsetMax = Vector2.zero;
-        Image barImg = barGO.AddComponent<Image>();
-        itemUI.rarityBar = barImg;
+        // === TOOLTIP ON HOVER ===
+        RewardSlotHover hover = slotGO.AddComponent<RewardSlotHover>();
+        hover.Setup(entry.item, entry.rarity);
+    }
 
-        // Không add vào scene — giữ làm template
-        rewardItemPrefab.transform.SetParent(this.transform, false);
+    /// <summary>
+    /// Helper tạo UI element
+    /// </summary>
+    private GameObject CreateUIElement(string name, Transform parent)
+    {
+        GameObject go = new GameObject(name, typeof(RectTransform));
+        go.transform.SetParent(parent, false);
+        return go;
+    }
+
+    /// <summary>
+    /// Raise/restore tooltip canvas để hiện trên reward panel
+    /// </summary>
+    private void RaiseTooltipCanvas(bool raise)
+    {
+        if (ItemTooltipManager.Instance == null) return;
+
+        Canvas tooltipCanvas = ItemTooltipManager.Instance.GetComponentInParent<Canvas>();
+        if (tooltipCanvas == null) return;
+
+        if (raise)
+        {
+            originalTooltipSortingOrder = tooltipCanvas.sortingOrder;
+            tooltipCanvas.overrideSorting = true;
+            tooltipCanvas.sortingOrder = 1000;
+        }
+        else
+        {
+            tooltipCanvas.sortingOrder = originalTooltipSortingOrder;
+        }
+    }
+}
+
+/// <summary>
+/// Hover tooltip cho reward slot — dùng ItemTooltipManager
+/// </summary>
+public class RewardSlotHover : MonoBehaviour, UnityEngine.EventSystems.IPointerEnterHandler, UnityEngine.EventSystems.IPointerExitHandler
+{
+    private Item itemData;
+    private Rarity itemRarity;
+
+    public void Setup(Item item, Rarity rarity)
+    {
+        itemData = item;
+        itemRarity = rarity;
+    }
+
+    public void OnPointerEnter(UnityEngine.EventSystems.PointerEventData eventData)
+    {
+        if (itemData != null && ItemTooltipManager.Instance != null)
+        {
+            ItemTooltipManager.Instance.ShowTooltip(itemData, itemRarity);
+        }
+    }
+
+    public void OnPointerExit(UnityEngine.EventSystems.PointerEventData eventData)
+    {
+        if (ItemTooltipManager.Instance != null)
+        {
+            ItemTooltipManager.Instance.HideTooltip();
+        }
+    }
+}
+
+/// <summary>
+/// Bắt scroll chuột dọc → chuyển thành scroll ngang cho ScrollRect
+/// </summary>
+public class HorizontalScrollCapture : MonoBehaviour, UnityEngine.EventSystems.IScrollHandler
+{
+    private ScrollRect scrollRect;
+
+    public void Setup(ScrollRect sr)
+    {
+        scrollRect = sr;
+    }
+
+    public void OnScroll(UnityEngine.EventSystems.PointerEventData eventData)
+    {
+        if (scrollRect == null) return;
+
+        // Chuyển scroll dọc (y) → ngang
+        Vector2 pos = scrollRect.normalizedPosition;
+        pos.x -= eventData.scrollDelta.y * 0.05f; // tốc độ scroll
+        pos.x = Mathf.Clamp01(pos.x);
+        scrollRect.normalizedPosition = pos;
     }
 }

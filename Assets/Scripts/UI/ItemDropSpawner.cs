@@ -103,13 +103,13 @@ public class ItemDropSpawner : MonoBehaviour
             dropCount++;
         }
 
-        // 3. EXP orb
+        // 3. EXP orb (màu vàng nổi bật)
         if (dropExp && dropCount < maxDropCount)
         {
             int exp = customExpAmount > 0 ? customExpAmount : GetExpFromEnemyType();
             if (exp > 0)
             {
-                SpawnOrb(deathPosition, $"EXP +{exp}", null, ItemRarity.Common, exp);
+                SpawnOrb(deathPosition, $"EXP +{exp}", null, ItemRarity.Legendary, exp);
             }
         }
 
@@ -308,7 +308,7 @@ public class ItemDropSpawner : MonoBehaviour
                 case 5: return 3000;  // Demon
             }
         }
-        return 50;
+        return 100;
     }
 
     /// <summary>
