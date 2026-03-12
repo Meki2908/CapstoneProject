@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 using Unity.Cinemachine;
 
 namespace MovementSystem
@@ -21,6 +22,10 @@ namespace MovementSystem
         [Tooltip("If you're using Cinemachine 2.8.4 or earlier, untick this option.\\nIf unticked, both Look and Zoom will be disabled.")]
         [SerializeField]
         private bool fixedCinemachineVersion;
+
+        // Track cursor state internally to avoid conflicts
+        private bool isCursorHidden = false;
+
         private void Awake()
         {
             if (cameraToggleInputAction != null)
@@ -30,14 +35,56 @@ namespace MovementSystem
 
             if (startHidden)
             {
-                ToggleCursor();
+                ForceHideCursor();
             }
+
+            // Đăng ký callback khi scene mới load xong → reset cursor state
+            SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        private void OnDestroy()
+        {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+            if (cameraToggleInputAction != null)
+            {
+                cameraToggleInputAction.action.started -= OnCameraCursorToggled;
+            }
+        }
+
+        /// <summary>
+        /// Khi scene mới load (bao gồm teleport vào dungeon) → reset cursor về trạng thái đúng
+        /// </summary>
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            if (startHidden)
+            {
+                StartCoroutine(DelayedForceHideCursor());
+            }
+        }
+
+        private System.Collections.IEnumerator DelayedForceHideCursor()
+        {
+            yield return null; // Đợi 1 frame
+            ForceHideCursor();
+        }
+
+        /// <summary>
+        /// Force ẩn cursor — dùng khi khởi tạo hoặc chuyển scene
+        /// </summary>
+        private void ForceHideCursor()
+        {
+            isCursorHidden = true;
+            Cursor.visible = false;
+            Cursor.lockState = CursorLockMode.Locked;
+            SetCinemachineInput(true);
         }
 
         private void Update()
         {
-            // Check for left ALT key press to unlock cursor
-            if (Input.GetKeyDown(KeyCode.LeftAlt))
+            // Chỉ dùng legacy Input khi KHÔNG có InputAction gán
+            // Nếu có InputAction (ví dụ Player/CameraToggle bound to ALT), nó đã xử lý qua OnCameraCursorToggled
+            // Dùng cả hai sẽ bị double toggle → cursor không thay đổi
+            if (cameraToggleInputAction == null && Input.GetKeyDown(KeyCode.LeftAlt))
             {
                 ToggleCursor();
             }
@@ -66,41 +113,52 @@ namespace MovementSystem
 
         private void ToggleCursor()
         {
-            Cursor.visible = !Cursor.visible;
-            if (!Cursor.visible)
+            isCursorHidden = !isCursorHidden;
+
+            if (isCursorHidden)
             {
+                Cursor.visible = false;
                 Cursor.lockState = CursorLockMode.Locked;
-                if (!fixedCinemachineVersion)
-                {
-                    if (inputProvider != null)
-                        inputProvider.enabled = true;
-                    return;
-                }
+                SetCinemachineInput(true);
+            }
+            else
+            {
+                Cursor.visible = true;
+                Cursor.lockState = CursorLockMode.None;
+                SetCinemachineInput(false);
+            }
+        }
 
-                if (inputProvider != null)
-                {
-                    inputProvider.XYAxis.action?.Enable();
-                    inputProvider.ZAxis.action?.Enable();
-                }
-
-                return;
+        /// <summary>
+        /// Enable/Disable Cinemachine input dựa trên trạng thái cursor
+        /// Tự tìm inputProvider nếu reference bị null (sau scene transition)
+        /// </summary>
+        private void SetCinemachineInput(bool enableInput)
+        {
+            if (inputProvider == null)
+            {
+                inputProvider = FindFirstObjectByType<CinemachineInputProvider>();
             }
 
-            Cursor.lockState = CursorLockMode.None;
+            if (inputProvider == null) return;
+
             if (!fixedCinemachineVersion)
             {
-                if (inputProvider != null)
-                    inputProvider.enabled = false;
+                inputProvider.enabled = enableInput;
                 return;
             }
 
-            if (inputProvider != null)
+            if (enableInput)
+            {
+                inputProvider.XYAxis.action?.Enable();
+                inputProvider.ZAxis.action?.Enable();
+            }
+            else
             {
                 if (disableCameraLookOnCursorVisible)
                 {
                     inputProvider.XYAxis.action?.Disable();
                 }
-
                 if (disableCameraZoomOnCursorVisible)
                 {
                     inputProvider.ZAxis.action?.Disable();
