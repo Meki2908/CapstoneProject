@@ -136,18 +136,18 @@ public class GamePlayManager : MonoBehaviour {
         DungeonWaveManager.Instance.SetWave(waveOfArena);
         
         // Lấy số lượng enemy từ DungeonWaveManager
-        int skeletCount, lichCount, bossCount, demonCount;
-        DungeonWaveManager.Instance.GetEnemyCounts(out skeletCount, out lichCount, out bossCount, out demonCount);
+        int skeletCount, monsterCount, lichCount, bossCount, demonCount;
+        DungeonWaveManager.Instance.GetEnemyCounts(out skeletCount, out monsterCount, out lichCount, out bossCount, out demonCount);
         
         // Tính tổng số enemy trong wave
-        int totalEnemies = skeletCount + lichCount + bossCount + demonCount;
+        int totalEnemies = skeletCount + monsterCount + lichCount + bossCount + demonCount;
         enemysOfWave = totalEnemies;
         
         // Thiết lập enemyType theo format cũ để tương thích
         // enemyType[0] = archers (skelet), [1] = monsters, [2] = lich, [3] = boss, [4] = demon
-        level.enemyType = new int[] { skeletCount, 0, lichCount, bossCount, demonCount };
+        level.enemyType = new int[] { skeletCount, monsterCount, lichCount, bossCount, demonCount };
         
-        Debug.Log($"[GamePlayManager] Wave {waveOfArena}: Skelet={skeletCount}, Lich={lichCount}, Boss={bossCount}, Demon={demonCount}, Total={totalEnemies}");
+        Debug.Log($"[GamePlayManager] Wave {waveOfArena}: Skelet={skeletCount}, Monster={monsterCount}, Lich={lichCount}, Boss={bossCount}, Demon={demonCount}, Total={totalEnemies}");
     }
     
     // Hệ thống wave cũ - giữ nguyên để tương thích
