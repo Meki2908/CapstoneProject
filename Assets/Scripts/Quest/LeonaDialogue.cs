@@ -108,9 +108,14 @@ public class LeonaDialogue : MonoBehaviour
 
         if (_isOpen)
         {
-            if (IsFPressed()) OnNextClicked();
+            if (IsFPressed()) 
+            {
+                Debug.Log("[LeonaDialogue] F pressed while dialogue open → OnNextClicked()");
+                OnNextClicked();
+            }
             return;
         }
+
         if (IsFPressed())
         {
             Debug.Log("[LeonaDialogue] F pressed → calling OpenDialogue()");
@@ -124,11 +129,22 @@ public class LeonaDialogue : MonoBehaviour
     {
         Debug.Log($"[LeonaDialogue] OnTriggerEnter: {other.name} tag={other.tag}");
         if (!other.CompareTag(playerTag)) return;
+        
         _playerNear = true;
-        if (promptPanel)
+        if (promptPanel != null)
+        {
             promptPanel.SetActive(true);
+            var parentCanvas = promptPanel.GetComponentInParent<Canvas>();
+            if (parentCanvas != null && !parentCanvas.enabled)
+            {
+                Debug.LogWarning($"[LeonaDialogue] Cảnh báo: '{parentCanvas.name}' (Canvas cha của promptPanel) đang bị TẮT (enabled=false)! Giao diện sẽ không hiện.");
+            }
+            Debug.Log($"[LeonaDialogue] Đã hiện promptPanel ({promptPanel.name})");
+        }
         else
-            Debug.LogWarning("[LeonaDialogue] promptPanel is NULL – assign it in Inspector!");
+        {
+            Debug.LogWarning("[LeonaDialogue] promptPanel is NULL – Hãy kéo thả object gợi ý 'Nhấn F' vào Inspector!");
+        }
     }
 
     void OnTriggerExit(Collider other)
@@ -145,11 +161,11 @@ public class LeonaDialogue : MonoBehaviour
         _mode = PickMode();
         _activeLines = GetLines(_mode);
 
-        Debug.Log($"[LeonaDialogue] OpenDialogue → mode={_mode}, lines={(  _activeLines?.Length ?? 0)}");
+        Debug.Log($"[LeonaDialogue] OpenDialogue → mode={_mode}, linesCount={(_activeLines?.Length ?? 0)}");
 
         if (_activeLines == null || _activeLines.Length == 0)
         {
-            Debug.LogWarning($"[LeonaDialogue] No lines for mode {_mode} – dialogue blocked!");
+            Debug.LogWarning($"[LeonaDialogue] KHÔNG CÓ HỘI THOẠI cho mode {_mode}! Kiểm tra lại mảng string trong Inspector hoặc logic QuestManager.");
             return;
         }
 
@@ -157,7 +173,17 @@ public class LeonaDialogue : MonoBehaviour
         _lineIndex = 0;
 
         if (promptPanel)   promptPanel.SetActive(false);
-        if (dialoguePanel) dialoguePanel.SetActive(true);
+        
+        if (dialoguePanel != null)
+        {
+            dialoguePanel.SetActive(true);
+            if (dialogueCanvas != null) dialogueCanvas.enabled = true;
+        }
+        else
+        {
+            Debug.LogError("[LeonaDialogue] dialoguePanel is NULL! Không thể hiện hội thoại.");
+            return;
+        }
 
         Cursor.visible   = true;
         Cursor.lockState = CursorLockMode.None;
