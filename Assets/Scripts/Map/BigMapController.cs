@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -45,6 +45,8 @@ public class BigMapController : MonoBehaviour
 
     private MapPortalMarker[] _portalMarkers;
 
+    public bool IsOpen => bigMapPanel != null && bigMapPanel.activeSelf;
+
     // =========================
     // Unity
     // =========================
@@ -72,6 +74,8 @@ public class BigMapController : MonoBehaviour
     void Start()
     {
         SpawnPortalMarkers();
+        Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
     }
 
     void Update()
@@ -89,6 +93,35 @@ public class BigMapController : MonoBehaviour
     }
 
     // =========================
+    // Public API
+    // =========================
+    public void OpenMap()
+    {
+        if (bigMapPanel == null) return;
+        if (bigMapPanel.activeSelf) return;
+
+        bigMapPanel.SetActive(true);
+        SetOtherUIActive(false);
+        Cursor.visible = true;
+        Cursor.lockState = CursorLockMode.None;
+
+        if (debugLogs) Debug.Log("[BigMap] Map opened.");
+    }
+
+    public void CloseMap()
+    {
+        if (bigMapPanel == null) return;
+        if (!bigMapPanel.activeSelf) return;
+
+        bigMapPanel.SetActive(false);
+        SetOtherUIActive(true);
+        Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
+
+        if (debugLogs) Debug.Log("[BigMap] Map closed.");
+    }
+
+    // =========================
     // Toggle BigMap
     // =========================
     void ToggleBigMap()
@@ -99,14 +132,8 @@ public class BigMapController : MonoBehaviour
             return;
         }
 
-        bool next = !bigMapPanel.activeSelf;
-        bigMapPanel.SetActive(next);
-
-        // Ẩn / hiện UI khác
-        SetOtherUIActive(!next);
-
-        if (debugLogs)
-            Debug.Log("[BigMap] BigMap active = " + next);
+        if (bigMapPanel.activeSelf) CloseMap();
+        else OpenMap();
     }
 
     void SetOtherUIActive(bool active)
@@ -132,7 +159,7 @@ public class BigMapController : MonoBehaviour
     // =========================
     // World -> Map UI
     // =========================
-    Vector2 WorldToMapUI(Vector3 worldPos)
+    public Vector2 WorldToMapUI(Vector3 worldPos)
     {
         if (mapRect == null) return Vector2.zero;
 
@@ -177,12 +204,10 @@ public class BigMapController : MonoBehaviour
         if (portalsParent == null)
             portalsParent = mapRect;
 
-        // Clear old
         if (_portalMarkers != null)
         {
             foreach (var m in _portalMarkers)
-                if (m != null)
-                    Destroy(m.gameObject);
+                if (m != null) Destroy(m.gameObject);
         }
 
         _portalMarkers = new MapPortalMarker[portalPoints.Length];
@@ -194,7 +219,6 @@ public class BigMapController : MonoBehaviour
             var marker = Instantiate(portalMarkerPrefab, portalsParent);
             marker.name = $"PortalMarker_{i}";
             marker.Init(this, portalPoints[i]);
-
             _portalMarkers[i] = marker;
         }
     }
@@ -206,7 +230,6 @@ public class BigMapController : MonoBehaviour
         foreach (var m in _portalMarkers)
         {
             if (m == null || m.Target == null) continue;
-
             m.Rect.anchoredPosition = WorldToMapUI(m.Target.position);
         }
     }
@@ -241,11 +264,7 @@ public class BigMapController : MonoBehaviour
                 characterController.enabled = true;
         }
 
-        if (closeMapAfterTeleport && bigMapPanel != null)
-        {
-            bigMapPanel.SetActive(false);
-            SetOtherUIActive(true);
-        }
+        if (closeMapAfterTeleport) CloseMap();
 
         if (debugLogs)
             Debug.Log("[BigMap] Teleported to " + finalPos);

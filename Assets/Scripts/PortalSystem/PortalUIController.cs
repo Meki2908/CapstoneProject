@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 public class PortalUIController : MonoBehaviour
 {
@@ -88,6 +89,10 @@ public class PortalUIController : MonoBehaviour
         // Khóa chuột lại để tiếp tục điều khiển camera
         Cursor.visible = false;
         Cursor.lockState = CursorLockMode.Locked;
+
+        // Xoá focus khỏi UI để trigger tiếp theo không bị chặn
+        if (EventSystem.current != null)
+            EventSystem.current.SetSelectedGameObject(null);
     }
 
     private void TeleportTo(Transform destination)

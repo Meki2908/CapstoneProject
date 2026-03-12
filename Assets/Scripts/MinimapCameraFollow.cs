@@ -1,18 +1,21 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UI;
 
 public class MinimapCameraFollow : MonoBehaviour
 {
     [Header("Player Settings")]
     public Transform player;               // Nhân vật
-    public Vector3 offset = new Vector3(0, 50, 0); // Camera cao nhìn thẳng
+    public Vector3 offset = new Vector3(0, 50, 0);
+
+    [Header("Rotation Settings")]
+    [Tooltip("Kéo Main Camera vào đây để minimap xoay theo hướng nhìn của camera. Để trống sẽ xoay theo player body.")]
+    public Transform cameraTransform;      // Main Camera (optional)
 
     [Header("UI Settings")]
     public RectTransform playerIcon;       // Icon Player trên RawImage
 
     void Start()
     {
-        // Tự động tìm player nếu chưa gán
         if (player == null)
         {
             GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
@@ -26,24 +29,28 @@ public class MinimapCameraFollow : MonoBehaviour
                 Debug.LogWarning("[MinimapCameraFollow] Không tìm thấy GameObject với tag 'Player'. Hãy gán thủ công trong Inspector!");
             }
         }
+
+        // Tự động tìm Main Camera nếu chưa gán
+        if (cameraTransform == null && Camera.main != null)
+        {
+            cameraTransform = Camera.main.transform;
+            Debug.Log("[MinimapCameraFollow] Tự động dùng Main Camera để xoay minimap.");
+        }
     }
 
     void LateUpdate()
     {
-        if (player == null)
-        {
-            Debug.LogWarning("Player chưa gán vào MinimapCameraFollow!");
-            return;
-        }
+        if (player == null) return;
 
-        // 1. Camera xoay theo player
+        // Camera minimap theo sát player
         transform.position = player.position + offset;
-        transform.rotation = Quaternion.Euler(90f, player.eulerAngles.y, 0f); // xoay map theo player
 
-        // 2. Icon player luôn hướng lên trên UI
+        // Xoay theo camera (hoặc player nếu không có camera)
+        float yAngle = (cameraTransform != null) ? cameraTransform.eulerAngles.y : player.eulerAngles.y;
+        transform.rotation = Quaternion.Euler(90f, yAngle, 0f);
+
+        // Icon player luôn hướng lên trên UI (không xoay theo map)
         if (playerIcon != null)
-        {
-            playerIcon.localRotation = Quaternion.identity; // icon không xoay, luôn hướng lên trên
-        }
+            playerIcon.localRotation = Quaternion.identity;
     }
 }
