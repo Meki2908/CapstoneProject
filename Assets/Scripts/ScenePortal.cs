@@ -11,8 +11,11 @@ using TMPro;
 public class ScenePortal : MonoBehaviour
 {
     [Header("=== UI REFERENCES ===")]
-    [Tooltip("Kéo Canvas chọn Scene vào đây")]
-    public GameObject portalCanvas;
+    [Tooltip("Danh sách các UI có thể chọn")]
+    public GameObject[] availableUIs;
+    
+    [Tooltip("Chỉ số của UI được chọn hiện tại (0, 1, 2, ...)")]
+    public int selectedUIIndex = 0;
 
     [Header("=== SETTINGS ===")]
     [Tooltip("Tag của người chơi")]
@@ -28,10 +31,13 @@ public class ScenePortal : MonoBehaviour
 
     void Start()
     {
-        // Ẩn Canvas lúc đầu
-        if (portalCanvas != null)
+        // Ẩn tất cả UI lúc đầu
+        if (availableUIs != null)
         {
-            portalCanvas.SetActive(false);
+            foreach (var ui in availableUIs)
+            {
+                if (ui != null) ui.SetActive(false);
+            }
         }
 
         if (portalEffect != null)
@@ -64,29 +70,41 @@ public class ScenePortal : MonoBehaviour
 
     public void OpenPortalUI()
     {
-        if (portalCanvas != null)
+        if (availableUIs != null && selectedUIIndex >= 0 && selectedUIIndex < availableUIs.Length)
         {
-            portalCanvas.SetActive(true);
-            
-            // Hiển thị chuột để chọn
-            Cursor.visible = true;
-            Cursor.lockState = CursorLockMode.None;
+            GameObject selectedUI = availableUIs[selectedUIIndex];
+            if (selectedUI != null)
+            {
+                selectedUI.SetActive(true);
+                
+                // Hiển thị chuột để chọn
+                Cursor.visible = true;
+                Cursor.lockState = CursorLockMode.None;
+            }
+            else
+            {
+                Debug.LogWarning($"[ScenePortal] UI tại index {selectedUIIndex} đang bị trống!");
+            }
         }
         else
         {
-            Debug.LogWarning("[ScenePortal] Chưa gán portalCanvas trong Inspector!");
+            Debug.LogWarning("[ScenePortal] Chưa gán availableUIs hoặc index không hợp lệ!");
         }
     }
 
     public void ClosePortalUI()
     {
-        if (portalCanvas != null)
+        if (availableUIs != null && selectedUIIndex >= 0 && selectedUIIndex < availableUIs.Length)
         {
-            portalCanvas.SetActive(false);
-            
-            // Khóa lại chuột để chơi tiếp
-            Cursor.visible = false;
-            Cursor.lockState = CursorLockMode.Locked;
+            GameObject selectedUI = availableUIs[selectedUIIndex];
+            if (selectedUI != null)
+            {
+                selectedUI.SetActive(false);
+                
+                // Khóa lại chuột để chơi tiếp
+                Cursor.visible = false;
+                Cursor.lockState = CursorLockMode.Locked;
+            }
         }
     }
 
@@ -100,7 +118,13 @@ public class ScenePortal : MonoBehaviour
         
         if (Application.CanStreamedLevelBeLoaded(sceneName))
         {
-            Time.timeScale = 1f; // Đảm bảo game không bị pause khi chuyển
+            // Đảm bảo game không bị pause khi chuyển
+            Time.timeScale = 1f; 
+            
+            // Ẩn chuột trước khi load scene mới
+            Cursor.visible = false;
+            Cursor.lockState = CursorLockMode.Locked;
+
             StartCoroutine(TeleportRoutine(sceneName));
         }
         else
