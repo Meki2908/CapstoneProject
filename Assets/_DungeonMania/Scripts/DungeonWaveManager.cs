@@ -64,6 +64,39 @@ public class DungeonWaveManager : MonoBehaviour
     [Tooltip("Prefab EnemyNew (chứa tất cả enemy bên trong)")]
     public GameObject enemyNewPrefab;
 
+    [Header("=== ITEM DROP CONFIG (theo từng Enemy Type) ===")]
+    [Tooltip("Có drop EXP orb không")]
+    public bool dropExpOrb = true;
+
+    [Tooltip("Số item tối đa rơi mỗi enemy")]
+    public int maxDropsPerEnemy = 3;
+
+    [Tooltip("Drop table cho Skeleton/Archer")]
+    public List<DungeonDropEntry> skeletDrops = new List<DungeonDropEntry>();
+
+    [Tooltip("Drop table cho Monster (Orc, Troll, Guul)")]
+    public List<DungeonDropEntry> monsterDrops = new List<DungeonDropEntry>();
+
+    [Tooltip("Drop table cho Lich")]
+    public List<DungeonDropEntry> lichDrops = new List<DungeonDropEntry>();
+
+    [Tooltip("Drop table cho Boss (Stoneogre, Golem, Minotaur, Ifrit)")]
+    public List<DungeonDropEntry> bossDrops = new List<DungeonDropEntry>();
+
+    [Tooltip("Drop table cho Demon")]
+    public List<DungeonDropEntry> demonDrops = new List<DungeonDropEntry>();
+
+    [System.Serializable]
+    public class DungeonDropEntry
+    {
+        [Tooltip("Kéo Item ScriptableObject vào đây")]
+        public Item item;
+        [Tooltip("Số lượng tối thiểu")]
+        public int minQuantity = 1;
+        [Tooltip("Số lượng tối đa")]
+        public int maxQuantity = 1;
+    }
+
     [Header("=== REFERENCES ===")]
     [Tooltip("Player object")]
     public Transform player;
@@ -779,9 +812,83 @@ public class DungeonWaveManager : MonoBehaviour
                 {
                     activeEnemy.AddComponent<EnemyDeathBridge>();
                     Debug.Log($"[DungeonWave] Added EnemyDeathBridge to {activeEnemy.name}");
-        }
+                }
+
+                // Thêm ItemDropSpawner để enemy rơi item khi chết
+                if (activeEnemy.GetComponent<ItemDropSpawner>() == null)
+                {
+                    var spawner = activeEnemy.AddComponent<ItemDropSpawner>();
+                    
+                    // Chọn drop table theo enemy type
+                    var enemyScript = activeEnemy.GetComponent<EnemyScript>();
+                    List<DungeonDropEntry> selectedDrops = GetDropTableForEnemy(enemyScript);
+                    
+                    if (selectedDrops != null && selectedDrops.Count > 0)
+                    {
+                        var drops = new List<ItemDropSpawner.ItemDropEntry>();
+                        foreach (var entry in selectedDrops)
+                        {
+                            if (entry.item == null) continue;
+                            // Tự tính dropChance từ item.rarity
+                            float chance = GetDropChanceByRarity(entry.item.rarity);
+                            drops.Add(new ItemDropSpawner.ItemDropEntry
+                            {
+                                item = entry.item,
+                                dropChance = chance,
+                                minQuantity = entry.minQuantity,
+                                maxQuantity = entry.maxQuantity
+                            });
+                        }
+                        spawner.SetDropTable(drops, dropExpOrb, maxDropsPerEnemy);
+                    }
+                    
+                    string typeName = enemyScript != null ? enemyScript.enemyType.ToString() : "unknown";
+                    Debug.Log($"[DungeonWave] Added ItemDropSpawner to {activeEnemy.name} (type={typeName}, {selectedDrops?.Count ?? 0} items)");
+                }
+
                 break; // Chỉ thêm vào một enemy đang active
             }
+        }
+    }
+
+    /// <summary>
+    /// Chọn drop table theo enemy type
+    /// </summary>
+    private List<DungeonDropEntry> GetDropTableForEnemy(EnemyScript enemyScript)
+    {
+        if (enemyScript == null) return skeletDrops; // Fallback
+
+        switch (enemyScript.enemyType)
+        {
+            case EnemyScript.EnemyType.skelet:
+            case EnemyScript.EnemyType.archer:
+                return skeletDrops;
+            case EnemyScript.EnemyType.monster:
+                return monsterDrops;
+            case EnemyScript.EnemyType.lich:
+                return lichDrops;
+            case EnemyScript.EnemyType.boss:
+                return bossDrops;
+            case EnemyScript.EnemyType.demon:
+                return demonDrops;
+            default:
+                return skeletDrops;
+        }
+    }
+
+    /// <summary>
+    /// Tự tính drop chance dựa trên item rarity
+    /// </summary>
+    private float GetDropChanceByRarity(Rarity rarity)
+    {
+        switch (rarity)
+        {
+            case Rarity.Common:    return 0.60f; // 60%
+            case Rarity.Uncommon:  return 0.45f; // 45%
+            case Rarity.Epic:      return 0.30f; // 30%
+            case Rarity.Legendary: return 0.15f; // 15%
+            case Rarity.Mythic:    return 0.05f; // 5%
+            default:               return 0.30f;
         }
     }
 

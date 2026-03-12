@@ -13,7 +13,6 @@ public enum SoundType
 
     // Melee impact (enemy was hit)
     Sword_Hit,
-    Axe_Hit,
 
     // Normal combo - Mage
     Mage_Normal_1,
@@ -48,5 +47,19 @@ public enum SoundType
     Land,
     Crouch_Move,
     GetHit,
-    Die
+    Die,
+
+    // Skill phase 2 (second sound in same motion - e.g. double slash)
+    Sword_Skill_E_2,
+    Sword_Skill_R_2,
+    Sword_Skill_T_2,
+    Sword_Skill_Q_2,
+    Axe_Skill_E_2,
+    Axe_Skill_R_2,
+    Axe_Skill_T_2,
+    Axe_Skill_Q_2,
+    Mage_Skill_E_2,
+    Mage_Skill_R_2,
+    Mage_Skill_T_2,
+    Mage_Skill_Q_2
 }

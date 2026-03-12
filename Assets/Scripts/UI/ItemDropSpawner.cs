@@ -62,13 +62,24 @@ public class ItemDropSpawner : MonoBehaviour
     }
 
     /// <summary>
+    /// Inject drop table từ bên ngoài (DungeonWaveManager) — thay thế default drops
+    /// </summary>
+    public void SetDropTable(List<ItemDropEntry> drops, bool enableExp, int maxDrops)
+    {
+        itemDropTable = drops ?? new List<ItemDropEntry>();
+        dropExp = enableExp;
+        maxDropCount = maxDrops;
+        Debug.Log($"[ItemDropSpawner] Drop table injected: {itemDropTable.Count} items, exp={enableExp}, max={maxDrops}");
+    }
+
+    /// <summary>
     /// Gọi khi enemy chết — spawn item orb bay ra
     /// </summary>
     public void SpawnDrops(Vector3 deathPosition)
     {
         int dropCount = 0;
 
-        // 1. Item ScriptableObject drops (kết nối inventory)
+        // 1. Item ScriptableObject drops — random rarity
         foreach (var drop in itemDropTable)
         {
             if (dropCount >= maxDropCount) break;
@@ -76,7 +87,8 @@ public class ItemDropSpawner : MonoBehaviour
             if (Random.value > drop.dropChance) continue;
 
             int qty = Random.Range(drop.minQuantity, drop.maxQuantity + 1);
-            SpawnOrb(deathPosition, drop.item, qty);
+            Rarity rtRarity = RandomRarityFromEnemy();
+            SpawnOrb(deathPosition, drop.item, qty, rtRarity);
             dropCount++;
         }
 
@@ -109,14 +121,22 @@ public class ItemDropSpawner : MonoBehaviour
     }
 
     /// <summary>
-    /// Spawn orb từ Item ScriptableObject (thêm vào inventory khi nhặt)
+    /// Spawn orb từ Item ScriptableObject với runtime rarity
     /// </summary>
-    private void SpawnOrb(Vector3 position, Item item, int quantity)
+    private void SpawnOrb(Vector3 position, Item item, int quantity, Rarity rtRarity)
     {
         var orbGO = CreateOrbGameObject(position, item.itemName);
         var orb = orbGO.GetComponent<ItemDropOrb>();
         if (orb == null) orb = orbGO.AddComponent<ItemDropOrb>();
-        orb.Setup(item, quantity); // Dùng Setup(Item) → tự lấy name + icon + rarity + link inventory
+        orb.Setup(item, rtRarity, quantity);
+    }
+
+    /// <summary>
+    /// Spawn orb từ Item ScriptableObject (dùng SO rarity)
+    /// </summary>
+    private void SpawnOrb(Vector3 position, Item item, int quantity)
+    {
+        SpawnOrb(position, item, quantity, item.rarity);
     }
 
     /// <summary>
@@ -152,49 +172,119 @@ public class ItemDropSpawner : MonoBehaviour
     }
 
     /// <summary>
-    /// Drop mặc định nếu không cấu hình drop table
+    /// Drop mặc định nếu không cấu hình drop table — dùng Item ScriptableObject thật
+    /// Player nhặt → thêm vào inventory
     /// </summary>
     private void SpawnDefaultDrops(Vector3 position)
     {
-        // Drop Mora/Gold luôn
-        int gold = Random.Range(10, 50);
-        SpawnOrb(position, "Gold", null, ItemRarity.Common, gold);
+        // Load tất cả Item ScriptableObject từ Resources hoặc cache
+        if (cachedItems == null)
+        {
+            cachedItems = Resources.FindObjectsOfTypeAll<Item>();
+            Debug.Log($"[ItemDropSpawner] Cached {cachedItems.Length} Item ScriptableObjects");
+        }
 
-        // Chance drop vật liệu theo loại quái
+        // Tìm enemy type
         var enemyScript = GetComponent<EnemyScript>();
         if (enemyScript == null) enemyScript = GetComponentInParent<EnemyScript>();
+        int type = enemyScript != null ? (int)enemyScript.enemyType : 0;
 
-        if (enemyScript != null)
+        // === DROP HEALTH POTION (quái nào cũng có chance) ===
+        Item healthPotion = FindItem("Health potion");
+        if (healthPotion != null)
         {
-            int type = (int)enemyScript.enemyType;
-            switch (type)
+            float potionChance = type >= 4 ? 0.8f : (type >= 2 ? 0.5f : 0.3f);
+            if (Random.value < potionChance)
             {
-                case 0: // Skeleton
-                    if (Random.value < 0.3f)
-                        SpawnOrb(position, "Bone Fragment", null, ItemRarity.Common, Random.Range(1, 3));
-                    break;
-                case 1: // Archer
-                    if (Random.value < 0.3f)
-                        SpawnOrb(position, "Arrow Head", null, ItemRarity.Uncommon, Random.Range(1, 2));
-                    break;
-                case 2: // Monster
-                    if (Random.value < 0.25f)
-                        SpawnOrb(position, "Monster Claw", null, ItemRarity.Uncommon, 1);
-                    break;
-                case 3: // Lich
-                    if (Random.value < 0.2f)
-                        SpawnOrb(position, "Dark Essence", null, ItemRarity.Rare, 1);
-                    break;
-                case 4: // Boss
-                    SpawnOrb(position, "Boss Core", null, ItemRarity.Epic, 1);
-                    if (Random.value < 0.3f)
-                        SpawnOrb(position, "Rare Gem", null, ItemRarity.Legendary, 1);
-                    break;
-                case 5: // Demon
-                    SpawnOrb(position, "Demon Heart", null, ItemRarity.Legendary, 1);
-                    SpawnOrb(position, "Dark Crystal", null, ItemRarity.Epic, Random.Range(1, 3));
-                    break;
+                int qty = type >= 4 ? Random.Range(2, 4) : 1;
+                SpawnOrb(position, healthPotion, qty);
             }
+        }
+
+        // === DROP GEM THEO ENEMY TYPE ===
+        switch (type)
+        {
+            case 0: // Skeleton — Common gems
+            case 1: // Archer
+                if (Random.value < 0.2f)
+                    SpawnRandomGem(position, Rarity.Common);
+                break;
+
+            case 2: // Monster — Common/Epic gems
+                if (Random.value < 0.3f)
+                    SpawnRandomGem(position, Random.value < 0.7f ? Rarity.Common : Rarity.Epic);
+                break;
+
+            case 3: // Lich — Epic gems
+                if (Random.value < 0.35f)
+                    SpawnRandomGem(position, Rarity.Epic);
+                if (Random.value < 0.15f)
+                    SpawnRandomGem(position, Rarity.Common);
+                break;
+
+            case 4: // Boss — Epic/Legendary gems + Equipment
+                SpawnRandomGem(position, Rarity.Epic); // Guaranteed Epic
+                if (Random.value < 0.3f)
+                    SpawnRandomGem(position, Rarity.Legendary);
+                SpawnRandomEquipment(position); // Guaranteed equipment
+                break;
+
+            case 5: // Demon — Legendary gems + Equipment
+                SpawnRandomGem(position, Rarity.Legendary); // Guaranteed Legendary
+                SpawnRandomGem(position, Rarity.Epic);
+                SpawnRandomEquipment(position);
+                break;
+        }
+    }
+
+    // Cache items để không load lại mỗi lần
+    private static Item[] cachedItems;
+
+    private Item FindItem(string name)
+    {
+        if (cachedItems == null) return null;
+        foreach (var item in cachedItems)
+        {
+            if (item != null && item.itemName == name) return item;
+        }
+        return null;
+    }
+
+    private void SpawnRandomGem(Vector3 position, Rarity targetRarity)
+    {
+        if (cachedItems == null) return;
+
+        // Tìm tất cả gem đúng rarity
+        var gems = new List<Item>();
+        foreach (var item in cachedItems)
+        {
+            if (item != null && item.itemType == ItemType.Gems && item.rarity == targetRarity)
+                gems.Add(item);
+        }
+
+        if (gems.Count > 0)
+        {
+            Item gem = gems[Random.Range(0, gems.Count)];
+            SpawnOrb(position, gem, 1);
+        }
+    }
+
+    private void SpawnRandomEquipment(Vector3 position)
+    {
+        if (cachedItems == null) return;
+
+        // Tìm tất cả equipment
+        var equips = new List<Item>();
+        foreach (var item in cachedItems)
+        {
+            if (item != null && item.itemType == ItemType.Equipment)
+                equips.Add(item);
+        }
+
+        if (equips.Count > 0)
+        {
+            Item equip = equips[Random.Range(0, equips.Count)];
+            SpawnOrb(position, equip, 1);
         }
     }
 
@@ -219,5 +309,54 @@ public class ItemDropSpawner : MonoBehaviour
             }
         }
         return 50;
+    }
+
+    /// <summary>
+    /// Random rarity dựa trên enemy type (weighted random)
+    /// </summary>
+    private Rarity RandomRarityFromEnemy()
+    {
+        var enemyScript = GetComponent<EnemyScript>();
+        if (enemyScript == null) enemyScript = GetComponentInParent<EnemyScript>();
+
+        int type = enemyScript != null ? (int)enemyScript.enemyType : 0;
+
+        // Weights: Common, Uncommon, Epic, Legendary, Mythic
+        float[] weights;
+        switch (type)
+        {
+            case 0: // Skeleton
+            case 1: // Archer
+                weights = new float[] { 60, 30, 8, 2, 0 };
+                break;
+            case 2: // Monster
+                weights = new float[] { 40, 35, 18, 5, 2 };
+                break;
+            case 3: // Lich
+                weights = new float[] { 20, 30, 30, 15, 5 };
+                break;
+            case 4: // Boss
+                weights = new float[] { 5, 15, 35, 30, 15 };
+                break;
+            case 5: // Demon
+                weights = new float[] { 0, 5, 25, 40, 30 };
+                break;
+            default:
+                weights = new float[] { 50, 30, 15, 4, 1 };
+                break;
+        }
+
+        float total = 0;
+        foreach (float w in weights) total += w;
+        float roll = Random.Range(0f, total);
+
+        float cumulative = 0;
+        for (int i = 0; i < weights.Length; i++)
+        {
+            cumulative += weights[i];
+            if (roll < cumulative) return (Rarity)i;
+        }
+
+        return Rarity.Common;
     }
 }

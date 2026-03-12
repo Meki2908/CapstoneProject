@@ -185,58 +185,77 @@ public class PlayerHealth : MonoBehaviour
     /// <summary>
     /// Main TakeDamage method with extended parameters
     /// </summary>
-    /// <param name="damage">Damage amount</param>
-    /// <param name="hitPosition">Position where damage came from</param>
-    /// <param name="forceHitAnimation">Force hit animation even if invulnerable</param>
     public void TakeDamage(float damage, Vector3 hitPosition, bool forceHitAnimation)
     {
-        if (!IsAlive) return; // Already dead, ignore damage
+        if (!IsAlive)
+        {
+            Debug.Log("[PlayerHealth] BLOCK: Already dead, ignoring damage");
+            return;
+        }
 
-        // Shield đang active → chặn toàn bộ damage
+        // === SHIELD CHECK (+ anti-stuck) ===
         if (ShieldActivate.IsShieldActive && !forceHitAnimation)
         {
-            Debug.Log("[PlayerHealth] Shield active — damage blocked!");
-            return;
+            // Safety: nếu không còn ShieldActivate nào trong scene → reset flag
+            if (FindFirstObjectByType<ShieldActivate>() == null)
+            {
+                Debug.LogWarning("[PlayerHealth] Shield flag stuck! No ShieldActivate in scene → resetting");
+                ShieldActivate.ForceReset();
+            }
+            else
+            {
+                Debug.Log("[PlayerHealth] BLOCK: Shield active — damage blocked!");
+                return;
+            }
         }
 
-        // If invulnerable (e.g., ultimate), ignore damage (unless forced)
+        // === INVULNERABLE CHECK (+ anti-stuck safety) ===
         if (isInvulnerable && !forceHitAnimation)
         {
-            Debug.Log("[PlayerHealth] Player is invulnerable - damage ignored");
+            Debug.Log("[PlayerHealth] BLOCK: Player is invulnerable — damage ignored");
             return;
         }
 
-        // Don't allow damage if already in DieState
+        // === DIE STATE CHECK ===
         if (character != null && character.movementSM != null && character.movementSM.currentState == character.dieState)
         {
+            Debug.Log("[PlayerHealth] BLOCK: Already in DieState — damage ignored");
             return;
         }
 
-        // Invincibility frame during dash - no damage received
+        // === DASH INVINCIBILITY CHECK ===
         if (character != null && character.IsDashing && !forceHitAnimation)
         {
-            Debug.Log($"[PlayerHealth] Dash invincibility frame active - damage ignored!");
+            Debug.Log("[PlayerHealth] BLOCK: Dash invincibility — damage ignored!");
             return;
         }
 
-        // Apply defense reduction from equipment
-        // Defense giảm damage nhưng TỐI ĐA 90% — player luôn nhận ít nhất 10% damage gốc
+        // === DEFENSE REDUCTION (cap ở 80%) ===
+        // Player LUÔN nhận ít nhất 20% damage gốc, bất kể defense cao bao nhiêu
         float finalDamage = damage;
         if (EquipmentManager.Instance != null)
         {
             float defense = EquipmentManager.Instance.GetTotalDefenseBonus();
-            float reduced = Mathf.Min(defense, damage * 0.9f); // Defense chặn tối đa 90% damage
-            finalDamage = Mathf.Max(damage * 0.1f, damage - reduced); // Luôn nhận ít nhất 10%
-            Debug.Log($"[PlayerHealth] Damage calculation: original={damage}, defense={defense}, reduced={reduced}, final={finalDamage}");
+            float maxReduction = damage * 0.8f; // Defense chặn TỐI ĐA 80% damage
+            float reduced = Mathf.Min(defense, maxReduction);
+            finalDamage = damage - reduced;
+            Debug.Log($"[PlayerHealth] Defense calc: original={damage}, defense={defense}, reduced={reduced}, maxReduction={maxReduction}, final={finalDamage}");
         }
 
+        // Đảm bảo minimum damage = 1 (không bao giờ = 0 nếu có damage đầu vào)
+        if (damage > 0f)
+        {
+            finalDamage = Mathf.Max(1f, finalDamage);
+        }
+
+        float hpBefore = currentHealth;
         currentHealth -= finalDamage;
         currentHealth = Mathf.Clamp(currentHealth, 0f, maxHealth);
 
         OnHealthChanged?.Invoke(currentHealth);
         UpdateHealthText();
 
-        Debug.Log($"[PlayerHealth] Player took {finalDamage} damage (original: {damage}, defense: {(EquipmentManager.Instance != null ? EquipmentManager.Instance.GetTotalDefenseBonus() : 0f)})! Current HP: {currentHealth}/{maxHealth}");
+        Debug.Log($"[PlayerHealth] DAMAGE APPLIED: {finalDamage} (original: {damage}) | HP: {hpBefore} → {currentHealth}/{maxHealth}");
 
         // Check if player died BEFORE triggering get hit animation
         if (currentHealth <= 0f)
