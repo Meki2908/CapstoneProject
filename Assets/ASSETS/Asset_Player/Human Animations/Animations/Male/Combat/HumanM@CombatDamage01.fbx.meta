@@ -1,5 +1,12 @@
 fileFormatVersion: 2
 guid: e191b1e6013333f4f8fcf7db4018a4d2
+AssetOrigin:
+  serializedVersion: 1
+  productId: 165785
+  packageName: Human Melee Animations FREE
+  packageVersion: 2.0.2
+  assetPath: Assets/Kevin Iglesias/Human Animations/Animations/Male/Combat/HumanM@CombatDamage01.fbx
+  uploadId: 762275
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
@@ -16,8 +23,6 @@ ModelImporter:
     optimizeGameObjects: 0
     removeConstantScaleCurves: 0
     motionNodeName: 
-    rigImportErrors: 
-    rigImportWarnings: 
     animationImportErrors: 
     animationImportWarnings: 
     animationRetargetingWarnings: 
@@ -56,7 +61,14 @@ ModelImporter:
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
       curves: []
-      events: []
+      events:
+      - time: 0.34051725
+        functionName: AE_PlayGetHitSound
+        data: 
+        objectReferenceParameter: {instanceID: 0}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
       transformMask:
       - path: 
         weight: 1
@@ -953,8 +965,7 @@ ModelImporter:
     hasTranslationDoF: 0
     hasExtraRoot: 0
     skeletonHasParents: 1
-  lastHumanDescriptionAvatarSource: {fileID: 9000000, guid: 2faa610713d3b3c439473daa55e8c60a,
-    type: 3}
+  lastHumanDescriptionAvatarSource: {fileID: 9000000, guid: 2faa610713d3b3c439473daa55e8c60a, type: 3}
   autoGenerateAvatarMappingIfUnspecified: 1
   animationType: 3
   humanoidOversampling: 1
@@ -966,10 +977,3 @@ ModelImporter:
   userData: 
   assetBundleName: 
   assetBundleVariant: 
-AssetOrigin:
-  serializedVersion: 1
-  productId: 165785
-  packageName: Human Melee Animations FREE
-  packageVersion: 2.0.2
-  assetPath: Assets/Kevin Iglesias/Human Animations/Animations/Male/Combat/HumanM@CombatDamage01.fbx
-  uploadId: 762275
