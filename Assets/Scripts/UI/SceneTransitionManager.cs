@@ -12,6 +12,20 @@ public class SceneTransitionManager : MonoBehaviour
 {
     public static SceneTransitionManager Instance { get; private set; }
 
+    /// <summary>
+    /// Đảm bảo Instance tồn tại — tự tạo nếu chưa có (dùng cho UI_Game không có player)
+    /// </summary>
+    public static SceneTransitionManager EnsureInstance()
+    {
+        if (Instance != null) return Instance;
+
+        var go = new GameObject("[SceneTransitionManager]");
+        Instance = go.AddComponent<SceneTransitionManager>();
+        // Awake() sẽ tự gọi DontDestroyOnLoad
+        Debug.Log("[SceneTransition] Tạo Instance mới (không có player prefab)");
+        return Instance;
+    }
+
     [Header("=== Scene Names ===")]
     [SerializeField] private string mainMapScene = "Map_Chinh";
     [SerializeField] private string dungeonSaMacScene = "MapSaMac";
@@ -27,6 +41,10 @@ public class SceneTransitionManager : MonoBehaviour
     [SerializeField] private float fadeSpeed = 2f;
     [SerializeField] private string defaultLoadingMessage = "Loading...";
     [SerializeField] private bool restoreCursorAfterLoad = false; // Không force cursor
+    [Tooltip("Thời gian tối thiểu hiện loading (giây) — slider chạy mượt")]
+    [SerializeField] private float minimumLoadTime = 1.5f;
+    [Tooltip("Tốc độ slider đuổi theo progress thật")]
+    [SerializeField] private float sliderLerpSpeed = 3f;
 
     private CanvasGroup fadeCanvasGroup;
     private bool isTransitioning = false;
@@ -131,18 +149,41 @@ public class SceneTransitionManager : MonoBehaviour
         }
         asyncLoad.allowSceneActivation = false;
 
-        // Cập nhật progress THẬT từ AsyncOperation
+        // Slider chạy mượt với minimum load time
+        float displayProgress = 0f;
+        float elapsedTime = 0f;
+        bool sceneReady = false;
+        bool activating = false; // Ngăn activation block chạy nhiều lần
+
         while (!asyncLoad.isDone)
         {
-            // asyncLoad.progress chạy từ 0 → 0.9 (0.9 = load xong, chờ activate)
-            float realProgress = Mathf.Clamp01(asyncLoad.progress / 0.9f);
-            UpdateProgress(realProgress, message);
+            elapsedTime += Time.unscaledDeltaTime;
 
-            // Khi load xong (progress >= 0.9) → cho activate
-            if (asyncLoad.progress >= 0.9f)
+            // Progress thật từ AsyncOperation (0 → 0.9 = load xong)
+            float realProgress = Mathf.Clamp01(asyncLoad.progress / 0.9f);
+
+            // Progress theo thời gian tối thiểu
+            float timeProgress = Mathf.Clamp01(elapsedTime / minimumLoadTime);
+
+            // Lấy giá trị NHỎ hơn giữa real và time → slider không vượt quá cả 2
+            float targetProgress = Mathf.Min(realProgress, timeProgress);
+
+            // Lerp mượt mà
+            displayProgress = Mathf.Lerp(displayProgress, targetProgress, Time.unscaledDeltaTime * sliderLerpSpeed);
+            UpdateProgress(displayProgress, message);
+
+            // Scene load xong VÀ đủ thời gian tối thiểu
+            if (asyncLoad.progress >= 0.9f && elapsedTime >= minimumLoadTime && !sceneReady)
             {
+                sceneReady = true;
+            }
+
+            // Cho activate CHỈ 1 LẦN khi slider đã gần 100%
+            if (sceneReady && displayProgress >= 0.95f && !activating)
+            {
+                activating = true;
                 UpdateProgress(1f, message);
-                yield return new WaitForSecondsRealtime(0.3f);
+                yield return new WaitForSecondsRealtime(0.2f);
                 asyncLoad.allowSceneActivation = true;
             }
 
@@ -362,6 +403,20 @@ public class SceneTransitionManager : MonoBehaviour
         loadingBar = null;
         loadingText = null;
         fadeCanvasGroup = null;
+
+        // CRITICAL: Nếu đang transition, tìm panel mới NGAY và che scene
+        // Tránh flash 2-frame lộ scene mới trước khi FadeOut
+        if (isTransitioning)
+        {
+            FindLoadingPanel();
+            if (loadingPanel != null)
+            {
+                loadingPanel.SetActive(true);
+                if (fadeCanvasGroup != null)
+                    fadeCanvasGroup.alpha = 1f; // Che ngay lập tức
+                Debug.Log($"[SceneTransition] OnSceneLoaded: Panel che scene mới ngay ({scene.name})");
+            }
+        }
     }
 
     private void OnDestroy()

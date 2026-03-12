@@ -24,7 +24,7 @@ namespace Artsystack.ArtsystackGui
         [SerializeField] private UnityEngine.UI.Button btn_Exit;
 
         [Header("Scene Settings")]
-        [SerializeField] private string gameSceneName = "Game";
+        [SerializeField] private string gameSceneName = "Map_Chinh";
         [SerializeField] private bool showCursorOnPlay = false;
 
         private bool isGameRunning = false;
@@ -140,10 +140,14 @@ namespace Artsystack.ArtsystackGui
 
         private IEnumerator LoadGameScene()
         {
-            // Dùng SceneTransitionManager nếu có
-            if (SceneTransitionManager.Instance != null)
+            // Ẩn menu trước khi chuyển
+            HideAllPanels();
+
+            // Dùng SceneTransitionManager (tự tạo nếu chưa có — UI_Game không có player)
+            var stm = SceneTransitionManager.EnsureInstance();
+            if (stm != null)
             {
-                SceneTransitionManager.Instance.GoToScene(gameSceneName, "Đang tải game...");
+                stm.GoToScene(gameSceneName, "Đang tải game...");
                 isGameRunning = true;
                 yield break;
             }

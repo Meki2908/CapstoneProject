@@ -6362,9 +6362,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 120488239}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 03841cfbfec157443b2c3abe82d4952d, type: 3}
+  m_Script: {fileID: 11500000, guid: 79d2e1822c3e531429574eddb21a5119, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Unity.FantasyKingdom.CloseCanvasButton
+  m_EditorClassIdentifier: 
+  player: {fileID: 1279886598}
+  targetPoint: {fileID: 0}
+  cc: {fileID: 1279886599}
+  offset: {x: 0, y: 0.1, z: 0}
 --- !u!1 &123508435
 GameObject:
   m_ObjectHideFlags: 0
@@ -7728,7 +7732,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -0.80000305, y: -5}
+  m_AnchoredPosition: {x: -0.7999878, y: -5}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &289453133
@@ -8325,7 +8329,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -0.80000305, y: -5}
+  m_AnchoredPosition: {x: -0.7999878, y: -5}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &326866559
@@ -24652,19 +24656,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7542521313094387615, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.005454166
+      value: 0.00060806866
       objectReference: {fileID: 0}
     - target: {fileID: 7542521313094387615, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0.00040920917
+      value: -0.00004562147
       objectReference: {fileID: 0}
     - target: {fileID: 7542521313094387615, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0.9971824
+      value: 0.99719715
       objectReference: {fileID: 0}
     - target: {fileID: 7542521313094387615, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.07481551
+      value: 0.07481665
       objectReference: {fileID: 0}
     - target: {fileID: 8127737498423080249, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalPosition.x
@@ -24694,6 +24698,14 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: -419.49
       objectReference: {fileID: 0}
+    - target: {fileID: 9076889876978067390, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9076889876978067390, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -24705,6 +24717,16 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 1699806196}
   m_SourcePrefab: {fileID: 100100000, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
+--- !u!4 &1279886598 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4443364280475888411, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
+  m_PrefabInstance: {fileID: 1279886597}
+  m_PrefabAsset: {fileID: 0}
+--- !u!143 &1279886599 stripped
+CharacterController:
+  m_CorrespondingSourceObject: {fileID: 9011594198968732796, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
+  m_PrefabInstance: {fileID: 1279886597}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1305125652
 GameObject:
   m_ObjectHideFlags: 0
@@ -30783,7 +30805,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -0.80000305, y: -5}
+  m_AnchoredPosition: {x: -0.7999878, y: -5}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1415766461
@@ -82251,7 +82273,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -0.80000305, y: -5}
+  m_AnchoredPosition: {x: -0.7999878, y: -5}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2003213514

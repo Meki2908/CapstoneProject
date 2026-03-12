@@ -272,6 +272,17 @@ public class PlayerHealth : MonoBehaviour
             Debug.Log($"[PlayerHealth] Hit cooldown active ({hitCooldown - (Time.time - lastHitTime):F1}s left) — damage applied but no stun");
             return; // Đã trừ máu ở trên, nhưng không dừng hành động player
         }
+
+        // === KHÔNG NGẮT COMBO ===
+        // Nếu player đang tấn công (AttackState) → chỉ trừ máu, KHÔNG chuyển GetHitState
+        // Player "tank through" damage để giữ combo mượt
+        if (character != null && character.movementSM != null &&
+            character.movementSM.currentState == character.attacking)
+        {
+            Debug.Log("[PlayerHealth] Player đang attack → skip GetHitState, giữ combo");
+            lastHitTime = Time.time; // Vẫn ghi nhận hit để cooldown hoạt động
+            return;
+        }
         
         lastHitTime = Time.time; // Ghi nhận thời điểm bị đánh
         
@@ -281,7 +292,7 @@ public class PlayerHealth : MonoBehaviour
             character.lastStateBeforeHit = character.movementSM.currentState;
         }
 
-        // Chuyển sang GetHitState (chỉ lần đầu bị đánh, sau đó cooldown bảo vệ)
+        // Chuyển sang GetHitState (chỉ khi KHÔNG đang attack)
         if (character != null && character.movementSM != null && character.movementSM.currentState != character.dieState)
         {
             Debug.Log($"[PlayerHealth] Changing state to GetHitState. Next hit stun in {hitCooldown}s");
