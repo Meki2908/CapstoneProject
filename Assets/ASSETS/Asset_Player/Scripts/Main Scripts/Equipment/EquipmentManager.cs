@@ -6,7 +6,7 @@ using UnityEngine;
 
 /// <summary>
 /// Manages equipped items per slot and provides stat bonuses.
-/// Persists to JSON.
+/// Persists to JSON. Hỗ trợ Runtime Rarity.
 /// </summary>
 public class EquipmentManager : MonoBehaviour
 {
@@ -20,7 +20,8 @@ public class EquipmentManager : MonoBehaviour
     [Serializable]
     private class EquipmentSlots
     {
-        public int[] slotItemIds = new int[NUM_SLOTS] { -1, -1, -1, -1 }; // -1 = empty
+        public int[] slotItemIds = new int[NUM_SLOTS] { -1, -1, -1, -1 };
+        public int[] slotRarities = new int[NUM_SLOTS] { 0, 0, 0, 0 }; // Rarity enum as int
     }
 
     [Serializable]
@@ -29,10 +30,8 @@ public class EquipmentManager : MonoBehaviour
         public EquipmentSlots slots;
     }
 
-    // Runtime storage
     private EquipmentSlots equipmentSlots;
 
-    // Events
     public event Action OnEquipmentChanged;
 
     private void Awake()
@@ -40,7 +39,6 @@ public class EquipmentManager : MonoBehaviour
         if (Instance == null)
         {
             Instance = this;
-            // Ensure we're on a root GameObject before calling DontDestroyOnLoad
             if (transform.parent != null)
             {
                 transform.SetParent(null);
@@ -69,7 +67,6 @@ public class EquipmentManager : MonoBehaviour
             var data = new EquipmentSave { slots = equipmentSlots };
             string json = JsonUtility.ToJson(data, true);
             File.WriteAllText(GetSavePath(), json);
-            Debug.Log($"[EquipmentManager] Saved equipment to {GetSavePath()}");
         }
         catch (Exception e)
         {
@@ -80,11 +77,7 @@ public class EquipmentManager : MonoBehaviour
     public void Load()
     {
         string path = GetSavePath();
-        if (!File.Exists(path))
-        {
-            Debug.Log($"[EquipmentManager] No save found at {path} (starting fresh)");
-            return;
-        }
+        if (!File.Exists(path)) return;
 
         try
         {
@@ -93,7 +86,11 @@ public class EquipmentManager : MonoBehaviour
             if (data != null && data.slots != null)
             {
                 equipmentSlots = data.slots;
-                Debug.Log($"[EquipmentManager] Loaded equipment from {path}");
+                // Ensure slotRarities array exists (backward compat with old saves)
+                if (equipmentSlots.slotRarities == null || equipmentSlots.slotRarities.Length != NUM_SLOTS)
+                {
+                    equipmentSlots.slotRarities = new int[NUM_SLOTS];
+                }
             }
         }
         catch (Exception e)
@@ -102,101 +99,90 @@ public class EquipmentManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Get equipped item at a specific slot (by slot type - legacy)
-    /// </summary>
+    // === GET EQUIPPED ITEM ===
+
     public Item GetEquippedItem(EquipmentSlotType slotType)
     {
-        int slotIndex = (int)slotType;
-        return GetEquippedItemByIndex(slotIndex);
+        return GetEquippedItemByIndex((int)slotType);
     }
 
-    /// <summary>
-    /// Get equipped item at a specific slot (by index)
-    /// </summary>
     public Item GetEquippedItemByIndex(int slotIndex)
     {
         if (slotIndex < 0 || slotIndex >= NUM_SLOTS) return null;
-
         int itemId = equipmentSlots.slotItemIds[slotIndex];
         if (itemId < 0) return null;
-
         return InventoryManager.Instance?.GetItemById(itemId);
     }
 
     /// <summary>
-    /// Equip an item into a specific slot (by slot type - legacy)
+    /// Get runtime rarity of equipped item at slot
     /// </summary>
+    public Rarity GetEquippedRarity(int slotIndex)
+    {
+        if (slotIndex < 0 || slotIndex >= NUM_SLOTS) return Rarity.Common;
+        return (Rarity)equipmentSlots.slotRarities[slotIndex];
+    }
+
+    public Rarity GetEquippedRarity(EquipmentSlotType slotType)
+    {
+        return GetEquippedRarity((int)slotType);
+    }
+
+    // === EQUIP / UNEQUIP ===
+
     public bool EquipItem(EquipmentSlotType slotType, Item equipmentItem)
     {
-        int slotIndex = (int)slotType;
-        return EquipItemByIndex(slotIndex, equipmentItem);
+        return EquipItemByIndex((int)slotType, equipmentItem);
     }
 
     /// <summary>
-    /// Equip an item into a specific slot (by index) - any equipment can go into any slot
+    /// Equip item với runtime rarity
     /// </summary>
-    public bool EquipItemByIndex(int slotIndex, Item equipmentItem)
+    public bool EquipItemByIndex(int slotIndex, Item equipmentItem, Rarity rarity)
     {
-        if (equipmentItem == null || equipmentItem.itemType != ItemType.Equipment)
+        if (equipmentItem == null || equipmentItem.itemType != ItemType.Equipment) return false;
+        if (slotIndex < 0 || slotIndex >= NUM_SLOTS) return false;
+        if (InventoryManager.Instance == null) return false;
+
+        if (InventoryManager.Instance.GetItemAmount(equipmentItem.id, rarity) <= 0)
         {
-            Debug.LogWarning("[EquipmentManager] EquipItemByIndex invalid args");
+            Debug.LogWarning($"[EquipmentManager] No {equipmentItem.itemName} [{rarity}] in inventory");
             return false;
         }
-
-        if (slotIndex < 0 || slotIndex >= NUM_SLOTS)
-        {
-            Debug.LogWarning($"[EquipmentManager] EquipItemByIndex invalid slot index: {slotIndex}");
-            return false;
-        }
-
-        if (InventoryManager.Instance == null)
-        {
-            Debug.LogWarning("[EquipmentManager] EquipItem failed: InventoryManager.Instance is null");
-            return false;
-        }
-
-        // Must own the item in inventory
-        if (InventoryManager.Instance.GetItemAmount(equipmentItem.id) <= 0)
-        {
-            Debug.LogWarning($"[EquipmentManager] EquipItem failed: No item id {equipmentItem.id} in inventory");
-            return false;
-        }
-
-        int currentId = equipmentSlots.slotItemIds[slotIndex];
 
         // Return existing item to inventory
+        int currentId = equipmentSlots.slotItemIds[slotIndex];
         if (currentId >= 0)
         {
-            InventoryManager.Instance.AddItem(currentId, 1, 1f);
+            Rarity currentRarity = (Rarity)equipmentSlots.slotRarities[slotIndex];
+            InventoryManager.Instance.AddItem(currentId, 1, currentRarity);
         }
 
-        // Consume one from inventory and equip
-        bool removed = InventoryManager.Instance.RemoveItem(equipmentItem.id, 1);
-        if (!removed)
-        {
-            Debug.LogWarning("[EquipmentManager] EquipItem failed: could not remove from inventory");
-            return false;
-        }
+        // Consume and equip
+        bool removed = InventoryManager.Instance.RemoveItem(equipmentItem.id, 1, rarity);
+        if (!removed) return false;
 
         equipmentSlots.slotItemIds[slotIndex] = equipmentItem.id;
+        equipmentSlots.slotRarities[slotIndex] = (int)rarity;
         Save();
         OnEquipmentChanged?.Invoke();
         return true;
     }
 
     /// <summary>
-    /// Remove item from a specific slot (by slot type - legacy)
+    /// Equip item — backward compat (dùng SO rarity)
     /// </summary>
-    public bool RemoveItem(EquipmentSlotType slotType)
+    public bool EquipItemByIndex(int slotIndex, Item equipmentItem)
     {
-        int slotIndex = (int)slotType;
-        return RemoveItemByIndex(slotIndex);
+        Rarity r = equipmentItem != null ? equipmentItem.rarity : Rarity.Common;
+        return EquipItemByIndex(slotIndex, equipmentItem, r);
     }
 
-    /// <summary>
-    /// Remove item from a specific slot (by index)
-    /// </summary>
+    public bool RemoveItem(EquipmentSlotType slotType)
+    {
+        return RemoveItemByIndex((int)slotType);
+    }
+
     public bool RemoveItemByIndex(int slotIndex)
     {
         if (slotIndex < 0 || slotIndex >= NUM_SLOTS) return false;
@@ -205,8 +191,10 @@ public class EquipmentManager : MonoBehaviour
         int currentId = equipmentSlots.slotItemIds[slotIndex];
         if (currentId < 0) return false;
 
-        InventoryManager.Instance.AddItem(currentId, 1, 1f);
+        Rarity currentRarity = (Rarity)equipmentSlots.slotRarities[slotIndex];
+        InventoryManager.Instance.AddItem(currentId, 1, currentRarity);
         equipmentSlots.slotItemIds[slotIndex] = -1;
+        equipmentSlots.slotRarities[slotIndex] = 0;
         Save();
         OnEquipmentChanged?.Invoke();
         return true;
@@ -226,8 +214,10 @@ public class EquipmentManager : MonoBehaviour
             int id = equipmentSlots.slotItemIds[i];
             if (id >= 0)
             {
-                InventoryManager.Instance.AddItem(id, 1, 1f);
+                Rarity r = (Rarity)equipmentSlots.slotRarities[i];
+                InventoryManager.Instance.AddItem(id, 1, r);
                 equipmentSlots.slotItemIds[i] = -1;
+                equipmentSlots.slotRarities[i] = 0;
             }
         }
         Save();
@@ -238,49 +228,49 @@ public class EquipmentManager : MonoBehaviour
     {
         if (InventoryManager.Instance == null) return;
 
-        var items = InventoryManager.Instance.GetAllItems(); // (Item, amount)
+        var items = InventoryManager.Instance.GetAllItemsWithRarity();
         if (items == null || items.Count == 0) return;
 
-        // Get all equipment items
-        List<Item> equipmentItems = new List<Item>();
-        foreach (var (item, amount) in items)
+        // Get all equipment items with their rarity
+        var equipList = new List<(Item item, Rarity rarity)>();
+        foreach (var (item, amount, rarity) in items)
         {
             if (item == null || amount <= 0) continue;
             if (item.itemType != ItemType.Equipment) continue;
-            equipmentItems.Add(item);
+            equipList.Add((item, rarity));
         }
 
-        if (equipmentItems.Count == 0) return;
+        if (equipList.Count == 0) return;
 
-        // Sort by rarity (descending), then by total stat value
-        equipmentItems.Sort((a, b) =>
+        // Sort by rarity (descending), then by scaled stat value
+        equipList.Sort((a, b) =>
         {
             int rarityCompare = b.rarity.CompareTo(a.rarity);
             if (rarityCompare != 0) return rarityCompare;
 
-            // Calculate total stat value
-            float aValue = a.hpBonus + a.defenseBonus + (a.critRateBonus * 100f) + ((a.critDamageMultiplier - 1f) * 100f) + (a.movementSpeedBonus * 100f) + (a.attackSpeedBonus * 100f);
-            float bValue = b.hpBonus + b.defenseBonus + (b.critRateBonus * 100f) + ((b.critDamageMultiplier - 1f) * 100f) + (b.movementSpeedBonus * 100f) + (b.attackSpeedBonus * 100f);
+            float aValue = a.item.ScaledHPBonus(a.rarity) + a.item.ScaledDefenseBonus(a.rarity);
+            float bValue = b.item.ScaledHPBonus(b.rarity) + b.item.ScaledDefenseBonus(b.rarity);
             return bValue.CompareTo(aValue);
         });
 
-        // Equip best items to each slot (any equipment can go into any slot)
-        for (int i = 0; i < NUM_SLOTS && i < equipmentItems.Count; i++)
+        for (int i = 0; i < NUM_SLOTS && i < equipList.Count; i++)
         {
-            EquipItemByIndex(i, equipmentItems[i]);
+            EquipItemByIndex(i, equipList[i].item, equipList[i].rarity);
         }
     }
 
-    // Stat getters - sum all equipped items
+    // === STAT GETTERS — dùng runtime rarity ===
+
     public float GetTotalHPBonus()
     {
         float total = 0f;
-        foreach (var slotType in Enum.GetValues(typeof(EquipmentSlotType)).Cast<EquipmentSlotType>())
+        for (int i = 0; i < NUM_SLOTS; i++)
         {
-            var item = GetEquippedItem(slotType);
+            var item = GetEquippedItemByIndex(i);
             if (item != null)
             {
-                total += item.hpBonus;
+                Rarity r = GetEquippedRarity(i);
+                total += item.ScaledHPBonus(r);
             }
         }
         return total;
@@ -289,40 +279,43 @@ public class EquipmentManager : MonoBehaviour
     public float GetTotalCritRateBonus()
     {
         float total = 0f;
-        foreach (var slotType in Enum.GetValues(typeof(EquipmentSlotType)).Cast<EquipmentSlotType>())
+        for (int i = 0; i < NUM_SLOTS; i++)
         {
-            var item = GetEquippedItem(slotType);
+            var item = GetEquippedItemByIndex(i);
             if (item != null)
             {
-                total += item.critRateBonus;
+                Rarity r = GetEquippedRarity(i);
+                total += item.ScaledCritRateBonus(r);
             }
         }
-        return Mathf.Clamp01(total); // Clamp to 0-1 (0-100%)
+        return Mathf.Clamp01(total);
     }
 
     public float GetTotalCritDamageMultiplier()
     {
-        float total = 1f; // Start at 1.0 (100%)
-        foreach (var slotType in Enum.GetValues(typeof(EquipmentSlotType)).Cast<EquipmentSlotType>())
+        float total = 1f;
+        for (int i = 0; i < NUM_SLOTS; i++)
         {
-            var item = GetEquippedItem(slotType);
+            var item = GetEquippedItemByIndex(i);
             if (item != null)
             {
-                total += (item.critDamageMultiplier - 1f); // Add bonus (e.g., 1.5 -> +0.5)
+                Rarity r = GetEquippedRarity(i);
+                total += (item.ScaledCritDamageMultiplier(r) - 1f);
             }
         }
-        return Mathf.Max(1f, total); // Minimum 1.0 (100%)
+        return Mathf.Max(1f, total);
     }
 
     public float GetTotalMovementSpeedBonus()
     {
         float total = 0f;
-        foreach (var slotType in Enum.GetValues(typeof(EquipmentSlotType)).Cast<EquipmentSlotType>())
+        for (int i = 0; i < NUM_SLOTS; i++)
         {
-            var item = GetEquippedItem(slotType);
+            var item = GetEquippedItemByIndex(i);
             if (item != null)
             {
-                total += item.movementSpeedBonus;
+                Rarity r = GetEquippedRarity(i);
+                total += item.ScaledMovementSpeedBonus(r);
             }
         }
         return total;
@@ -331,12 +324,13 @@ public class EquipmentManager : MonoBehaviour
     public float GetTotalAttackSpeedBonus()
     {
         float total = 0f;
-        foreach (var slotType in Enum.GetValues(typeof(EquipmentSlotType)).Cast<EquipmentSlotType>())
+        for (int i = 0; i < NUM_SLOTS; i++)
         {
-            var item = GetEquippedItem(slotType);
+            var item = GetEquippedItemByIndex(i);
             if (item != null)
             {
-                total += item.attackSpeedBonus;
+                Rarity r = GetEquippedRarity(i);
+                total += item.ScaledAttackSpeedBonus(r);
             }
         }
         return total;
@@ -345,15 +339,15 @@ public class EquipmentManager : MonoBehaviour
     public float GetTotalDefenseBonus()
     {
         float total = 0f;
-        foreach (var slotType in Enum.GetValues(typeof(EquipmentSlotType)).Cast<EquipmentSlotType>())
+        for (int i = 0; i < NUM_SLOTS; i++)
         {
-            var item = GetEquippedItem(slotType);
+            var item = GetEquippedItemByIndex(i);
             if (item != null)
             {
-                total += item.defenseBonus;
+                Rarity r = GetEquippedRarity(i);
+                total += item.ScaledDefenseBonus(r);
             }
         }
         return total;
     }
 }
-

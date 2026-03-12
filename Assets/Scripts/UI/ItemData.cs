@@ -9,7 +9,8 @@ public enum ItemRarity
     Uncommon,
     Rare,
     Epic,
-    Legendary
+    Legendary,
+    Mythic
 }
 
 /// <summary>

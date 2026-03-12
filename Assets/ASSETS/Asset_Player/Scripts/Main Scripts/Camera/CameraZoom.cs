@@ -7,20 +7,20 @@ namespace MovementSystem
     public class CameraZoom : MonoBehaviour
     {
         [SerializeField]
-        [Range(0f, 12f)]
+        [Range(0f, 20f)]
         private float defaultDistance = 6f;
         [SerializeField]
-        [Range(0f, 12f)]
+        [Range(0f, 20f)]
         private float minimumDistance = 1f;
         [SerializeField]
-        [Range(0f, 12f)]
-        private float maximumDistance = 6f;
+        [Range(0f, 20f)]
+        private float maximumDistance = 12f;
         [SerializeField]
         [Range(0f, 20f)]
         private float smoothing = 4f;
         [SerializeField]
         [Range(0f, 20f)]
-        private float zoomSensitivity = 1f;
+        private float zoomSensitivity = 2f;
         [SerializeField]
         private InputActionReference zoomInputAction;
         private CinemachinePositionComposer positionComposer;

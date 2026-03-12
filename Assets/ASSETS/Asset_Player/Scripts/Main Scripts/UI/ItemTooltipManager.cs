@@ -238,34 +238,34 @@ public class ItemTooltipManager : MonoBehaviour
 
         bool hasStats = false;
 
-        if (item.hpBonus > 0f)
+        if (item.ScaledHPBonus(item.rarity) > 0f)
         {
-            sb.AppendLine($"<color=#00FF00>HP: +{item.hpBonus:F0}</color>");
+            sb.AppendLine($"<color=#00FF00>HP: +{item.ScaledHPBonus(item.rarity):F0}</color>");
             hasStats = true;
         }
-        if (item.defenseBonus > 0f)
+        if (item.ScaledDefenseBonus(item.rarity) > 0f)
         {
-            sb.AppendLine($"<color=#00AAFF>Defense: +{item.defenseBonus:F0}</color>");
+            sb.AppendLine($"<color=#00AAFF>Defense: +{item.ScaledDefenseBonus(item.rarity):F0}</color>");
             hasStats = true;
         }
-        if (item.critRateBonus > 0f)
+        if (item.ScaledCritRateBonus(item.rarity) > 0f)
         {
-            sb.AppendLine($"<color=#FF00FF>Crit Rate: +{item.critRateBonus * 100f:F1}%</color>");
+            sb.AppendLine($"<color=#FF00FF>Crit Rate: +{item.ScaledCritRateBonus(item.rarity) * 100f:F1}%</color>");
             hasStats = true;
         }
-        if (item.critDamageMultiplier > 1f)
+        if (item.ScaledCritDamageMultiplier(item.rarity) > 1f)
         {
-            sb.AppendLine($"<color=#FF00FF>Crit Damage: +{(item.critDamageMultiplier - 1f) * 100f:F1}%</color>");
+            sb.AppendLine($"<color=#FF00FF>Crit Damage: +{(item.ScaledCritDamageMultiplier(item.rarity) - 1f) * 100f:F1}%</color>");
             hasStats = true;
         }
-        if (item.movementSpeedBonus > 0f)
+        if (item.ScaledMovementSpeedBonus(item.rarity) > 0f)
         {
-            sb.AppendLine($"<color=#00FFFF>Movement Speed: +{item.movementSpeedBonus * 100f:F1}%</color>");
+            sb.AppendLine($"<color=#00FFFF>Movement Speed: +{item.ScaledMovementSpeedBonus(item.rarity) * 100f:F1}%</color>");
             hasStats = true;
         }
-        if (item.attackSpeedBonus > 0f)
+        if (item.ScaledAttackSpeedBonus(item.rarity) > 0f)
         {
-            sb.AppendLine($"<color=#FFAA00>Attack Speed: +{item.attackSpeedBonus * 100f:F1}%</color>");
+            sb.AppendLine($"<color=#FFAA00>Attack Speed: +{item.ScaledAttackSpeedBonus(item.rarity) * 100f:F1}%</color>");
             hasStats = true;
         }
 
@@ -343,17 +343,7 @@ public class ItemTooltipManager : MonoBehaviour
     /// </summary>
     private string GetRarityColor(Rarity rarity)
     {
-        switch (rarity)
-        {
-            case Rarity.Common:
-                return "#FFFFFF"; // White
-            case Rarity.Epic:
-                return "#9B59B6"; // Purple
-            case Rarity.Legendary:
-                return "#FFD700"; // Gold
-            default:
-                return "#FFFFFF";
-        }
+        return Item.GetRarityColorHex(rarity);
     }
 }
 
