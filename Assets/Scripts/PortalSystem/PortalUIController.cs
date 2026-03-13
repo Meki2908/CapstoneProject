@@ -26,13 +26,18 @@ public class PortalUIController : MonoBehaviour
 
     private void Start()
     {
+        // Bật canvas lên khi game chạy (dù đang tắt trong Editor)
+        var canvas = GetComponent<Canvas>();
+        if (canvas != null) canvas.enabled = true;
+        else gameObject.SetActive(true);
+
         Debug.Log("[PortalUI] PortalUIController Start() đang chạy...");
 
         // Kiểm tra Canvas và GraphicRaycaster
-        Canvas canvas = GetComponentInParent<Canvas>();
-        if (canvas != null && canvas.GetComponent<GraphicRaycaster>() == null)
+        Canvas parentCanvas = GetComponentInParent<Canvas>();
+        if (parentCanvas != null && parentCanvas.GetComponent<GraphicRaycaster>() == null)
         {
-            Debug.LogError($"[PortalUI] KHÔNG TÌM THẤY 'Graphic Raycaster' trên Canvas '{canvas.name}'! Các nút bấm sẽ không nhận chuột.");
+            Debug.LogError($"[PortalUI] KHÔNG TÌM THẤY 'Graphic Raycaster' trên Canvas '{parentCanvas.name}'! Các nút bấm sẽ không nhận chuột.");
         }
 
         // Kiểm tra EventSystem

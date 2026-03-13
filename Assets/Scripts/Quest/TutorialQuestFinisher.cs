@@ -48,10 +48,11 @@ public class TutorialQuestFinisher : MonoBehaviour
     public void FinishTutorial()
     {
         Debug.Log("[TutorialFinisher] FinishTutorial() called – returning to map.");
-        // Quest đã được xử lý trong LeonaDialogue khi accept
-        // Chỉ cần save và load scene về Map
         StartCoroutine(ReturnToMap());
     }
+
+    /// <summary>Assign this to the 'Return' button on the completion canvas.</summary>
+    public void OnReturnButtonClicked() => FinishTutorial();
 
     System.Collections.IEnumerator ReturnToMap()
     {

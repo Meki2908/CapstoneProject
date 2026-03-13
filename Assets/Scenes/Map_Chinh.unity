@@ -3464,74 +3464,6 @@ Transform:
   - {fileID: 1059411933}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &309647510
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 309647512}
-  - component: {fileID: 309647511}
-  m_Layer: 0
-  m_Name: UI_MapManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &309647511
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 309647510}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1dc380552157ca5448fbf4a904d5f38a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BigMapController
-  bigMapPanel: {fileID: 1272782064}
-  mapRect: {fileID: 494778794}
-  playerMarkerRect: {fileID: 0}
-  hideWhenBigMapOpen:
-  - {fileID: 0}
-  - {fileID: 0}
-  player: {fileID: 0}
-  minX: -400
-  maxX: 400
-  minZ: -400
-  maxZ: 400
-  invertX: 0
-  invertZ: 0
-  toggleKey: 109
-  portalPoints:
-  - {fileID: 0}
-  portalMarkerPrefab: {fileID: 0}
-  portalsParent: {fileID: 0}
-  closeMapAfterTeleport: 1
-  characterController: {fileID: 0}
-  playerRigidbody: {fileID: 0}
-  navAgent: {fileID: 0}
-  teleportOffset: {x: 0, y: 0.1, z: 0}
-  debugLogs: 1
---- !u!4 &309647512
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 309647510}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -1602.0242, y: -540.00006, z: 38280.74}
-  m_LocalScale: {x: 2.3933518, y: 2.3933518, z: 2.3933518}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 2136595830}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &324548991
 GameObject:
   m_ObjectHideFlags: 0
@@ -6000,7 +5932,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &641606118
 RectTransform:
   m_ObjectHideFlags: 0
@@ -6140,6 +6072,7 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1666556677}
+  - {fileID: 1650062826}
   m_Father: {fileID: 1807593178}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
@@ -6651,21 +6584,25 @@ PrefabInstance:
       propertyPath: m_Name
       value: Player_Item
       objectReference: {fileID: 0}
+    - target: {fileID: 4443364280475888411, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -0.12
+      objectReference: {fileID: 0}
     - target: {fileID: 6039037309642713428, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.9239543
+      value: 0.91754794
       objectReference: {fileID: 0}
     - target: {fileID: 6039037309642713428, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0.12905742
+      value: -0.14015357
       objectReference: {fileID: 0}
     - target: {fileID: 6039037309642713428, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0.3566112
+      value: 0.36783955
       objectReference: {fileID: 0}
     - target: {fileID: 6039037309642713428, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.049811248
+      value: 0.056186736
       objectReference: {fileID: 0}
     - target: {fileID: 7069795437127634594, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalPosition.x
@@ -6673,7 +6610,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7069795437127634594, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.837
+      value: 1.297
       objectReference: {fileID: 0}
     - target: {fileID: 7069795437127634594, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalPosition.z
@@ -6681,19 +6618,23 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7542521313094387615, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.011121482
+      value: 0.005558957
       objectReference: {fileID: 0}
     - target: {fileID: 7542521313094387615, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0.00083441054
+      value: -0.00041707148
       objectReference: {fileID: 0}
     - target: {fileID: 7542521313094387615, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0.9971353
+      value: 0.99718183
       objectReference: {fileID: 0}
     - target: {fileID: 7542521313094387615, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.07481198
+      value: 0.0748155
+      objectReference: {fileID: 0}
+    - target: {fileID: 8127737498423080249, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.297
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -9986,7 +9927,7 @@ Transform:
   m_GameObject: {fileID: 1171884496}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 8.611, y: 1.837, z: -4.8}
+  m_LocalPosition: {x: 8.611, y: 1.297, z: -4.8}
   m_LocalScale: {x: 1.0000005, y: 1, z: 1.0000004}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -10671,7 +10612,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1318360181
 RectTransform:
   m_ObjectHideFlags: 0
@@ -14642,14 +14583,14 @@ RectTransform:
   m_GameObject: {fileID: 1650062825}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 3, y: 3, z: 0.5}
+  m_LocalScale: {x: 3, y: 3, z: 0.50000006}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1807593178}
+  m_Father: {fileID: 647498993}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -912.9997, y: 442}
+  m_AnchoredPosition: {x: 0.0004272461, y: 10.999847}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1650062827
@@ -16417,6 +16358,7 @@ GameObject:
   - component: {fileID: 1807593177}
   - component: {fileID: 1807593176}
   - component: {fileID: 1807593175}
+  - component: {fileID: 1807593179}
   m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
@@ -16500,7 +16442,6 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 647498993}
-  - {fileID: 1650062826}
   - {fileID: 1430023031}
   - {fileID: 179220670}
   - {fileID: 2136595830}
@@ -16514,6 +16455,18 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
+--- !u!114 &1807593179
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1807593174}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d50c8fa2bb4b6c943b5fa08e648d05de, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1808015316 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: aa42f4796862ec349bfa1cdf4489664b, type: 3}
@@ -50890,13 +50843,14 @@ GameObject:
   - component: {fileID: 2136595833}
   - component: {fileID: 2136595832}
   - component: {fileID: 2136595831}
+  - component: {fileID: 2136595834}
   m_Layer: 5
   m_Name: Map
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &2136595830
 RectTransform:
   m_ObjectHideFlags: 0
@@ -50910,7 +50864,6 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1272782065}
-  - {fileID: 309647512}
   m_Father: {fileID: 1807593178}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -50981,6 +50934,39 @@ Canvas:
   m_SortingLayerID: 0
   m_SortingOrder: 0
   m_TargetDisplay: 0
+--- !u!114 &2136595834
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2136595829}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dc380552157ca5448fbf4a904d5f38a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  bigMapPanel: {fileID: 0}
+  mapRect: {fileID: 0}
+  playerMarkerRect: {fileID: 0}
+  hideWhenBigMapOpen: []
+  player: {fileID: 0}
+  minX: -400
+  maxX: 400
+  minZ: -400
+  maxZ: 400
+  invertX: 0
+  invertZ: 0
+  toggleKey: 109
+  portalPoints: []
+  portalMarkerPrefab: {fileID: 0}
+  portalsParent: {fileID: 0}
+  closeMapAfterTeleport: 1
+  characterController: {fileID: 0}
+  playerRigidbody: {fileID: 0}
+  navAgent: {fileID: 0}
+  teleportOffset: {x: 0, y: 0.1, z: 0}
+  debugLogs: 0
 --- !u!1001 &4366403772634863666
 PrefabInstance:
   m_ObjectHideFlags: 0

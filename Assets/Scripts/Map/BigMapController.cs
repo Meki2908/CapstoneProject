@@ -1,272 +1,110 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 
-#if ENABLE_INPUT_SYSTEM
-using UnityEngine.InputSystem;
-#endif
-
+/// <summary>
+/// Mirror của QuestJournalUI — áp dụng cho Big Map.
+/// Canvas luôn bật. Chỉ rootPanel (panel con) bị ẩn/hiện.
+///
+/// SETUP (giống QuestJournalUI):
+///   1. Canvas BigMap → LUÔN BẬT trong Hierarchy
+///   2. Gắn script này lên Canvas (hoặc bất kỳ GameObject nào luôn active)
+///   3. rootPanel = Panel con bên trong Canvas (kéo vào Inspector)
+///   4. Ấn M trong Game → bật/tắt rootPanel + cursor
+/// </summary>
 public class BigMapController : MonoBehaviour
 {
-    [Header("UI")]
-    public GameObject bigMapPanel;            // Panel chứa Big Map
-    public RectTransform mapRect;             // RectTransform của map
-    public RectTransform playerMarkerRect;    // Marker người chơi (con của mapRect)
-
-    [Header("UI Hide When BigMap Open")]
-    public GameObject[] hideWhenBigMapOpen;   // Các UI cần ẩn khi mở Big Map
-
-    [Header("Player")]
-    public Transform player;
-
-    [Header("World Bounds (from capture camera)")]
-    public float minX = -400, maxX = 400;
-    public float minZ = -400, maxZ = 400;
-
-    [Header("Fix if flipped")]
-    public bool invertX = false;
-    public bool invertZ = false;
-
-    [Header("Toggle Key")]
+    [Header("Phím toggle")]
     public KeyCode toggleKey = KeyCode.M;
 
-    [Header("Portals (Teleport Markers)")]
-    public Transform[] portalPoints;
-    public MapPortalMarker portalMarkerPrefab;
-    public RectTransform portalsParent;
-    public bool closeMapAfterTeleport = true;
+    [Header("Panel bên trong Canvas")]
+    public GameObject rootPanel;   // Kéo Panel con vào đây — giống rootPanel của QuestJournalUI
 
-    [Header("Teleport Support (optional)")]
-    public CharacterController characterController;
-    public Rigidbody playerRigidbody;
-    public UnityEngine.AI.NavMeshAgent navAgent;
-    public Vector3 teleportOffset = Vector3.up * 0.1f;
+    [Header("UI ẩn khi map mở (tuỳ chọn)")]
+    public GameObject[] hideWhenOpen;
 
-    [Header("Debug")]
-    public bool debugLogs = false;
-
-    private MapPortalMarker[] _portalMarkers;
-
-    public bool IsOpen => bigMapPanel != null && bigMapPanel.activeSelf;
-
-    // =========================
-    // Unity
-    // =========================
-    void Awake()
-    {
-        if (bigMapPanel != null)
-            bigMapPanel.SetActive(false);
-
-        if (portalsParent == null)
-            portalsParent = mapRect;
-
-        if (player != null)
-        {
-            if (characterController == null)
-                characterController = player.GetComponent<CharacterController>();
-
-            if (playerRigidbody == null)
-                playerRigidbody = player.GetComponent<Rigidbody>();
-
-            if (navAgent == null)
-                navAgent = player.GetComponent<UnityEngine.AI.NavMeshAgent>();
-        }
-    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     void Start()
     {
-        SpawnPortalMarkers();
-        Cursor.visible = false;
-        Cursor.lockState = CursorLockMode.Locked;
+        if (rootPanel != null)
+        {
+            rootPanel.SetActive(false);
+        }
+        else
+        {
+            Debug.LogError("[BigMap] rootPanel CHƯA ĐƯỢC GÁN! Kéo Panel con vào Inspector slot 'Root Panel'.");
+        }
     }
 
     void Update()
     {
         if (IsTogglePressedThisFrame())
-        {
-            ToggleBigMap();
-        }
+            ToggleMap();
+    }
 
-        if (bigMapPanel != null && bigMapPanel.activeSelf)
+    // ─── Toggle (giống ToggleJournal) ────────────────────────────────────────
+
+    public void ToggleMap()
+    {
+        if (rootPanel == null) return;
+
+        bool isOpen = !rootPanel.activeSelf;
+        rootPanel.SetActive(isOpen);
+
+        if (isOpen)
         {
-            UpdatePlayerMarker();
-            UpdatePortalMarkers();
+            SetOtherUI(false);
+            Cursor.visible   = true;
+            Cursor.lockState = CursorLockMode.None;
+        }
+        else
+        {
+            SetOtherUI(true);
+            Cursor.visible   = false;
+            Cursor.lockState = CursorLockMode.Locked;
+            if (EventSystem.current != null)
+                EventSystem.current.SetSelectedGameObject(null);
         }
     }
 
-    // =========================
-    // Public API
-    // =========================
     public void OpenMap()
     {
-        if (bigMapPanel == null) return;
-        if (bigMapPanel.activeSelf) return;
-
-        bigMapPanel.SetActive(true);
-        SetOtherUIActive(false);
-        Cursor.visible = true;
+        if (rootPanel == null) return;
+        rootPanel.SetActive(true);
+        SetOtherUI(false);
+        Cursor.visible   = true;
         Cursor.lockState = CursorLockMode.None;
-
-        if (debugLogs) Debug.Log("[BigMap] Map opened.");
     }
 
     public void CloseMap()
     {
-        if (bigMapPanel == null) return;
-        if (!bigMapPanel.activeSelf) return;
-
-        bigMapPanel.SetActive(false);
-        SetOtherUIActive(true);
-        Cursor.visible = false;
+        if (rootPanel == null) return;
+        rootPanel.SetActive(false);
+        SetOtherUI(true);
+        Cursor.visible   = false;
         Cursor.lockState = CursorLockMode.Locked;
-
-        if (debugLogs) Debug.Log("[BigMap] Map closed.");
+        if (EventSystem.current != null)
+            EventSystem.current.SetSelectedGameObject(null);
     }
 
-    // =========================
-    // Toggle BigMap
-    // =========================
-    void ToggleBigMap()
+    public bool IsOpen => rootPanel != null && rootPanel.activeSelf;
+
+    // ─── Helpers ──────────────────────────────────────────────────────────────
+
+    void SetOtherUI(bool active)
     {
-        if (bigMapPanel == null)
-        {
-            Debug.LogError("[BigMap] bigMapPanel is NULL.");
-            return;
-        }
-
-        if (bigMapPanel.activeSelf) CloseMap();
-        else OpenMap();
-    }
-
-    void SetOtherUIActive(bool active)
-    {
-        if (hideWhenBigMapOpen == null) return;
-
-        foreach (var ui in hideWhenBigMapOpen)
-        {
-            if (ui != null)
-                ui.SetActive(active);
-        }
+        if (hideWhenOpen == null) return;
+        foreach (var ui in hideWhenOpen)
+            if (ui != null) ui.SetActive(active);
     }
 
     bool IsTogglePressedThisFrame()
     {
 #if ENABLE_INPUT_SYSTEM
-        if (Keyboard.current != null && Keyboard.current.mKey.wasPressedThisFrame)
+        if (UnityEngine.InputSystem.Keyboard.current != null &&
+            UnityEngine.InputSystem.Keyboard.current.mKey.wasPressedThisFrame)
             return true;
 #endif
         return Input.GetKeyDown(toggleKey);
-    }
-
-    // =========================
-    // World -> Map UI
-    // =========================
-    public Vector2 WorldToMapUI(Vector3 worldPos)
-    {
-        if (mapRect == null) return Vector2.zero;
-
-        float nx = Mathf.InverseLerp(minX, maxX, worldPos.x);
-        float nz = Mathf.InverseLerp(minZ, maxZ, worldPos.z);
-
-        if (invertX) nx = 1f - nx;
-        if (invertZ) nz = 1f - nz;
-
-        nx = Mathf.Clamp01(nx);
-        nz = Mathf.Clamp01(nz);
-
-        float uiX = (nx - 0.5f) * mapRect.rect.width;
-        float uiY = (nz - 0.5f) * mapRect.rect.height;
-
-        return new Vector2(uiX, uiY);
-    }
-
-    // =========================
-    // Player Marker
-    // =========================
-    void UpdatePlayerMarker()
-    {
-        if (player == null || playerMarkerRect == null || mapRect == null)
-            return;
-
-        Vector2 ui = WorldToMapUI(player.position);
-        playerMarkerRect.anchoredPosition = ui;
-
-        if (debugLogs)
-            Debug.Log($"[BigMap] Player UI Pos = {ui}");
-    }
-
-    // =========================
-    // Portal Markers
-    // =========================
-    void SpawnPortalMarkers()
-    {
-        if (portalMarkerPrefab == null || portalPoints == null || portalPoints.Length == 0)
-            return;
-
-        if (portalsParent == null)
-            portalsParent = mapRect;
-
-        if (_portalMarkers != null)
-        {
-            foreach (var m in _portalMarkers)
-                if (m != null) Destroy(m.gameObject);
-        }
-
-        _portalMarkers = new MapPortalMarker[portalPoints.Length];
-
-        for (int i = 0; i < portalPoints.Length; i++)
-        {
-            if (portalPoints[i] == null) continue;
-
-            var marker = Instantiate(portalMarkerPrefab, portalsParent);
-            marker.name = $"PortalMarker_{i}";
-            marker.Init(this, portalPoints[i]);
-            _portalMarkers[i] = marker;
-        }
-    }
-
-    void UpdatePortalMarkers()
-    {
-        if (_portalMarkers == null) return;
-
-        foreach (var m in _portalMarkers)
-        {
-            if (m == null || m.Target == null) continue;
-            m.Rect.anchoredPosition = WorldToMapUI(m.Target.position);
-        }
-    }
-
-    // =========================
-    // Teleport
-    // =========================
-    public void TeleportTo(Vector3 targetPos)
-    {
-        if (player == null) return;
-
-        Vector3 finalPos = targetPos + teleportOffset;
-
-        if (navAgent != null && navAgent.enabled)
-        {
-            navAgent.Warp(finalPos);
-        }
-        else
-        {
-            if (characterController != null)
-                characterController.enabled = false;
-
-            if (playerRigidbody != null)
-            {
-                playerRigidbody.linearVelocity = Vector3.zero;
-                playerRigidbody.angularVelocity = Vector3.zero;
-            }
-
-            player.position = finalPos;
-
-            if (characterController != null)
-                characterController.enabled = true;
-        }
-
-        if (closeMapAfterTeleport) CloseMap();
-
-        if (debugLogs)
-            Debug.Log("[BigMap] Teleported to " + finalPos);
     }
 }

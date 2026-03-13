@@ -1,34 +1,11 @@
-﻿using UnityEngine;
-using UnityEngine.UI;
+using UnityEngine;
 
+/// <summary>
+/// MapPortalMarker không còn dùng sau khi xóa cơ chế teleport khỏi BigMapController.
+/// Script này giữ lại nhưng không làm gì.
+/// </summary>
 public class MapPortalMarker : MonoBehaviour
 {
-    public RectTransform Rect { get; private set; }
-    public Transform Target { get; private set; }
-
-    Button _button;
-    BigMapController _map;
-
-    void Awake()
-    {
-        Rect = GetComponent<RectTransform>();
-        _button = GetComponent<Button>();
-    }
-
-    // Chỉ dùng 2 tham số để khỏi mismatch
-    public void Init(BigMapController map, Transform target)
-    {
-        _map = map;
-        Target = target;
-
-        if (_button != null)
-        {
-            _button.onClick.RemoveAllListeners();
-            _button.onClick.AddListener(() =>
-            {
-                if (_map != null && Target != null)
-                    _map.TeleportTo(Target.position);
-            });
-        }
-    }
+    // Teleport đã bị xóa khỏi BigMapController.
+    // Script này có thể xóa khỏi project nếu không cần nữa.
 }
