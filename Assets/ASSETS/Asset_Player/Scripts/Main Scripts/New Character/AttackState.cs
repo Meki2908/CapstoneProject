@@ -1,4 +1,4 @@
-﻿using UnityEditor.Timeline.Actions;
+using UnityEditor.Timeline.Actions;
 using UnityEngine;
 
 public class AttackState : State
@@ -37,6 +37,15 @@ public class AttackState : State
     public override void Enter()
     {
         base.Enter();
+
+        // GUARD: Không cho đánh nếu chưa rút vũ khí
+        if (!character.isWeaponDrawn)
+        {
+            Debug.LogWarning("[AttackState] Blocked — weapon not drawn! Returning to standing.");
+            character.animator.ResetTrigger("attack");
+            stateMachine.ChangeState(character.standing);
+            return;
+        }
 
         movementInput = Vector2.zero;
         attack = false;
