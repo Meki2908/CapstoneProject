@@ -26,6 +26,11 @@ public class ItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     // Reference to inventory controller for removal
     private InventoryController inventoryController;
 
+    /// <summary>
+    /// Public accessor for item data (used by Blacksmith UI)
+    /// </summary>
+    public Item GetItem() => itemData;
+
     private void Awake()
     {
         // Auto-find components if not assigned

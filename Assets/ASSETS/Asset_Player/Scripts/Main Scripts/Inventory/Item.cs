@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public enum ItemType { Equipment, Consumable, Material, Gems }
+public enum ItemType { Equipment, Consumable, Material, Gems, CrystalStone }
 public enum Rarity { Common, Uncommon, Rare, Epic, Legendary, Mythic }
 public enum GemType { MovementSpeed, CooldownReduction, Damage }
 public enum EquipmentSlotType { Head, Body, Legs, Accessory }

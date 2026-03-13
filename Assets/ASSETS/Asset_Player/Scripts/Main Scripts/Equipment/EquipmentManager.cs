@@ -16,12 +16,15 @@ public class EquipmentManager : MonoBehaviour
     [SerializeField] private string saveFileName = "equipment.json";
 
     private const int NUM_SLOTS = 4; // Head, Body, Legs, Accessory
+    private const int NUM_GEM_SLOTS = 4; // 4 gem slots per equipment piece
 
     [Serializable]
     private class EquipmentSlots
     {
         public int[] slotItemIds = new int[NUM_SLOTS] { -1, -1, -1, -1 };
         public int[] slotRarities = new int[NUM_SLOTS] { 0, 0, 0, 0 }; // Rarity enum as int
+        // Gem slots: [equipSlot][gemSlot] — flat array for JSON serialization
+        public int[] gemSlotIds = new int[NUM_SLOTS * NUM_GEM_SLOTS]; // -1 = empty
     }
 
     [Serializable]
@@ -56,6 +59,11 @@ public class EquipmentManager : MonoBehaviour
     private void InitializeRuntime()
     {
         equipmentSlots = new EquipmentSlots();
+        // Initialize gem slots to -1 (empty)
+        for (int i = 0; i < equipmentSlots.gemSlotIds.Length; i++)
+        {
+            equipmentSlots.gemSlotIds[i] = -1;
+        }
     }
 
     private string GetSavePath() => Path.Combine(Application.persistentDataPath, saveFileName);
@@ -350,4 +358,153 @@ public class EquipmentManager : MonoBehaviour
         }
         return total;
     }
+
+    // ================================================================
+    // EQUIPMENT GEM SLOTS (4 gem slots per equipment piece)
+    // ================================================================
+
+    private int GemIndex(int equipSlot, int gemSlot) => equipSlot * NUM_GEM_SLOTS + gemSlot;
+
+    /// <summary>
+    /// Get equipped gem at a specific slot
+    /// </summary>
+    public Item GetEquippedGem(int equipSlotIndex, int gemSlotIndex)
+    {
+        if (equipSlotIndex < 0 || equipSlotIndex >= NUM_SLOTS) return null;
+        if (gemSlotIndex < 0 || gemSlotIndex >= NUM_GEM_SLOTS) return null;
+        int idx = GemIndex(equipSlotIndex, gemSlotIndex);
+        if (idx >= equipmentSlots.gemSlotIds.Length) return null;
+        int itemId = equipmentSlots.gemSlotIds[idx];
+        if (itemId < 0) return null;
+        return InventoryManager.Instance?.GetItemById(itemId);
+    }
+
+    /// <summary>
+    /// Equip gem into equipment slot — called by SocketingManager
+    /// </summary>
+    public bool EquipGemToSlot(int equipSlotIndex, int gemSlotIndex, Item gemItem)
+    {
+        if (gemItem == null || gemItem.itemType != ItemType.Gems) return false;
+        if (equipSlotIndex < 0 || equipSlotIndex >= NUM_SLOTS) return false;
+        if (gemSlotIndex < 0 || gemSlotIndex >= NUM_GEM_SLOTS) return false;
+        if (InventoryManager.Instance == null) return false;
+
+        // Check equipment is equipped
+        if (equipmentSlots.slotItemIds[equipSlotIndex] < 0)
+        {
+            Debug.LogWarning($"[EquipmentManager] Cannot socket gem: no equipment in slot {equipSlotIndex}");
+            return false;
+        }
+
+        // Check inventory has the gem
+        if (InventoryManager.Instance.GetItemAmount(gemItem.id) <= 0)
+        {
+            Debug.LogWarning($"[EquipmentManager] No {gemItem.itemName} in inventory");
+            return false;
+        }
+
+        int idx = GemIndex(equipSlotIndex, gemSlotIndex);
+
+        // Return existing gem to inventory
+        int currentGemId = equipmentSlots.gemSlotIds[idx];
+        if (currentGemId >= 0)
+        {
+            InventoryManager.Instance.AddItem(currentGemId, 1);
+        }
+
+        // Consume gem from inventory and equip
+        bool removed = InventoryManager.Instance.RemoveItem(gemItem.id, 1);
+        if (!removed) return false;
+
+        equipmentSlots.gemSlotIds[idx] = gemItem.id;
+        Save();
+        OnEquipmentChanged?.Invoke();
+        Debug.Log($"[EquipmentManager] Socketed {gemItem.itemName} into equipment slot {equipSlotIndex} gem {gemSlotIndex}");
+        return true;
+    }
+
+    /// <summary>
+    /// Remove gem from equipment slot
+    /// </summary>
+    public bool RemoveGemFromSlot(int equipSlotIndex, int gemSlotIndex)
+    {
+        if (equipSlotIndex < 0 || equipSlotIndex >= NUM_SLOTS) return false;
+        if (gemSlotIndex < 0 || gemSlotIndex >= NUM_GEM_SLOTS) return false;
+        if (InventoryManager.Instance == null) return false;
+
+        int idx = GemIndex(equipSlotIndex, gemSlotIndex);
+        int currentGemId = equipmentSlots.gemSlotIds[idx];
+        if (currentGemId < 0) return false;
+
+        InventoryManager.Instance.AddItem(currentGemId, 1);
+        equipmentSlots.gemSlotIds[idx] = -1;
+        Save();
+        OnEquipmentChanged?.Invoke();
+        return true;
+    }
+
+    /// <summary>
+    /// Remove all gems from an equipment slot
+    /// </summary>
+    public void RemoveAllGemsFromSlot(int equipSlotIndex)
+    {
+        if (equipSlotIndex < 0 || equipSlotIndex >= NUM_SLOTS) return;
+        for (int g = 0; g < NUM_GEM_SLOTS; g++)
+        {
+            RemoveGemFromSlot(equipSlotIndex, g);
+        }
+    }
+
+    /// <summary>
+    /// Get gem stat multipliers from all equipment gems
+    /// </summary>
+    public float GetTotalGemMovementSpeedBonus()
+    {
+        float total = 0f;
+        for (int e = 0; e < NUM_SLOTS; e++)
+        {
+            for (int g = 0; g < NUM_GEM_SLOTS; g++)
+            {
+                var gem = GetEquippedGem(e, g);
+                if (gem != null && gem.gemType == GemType.MovementSpeed)
+                    total += gem.gemValuePercent;
+            }
+        }
+        return total;
+    }
+
+    public float GetTotalGemCooldownReduction()
+    {
+        float total = 0f;
+        for (int e = 0; e < NUM_SLOTS; e++)
+        {
+            for (int g = 0; g < NUM_GEM_SLOTS; g++)
+            {
+                var gem = GetEquippedGem(e, g);
+                if (gem != null && gem.gemType == GemType.CooldownReduction)
+                    total += gem.gemValuePercent;
+            }
+        }
+        return total;
+    }
+
+    public float GetTotalGemDamageBonus()
+    {
+        float total = 0f;
+        for (int e = 0; e < NUM_SLOTS; e++)
+        {
+            for (int g = 0; g < NUM_GEM_SLOTS; g++)
+            {
+                var gem = GetEquippedGem(e, g);
+                if (gem != null && gem.gemType == GemType.Damage)
+                    total += gem.gemValuePercent;
+            }
+        }
+        return total;
+    }
+
+    /// <summary>
+    /// Number of gem slots per equipment piece
+    /// </summary>
+    public int GetNumGemSlots() => NUM_GEM_SLOTS;
 }

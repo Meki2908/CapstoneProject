@@ -43,7 +43,7 @@ public class JumpingState : State
 
         if (grounded)
         {
-            stateMachine.ChangeState(character.landing);
+            stateMachine.ChangeState(character.standing);
         }
     }
 
