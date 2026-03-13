@@ -141,19 +141,8 @@ public class InventoryController : MonoBehaviour
             SetRemoveMode(false);
         }
 
-        // Close Weapon Forge panel if open
-        WeaponForgeUI weaponForgeUI = FindFirstObjectByType<WeaponForgeUI>();
-        if (weaponForgeUI != null)
-        {
-            weaponForgeUI.CloseForge();
-        }
-
-        // Close Equipment Panel if open
-        EquipmentPanelUI equipmentPanelUI = FindFirstObjectByType<EquipmentPanelUI>();
-        if (equipmentPanelUI != null)
-        {
-            equipmentPanelUI.ClosePanel();
-        }
+        // NOTE: WeaponForgeUI and EquipmentPanelUI have been moved to BlacksmithUI (NPC Thợ Rèn)
+        // Player no longer accesses forge/equipment panel from inventory
 
         // Kiểm tra PauseMenu có đang mở không
         bool isPauseMenuOpen = false;

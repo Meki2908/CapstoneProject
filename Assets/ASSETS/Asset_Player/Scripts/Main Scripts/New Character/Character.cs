@@ -38,7 +38,6 @@ public class Character : MonoBehaviour
     public BaseMoveState standing;
     public JumpingState jumping;
     public CrouchingState crouching;
-    public LandingState landing;
     public SprintState sprinting;
     public SprintJumpState sprintjumping;
     public DashState dashing;
@@ -93,7 +92,6 @@ public class Character : MonoBehaviour
         standing = new StandingState(this, movementSM);
         jumping = new JumpingState(this, movementSM);
         crouching = new CrouchingState(this, movementSM);
-        landing = new LandingState(this, movementSM);
         sprinting = new SprintState(this, movementSM);
         sprintjumping = new SprintJumpState(this, movementSM);
         dashing = new DashState(this, movementSM);

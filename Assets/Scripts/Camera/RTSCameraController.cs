@@ -123,6 +123,7 @@ namespace Unity.FantasyKingdom
         private bool midPointFired;
         private ZoomLevelData _zoomLevelData;
         private ZoomLevelData _prevZoomLevelData;
+        private InventoryController _cachedInventory; // Cache for inventory check
         public enum CameraType
         {
             GameplayCamera = 0,
@@ -166,6 +167,9 @@ namespace Unity.FantasyKingdom
 
         void Update()
         {
+            // Không xử lý camera khi inventory đang mở
+            if (IsInventoryOpen()) return;
+
             _currentMousePosition = _inputProvider.MousePosition;
 
             if (Application.isMobilePlatform)
@@ -483,17 +487,21 @@ namespace Unity.FantasyKingdom
 
         private void LockMouse(bool lockMouse)
         {
-            // Kiểm tra PauseMenu có đang mở không
-            bool isPauseMenuOpen = false;
-
-            if (isPauseMenuOpen)
-            {
-                // PauseMenu đang mở - không lock cursor
-                return;
-            }
+            // Không lock cursor khi inventory hoặc PauseMenu đang mở
+            if (IsInventoryOpen()) return;
             
             Cursor.lockState = lockMouse ? CursorLockMode.Locked : CursorLockMode.None;
             Cursor.visible = lockMouse ? false : true;
+        }
+
+        /// <summary>
+        /// Kiểm tra inventory đang mở (cache reference)
+        /// </summary>
+        private bool IsInventoryOpen()
+        {
+            if (_cachedInventory == null)
+                _cachedInventory = FindFirstObjectByType<InventoryController>();
+            return _cachedInventory != null && _cachedInventory.isInventoryOpen;
         }
 
         public float Remap(float value, float from1, float to1, float from2, float to2)
