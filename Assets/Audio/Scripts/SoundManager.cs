@@ -51,16 +51,37 @@ public class SoundManager : MonoBehaviour
         float finalVolume = Mathf.Clamp01(volume) * Mathf.Clamp01(soundList.volume);
         AudioSource targetSource = source != null ? source : instance.audioSource;
 
+        float originalPitch = targetSource.pitch;
+        if (soundList.changePitch)
+        {
+            float pMin = soundList.pitchMin;
+            float pMax = soundList.pitchMax;
+            if (pMax <= pMin)
+            {
+                pMin = 0.92f;
+                pMax = 1.08f;
+            }
+            targetSource.pitch = Mathf.Clamp(UnityEngine.Random.Range(pMin, pMax), 0.01f, 3f);
+        }
+
         targetSource.outputAudioMixerGroup = soundList.mixer;
         if (source != null)
         {
             targetSource.clip = randomClip;
             targetSource.volume = finalVolume;
             targetSource.Play();
+            if (soundList.changePitch)
+            {
+                targetSource.pitch = originalPitch;
+            }
             return;
         }
 
         targetSource.PlayOneShot(randomClip, finalVolume);
+        if (soundList.changePitch)
+        {
+            targetSource.pitch = originalPitch;
+        }
     }
 
     public static void PlayBasicAttack(WeaponType weaponType, int comboIndex, AudioSource source = null, float volume = 1f)
@@ -114,6 +135,26 @@ public class SoundManager : MonoBehaviour
     public static void PlayCrouchMove(AudioSource source = null, float volume = 1f) => PlaySound(SoundType.Crouch_Move, source, volume);
     public static void PlayGetHit(AudioSource source = null, float volume = 1f) => PlaySound(SoundType.GetHit, source, volume);
     public static void PlayDie(AudioSource source = null, float volume = 1f) => PlaySound(SoundType.Die, source, volume);
+    public static void PlayDrawWeapon(WeaponType weaponType, AudioSource source = null, float volume = 1f)
+    {
+        PlayDrawWeapon(weaponType, 0, source, volume);
+    }
+    /// <param name="phase">0 = first sound, 1 = second sound in same draw motion.</param>
+    public static void PlayDrawWeapon(WeaponType weaponType, int phase, AudioSource source = null, float volume = 1f)
+    {
+        SoundType soundType = GetDrawWeaponSoundType(weaponType, phase);
+        PlaySound(soundType, source, volume);
+    }
+    public static void PlaySheathWeapon(WeaponType weaponType, AudioSource source = null, float volume = 1f)
+    {
+        PlaySheathWeapon(weaponType, 0, source, volume);
+    }
+    /// <param name="phase">0 = first sound, 1 = second sound in same sheath motion.</param>
+    public static void PlaySheathWeapon(WeaponType weaponType, int phase, AudioSource source = null, float volume = 1f)
+    {
+        SoundType soundType = GetSheathWeaponSoundType(weaponType, phase);
+        PlaySound(soundType, source, volume);
+    }
 
     private static void PlayCustomSoundList(SoundList soundList, AudioSource source = null, float volume = 1f)
     {
@@ -125,6 +166,20 @@ public class SoundManager : MonoBehaviour
 
         float finalVolume = Mathf.Clamp01(volume) * Mathf.Clamp01(soundList.volume);
         AudioSource targetSource = source != null ? source : instance.audioSource;
+
+        float originalPitch = targetSource.pitch;
+        if (soundList.changePitch)
+        {
+            float pMin = soundList.pitchMin;
+            float pMax = soundList.pitchMax;
+            if (pMax <= pMin)
+            {
+                pMin = 0.92f;
+                pMax = 1.08f;
+            }
+            targetSource.pitch = Mathf.Clamp(UnityEngine.Random.Range(pMin, pMax), 0.01f, 3f);
+        }
+
         targetSource.outputAudioMixerGroup = soundList.mixer;
 
         if (source != null)
@@ -132,10 +187,42 @@ public class SoundManager : MonoBehaviour
             targetSource.clip = randomClip;
             targetSource.volume = finalVolume;
             targetSource.Play();
+            if (soundList.changePitch)
+            {
+                targetSource.pitch = originalPitch;
+            }
             return;
         }
 
         targetSource.PlayOneShot(randomClip, finalVolume);
+        if (soundList.changePitch)
+        {
+            targetSource.pitch = originalPitch;
+        }
+    }
+
+    private static SoundType GetDrawWeaponSoundType(WeaponType weaponType, int phase = 0)
+    {
+        bool usePhase2 = phase != 0;
+        return weaponType switch
+        {
+            WeaponType.Sword => usePhase2 ? SoundType.Sword_Draw_2 : SoundType.Sword_Draw,
+            WeaponType.Axe => usePhase2 ? SoundType.Axe_Draw_2 : SoundType.Axe_Draw,
+            WeaponType.Mage => usePhase2 ? SoundType.Mage_Draw_2 : SoundType.Mage_Draw,
+            _ => usePhase2 ? SoundType.Sword_Draw_2 : SoundType.Sword_Draw
+        };
+    }
+
+    private static SoundType GetSheathWeaponSoundType(WeaponType weaponType, int phase = 0)
+    {
+        bool usePhase2 = phase != 0;
+        return weaponType switch
+        {
+            WeaponType.Sword => usePhase2 ? SoundType.Sword_Sheath_2 : SoundType.Sword_Sheath,
+            WeaponType.Axe => usePhase2 ? SoundType.Axe_Sheath_2 : SoundType.Axe_Sheath,
+            WeaponType.Mage => usePhase2 ? SoundType.Mage_Sheath_2 : SoundType.Mage_Sheath,
+            _ => usePhase2 ? SoundType.Sword_Sheath_2 : SoundType.Sword_Sheath
+        };
     }
 
     private static SoundType GetBasicAttackSoundType(WeaponType weaponType, int comboIndex)

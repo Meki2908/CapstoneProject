@@ -831,6 +831,20 @@ ModelImporter:
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
       curves: []
       events:
+      - time: 0
+        functionName: AE_LockCCAndApplyRootMotion
+        data: 
+        objectReferenceParameter: {instanceID: 0}
+        floatParameter: 0
+        intParameter: 2
+        messageOptions: 0
+      - time: 0.03448276
+        functionName: AE_PlayDrawWeaponSound
+        data: 
+        objectReferenceParameter: {instanceID: 0}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
       - time: 0.2555024
         functionName: AE_DrawWeapon
         data: 
@@ -844,13 +858,6 @@ ModelImporter:
         objectReferenceParameter: {instanceID: 0}
         floatParameter: 0
         intParameter: 3
-        messageOptions: 0
-      - time: 0
-        functionName: AE_LockCCAndApplyRootMotion
-        data: 
-        objectReferenceParameter: {instanceID: 0}
-        floatParameter: 0
-        intParameter: 2
         messageOptions: 0
       - time: 0.9191709
         functionName: AE_UnlockCCAndDisableRootMotion

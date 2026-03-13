@@ -48,5 +48,19 @@ public enum SoundType
     Land,
     Crouch_Move,
     GetHit,
-    Die
+    Die,
+
+    // Weapon draw/sheath per type (phase 0 = first sound, phase 1 = second sound in same motion)
+    Sword_Draw,
+    Sword_Sheath,
+    Axe_Draw,
+    Axe_Sheath,
+    Mage_Draw,
+    Mage_Sheath,
+    Sword_Draw_2,
+    Sword_Sheath_2,
+    Axe_Draw_2,
+    Axe_Sheath_2,
+    Mage_Draw_2,
+    Mage_Sheath_2
 }

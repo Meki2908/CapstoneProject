@@ -57,6 +57,11 @@ public struct SoundList
     public AudioMixerGroup mixer;
     public AudioClip[] sounds;
 
+    [Tooltip("When true, plays with random pitch in [Pitch Min, Pitch Max] for variation.")]
+    public bool changePitch;
+    [Range(0.5f, 1.5f)] public float pitchMin;
+    [Range(0.5f, 1.5f)] public float pitchMax;
+
     public bool IsValid()
     {
         return sounds != null && sounds.Length > 0;
