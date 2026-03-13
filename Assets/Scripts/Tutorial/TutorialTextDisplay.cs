@@ -1,187 +1,335 @@
-﻿using UnityEngine;
+using UnityEngine;
 using TMPro;
 using System.Collections;
 
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
+
+/// <summary>
+/// Tutorial step sequence:
+/// 0  Space  - Jump
+/// 1  Tab    - Equip weapon
+/// 2  RMB    - Roll
+/// 3  LMB    - Attack
+/// 4  E      - Skill 1
+/// 5  R      - Skill 2
+/// 6  [Spawn Enemy 1] Kill the enemy
+/// 7  T      - Skill 3  (lv30 set)
+/// 8  [Spawn Enemy 2] Kill the enemy
+/// 9  Q      - Ultimate (lv60 set)
+/// -- 5s pause --
+/// 10 [Spawn 10 enemies] Defeat all enemies (kill counter shown)
+/// 11 Tab    - Sheathe
+/// 12 I      - Open inventory
+/// 13 Change weapon  (OnWeaponChanged event)
+/// 14 I      - Close inventory
+/// 15 [Complete] show completion canvas → TutorialQuestFinisher
+/// </summary>
 public class TutorialTextDisplay : MonoBehaviour
 {
-    [Header("UI Reference")]
+    [Header("UI")]
     public TMP_Text tutorialText;
+    public GameObject completionCanvas;
+    public TMP_Text  completionMessageText;
 
-    [Header("Quest Integration")]
-    [Tooltip("Kéo GameObject chứa TutorialQuestFinisher vào đây")]
+    [Header("Quest")]
     public TutorialQuestFinisher questFinisher;
 
-    [Header("Return Prompt UI")]
-    [Tooltip("Panel hiện dòng 'Press F to return' sau Congratulations, ẩn lúc đầu")]
-    public GameObject returnPromptPanel;
+    [Header("Timing")]
+    public float textDelay    = 1f;    // 1s between steps
+    public float postUltDelay = 5f;    // Pause after Q before wave spawns
 
-    // ─── Tutorial Steps ────────────────────────────────────────────────────
-    // Thứ tự bước:
-    // 0  – Press Space to jump
-    // 1  – Press E to equip your weapon
-    // 2  – Press right mouse button to roll
-    // 3  – Press left mouse button to attack
-    // 4  – Press E on the dummy to use Special Skill 1
-    // 5  – Press R on the dummy to use Special Skill 2
-    // 6  – Press T on the dummy to use Special Skill 3
-    // 7  – Press Q to use your Ultimate Skill
-    // 8  – Press E to sheathe your weapon
-    // 9  – Press I to open your inventory
-    // 10 – Choose a different weapon (press 1 or 2)
-    // 11 – Congratulations! → hiện prompt 'Press F to return'
+    [Header("Enemy Spawning")]
+    public GameObject  enemyPrefab1;
+    public Transform   spawnPoint1;
+    public GameObject  enemyPrefab2;
+    public Transform   spawnPoint2;
+    public GameObject  wavePrefab;
+    public Transform[] waveSpawnPoints;
 
-    private readonly string[] tutorialSteps =
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Step Constants
+    // ─────────────────────────────────────────────────────────────────────────
+    const int STEP_SPACE      = 0;
+    const int STEP_TAB_DRAW   = 1;
+    const int STEP_ROLL       = 2;
+    const int STEP_ATTACK     = 3;
+    const int STEP_SKILL_E    = 4;
+    const int STEP_SKILL_R    = 5;
+    const int STEP_KILL1      = 6;
+    const int STEP_SKILL_T    = 7;
+    const int STEP_KILL2      = 8;
+    const int STEP_ULT        = 9;
+    const int STEP_WAVE       = 10;   // After 5s pause
+    const int STEP_TAB_SHEATH = 11;
+    const int STEP_OPEN_INV   = 12;
+    const int STEP_CHANGE_WP  = 13;
+    const int STEP_CLOSE_INV  = 14;
+    const int WAVE_COUNT      = 10;
+
+    readonly string[] _texts =
     {
-        "Press Space to jump",
-        "Press Tab to equip your weapon",
-        "Press Right Mouse Button to roll",
-        "Press Left Mouse Button to attack",
-        "Press E on the dummy to use Special Skill 1",
-        "Press R on the dummy to use Special Skill 2",
-        "Press T on the dummy to use Special Skill 3",
-        "Press Q to use your Ultimate Skill",
-        "Press Tab to sheathe your weapon",
-        "Press I to open your inventory",
-        "Choose a different weapon — press 1 or 2",
-        "Congratulations! You have completed the tutorial!"
+        /* 0  */ "Press Space to jump",
+        /* 1  */ "Press Tab to equip your weapon",
+        /* 2  */ "Press Right Mouse Button to roll",
+        /* 3  */ "Press Left Mouse Button to attack",
+        /* 4  */ "Press E to use Skill 1",
+        /* 5  */ "Press R to use Skill 2",
+        /* 6  */ "Kill the enemy!",
+        /* 7  */ "Press T to use Skill 3",
+        /* 8  */ "Kill the enemy!",
+        /* 9  */ "Press Q to use your Ultimate",
+        /* 10 */ "Defeat all 10 enemies!",
+        /* 11 */ "Press Tab to sheathe your weapon",
+        /* 12 */ "Press I to open your inventory",
+        /* 13 */ "Change your weapon",
+        /* 14 */ "Press I to close your inventory",
     };
 
-    private int  _currentStep    = 0;
-    private bool _completed      = false;
-    private bool _waitingReturn  = false;   // Đang chờ F để thoát
+    // ─────────────────────────────────────────────────────────────────────────
+    //  State
+    // ─────────────────────────────────────────────────────────────────────────
+    int  _step      = 0;
+    bool _waiting   = false;
+    bool _completed = false;
+    int  _waveKills = 0;
 
-    // ─────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Lifecycle
+    // ─────────────────────────────────────────────────────────────────────────
 
     void Start()
     {
-        if (returnPromptPanel) returnPromptPanel.SetActive(false);
-        ShowStep(0);
+        if (completionCanvas != null) completionCanvas.SetActive(false);
+        SetAllMasteryLevels(1);
+        StartCoroutine(ShowDelayed(0));
     }
 
     void Update()
     {
-        // Khi đến màn hình Congratulations, chờ F để thoát
-        if (_waitingReturn)
+        if (_completed || _waiting) return;
+
+        switch (_step)
         {
-            if (Input.GetKeyDown(KeyCode.F)) TriggerReturn();
-            return;
-        }
-
-        if (_completed) return;
-
-        switch (_currentStep)
-        {
-            // Bước 0: Space để nhảy
-            case 0:
-                if (Input.GetKeyDown(KeyCode.Space)) Advance();
-                break;
-
-            // Bước 1: Tab để rút vũ khí
-            case 1:
-                if (Input.GetKeyDown(KeyCode.Tab)) Advance();
-                break;
-
-            // Bước 2: Chuột phải để lăn
-            case 2:
-                if (Input.GetMouseButtonDown(1)) Advance();
-                break;
-
-            // Bước 3: Chuột trái để tấn công
-            case 3:
-                if (Input.GetMouseButtonDown(0)) Advance();
-                break;
-
-            // Bước 4: E - skill 1
-            case 4:
-                if (Input.GetKeyDown(KeyCode.E)) Advance();
-                break;
-
-            // Bước 5: R - skill 2
-            case 5:
-                if (Input.GetKeyDown(KeyCode.R)) Advance();
-                break;
-
-            // Bước 6: T - skill 3
-            case 6:
-                if (Input.GetKeyDown(KeyCode.T)) Advance();
-                break;
-
-            // Bước 7: Q - Ultimate
-            case 7:
-                if (Input.GetKeyDown(KeyCode.Q)) Advance();
-                break;
-
-            // Bước 8: Tab để cất vũ khí
-            case 8:
-                if (Input.GetKeyDown(KeyCode.Tab)) Advance();
-                break;
-
-            // Bước 9: I để mở inventory
-            case 9:
-                if (Input.GetKeyDown(KeyCode.I)) Advance();
-                break;
-
-            // Bước 10: Đợi event từ WeaponSwapper.OnWeaponSwapped
-            // (Không detect phím – sử dụng chuột trong Inventory UI)
-            // Bước 11: Congratulations – tự hoàn thành sau delay
-            // (Không cần input, được xử lý trong Advance())
+            case STEP_SPACE:      if (IsKeyDown(KeyCode.Space, "space")) Advance(); break;
+            case STEP_TAB_DRAW:   if (IsKeyDown(KeyCode.Tab,   "tab"))   Advance(); break;
+            case STEP_ROLL:       if (IsMouseDown(1))                    Advance(); break;
+            case STEP_ATTACK:     if (IsMouseDown(0))                    Advance(); break;
+            case STEP_SKILL_E:    if (IsKeyDown(KeyCode.E, "e"))         Advance(); break;
+            case STEP_SKILL_R:    if (IsKeyDown(KeyCode.R, "r"))         Advance(); break;
+            case STEP_SKILL_T:    if (IsKeyDown(KeyCode.T, "t"))         Advance(); break;
+            case STEP_ULT:        if (IsKeyDown(KeyCode.Q, "q"))         Advance(); break;
+            case STEP_TAB_SHEATH: if (IsKeyDown(KeyCode.Tab, "tab"))     Advance(); break;
+            case STEP_OPEN_INV:   if (IsKeyDown(KeyCode.I, "i"))         Advance(); break;
+            case STEP_CLOSE_INV:  if (IsKeyDown(KeyCode.I, "i"))         Advance(); break;
+            // STEP_KILL1, STEP_KILL2, STEP_CHANGE_WP, STEP_WAVE → event-driven
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Input Helpers – support both old & new Input System
+    // ─────────────────────────────────────────────────────────────────────────
+
+    bool IsKeyDown(KeyCode legacy, string newKey)
+    {
+#if ENABLE_INPUT_SYSTEM
+        var kb = Keyboard.current;
+        if (kb != null)
+        {
+            var key = kb.FindKeyOnCurrentKeyboardLayout(newKey);
+            if (key != null && key.wasPressedThisFrame) return true;
+        }
+#endif
+        return Input.GetKeyDown(legacy);
+    }
+
+    bool IsMouseDown(int button)
+    {
+#if ENABLE_INPUT_SYSTEM
+        var mouse = Mouse.current;
+        if (mouse != null)
+        {
+            if (button == 0 && mouse.leftButton.wasPressedThisFrame)  return true;
+            if (button == 1 && mouse.rightButton.wasPressedThisFrame) return true;
+        }
+#endif
+        return Input.GetMouseButtonDown(button);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Step Progression
+    // ─────────────────────────────────────────────────────────────────────────
 
     void Advance()
     {
-        _currentStep++;
+        _step++;
+        OnEnterStep(_step);
 
-        if (_currentStep >= tutorialSteps.Length)
+        if (_step >= _texts.Length) return;
+
+        bool instant = (_step == STEP_KILL1 || _step == STEP_KILL2 || _step == STEP_WAVE);
+        if (instant) ShowNow(_step);
+        else         StartCoroutine(ShowDelayed(_step));
+    }
+
+    void OnEnterStep(int step)
+    {
+        switch (step)
         {
-            // Đã qua tất cả bước → hiện bước cuối và wrap up
-            _currentStep = tutorialSteps.Length - 1;
-        }
-
-        ShowStep(_currentStep);
-
-        // Đến bước "Congratulations" → hiện prompt và chờ F
-        if (_currentStep == tutorialSteps.Length - 1)
-        {
-            _completed     = true;
-            _waitingReturn = true;
-
-            // Hiện dòng "Press F to return"
-            if (returnPromptPanel) returnPromptPanel.SetActive(true);
+            case STEP_KILL1:      SpawnEnemy1();              break;
+            case STEP_SKILL_T:    SetAllMasteryLevels(30);    break;
+            case STEP_KILL2:      SpawnEnemy2();              break;
+            case STEP_ULT:        SetAllMasteryLevels(60);    break;
+            case STEP_WAVE:       StartCoroutine(DelayedWaveSpawn()); break;
         }
     }
 
-    void ShowStep(int index)
+    IEnumerator DelayedWaveSpawn()
     {
+        _waiting = true;
+        if (tutorialText != null) tutorialText.text = "Excellent! Prepare yourself...";
+        yield return new WaitForSeconds(postUltDelay);
+        SpawnWave();
+        ShowNow(STEP_WAVE);
+        _waiting = false;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Display
+    // ─────────────────────────────────────────────────────────────────────────
+
+    IEnumerator ShowDelayed(int step)
+    {
+        _waiting = true;
+        if (tutorialText != null) tutorialText.text = "";
+        yield return new WaitForSeconds(textDelay);
+        if (tutorialText != null && step < _texts.Length)
+            tutorialText.text = _texts[step];
+        _waiting = false;
+    }
+
+    void ShowNow(int step)
+    {
+        if (tutorialText != null && step < _texts.Length)
+            tutorialText.text = _texts[step];
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Enemy Spawning
+    // ─────────────────────────────────────────────────────────────────────────
+
+    void SpawnEnemy1()
+    {
+        if (enemyPrefab1 == null || spawnPoint1 == null) { Advance(); return; }
+        var go = Instantiate(enemyPrefab1, spawnPoint1.position, spawnPoint1.rotation);
+        if (!HookDeath(go, OnEnemy1Died)) Advance();
+    }
+
+    void SpawnEnemy2()
+    {
+        if (enemyPrefab2 == null || spawnPoint2 == null) { Advance(); return; }
+        var go = Instantiate(enemyPrefab2, spawnPoint2.position, spawnPoint2.rotation);
+        if (!HookDeath(go, OnEnemy2Died)) Advance();
+    }
+
+    void SpawnWave()
+    {
+        if (wavePrefab == null || waveSpawnPoints == null || waveSpawnPoints.Length == 0)
+        { TriggerCompletion(); return; }
+
+        _waveKills = 0;
+        int count = Mathf.Min(WAVE_COUNT, waveSpawnPoints.Length);
+        for (int i = 0; i < count; i++)
+        {
+            if (waveSpawnPoints[i] == null) continue;
+            var go = Instantiate(wavePrefab, waveSpawnPoints[i].position, waveSpawnPoints[i].rotation);
+            HookDeath(go, OnWaveKill);
+        }
+    }
+
+    bool HookDeath(GameObject go, System.Action cb)
+    {
+        var bridge = go.GetComponentInChildren<EnemyDeathBridge>();
+        if (bridge != null) { bridge.OnEnemyDied += cb; return true; }
+
+        var td = go.GetComponentInChildren<TakeDamageTest>();
+        if (td != null) { td.OnEnemyDied += cb; return true; }
+
+        Debug.LogWarning("[Tutorial] No death script found on enemy prefab.");
+        return false;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Kill Callbacks
+    // ─────────────────────────────────────────────────────────────────────────
+
+    void OnEnemy1Died() => Advance(); // → STEP_SKILL_T (lv30 + T)
+    void OnEnemy2Died() => Advance(); // → STEP_ULT (lv60 + Q)
+
+    void OnWaveKill()
+    {
+        _waveKills++;
+        // Show live counter
         if (tutorialText != null)
-            tutorialText.text = tutorialSteps[index];
+            tutorialText.text = $"Defeat all 10 enemies! ({_waveKills}/{WAVE_COUNT})";
+
+        if (_waveKills >= WAVE_COUNT)
+            Advance(); // → STEP_TAB_SHEATH
     }
 
-    void TriggerReturn()
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Completion
+    // ─────────────────────────────────────────────────────────────────────────
+
+    void TriggerCompletion()
     {
-        _waitingReturn = false;
-        if (returnPromptPanel) returnPromptPanel.SetActive(false);
+        _completed = true;
+        if (tutorialText != null) tutorialText.text = "";
 
-        if (questFinisher != null)
-            questFinisher.FinishTutorial();
+        if (completionCanvas != null)
+        {
+            completionCanvas.SetActive(true);
+            if (completionMessageText != null)
+                completionMessageText.text = "Tutorial Complete! Well done, adventurer!";
+            StartCoroutine(FinishAndReturn());
+        }
         else
-            Debug.LogWarning("[TutorialTextDisplay] QuestFinisher chưa được gán!");
+        {
+            if (questFinisher != null) questFinisher.FinishTutorial();
+        }
     }
 
-    // ─── Public API ───────────────────────────────────────────────────────
+    IEnumerator FinishAndReturn()
+    {
+        yield return new WaitForSeconds(3f);
+        if (completionMessageText != null) completionMessageText.text = "";
+        if (questFinisher != null) questFinisher.FinishTutorial();
+    }
 
-    /// <summary>
-    /// Gọi từ WeaponSwapper.OnWeaponSwapped event khi player đổi vũ khí bằng chuột.
-    /// Chỉ hoạt động nếu đang ở bước 10 ("Choose a different weapon").
-    /// </summary>
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Mastery / Levels
+    // ─────────────────────────────────────────────────────────────────────────
+
+    void SetAllMasteryLevels(int lv)
+    {
+        if (WeaponMasteryManager.Instance == null) return;
+        WeaponMasteryManager.Instance.SetMasteryLevel(WeaponType.Sword, lv);
+        WeaponMasteryManager.Instance.SetMasteryLevel(WeaponType.Axe,   lv);
+        WeaponMasteryManager.Instance.SetMasteryLevel(WeaponType.Mage,  lv);
+        Debug.Log($"[Tutorial] Mastery level set to {lv}");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Public API
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// <summary>Called by WeaponController.OnWeaponChanged Unity Event.</summary>
     public void OnWeaponChanged()
     {
-        if (_currentStep == 10 && !_completed)
-            Advance();
+        if (_step == STEP_CHANGE_WP && !_completed) Advance();
     }
 
-    /// <summary>Bỏ qua bước hiện tại – có thể gọi từ button "Skip" trong UI</summary>
+    /// <summary>Skip button — advance one step.</summary>
     public void ShowNextTutorialText() => Advance();
 }

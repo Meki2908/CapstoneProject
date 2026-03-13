@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using DamageNumbersPro;
 
@@ -22,6 +23,8 @@ using DamageNumbersPro;
 /// </summary>
 public class TakeDamageTest : MonoBehaviour
 {
+    public event Action OnEnemyDied;
+
     [Header("Damage Number Settings")]
     public DamageNumber damageNumberPrefab;
 
@@ -548,6 +551,7 @@ public class TakeDamageTest : MonoBehaviour
 
         isAlive = false;
         currentHealth = 0f;
+        OnEnemyDied?.Invoke();
 
         if (showDebugInfo)
         {

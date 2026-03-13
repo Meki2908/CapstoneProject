@@ -119,42 +119,6 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &8926658
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 8926659}
-  m_Layer: 5
-  m_Name: Map
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &8926659
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8926658}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 2136595830}
-  m_Father: {fileID: 1807593178}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0.07299805, y: 0.1697998}
-  m_SizeDelta: {x: -397.0942, y: -150.8752}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &10881286
 GameObject:
   m_ObjectHideFlags: 0
@@ -1952,10 +1916,10 @@ RectTransform:
   - {fileID: 189494548}
   m_Father: {fileID: 1807593178}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 1267, y: -836}
+  m_SizeDelta: {x: 3840, y: 2160}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &179220671
 MonoBehaviour:
@@ -3545,6 +3509,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: -554.1
       objectReference: {fileID: 0}
+    - target: {fileID: 1310693260776077090, guid: a25327ca3848894439354699f472126a, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -57.999756
+      objectReference: {fileID: 0}
     - target: {fileID: 2069801365779877537, guid: a25327ca3848894439354699f472126a, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -3913,6 +3881,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 9015790023497601386, guid: a25327ca3848894439354699f472126a, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -65.0603
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -3947,30 +3919,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1dc380552157ca5448fbf4a904d5f38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BigMapController
-  bigMapPanel: {fileID: 1272782064}
-  mapRect: {fileID: 494778794}
-  playerMarkerRect: {fileID: 0}
-  hideWhenBigMapOpen:
-  - {fileID: 0}
-  - {fileID: 0}
-  player: {fileID: 0}
-  minX: -400
-  maxX: 400
-  minZ: -400
-  maxZ: 400
-  invertX: 0
-  invertZ: 0
-  toggleKey: 109
-  portalPoints:
-  - {fileID: 0}
-  portalMarkerPrefab: {fileID: 0}
-  portalsParent: {fileID: 0}
-  closeMapAfterTeleport: 1
-  characterController: {fileID: 0}
-  playerRigidbody: {fileID: 0}
-  navAgent: {fileID: 0}
-  teleportOffset: {x: 0, y: 0.1, z: 0}
-  debugLogs: 1
+  mapCanvas: {fileID: 0}
 --- !u!4 &309647512
 Transform:
   m_ObjectHideFlags: 0
@@ -6591,16 +6540,16 @@ RectTransform:
   m_GameObject: {fileID: 647498992}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 1.5, y: 1.5, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1666556677}
   - {fileID: 1650062826}
   m_Father: {fileID: 1807593178}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -913, y: 431}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 335, y: -277}
   m_SizeDelta: {x: 300, y: 300}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &661909087
@@ -9822,19 +9771,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7542521313094387615, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.0058884695
+      value: 0.012616462
       objectReference: {fileID: 0}
     - target: {fileID: 7542521313094387615, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0.00044179382
+      value: -0.00094657496
       objectReference: {fileID: 0}
     - target: {fileID: 7542521313094387615, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0.99718
+      value: 0.9971175
       objectReference: {fileID: 0}
     - target: {fileID: 7542521313094387615, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.074815355
+      value: 0.0748107
       objectReference: {fileID: 0}
     - target: {fileID: 8127737498423080249, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalPosition.x
@@ -12749,10 +12698,10 @@ RectTransform:
   - {fileID: 293839315}
   m_Father: {fileID: 1807593178}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: -8.319946, y: 3.69}
+  m_SizeDelta: {x: 3840, y: 2160}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1430023032
 MonoBehaviour:
@@ -16962,9 +16911,9 @@ MonoBehaviour:
   m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
-  m_ReferenceResolution: {x: 2532, y: 1170}
+  m_ReferenceResolution: {x: 3840, y: 2160}
   m_ScreenMatchMode: 0
-  m_MatchWidthOrHeight: 0.5
+  m_MatchWidthOrHeight: 0.46
   m_PhysicalUnit: 3
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96
@@ -17008,7 +16957,7 @@ RectTransform:
   - {fileID: 647498993}
   - {fileID: 1430023031}
   - {fileID: 179220670}
-  - {fileID: 8926659}
+  - {fileID: 2136595830}
   - {fileID: 1318360181}
   - {fileID: 641606118}
   - {fileID: 120488240}
@@ -17049,30 +16998,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 1807593174}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1dc380552157ca5448fbf4a904d5f38a, type: 3}
+  m_Script: {fileID: 11500000, guid: 7c61c9a298051014cad1a6e784d2f273, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  bigMapPanel: {fileID: 0}
-  mapRect: {fileID: 0}
-  playerMarkerRect: {fileID: 0}
-  hideWhenBigMapOpen: []
-  player: {fileID: 0}
-  minX: -400
-  maxX: 400
-  minZ: -400
-  maxZ: 400
-  invertX: 0
-  invertZ: 0
-  toggleKey: 109
-  portalPoints: []
-  portalMarkerPrefab: {fileID: 0}
-  portalsParent: {fileID: 0}
-  closeMapAfterTeleport: 1
-  characterController: {fileID: 0}
-  playerRigidbody: {fileID: 0}
-  navAgent: {fileID: 0}
-  teleportOffset: {x: 0, y: 0.1, z: 0}
-  debugLogs: 0
+  mapCanvas: {fileID: 2136595829}
 --- !u!1 &1808015316 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: aa42f4796862ec349bfa1cdf4489664b, type: 3}
@@ -51465,17 +51394,17 @@ RectTransform:
   m_GameObject: {fileID: 2136595829}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1.1423881, y: 1.1423881, z: 1.1423881}
+  m_LocalScale: {x: 1.1423882, y: 1.1423882, z: 1.1423882}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1272782065}
   - {fileID: 309647512}
-  m_Father: {fileID: 8926659}
+  m_Father: {fileID: 1807593178}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -0.000045776367, y: 0}
-  m_SizeDelta: {x: 2367.7888, y: 1296.6582}
+  m_AnchoredPosition: {x: -0.07324219, y: 0.16992188}
+  m_SizeDelta: {x: -329.8711, y: -141.91797}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2136595831
 MonoBehaviour:

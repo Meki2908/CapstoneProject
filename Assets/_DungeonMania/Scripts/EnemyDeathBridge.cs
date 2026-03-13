@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 /// <summary>
@@ -8,6 +9,8 @@ using UnityEngine;
 /// </summary>
 public class EnemyDeathBridge : MonoBehaviour
 {
+    public event Action OnEnemyDied;
+
     private TakeDamageTest takeDamage;
     private EnemyScript enemyScript;
     private bool hasCalledDeadEvent = false;
@@ -65,6 +68,7 @@ public class EnemyDeathBridge : MonoBehaviour
     void OnEnemyDead()
     {
         hasCalledDeadEvent = true;
+        OnEnemyDied?.Invoke();
 
         // QUAN TRỌNG: Set EnemyScript.alive = false để AI dừng lại
         // TakeDamageTest Die() không làm điều này!
