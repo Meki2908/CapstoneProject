@@ -5,22 +5,17 @@ public class MinimapCameraFollow : MonoBehaviour
 {
     [Header("Player Settings")]
     public Transform player;               // Nhân vật
-    public Vector3 offset = new Vector3(0, 50, 0); // Camera cao nhìn thẳng
+    public Vector3 offset = new Vector3(0, 50, 0);
+
+    [Header("Rotation Settings")]
+    [Tooltip("Kéo Main Camera vào đây để minimap xoay theo hướng nhìn của camera. Để trống sẽ xoay theo player body.")]
+    public Transform cameraTransform;      // Main Camera (optional)
 
     [Header("UI Settings")]
     public RectTransform playerIcon;       // Icon Player trên RawImage
 
-    [Header("Minimap Canvas")]
-    [Tooltip("Canvas hoặc GameObject chứa minimap UI — sẽ ẩn/hiện theo settings")]
-    public GameObject minimapCanvas;       // Gán Canvas minimap để toggle
-
-    private Camera minimapCamera;
-
     void Start()
     {
-        minimapCamera = GetComponent<Camera>();
-
-        // Tự động tìm player nếu chưa gán
         if (player == null)
         {
             GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
@@ -35,43 +30,27 @@ public class MinimapCameraFollow : MonoBehaviour
             }
         }
 
-        // Listen settings changed
-        GameSettings.OnSettingsChanged += UpdateMinimapVisibility;
-        UpdateMinimapVisibility();
-    }
-
-    void OnDestroy()
-    {
-        GameSettings.OnSettingsChanged -= UpdateMinimapVisibility;
-    }
-
-    /// <summary>
-    /// Ẩn/hiện minimap theo GameSettings.miniMapEnabled
-    /// </summary>
-    private void UpdateMinimapVisibility()
-    {
-        bool enabled = GameSettings.Instance == null || GameSettings.Instance.miniMapEnabled;
-
-        if (minimapCamera != null)
-            minimapCamera.enabled = enabled;
-
-        if (minimapCanvas != null)
-            minimapCanvas.SetActive(enabled);
+        // Tự động tìm Main Camera nếu chưa gán
+        if (cameraTransform == null && Camera.main != null)
+        {
+            cameraTransform = Camera.main.transform;
+            Debug.Log("[MinimapCameraFollow] Tự động dùng Main Camera để xoay minimap.");
+        }
     }
 
     void LateUpdate()
     {
-        if (player == null)
-            return;
+        if (player == null) return;
 
-        // 1. Camera xoay theo player
+        // Camera minimap theo sát player
         transform.position = player.position + offset;
-        transform.rotation = Quaternion.Euler(90f, player.eulerAngles.y, 0f); // xoay map theo player
 
-        // 2. Icon player luôn hướng lên trên UI
+        // Xoay theo camera (hoặc player nếu không có camera)
+        float yAngle = (cameraTransform != null) ? cameraTransform.eulerAngles.y : player.eulerAngles.y;
+        transform.rotation = Quaternion.Euler(90f, yAngle, 0f);
+
+        // Icon player luôn hướng lên trên UI (không xoay theo map)
         if (playerIcon != null)
-        {
-            playerIcon.localRotation = Quaternion.identity; // icon không xoay, luôn hướng lên trên
-        }
+            playerIcon.localRotation = Quaternion.identity;
     }
 }

@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using TMPro;
 using System.Collections;
 
@@ -342,6 +343,9 @@ public class LeonaDialogue : MonoBehaviour
         if (dialoguePanel) dialoguePanel.SetActive(false);
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible   = false;
+        // Xoá focus khỏi UI để lần trigger tiếp theo không bị chặn
+        if (EventSystem.current != null)
+            EventSystem.current.SetSelectedGameObject(null);
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────

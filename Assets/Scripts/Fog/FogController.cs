@@ -90,6 +90,11 @@ namespace Unity.FantasyKingdom
                 else Debug.LogWarning("[FogController] CubeFog passMaterial is null – assign it in URP Renderer Feature.");
             }
 
+            if (camController == null)
+            {
+                Debug.LogError("[FogController] camController is not assigned! Please assign it in the Inspector.", this);
+                return;
+            }
             camController.OnZoomHandled += HandleZoomLerp;
             camController.OnZoomDone += ZoomDone;
             camController.OnZoomMidPoint += ForceLodsOnZoomMidPoint;

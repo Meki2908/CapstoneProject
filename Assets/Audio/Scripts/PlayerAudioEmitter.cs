@@ -33,6 +33,14 @@ public class PlayerAudioEmitter : MonoBehaviour
     public void AE_PlayCrouchMoveSound() => SoundManager.PlayCrouchMove(localSource, defaultVolume);
     public void AE_PlayGetHitSound() => SoundManager.PlayGetHit(localSource, defaultVolume);
     public void AE_PlayDieSound() => SoundManager.PlayDie(localSource, defaultVolume);
+    /// <summary>First (or only) sound in draw weapon motion.</summary>
+    public void AE_PlayDrawWeaponSound() => SoundManager.PlayDrawWeapon(GetCurrentWeaponType(), 0, localSource, defaultVolume);
+    /// <summary>Second sound in the same draw weapon motion. Add a second Animation Event and call this at the second action.</summary>
+    public void AE_PlayDrawWeaponSoundSecond() => SoundManager.PlayDrawWeapon(GetCurrentWeaponType(), 1, localSource, defaultVolume);
+    /// <summary>First (or only) sound in sheath weapon motion.</summary>
+    public void AE_PlaySheathWeaponSound() => SoundManager.PlaySheathWeapon(GetCurrentWeaponType(), 0, localSource, defaultVolume);
+    /// <summary>Second sound in the same sheath weapon motion. Add a second Animation Event and call this at the second action.</summary>
+    public void AE_PlaySheathWeaponSoundSecond() => SoundManager.PlaySheathWeapon(GetCurrentWeaponType(), 1, localSource, defaultVolume);
 
     private WeaponType GetCurrentWeaponType()
     {
