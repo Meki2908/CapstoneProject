@@ -115,28 +115,45 @@ public class ItemTooltip : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
     /// </summary>
     private void UpdateTooltipPosition()
     {
-        if (canvas == null || canvasRectTransform == null || tooltipRectTransform == null) return;
+        if (tooltipRectTransform == null) return;
 
-        Vector2 mousePosition;
+        tooltipRectTransform.anchorMin = Vector2.zero;
+        tooltipRectTransform.anchorMax = Vector2.zero;
+        tooltipRectTransform.pivot = new Vector2(0f, 1f);
+
+        Vector3[] corners = new Vector3[4];
+        tooltipRectTransform.GetWorldCorners(corners);
+        float tooltipScreenWidth = 0f;
+        float tooltipScreenHeight = 0f;
+        
+        if (canvas != null)
+        {
+            Camera cam = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
+            Vector2 screenBL = RectTransformUtility.WorldToScreenPoint(cam, corners[0]);
+            Vector2 screenTR = RectTransformUtility.WorldToScreenPoint(cam, corners[2]);
+            tooltipScreenWidth = screenTR.x - screenBL.x;
+            tooltipScreenHeight = screenTR.y - screenBL.y;
+        }
+
+        Vector2 mouseScreen = Input.mousePosition;
+        float posX = mouseScreen.x + 15f;
+        float posY = mouseScreen.y - 15f;
+
+        if (posX + tooltipScreenWidth > Screen.width)
+            posX = mouseScreen.x - 15f - tooltipScreenWidth;
+        if (posY > Screen.height) posY = Screen.height;
+        if (posY - tooltipScreenHeight < 0) posY = tooltipScreenHeight;
+        if (posX < 0) posX = 0;
+
+        Vector2 localPos;
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
             canvasRectTransform,
-            Input.mousePosition,
-            canvas.worldCamera,
-            out mousePosition
+            new Vector2(posX, posY),
+            canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera,
+            out localPos
         );
 
-        // Apply offset
-        mousePosition += offset;
-
-        // Clamp to canvas bounds to prevent tooltip from going off-screen
-        Vector2 tooltipSize = tooltipRectTransform.sizeDelta;
-        float maxX = canvasRectTransform.rect.width - tooltipSize.x;
-        float maxY = canvasRectTransform.rect.height - tooltipSize.y;
-        
-        mousePosition.x = Mathf.Clamp(mousePosition.x, 0f, maxX);
-        mousePosition.y = Mathf.Clamp(mousePosition.y, 0f, maxY);
-
-        tooltipRectTransform.anchoredPosition = mousePosition;
+        tooltipRectTransform.anchoredPosition = localPos;
     }
 
     /// <summary>

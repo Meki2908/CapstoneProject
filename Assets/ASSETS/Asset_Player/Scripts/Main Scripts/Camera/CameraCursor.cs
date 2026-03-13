@@ -25,6 +25,7 @@ namespace MovementSystem
 
         // Track cursor state internally to avoid conflicts
         private bool isCursorHidden = false;
+        private InventoryController cachedInventory; // Cache reference
 
         private void Awake()
         {
@@ -77,6 +78,9 @@ namespace MovementSystem
         /// </summary>
         private void ForceHideCursor()
         {
+            // Không lock cursor nếu inventory đang mở
+            if (IsInventoryOpen()) return;
+
             isCursorHidden = true;
             Cursor.visible = false;
             Cursor.lockState = CursorLockMode.Locked;
@@ -85,9 +89,10 @@ namespace MovementSystem
 
         private void Update()
         {
+            // KHÔNG xử lý cursor khi inventory đang mở
+            if (IsInventoryOpen()) return;
+
             // Chỉ dùng legacy Input khi KHÔNG có InputAction gán
-            // Nếu có InputAction (ví dụ Player/CameraToggle bound to ALT), nó đã xử lý qua OnCameraCursorToggled
-            // Dùng cả hai sẽ bị double toggle → cursor không thay đổi
             if (cameraToggleInputAction == null && Input.GetKeyDown(KeyCode.LeftAlt))
             {
                 ToggleCursor();
@@ -112,6 +117,9 @@ namespace MovementSystem
 
         private void OnCameraCursorToggled(InputAction.CallbackContext context)
         {
+            // KHÔNG toggle cursor khi inventory đang mở
+            if (IsInventoryOpen()) return;
+
             ToggleCursor();
         }
 
@@ -187,6 +195,16 @@ namespace MovementSystem
             // TODO: Migrate to InputAxisController to support Gain (camera sensitivity)
             // CinemachineInputProvider (deprecated) does not support Gain on InputActionReference
             Debug.Log($"[CameraCursor] Camera speed setting: MouseSpeed={gs.cameraMouseSpeed:F2} (not yet applied)");
+        }
+
+        /// <summary>
+        /// Kiểm tra inventory đang mở (cache reference để tránh Find mỗi frame)
+        /// </summary>
+        private bool IsInventoryOpen()
+        {
+            if (cachedInventory == null)
+                cachedInventory = FindFirstObjectByType<InventoryController>();
+            return cachedInventory != null && cachedInventory.isInventoryOpen;
         }
     }
 }
