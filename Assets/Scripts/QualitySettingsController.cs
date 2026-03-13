@@ -65,7 +65,8 @@ namespace Unity.FantasyKingdom
             UpdateFogSettings(nextQualityLevel);
             QualitySettings.SetQualityLevel(nextQualityLevel, true);
             currentQualityLevelName = QualitySettings.names[nextQualityLevel];
-            QualitySettingsText.text = $"Quality Level:\n{currentQualityLevelName}";
+            if (QualitySettingsText != null)
+                QualitySettingsText.text = $"Quality Level:\n{currentQualityLevelName}";
             UpdateURPAsset(nextQualityLevel);
         }
 

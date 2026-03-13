@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UI;
 
 public class MinimapCameraFollow : MonoBehaviour
@@ -10,8 +10,16 @@ public class MinimapCameraFollow : MonoBehaviour
     [Header("UI Settings")]
     public RectTransform playerIcon;       // Icon Player trên RawImage
 
+    [Header("Minimap Canvas")]
+    [Tooltip("Canvas hoặc GameObject chứa minimap UI — sẽ ẩn/hiện theo settings")]
+    public GameObject minimapCanvas;       // Gán Canvas minimap để toggle
+
+    private Camera minimapCamera;
+
     void Start()
     {
+        minimapCamera = GetComponent<Camera>();
+
         // Tự động tìm player nếu chưa gán
         if (player == null)
         {
@@ -26,15 +34,35 @@ public class MinimapCameraFollow : MonoBehaviour
                 Debug.LogWarning("[MinimapCameraFollow] Không tìm thấy GameObject với tag 'Player'. Hãy gán thủ công trong Inspector!");
             }
         }
+
+        // Listen settings changed
+        GameSettings.OnSettingsChanged += UpdateMinimapVisibility;
+        UpdateMinimapVisibility();
+    }
+
+    void OnDestroy()
+    {
+        GameSettings.OnSettingsChanged -= UpdateMinimapVisibility;
+    }
+
+    /// <summary>
+    /// Ẩn/hiện minimap theo GameSettings.miniMapEnabled
+    /// </summary>
+    private void UpdateMinimapVisibility()
+    {
+        bool enabled = GameSettings.Instance == null || GameSettings.Instance.miniMapEnabled;
+
+        if (minimapCamera != null)
+            minimapCamera.enabled = enabled;
+
+        if (minimapCanvas != null)
+            minimapCanvas.SetActive(enabled);
     }
 
     void LateUpdate()
     {
         if (player == null)
-        {
-            Debug.LogWarning("Player chưa gán vào MinimapCameraFollow!");
             return;
-        }
 
         // 1. Camera xoay theo player
         transform.position = player.position + offset;

@@ -48,7 +48,8 @@ public class SoundManager : MonoBehaviour
             return;
         }
 
-        float finalVolume = Mathf.Clamp01(volume) * Mathf.Clamp01(soundList.volume);
+        float settingsSfxVol = GameSettings.Instance != null ? GameSettings.Instance.sfxVolume : 1f;
+        float finalVolume = Mathf.Clamp01(volume) * Mathf.Clamp01(soundList.volume) * settingsSfxVol;
         AudioSource targetSource = source != null ? source : instance.audioSource;
 
         targetSource.outputAudioMixerGroup = soundList.mixer;
@@ -123,7 +124,8 @@ public class SoundManager : MonoBehaviour
             return;
         }
 
-        float finalVolume = Mathf.Clamp01(volume) * Mathf.Clamp01(soundList.volume);
+        float settingsSfxVol = GameSettings.Instance != null ? GameSettings.Instance.sfxVolume : 1f;
+        float finalVolume = Mathf.Clamp01(volume) * Mathf.Clamp01(soundList.volume) * settingsSfxVol;
         AudioSource targetSource = source != null ? source : instance.audioSource;
         targetSource.outputAudioMixerGroup = soundList.mixer;
 

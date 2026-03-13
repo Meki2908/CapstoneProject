@@ -40,11 +40,15 @@ namespace MovementSystem
 
             // Đăng ký callback khi scene mới load xong → reset cursor state
             SceneManager.sceneLoaded += OnSceneLoaded;
+
+            // Listen GameSettings changes
+            GameSettings.OnSettingsChanged += ApplyCameraSpeedSettings;
         }
 
         private void OnDestroy()
         {
             SceneManager.sceneLoaded -= OnSceneLoaded;
+            GameSettings.OnSettingsChanged -= ApplyCameraSpeedSettings;
             if (cameraToggleInputAction != null)
             {
                 cameraToggleInputAction.action.started -= OnCameraCursorToggled;
@@ -145,6 +149,7 @@ namespace MovementSystem
             if (!fixedCinemachineVersion)
             {
                 inputProvider.enabled = enableInput;
+                if (enableInput) ApplyCameraSpeedSettings();
                 return;
             }
 
@@ -152,6 +157,7 @@ namespace MovementSystem
             {
                 inputProvider.XYAxis.action?.Enable();
                 inputProvider.ZAxis.action?.Enable();
+                ApplyCameraSpeedSettings();
             }
             else
             {
@@ -164,6 +170,23 @@ namespace MovementSystem
                     inputProvider.ZAxis.action?.Disable();
                 }
             }
+        }
+
+        /// <summary>
+        /// Apply GameSettings camera speed vào CinemachineInputProvider Gain
+        /// </summary>
+        private void ApplyCameraSpeedSettings()
+        {
+            if (inputProvider == null)
+                inputProvider = FindFirstObjectByType<CinemachineInputProvider>();
+            if (inputProvider == null) return;
+
+            var gs = GameSettings.Instance;
+            if (gs == null) return;
+
+            // TODO: Migrate to InputAxisController to support Gain (camera sensitivity)
+            // CinemachineInputProvider (deprecated) does not support Gain on InputActionReference
+            Debug.Log($"[CameraCursor] Camera speed setting: MouseSpeed={gs.cameraMouseSpeed:F2} (not yet applied)");
         }
     }
 }
