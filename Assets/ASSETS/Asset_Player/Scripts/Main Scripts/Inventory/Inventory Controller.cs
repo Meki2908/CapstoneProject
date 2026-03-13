@@ -101,6 +101,9 @@ public class InventoryController : MonoBehaviour
 
     private void OpenInventory()
     {
+        // Pause game khi mở inventory (để kéo thả item thoải mái)
+        Time.timeScale = 0f;
+
         // Show cursor and unlock
         Cursor.visible = true;
         Cursor.lockState = CursorLockMode.None;
@@ -123,7 +126,7 @@ public class InventoryController : MonoBehaviour
         inventory.SetActive(true);
         isInventoryOpen = true;
 
-        Debug.Log("[InventoryController] Inventory opened - Cursor visible and unlocked");
+        Debug.Log("[InventoryController] Inventory opened - Game paused, cursor unlocked");
     }
 
     private void CloseInventory()
@@ -154,6 +157,9 @@ public class InventoryController : MonoBehaviour
         // Chỉ lock cursor nếu PauseMenu KHÔNG mở
         if (!isPauseMenuOpen)
         {
+            // Resume game khi đóng inventory
+            Time.timeScale = 1f;
+
             Cursor.visible = false;
             Cursor.lockState = CursorLockMode.Locked;
             

@@ -686,7 +686,29 @@ public class DungeonWaveManager : MonoBehaviour
     /// </summary>
     private void HidePlayerUIOnComplete()
     {
-        string[] uiNames = { "UI_HP_Invetory", "UI_HP_Inventory", "UI_HP", "UI_Invetory", "UI_Inventory" };
+        // Ẩn toàn bộ Canvas_Menu (chứa tất cả GUI player: HP, Inventory, Skills, XP...)
+        string[] canvasNames = { "Canvas_Menu" };
+        foreach (string n in canvasNames)
+        {
+            // Tìm trong DontDestroyOnLoad + scene
+            Canvas[] allCanvases = Resources.FindObjectsOfTypeAll<Canvas>();
+            foreach (Canvas c in allCanvases)
+            {
+                if (c.gameObject.name == n && c.gameObject.scene.IsValid())
+                {
+                    c.gameObject.SetActive(false);
+                    Debug.Log($"[DungeonWave] Hidden Canvas: {n}");
+                    break;
+                }
+            }
+        }
+
+        // Fallback: tìm từng panel riêng nếu Canvas_Menu không tìm thấy
+        string[] uiNames = { 
+            "UI_HP_Invetory", "UI_HP_Inventory", "UI_HP-Invetory", "UI_HP-Inventory",
+            "UI_HP", "UI_Invetory", "UI_Inventory",
+            "AbilityIcons", "SkillBar", "UI_Skills"
+        };
 
         // Cách 1: Tìm trong player hierarchy (recursive)
         Transform searchRoot = player;
@@ -701,7 +723,11 @@ public class DungeonWaveManager : MonoBehaviour
             foreach (string n in uiNames)
             {
                 Transform t = FindInChildren(searchRoot, n);
-                if (t != null) { t.gameObject.SetActive(false); Debug.Log($"[DungeonWave] Hidden {n} (in player)"); return; }
+                if (t != null && t.gameObject.activeSelf) 
+                { 
+                    t.gameObject.SetActive(false); 
+                    Debug.Log($"[DungeonWave] Hidden {n} (in player)"); 
+                }
             }
         }
 
@@ -709,10 +735,12 @@ public class DungeonWaveManager : MonoBehaviour
         foreach (string n in uiNames)
         {
             GameObject go = GameObject.Find(n);
-            if (go != null) { go.SetActive(false); Debug.Log($"[DungeonWave] Hidden {n} (scene)"); return; }
+            if (go != null && go.activeSelf) 
+            { 
+                go.SetActive(false); 
+                Debug.Log($"[DungeonWave] Hidden {n} (scene)"); 
+            }
         }
-
-        Debug.LogWarning("[DungeonWave] Could not find UI_HP_Invetory to hide!");
     }
 
     /// <summary>
@@ -734,7 +762,23 @@ public class DungeonWaveManager : MonoBehaviour
     /// </summary>
     private void RestorePlayerUI()
     {
-        string[] uiNames = { "UI_HP_Invetory", "UI_HP_Inventory", "UI_HP", "UI_Invetory", "UI_Inventory" };
+        // Bật lại Canvas_Menu đã bị ẩn khi complete
+        Canvas[] allCanvases = Resources.FindObjectsOfTypeAll<Canvas>();
+        foreach (Canvas c in allCanvases)
+        {
+            if (c.gameObject.name == "Canvas_Menu" && !c.gameObject.activeSelf)
+            {
+                c.gameObject.SetActive(true);
+                Debug.Log("[DungeonWave] Restored Canvas_Menu");
+                break;
+            }
+        }
+
+        // Fallback: bật lại các panel riêng
+        string[] uiNames = { 
+            "UI_HP_Invetory", "UI_HP_Inventory", "UI_HP-Invetory", "UI_HP-Inventory",
+            "UI_HP", "UI_Invetory", "UI_Inventory" 
+        };
 
         Transform searchRoot = player;
         if (searchRoot == null)
@@ -752,7 +796,7 @@ public class DungeonWaveManager : MonoBehaviour
             }
         }
 
-        // Tìm inactive objects trong scene (đã bị SetActive(false))
+        // Tìm inactive objects trong scene
         foreach (GameObject root in UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects())
         {
             foreach (string n in uiNames)

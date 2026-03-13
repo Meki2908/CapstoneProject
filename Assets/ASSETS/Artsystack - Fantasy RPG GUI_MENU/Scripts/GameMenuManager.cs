@@ -241,12 +241,12 @@ namespace Artsystack.ArtsystackGui
 
         private void Update()
         {
-            // Pause game với phím Escape
+            // ESC chỉ dùng trong gameplay (pause/resume)
+            // Trong lobby, dùng phím B để Back (xử lý bởi SettingsManager)
             if (Input.GetKeyDown(KeyCode.Escape))
             {
                 if (isGameRunning)
                 {
-                    // Trong gameplay → toggle pause
                     if (panel_PopUpPause != null && panel_PopUpPause.activeSelf)
                     {
                         ResumeGame();
@@ -255,21 +255,6 @@ namespace Artsystack.ArtsystackGui
                     {
                         PauseGame();
                     }
-                }
-                else
-                {
-                    // Trong lobby → toggle Settings GUI
-                    if (panel_GUISettings != null && panel_GUISettings.activeSelf)
-                    {
-                        // Settings đang mở → đóng, quay về menu chính
-                        OnCloseSettings();
-                    }
-                    else if (panel_Exit != null && panel_Exit.activeSelf)
-                    {
-                        // Exit dialog đang mở → đóng
-                        CancelExit();
-                    }
-                    // Không mở gì thêm nếu đang ở menu chính — ESC không cần thiết
                 }
             }
         }

@@ -71,12 +71,6 @@ namespace Artsystack.ArtsystackGui
         {
             SetupButtonListeners();
 
-            // Kiểm tra lobby mode: GameMenuManager enabled = lobby scene
-            var gmm = FindFirstObjectByType<GameMenuManager>();
-            lobbyModeActive = (gmm != null && gmm.enabled);
-            if (lobbyModeActive)
-                Debug.Log("[PauseMenuManager] Lobby mode — ESC handled by GameMenuManager");
-
             // Bật HUD panel + tất cả children (bị tắt mặc định trong Inspector)
             if (panel_HUD != null)
             {
@@ -88,13 +82,17 @@ namespace Artsystack.ArtsystackGui
             }
         }
 
-        // Cache: GameMenuManager đang xử lý ESC trong lobby?
-        private bool lobbyModeActive = false;
+        // Cache reference, kiểm tra .enabled mỗi frame (tránh race condition Start() ordering)
+        private GameMenuManager cachedGMM;
 
         private void Update()
         {
-            // Trong lobby, GameMenuManager.Update() xử lý ESC
-            if (lobbyModeActive)
+            // Tìm GameMenuManager 1 lần nếu chưa cache
+            if (cachedGMM == null)
+                cachedGMM = FindFirstObjectByType<GameMenuManager>();
+
+            // Trong lobby (GameMenuManager enabled), nó xử lý ESC — skip ở đây
+            if (cachedGMM != null && cachedGMM.enabled)
                 return;
 
             bool escPressed = false;
