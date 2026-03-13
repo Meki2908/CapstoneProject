@@ -22,7 +22,8 @@ public class SkillProjectileManager : MonoBehaviour
         }
         else
         {
-            Destroy(gameObject);
+            // CHỈ xóa component, KHÔNG xóa gameObject (có thể là child của Canvas)
+            Destroy(this);
         }
     }
 

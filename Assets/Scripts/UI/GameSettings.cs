@@ -80,7 +80,8 @@ public class GameSettings : MonoBehaviour
         }
         else if (Instance != this)
         {
-            Destroy(gameObject);
+            // CHỈ xóa component — gameObject có thể là child của Canvas player
+            Destroy(this);
         }
     }
 

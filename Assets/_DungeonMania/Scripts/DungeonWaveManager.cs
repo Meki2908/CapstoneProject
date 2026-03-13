@@ -160,6 +160,24 @@ public class DungeonWaveManager : MonoBehaviour
         }
     }
 
+    void OnDestroy()
+    {
+        // FIX: Unsubscribe OnPlayerDied để tránh MissingReferenceException
+        if (player != null)
+        {
+            PlayerHealth ph = player.GetComponent<PlayerHealth>();
+            if (ph == null) ph = player.GetComponentInChildren<PlayerHealth>();
+            if (ph != null)
+            {
+                ph.OnPlayerDied -= OnPlayerDied;
+            }
+        }
+
+        // Cleanup singleton
+        if (Instance == this)
+            Instance = null;
+    }
+
     void Start()
     {
         // Tìm player TRƯỚC KHI làm gì khác
@@ -1051,42 +1069,8 @@ public class DungeonWaveManager : MonoBehaviour
     /// <summary>
     /// Thiết lập SelectEnemyPos với vị trí spawn
     /// </summary>
-    private void SetupSelectEnemyPos(Vector3 spawnPos)
-    {
-        // Số vị trí spawn - khớp với kích thước mảng trong SelectEnemyPos
-        int count = 10;
-
-        // Xóa các temp objects cũ nếu có
-        GameObject oldParent = GameObject.Find("TempSpawnPoints");
-        if (oldParent != null)
-        {
-            Destroy(oldParent);
-        }
-
-        // Khởi tạo mảng mới với đủ số phần tử
-        SelectEnemyPos.enemyTr = new Transform[count];
-
-        // Tạo một parent để dễ quản lý
-        GameObject parent = new GameObject("TempSpawnPoints");
-        parent.transform.position = spawnPos;
-
-        float radius = 5f; // bán kính vòng tròn quanh player
-
-        for (int i = 0; i < count; i++)
-        {
-            // Tạo vị trí xung quanh player theo vòng tròn
-            float angle = (Mathf.PI * 2f / count) * i;
-            Vector3 offset = new Vector3(Mathf.Cos(angle), 0, Mathf.Sin(angle)) * radius;
-
-            GameObject p = new GameObject($"TempSpawnPos_{i}");
-            p.transform.position = spawnPos + offset;
-            p.transform.parent = parent.transform;
-
-            SelectEnemyPos.enemyTr[i] = p.transform;
-        }
-
-        Debug.Log($"[DungeonWave] Đã setup SelectEnemyPos với {count} vị trí quanh player tại {spawnPos}");
-    }
+    // FIX #4: Removed duplicate SetupSelectEnemyPos method (memory leak - no Destroy call)
+    // Use SetupSelectEnemyPosForAllEnemies instead (has Destroy(parent, 5f) cleanup)
 
     /// <summary>
     /// Theo dõi enemy type sau khi RandomEnemy chọn xong
@@ -1215,11 +1199,16 @@ public class DungeonWaveManager : MonoBehaviour
             EnsureParentActive(waveNotificationUI);
             waveNotificationUI.SetActive(true);
             
+            // FIX #7: Dựa vào config thực tế thay vì hardcode wave position
             string waveName = "";
-            if (wave == totalWaves - 1)
-                waveName = "BOSS WAVE";
-            else if (wave == totalWaves)
+            int waveIdx = wave - 1;
+            bool hasBoss = waveIdx < bossCount.Length && bossCount[waveIdx] > 0;
+            bool hasDemon = waveIdx < demonCount.Length && demonCount[waveIdx] > 0;
+            
+            if (wave == totalWaves && (hasBoss || hasDemon))
                 waveName = "FINAL BOSS";
+            else if (hasBoss || hasDemon)
+                waveName = "BOSS WAVE";
             else
                 waveName = $"WAVE {wave}";
 
@@ -1653,55 +1642,12 @@ public class DungeonWaveManager : MonoBehaviour
 }
 
 /// <summary>
-/// Script theo dõi enemy trong wave
+/// Script theo dõi enemy trong wave — chỉ lưu metadata
+/// FIX #1/#3: Removed death tracking coroutine — EnemyDeathBridge handles death notification
+/// to avoid double OnEnemyKilled calls (enemiesAlive bị trừ 2 lần)
 /// </summary>
 public class EnemyWaveTracker : MonoBehaviour
 {
     public DungeonWaveManager waveManager;
     public int enemyType;
-    private bool isDead = false;
-
-    void Start()
-    {
-        // Đăng ký theo dõi
-        StartCoroutine(TrackEnemy());
-    }
-
-    IEnumerator TrackEnemy()
-    {
-        // Chờ đợi enemy chết hoặc bị destroy
-        while (gameObject != null && !isDead)
-        {
-            EnemyScript es = GetComponent<EnemyScript>();
-            if (es != null && !es.alive)
-            {
-                OnEnemyDeath();
-                break;
-            }
-            yield return new WaitForSeconds(0.5f);
-        }
-    }
-
-    private void OnEnemyDeath()
-    {
-        if (isDead) return;
-        isDead = true;
-
-        // Tính EXP theo loại enemy
-        int exp = 0;
-        switch (enemyType)
-        {
-            case 0: exp = 100; break;   // Skeleton
-            case 1: exp = 150; break;   // Archer
-            case 2: exp = 300; break;   // Monster
-            case 3: exp = 350; break;   // Lich
-            case 4: exp = 1500; break;  // Boss
-            case 5: exp = 3000; break;  // Demon
-        }
-
-        if (waveManager != null)
-        {
-            waveManager.OnEnemyKilled(enemyType, exp);
-        }
-    }
 }

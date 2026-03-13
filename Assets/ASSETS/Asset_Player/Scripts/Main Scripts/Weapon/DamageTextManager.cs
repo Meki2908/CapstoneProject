@@ -28,8 +28,9 @@ public class DamageTextManager : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("[DamageTextManager] Multiple instances found! Destroying duplicate.");
-            Destroy(gameObject);
+            Debug.LogWarning("[DamageTextManager] Multiple instances found! Removing duplicate component.");
+            // CHỈ xóa component, KHÔNG xóa gameObject (có thể là child của Canvas)
+            Destroy(this);
         }
     }
 

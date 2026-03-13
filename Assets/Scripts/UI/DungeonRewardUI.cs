@@ -65,14 +65,24 @@ public class DungeonRewardUI : MonoBehaviour
         }
         else
         {
-            Destroy(gameObject);
+            // CHỈ xóa component — gameObject có thể là child của Canvas player
+            Destroy(this);
         }
     }
 
     private void OnDestroy()
     {
+        // FIX #10: Cleanup canvas trước khi null Instance
         if (Instance == this)
+        {
+            if (isShowing)
+            {
+                if (panelRoot != null) Destroy(panelRoot);
+                if (rewardCanvas != null) Destroy(rewardCanvas.gameObject);
+                isShowing = false;
+            }
             Instance = null;
+        }
     }
 
     /// <summary>
