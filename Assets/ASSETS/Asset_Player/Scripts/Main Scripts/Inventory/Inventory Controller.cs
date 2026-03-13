@@ -83,8 +83,12 @@ public class InventoryController : MonoBehaviour
 
     void Update()
     {
-        // Input is now handled via Input System actions in Start()
-        // This Update method can be removed or used for other purposes
+        // Chỉ dùng legacy Input khi Input System action "Inventory" KHÔNG tồn tại
+        // Nếu cả 2 cùng chạy → double toggle → mở rồi đóng ngay
+        if (inventoryToggleAction == null && Input.GetKeyDown(KeyCode.I))
+        {
+            ToggleInventory();
+        }
     }
 
     private void ToggleInventory()
@@ -104,11 +108,7 @@ public class InventoryController : MonoBehaviour
         // Pause game khi mở inventory (để kéo thả item thoải mái)
         Time.timeScale = 0f;
 
-        // Show cursor and unlock
-        Cursor.visible = true;
-        Cursor.lockState = CursorLockMode.None;
-
-        // Disable camera controls
+        // Disable camera controls TRƯỚC
         DisableCameraControls();
 
         // Disable player input
@@ -126,7 +126,11 @@ public class InventoryController : MonoBehaviour
         inventory.SetActive(true);
         isInventoryOpen = true;
 
-        Debug.Log("[InventoryController] Inventory opened - Game paused, cursor unlocked");
+        // Unlock cursor SAU CÙNG (đảm bảo không bị script khác override)
+        Cursor.visible = true;
+        Cursor.lockState = CursorLockMode.None;
+
+        Debug.Log($"[InventoryController] Inventory opened - timeScale={Time.timeScale}, cursor locked={Cursor.lockState}");
     }
 
     private void CloseInventory()
