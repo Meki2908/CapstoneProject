@@ -9993,7 +9993,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 5486234518520403956}
   m_HandleRect: {fileID: 3111931760168605685}
   m_Direction: 2
-  m_Value: 1.0000074
+  m_Value: 1
   m_Size: 0.93781286
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -20393,8 +20393,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -0.00033569336}
-  m_SizeDelta: {x: 968.20996, y: 1599.5999}
+  m_AnchoredPosition: {x: 0, y: 0.000030517578}
+  m_SizeDelta: {x: 968.20996, y: 0}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &5961968106673637679
 MonoBehaviour:
@@ -20600,7 +20600,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &3216585232729353002
 RectTransform:
   m_ObjectHideFlags: 0
@@ -20641,7 +20641,7 @@ Canvas:
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
   m_VertexColorAlwaysGammaSpace: 0
-  m_AdditionalShaderChannelsFlag: 0
+  m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
   m_SortingOrder: 0
@@ -26538,8 +26538,8 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 3366205515032275464}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.062187135}
-  m_AnchorMax: {x: 1, y: 1}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: -2.7999268}
   m_SizeDelta: {x: 20, y: 25.6}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -28158,7 +28158,6 @@ GameObject:
   - component: {fileID: 8361559067120853895}
   - component: {fileID: 1909252503540550378}
   - component: {fileID: 3870817058630176549}
-  - component: {fileID: 7127278625636007633}
   - component: {fileID: 6544144954998574600}
   - component: {fileID: 7395996711300719956}
   - component: {fileID: 2243221323192493820}
@@ -28278,23 +28277,6 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
---- !u!114 &7127278625636007633
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6154244371206602844}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d0b148fe25e99eb48b9724523833bab1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_Delegates:
-  - eventID: 4
-    callback:
-      m_PersistentCalls:
-        m_Calls: []
 --- !u!114 &6544144954998574600
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -28428,7 +28410,6 @@ MonoBehaviour:
   panel_GUISettings: {fileID: 5677775948098599565}
   mainMenuSceneName: UI_Game
   cursorVisibleOnPause: 1
-  openMenuAction: {fileID: 5750602332980554053, guid: 052faaac586de48259a63d0c4782560b, type: 3}
 --- !u!1 &6196443958397041876
 GameObject:
   m_ObjectHideFlags: 0

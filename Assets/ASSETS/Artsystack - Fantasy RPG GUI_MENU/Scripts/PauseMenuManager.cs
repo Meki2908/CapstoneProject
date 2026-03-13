@@ -32,8 +32,7 @@ namespace Artsystack.ArtsystackGui
         [SerializeField] private string mainMenuSceneName = "MainMenu";
         [SerializeField] private bool cursorVisibleOnPause = true;
 
-        [Header("Input System")]
-        [SerializeField] private InputActionReference openMenuAction;
+
 
         private static PauseMenuManager instance;
         private bool isPaused = false;
@@ -50,41 +49,33 @@ namespace Artsystack.ArtsystackGui
 
         private void Awake()
         {
+            Debug.Log($"[PauseMenuManager] Awake() on {gameObject.name}, instance={instance}, this={this.GetInstanceID()}");
             if (instance != null && instance != this)
             {
-                this.enabled = false; // Chỉ tắt component, không xóa
+                Debug.LogWarning($"[PauseMenuManager] Duplicate detected! Disabling on {gameObject.name}");
+                this.enabled = false;
                 return;
             }
             instance = this;
 
+            Debug.Log($"[PauseMenuManager] panel_PopUpPause={(panel_PopUpPause != null ? panel_PopUpPause.name : "NULL")}");
+            Debug.Log($"[PauseMenuManager] panel_HUD={(panel_HUD != null ? panel_HUD.name : "NULL")}");
+
             if (panel_PopUpPause != null)
                 panel_PopUpPause.SetActive(false);
-
-            // Subscribe to OpenMenu action
-            if (openMenuAction != null && openMenuAction.action != null)
-            {
-                openMenuAction.action.Enable();
-                openMenuAction.action.performed += OnOpenMenuPerformed;
-            }
         }
 
-        private void OnDestroy()
-        {
-            // Unsubscribe to prevent memory leaks
-            if (openMenuAction != null && openMenuAction.action != null)
-            {
-                openMenuAction.action.performed -= OnOpenMenuPerformed;
-            }
-        }
 
-        private void OnOpenMenuPerformed(InputAction.CallbackContext context)
-        {
-            TogglePause();
-        }
 
         private void Start()
         {
             SetupButtonListeners();
+
+            // Kiểm tra lobby mode: GameMenuManager enabled = lobby scene
+            var gmm = FindFirstObjectByType<GameMenuManager>();
+            lobbyModeActive = (gmm != null && gmm.enabled);
+            if (lobbyModeActive)
+                Debug.Log("[PauseMenuManager] Lobby mode — ESC handled by GameMenuManager");
 
             // Bật HUD panel + tất cả children (bị tắt mặc định trong Inspector)
             if (panel_HUD != null)
@@ -94,6 +85,41 @@ namespace Artsystack.ArtsystackGui
                 {
                     child.gameObject.SetActive(true);
                 }
+            }
+        }
+
+        // Cache: GameMenuManager đang xử lý ESC trong lobby?
+        private bool lobbyModeActive = false;
+
+        private void Update()
+        {
+            // Trong lobby, GameMenuManager.Update() xử lý ESC
+            if (lobbyModeActive)
+                return;
+
+            bool escPressed = false;
+
+            // Check New Input System
+            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            {
+                escPressed = true;
+            }
+
+            // Fallback: Legacy Input
+            if (!escPressed)
+            {
+                try
+                {
+                    if (Input.GetKeyDown(KeyCode.Escape))
+                        escPressed = true;
+                }
+                catch { }
+            }
+
+            if (escPressed)
+            {
+                Debug.Log($"[PauseMenuManager] ESC detected! isPaused={isPaused}, enabled={enabled}");
+                TogglePause();
             }
         }
 
@@ -118,8 +144,27 @@ namespace Artsystack.ArtsystackGui
             isPaused = true;
             Time.timeScale = 0f;
 
+            Debug.Log($"[PauseMenuManager] PauseGame() — panel_PopUpPause={(panel_PopUpPause != null ? panel_PopUpPause.name : "NULL")}");
+
             if (panel_PopUpPause != null)
+            {
+                // CRITICAL: Kích hoạt tất cả parent trước khi bật panel
+                // (parent có thể bị ẩn bởi GameMenuManager.HideAllPanels)
+                EnsureParentsActive(panel_PopUpPause.transform);
                 panel_PopUpPause.SetActive(true);
+                Debug.Log($"[PauseMenuManager] panel_PopUpPause SET ACTIVE = true, activeSelf={panel_PopUpPause.activeSelf}, activeInHierarchy={panel_PopUpPause.activeInHierarchy}");
+                
+                // Kiểm tra Canvas parent
+                Canvas parentCanvas = panel_PopUpPause.GetComponentInParent<Canvas>();
+                if (parentCanvas != null)
+                    Debug.Log($"[PauseMenuManager] Parent Canvas: {parentCanvas.gameObject.name}, enabled={parentCanvas.enabled}, renderMode={parentCanvas.renderMode}, activeInHierarchy={parentCanvas.gameObject.activeInHierarchy}");
+                else
+                    Debug.LogError("[PauseMenuManager] NO PARENT CANVAS FOUND! Panel won't render!");
+            }
+            else
+            {
+                Debug.LogError("[PauseMenuManager] panel_PopUpPause is NULL! GUI cannot show!");
+            }
 
             // Ẩn HUD khi pause
             if (panel_HUD != null)
@@ -140,6 +185,10 @@ namespace Artsystack.ArtsystackGui
             if (!isPaused) return;
             isPaused = false;
             HideAllPanels();
+
+            // Tắt lại các parent đã bật khi pause
+            RestoreParents();
+
             Time.timeScale = 1f;
             Cursor.visible = false;
             Cursor.lockState = CursorLockMode.Locked;
@@ -227,6 +276,48 @@ namespace Artsystack.ArtsystackGui
         {
             if (panel_PopUpPause != null) panel_PopUpPause.SetActive(false);
             if (panel_GUISettings != null) panel_GUISettings.SetActive(false);
+        }
+
+        // Lưu danh sách các parent đã bật khi pause → tắt lại khi resume
+        private readonly List<GameObject> activatedParents = new List<GameObject>();
+
+        /// <summary>
+        /// Kích hoạt tất cả parent inactive từ panel lên đến Canvas
+        /// (parent có thể bị ẩn bởi GameMenuManager.HideAllPanels)
+        /// </summary>
+        private void EnsureParentsActive(Transform child)
+        {
+            activatedParents.Clear();
+            Transform current = child.parent;
+            while (current != null)
+            {
+                if (!current.gameObject.activeSelf)
+                {
+                    Debug.Log($"[PauseMenuManager] Activating inactive parent: {current.gameObject.name}");
+                    current.gameObject.SetActive(true);
+                    activatedParents.Add(current.gameObject);
+                }
+                // Dừng khi tới Canvas root
+                if (current.GetComponent<Canvas>() != null)
+                    break;
+                current = current.parent;
+            }
+        }
+
+        /// <summary>
+        /// Tắt lại các parent đã bật khi pause
+        /// </summary>
+        private void RestoreParents()
+        {
+            foreach (var go in activatedParents)
+            {
+                if (go != null)
+                {
+                    go.SetActive(false);
+                    Debug.Log($"[PauseMenuManager] Deactivating parent: {go.name}");
+                }
+            }
+            activatedParents.Clear();
         }
 
         public bool IsPaused => isPaused;

@@ -1147,16 +1147,51 @@ namespace Artsystack.ArtsystackGui
         {
             if (panel_GUISettings != null)
             {
+                // Đảm bảo tất cả parent từ panel_GUISettings lên Canvas đều active
+                EnsureHierarchyActive(panel_GUISettings.transform);
+
                 panel_GUISettings.SetActive(true);
 
-                // FIX: Chỉ bật các panel layout cần thiết, không bật ALL children
-                // (bật all sẽ hiện cùng lúc Gameplay+Controller+Graphics+Audio gây flash)
-                // SwitchToPanel sẽ tự ẩn/hiện đúng tab
+                // Bật các children layout quan trọng (Middle, Right Side, Controller_Button...)
+                // Chúng có thể bị tắt do GameMenuManager.HideAllPanels()
+                foreach (Transform child in panel_GUISettings.transform)
+                {
+                    // Bật tất cả children trực tiếp trừ các tab panel (sẽ do SwitchToPanel quản lý)
+                    bool isTabPanel = (child.gameObject == panel_Gameplay ||
+                                       child.gameObject == panel_Controller ||
+                                       child.gameObject == panel_Graphics ||
+                                       child.gameObject == panel_Audio);
+                    if (!isTabPanel)
+                    {
+                        child.gameObject.SetActive(true);
+                    }
+                }
 
                 // Default to Gameplay panel
                 SwitchToPanel(panel_Gameplay);
                 // Load current values
                 LoadSettings();
+
+                Debug.Log("[SettingsManager] OpenSettings complete — all layout children activated");
+            }
+        }
+
+        /// <summary>
+        /// Đảm bảo tất cả parent trong hierarchy đều active (lên tới Canvas root)
+        /// </summary>
+        private void EnsureHierarchyActive(Transform child)
+        {
+            Transform current = child.parent;
+            while (current != null)
+            {
+                if (!current.gameObject.activeSelf)
+                {
+                    Debug.Log($"[SettingsManager] Activating inactive parent: {current.gameObject.name}");
+                    current.gameObject.SetActive(true);
+                }
+                if (current.GetComponent<Canvas>() != null)
+                    break;
+                current = current.parent;
             }
         }
 

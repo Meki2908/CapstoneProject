@@ -225,6 +225,11 @@ public class PauseMenuController : MonoBehaviour
     
     void Update()
     {
+        // PauseMenuManager.Update() xử lý ESC cho GUI pause
+        // PauseMenuController chỉ xử lý khi có menuCanvas (Canv_Options) riêng
+        if (menuCanvas == null)
+            return;
+
         bool escPressed = false;
 
         // 1. Check New Input System
