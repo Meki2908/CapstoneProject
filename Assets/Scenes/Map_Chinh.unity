@@ -3947,30 +3947,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1dc380552157ca5448fbf4a904d5f38a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BigMapController
-  bigMapPanel: {fileID: 1272782064}
-  mapRect: {fileID: 494778794}
-  playerMarkerRect: {fileID: 0}
-  hideWhenBigMapOpen:
-  - {fileID: 0}
-  - {fileID: 0}
-  player: {fileID: 0}
-  minX: -400
-  maxX: 400
-  minZ: -400
-  maxZ: 400
-  invertX: 0
-  invertZ: 0
-  toggleKey: 109
-  portalPoints:
-  - {fileID: 0}
-  portalMarkerPrefab: {fileID: 0}
-  portalsParent: {fileID: 0}
-  closeMapAfterTeleport: 1
-  characterController: {fileID: 0}
-  playerRigidbody: {fileID: 0}
-  navAgent: {fileID: 0}
-  teleportOffset: {x: 0, y: 0.1, z: 0}
-  debugLogs: 1
 --- !u!4 &309647512
 Transform:
   m_ObjectHideFlags: 0
@@ -6454,7 +6430,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &641606118
 RectTransform:
   m_ObjectHideFlags: 0
@@ -6479,7 +6455,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 1291.8583, y: 573.2904}
+  m_AnchoredPosition: {x: 1732, y: 1203}
   m_SizeDelta: {x: 784.75, y: 348.24997}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &641606119
@@ -6600,8 +6576,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -913, y: 431}
-  m_SizeDelta: {x: 300, y: 300}
+  m_AnchoredPosition: {x: -1713.7664, y: 739.44995}
+  m_SizeDelta: {x: 400, y: 400}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &661909087
 GameObject:
@@ -9708,9 +9684,13 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 178156860825758609, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 1068612423306729459, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 0
+      value: 140
       objectReference: {fileID: 0}
     - target: {fileID: 1245353089643615957, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalPosition.x
@@ -9786,27 +9766,27 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6419902585229793585, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6419902585229793585, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6419902585229793585, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 0
+      value: 130
       objectReference: {fileID: 0}
     - target: {fileID: 6419902585229793585, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 0
+      value: 130
       objectReference: {fileID: 0}
     - target: {fileID: 6419902585229793585, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 0
+      value: 90
       objectReference: {fileID: 0}
     - target: {fileID: 6419902585229793585, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0
+      value: -75
       objectReference: {fileID: 0}
     - target: {fileID: 7069795437127634594, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalPosition.x
@@ -9820,21 +9800,25 @@ PrefabInstance:
       propertyPath: m_LocalPosition.z
       value: -3.1799998
       objectReference: {fileID: 0}
+    - target: {fileID: 7381843887877748772, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 7542521313094387615, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.0058884695
+      value: 0.0054541607
       objectReference: {fileID: 0}
     - target: {fileID: 7542521313094387615, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0.00044179382
+      value: -0.0004092092
       objectReference: {fileID: 0}
     - target: {fileID: 7542521313094387615, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0.99718
+      value: 0.9971824
       objectReference: {fileID: 0}
     - target: {fileID: 7542521313094387615, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.074815355
+      value: 0.07481558
       objectReference: {fileID: 0}
     - target: {fileID: 8127737498423080249, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalPosition.x
@@ -15153,7 +15137,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0.00030517578, y: 10.9999695}
+  m_AnchoredPosition: {x: 0.00024414062, y: 11}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1650062827
@@ -15414,8 +15398,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0.00002689299}
-  m_SizeDelta: {x: 100, y: 100}
+  m_AnchoredPosition: {x: 0.00018311, y: -2.1393}
+  m_SizeDelta: {x: 100, y: 95.7213}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1666556678
 MonoBehaviour:
@@ -16922,7 +16906,6 @@ GameObject:
   - component: {fileID: 1807593176}
   - component: {fileID: 1807593175}
   - component: {fileID: 1807593179}
-  - component: {fileID: 1807593180}
   m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
@@ -16962,9 +16945,9 @@ MonoBehaviour:
   m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
-  m_ReferenceResolution: {x: 2532, y: 1170}
+  m_ReferenceResolution: {x: 3840, y: 2160}
   m_ScreenMatchMode: 0
-  m_MatchWidthOrHeight: 0.5
+  m_MatchWidthOrHeight: 0
   m_PhysicalUnit: 3
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96
@@ -17040,39 +17023,6 @@ MonoBehaviour:
   btnClose: {fileID: 887160321}
   playerOverride: {fileID: 298530814}
   rootPanel: {fileID: 641606117}
---- !u!114 &1807593180
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1807593174}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1dc380552157ca5448fbf4a904d5f38a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  bigMapPanel: {fileID: 0}
-  mapRect: {fileID: 0}
-  playerMarkerRect: {fileID: 0}
-  hideWhenBigMapOpen: []
-  player: {fileID: 0}
-  minX: -400
-  maxX: 400
-  minZ: -400
-  maxZ: 400
-  invertX: 0
-  invertZ: 0
-  toggleKey: 109
-  portalPoints: []
-  portalMarkerPrefab: {fileID: 0}
-  portalsParent: {fileID: 0}
-  closeMapAfterTeleport: 1
-  characterController: {fileID: 0}
-  playerRigidbody: {fileID: 0}
-  navAgent: {fileID: 0}
-  teleportOffset: {x: 0, y: 0.1, z: 0}
-  debugLogs: 0
 --- !u!1 &1808015316 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: aa42f4796862ec349bfa1cdf4489664b, type: 3}
