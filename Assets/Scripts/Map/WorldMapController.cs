@@ -5,6 +5,7 @@ using UnityEngine;
 /// mapCanvas = Canvas Map (tắt trong Editor).
 /// Ấn M → bật map + chuột. Ấn M lại → tắt.
 /// </summary>
+[DisallowMultipleComponent]
 public class WorldMapController : MonoBehaviour
 {
     public GameObject mapCanvas;  // Kéo Canvas Map vào đây
