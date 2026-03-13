@@ -20,9 +20,9 @@ public class ItemTooltipManager : MonoBehaviour
     [SerializeField] private float padding = 20f; // Padding around text (canvas units)
     [SerializeField] private float minWidth = 350f; // Minimum tooltip width (canvas units)
     [SerializeField] private float maxWidth = 700f; // Maximum tooltip width (canvas units)
-    [Header("Cursor Offset (Canvas Units)")]
-    [Tooltip("Offset từ chuột tính bằng canvas units.\nX: sang phải, Y: xuống dưới.\nTự động scale theo CanvasScaler.")]
-    [SerializeField] private Vector2 canvasOffset = new Vector2(20f, 20f);
+    [Header("Cursor Offset (Screen Pixels)")]
+    [Tooltip("Khoảng cách tooltip từ chuột tính bằng screen pixels.\nChỉ dùng X (sang trái). Y không dùng vì tooltip luôn ở giữa màn hình.")]
+    [SerializeField] private float cursorOffsetPixels = 30f;
 
     private Canvas canvas;
     private RectTransform canvasRectTransform;
@@ -141,66 +141,59 @@ public class ItemTooltipManager : MonoBehaviour
 
     /// <summary>
     /// Update tooltip position to follow mouse cursor.
-    /// Tính toán trong parent local space — hoạt động đúng bất kể tooltip nằm ở đâu trong hierarchy.
+    /// Tính toán hoàn toàn bằng screen pixels → convert sang world position.
+    /// Không phụ thuộc vào hierarchy, anchor, hay parent.
     /// </summary>
     private void UpdateTooltipPosition()
     {
-        if (tooltipRectTransform == null || canvas == null) return;
+        if (tooltipRectTransform == null || canvas == null || canvasRectTransform == null) return;
 
-        // Pivot: right-center → tooltip mở rộng sang TRÁI, căn giữa dọc
-        tooltipRectTransform.anchorMin = Vector2.zero;
-        tooltipRectTransform.anchorMax = Vector2.zero;
+        // Pivot: right-center → cạnh phải ở giữa dọc = điểm neo
         tooltipRectTransform.pivot = new Vector2(1f, 0.5f);
 
         Camera cam = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
 
-        RectTransform parentRect = tooltipRectTransform.parent as RectTransform;
-        if (parentRect == null) parentRect = canvasRectTransform;
+        // Lấy kích thước tooltip THỰC trong screen pixels qua world corners
+        Vector3[] corners = new Vector3[4];
+        tooltipRectTransform.GetWorldCorners(corners);
+        Vector2 sBL = RectTransformUtility.WorldToScreenPoint(cam, corners[0]);
+        Vector2 sTR = RectTransformUtility.WorldToScreenPoint(cam, corners[2]);
+        float tooltipScreenW = sTR.x - sBL.x;
+        float tooltipScreenH = sTR.y - sBL.y;
 
-        // Convert mouse screen → parent local space
-        Vector2 mouseLocal;
+        // --- Tính vị trí screen pixels ---
+        Vector2 mouse = Input.mousePosition;
+
+        // X: bên TRÁI chuột (pivot right → posX = cạnh phải tooltip)
+        float posX = mouse.x - cursorOffsetPixels;
+
+        // Y: theo chuột
+        float posY = mouse.y;
+
+        // --- Clamp trong screen ---
+
+        // Nếu cạnh trái tooltip tràn ra ngoài → flip sang PHẢI chuột
+        if (posX - tooltipScreenW < 0)
+            posX = mouse.x + cursorOffsetPixels + tooltipScreenW;
+
+        // Nếu vẫn tràn phải
+        if (posX > Screen.width)
+            posX = Screen.width;
+
+        // Nếu tràn dưới
+        if (posY - tooltipScreenH * 0.5f < 0)
+            posY = tooltipScreenH * 0.5f;
+
+        // Nếu tràn trên
+        if (posY + tooltipScreenH * 0.5f > Screen.height)
+            posY = Screen.height - tooltipScreenH * 0.5f;
+
+        // --- Convert screen pixels → world position qua canvas ---
+        Vector2 localPos;
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
-            parentRect, Input.mousePosition, cam, out mouseLocal
+            canvasRectTransform, new Vector2(posX, posY), cam, out localPos
         );
-
-        // Convert screen bounds → parent local space
-        Vector2 screenBL, screenTR;
-        RectTransformUtility.ScreenPointToLocalPointInRectangle(
-            parentRect, Vector2.zero, cam, out screenBL
-        );
-        RectTransformUtility.ScreenPointToLocalPointInRectangle(
-            parentRect, new Vector2(Screen.width, Screen.height), cam, out screenTR
-        );
-
-        float tooltipW = tooltipRectTransform.sizeDelta.x;
-        float tooltipH = tooltipRectTransform.sizeDelta.y;
-
-        // X: bên TRÁI chuột, gần chuột
-        float posX = mouseLocal.x - canvasOffset.x;
-
-        // Y: giữa màn hình (pivot 0.5 → tooltip tự căn giữa dọc)
-        float screenCenterY = (screenBL.y + screenTR.y) * 0.5f;
-        float posY = screenCenterY;
-
-        // --- Clamp trong screen bounds ---
-
-        // Nếu vượt cạnh TRÁI → flip sang phải chuột
-        if (posX - tooltipW < screenBL.x)
-            posX = mouseLocal.x + canvasOffset.x + tooltipW;
-
-        // Nếu vẫn vượt cạnh PHẢI → ép sát phải
-        if (posX > screenTR.x)
-            posX = screenTR.x;
-
-        // Nếu tooltip tràn dưới (pivot 0.5 → nửa dưới = posY - tooltipH/2)
-        if (posY - tooltipH * 0.5f < screenBL.y)
-            posY = screenBL.y + tooltipH * 0.5f;
-
-        // Nếu tooltip tràn trên
-        if (posY + tooltipH * 0.5f > screenTR.y)
-            posY = screenTR.y - tooltipH * 0.5f;
-
-        tooltipRectTransform.anchoredPosition = new Vector2(posX, posY);
+        tooltipRectTransform.position = canvasRectTransform.TransformPoint(localPos);
     }
 
     /// <summary>
