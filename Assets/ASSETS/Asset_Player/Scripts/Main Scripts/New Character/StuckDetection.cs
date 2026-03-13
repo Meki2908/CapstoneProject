@@ -35,14 +35,13 @@ public class StuckDetection : MonoBehaviour
 
     private void Update()
     {
-        if (character == null || controller == null) return;
+        // [DISABLED] Tắt auto-dash khi bị kẹt — gây player tự động lăn
+        return;
 
-        // Skip if already dashing or in certain states
-        // Skip if already dashing or in certain states
-        if (character.IsDashing || character.movementSM == null || character.movementSM.currentState == null || character.movementSM.currentState == character.getHit) return;
-
-        DetectStuckCondition();
-        HandleStuckEscape();
+        // if (character == null || controller == null) return;
+        // if (character.IsDashing || character.movementSM == null || character.movementSM.currentState == null || character.movementSM.currentState == character.getHit) return;
+        // DetectStuckCondition();
+        // HandleStuckEscape();
     }
 
     private void DetectStuckCondition()
