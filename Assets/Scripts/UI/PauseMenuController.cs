@@ -4,6 +4,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
 
+
 /// <summary>
 /// SCRIPT DUY NHẤT cho In-Game Options Menu
 /// Sử dụng Screen Space - Overlay để đảm bảo hiển thị
@@ -218,14 +219,8 @@ public class PauseMenuController : MonoBehaviour
             Debug.LogError("[PauseMenu] 2. Hoặc đảm bảo Canv_Options tồn tại trong scene");
         }
         
-        // Đảm bảo có EventSystem
-        if (FindFirstObjectByType<EventSystem>() == null)
-        {
-            GameObject es = new GameObject("EventSystem");
-            es.AddComponent<EventSystem>();
-            es.AddComponent<InputSystemUIInputModule>();
-            Debug.Log("[PauseMenu] Created EventSystem");
-        }
+        // Đảm bảo có đúng 1 EventSystem
+        EnsureSingleEventSystem();
     }
     
     void Update()
@@ -441,4 +436,47 @@ public class PauseMenuController : MonoBehaviour
     /// Kiểm tra menu đang mở hay không
     /// </summary>
     public bool IsMenuOpen => isOpen;
+
+    /// <summary>
+    /// Đảm bảo scene luôn có đúng 1 EventSystem.
+    /// Tạo mới nếu không có, xoá duplicate nếu có nhiều hơn 1.
+    /// CHỈ XOÁ COMPONENT, KHÔNG XOÁ GAMEOBJECT (tránh mất Canvas/UI)
+    /// </summary>
+    private void EnsureSingleEventSystem()
+    {
+        EventSystem[] allEventSystems = FindObjectsByType<EventSystem>(FindObjectsSortMode.None);
+        
+        if (allEventSystems.Length == 0)
+        {
+            // Không có → tạo mới
+            GameObject es = new GameObject("EventSystem");
+            es.AddComponent<EventSystem>();
+            es.AddComponent<InputSystemUIInputModule>();
+            Debug.Log("[PauseMenu] Created EventSystem (none found)");
+        }
+        else if (allEventSystems.Length > 1)
+        {
+            // Có nhiều hơn 1 → giữ cái đầu tiên, xoá component trên các cái còn lại
+            Debug.LogWarning($"[PauseMenu] Found {allEventSystems.Length} EventSystems! Removing duplicates...");
+            for (int i = 1; i < allEventSystems.Length; i++)
+            {
+                GameObject esObj = allEventSystems[i].gameObject;
+                Debug.Log($"[PauseMenu] Removing duplicate EventSystem from: {esObj.name}");
+                
+                // Xoá InputModule trước (nếu có)
+                var inputModule = esObj.GetComponent<UnityEngine.EventSystems.BaseInputModule>();
+                if (inputModule != null) Destroy(inputModule);
+                
+                // Xoá EventSystem component
+                Destroy(allEventSystems[i]);
+                
+                // Chỉ destroy cả GameObject nếu nó là object "EventSystem" riêng biệt (không có component khác quan trọng)
+                if (esObj.name == "EventSystem" && esObj.GetComponents<Component>().Length <= 2) // Transform + (vừa destroy xong)
+                {
+                    Destroy(esObj);
+                    Debug.Log($"[PauseMenu] Also destroyed standalone EventSystem GameObject");
+                }
+            }
+        }
+    }
 }

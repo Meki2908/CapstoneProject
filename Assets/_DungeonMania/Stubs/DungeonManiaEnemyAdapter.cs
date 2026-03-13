@@ -101,12 +101,13 @@ public class DungeonManiaEnemyAdapter : MonoBehaviour
     
     /// <summary>
     /// Lấy health hiện tại của enemy
+    /// FIX #5: Trả về helth.value (current) thay vì mainHelth (max)
     /// </summary>
     public float GetCurrentHealth()
     {
         if (enemyScript != null && enemyScript.enemy != null)
         {
-            return enemyScript.enemy.mainHelth;
+            return enemyScript.enemy.helth.value;
         }
         return 100;
     }

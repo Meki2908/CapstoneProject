@@ -100,7 +100,8 @@ public class ItemPickupNotification : MonoBehaviour
     {
         if (_instance != null && _instance != this)
         {
-            Destroy(gameObject);
+            // CHỈ xóa component — gameObject có thể là child của Canvas player
+            Destroy(this);
             return;
         }
         _instance = this;

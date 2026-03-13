@@ -16,7 +16,8 @@ public class SoundManager : MonoBehaviour
     {
         if (instance != null && instance != this)
         {
-            Destroy(gameObject);
+            // CHỈ xóa component — gameObject có thể là child của Canvas player
+            Destroy(this);
             return;
         }
 
@@ -25,6 +26,12 @@ public class SoundManager : MonoBehaviour
 
         if (dontDestroyOnLoad)
         {
+            // CRITICAL: Tách khỏi parent hierarchy trước khi DontDestroyOnLoad
+            // DontDestroyOnLoad chỉ hoạt động trên root GameObjects
+            if (transform.parent != null)
+            {
+                transform.SetParent(null);
+            }
             DontDestroyOnLoad(gameObject);
         }
     }
@@ -48,7 +55,8 @@ public class SoundManager : MonoBehaviour
             return;
         }
 
-        float finalVolume = Mathf.Clamp01(volume) * Mathf.Clamp01(soundList.volume);
+        float settingsSfxVol = GameSettings.Instance != null ? GameSettings.Instance.sfxVolume : 1f;
+        float finalVolume = Mathf.Clamp01(volume) * Mathf.Clamp01(soundList.volume) * settingsSfxVol;
         AudioSource targetSource = source != null ? source : instance.audioSource;
 
         float originalPitch = targetSource.pitch;
@@ -164,7 +172,8 @@ public class SoundManager : MonoBehaviour
             return;
         }
 
-        float finalVolume = Mathf.Clamp01(volume) * Mathf.Clamp01(soundList.volume);
+        float settingsSfxVol = GameSettings.Instance != null ? GameSettings.Instance.sfxVolume : 1f;
+        float finalVolume = Mathf.Clamp01(volume) * Mathf.Clamp01(soundList.volume) * settingsSfxVol;
         AudioSource targetSource = source != null ? source : instance.audioSource;
 
         float originalPitch = targetSource.pitch;

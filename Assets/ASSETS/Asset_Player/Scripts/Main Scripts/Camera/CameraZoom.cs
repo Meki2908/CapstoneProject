@@ -62,7 +62,9 @@ namespace MovementSystem
         {
             if (positionComposer != null && zoomInputAction != null)
             {
-                float zoomValue = zoomInputAction.action.ReadValue<float>() * zoomSensitivity;
+                // Nhân thêm GameSettings zoom speed multiplier
+                float settingsZoomMultiplier = GameSettings.Instance != null ? GameSettings.Instance.cameraZoomSpeed : 1f;
+                float zoomValue = zoomInputAction.action.ReadValue<float>() * zoomSensitivity * settingsZoomMultiplier;
                 currentTargetDistance = Mathf.Clamp(currentTargetDistance + zoomValue, minimumDistance, maximumDistance);
                 float currentDistance = positionComposer.CameraDistance;
                 if (Mathf.Approximately(currentDistance, currentTargetDistance))

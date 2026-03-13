@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using TMPro;
 
@@ -200,6 +201,9 @@ namespace Artsystack.ArtsystackGui
 
         private void Start()
         {
+            // Đảm bảo GameSettings singleton tồn tại (đồng bộ mọi scene)
+            GameSettings.EnsureInstance();
+
             // Initialize hover info panel references
             SettingHoverInfo.SetInfoPanel(panel_InfoRight, text_InfoTitle, text_InfoDescription);
             if (panel_InfoRight != null) panel_InfoRight.SetActive(false);
@@ -231,6 +235,13 @@ namespace Artsystack.ArtsystackGui
             // Key rebinding detection
             if (isWaitingForKey)
             {
+                // FIX: Escape hủy rebind thay vì gán
+                if (Input.GetKeyDown(KeyCode.Escape))
+                {
+                    CancelRebind();
+                    return;
+                }
+
                 // Check for mouse buttons first
                 for (int i = 0; i < 3; i++)
                 {
@@ -280,8 +291,22 @@ namespace Artsystack.ArtsystackGui
             keyBindings[action] = key;
             isWaitingForKey = false;
             currentRebindAction = "";
+            currentRebindInput = null;
             UpdateKeyBindTexts();
             MarkAsChanged();
+        }
+
+        /// <summary>
+        /// Hủy thao tác rebind (nhấn Escape)
+        /// </summary>
+        private void CancelRebind()
+        {
+            isWaitingForKey = false;
+            if (currentRebindInput != null && keyBindings.ContainsKey(currentRebindAction))
+                currentRebindInput.text = GetKeyDisplayName(keyBindings[currentRebindAction]);
+            currentRebindAction = "";
+            currentRebindInput = null;
+            Debug.Log("[Settings] Key rebind cancelled");
         }
 
         /// <summary>
@@ -966,56 +991,46 @@ namespace Artsystack.ArtsystackGui
 
         private void ApplySettings()
         {
-            // Audio
-            if (tab_MasterVolume != null)
+            // Đồng bộ tất cả values vào GameSettings singleton
+            var gs = GameSettings.Instance;
+            if (gs == null)
             {
-                AudioListener.volume = tab_MasterVolume.value;
-                PlayerPrefs.SetFloat(KEY_MASTER_VOLUME, tab_MasterVolume.value);
+                Debug.LogWarning("[SettingsManager] GameSettings.Instance is null!");
+                return;
             }
-            if (tab_MusicVolume != null)
-                PlayerPrefs.SetFloat(KEY_MUSIC_VOLUME, tab_MusicVolume.value);
-            if (tab_SFXVolume != null)
-                PlayerPrefs.SetFloat(KEY_SFX_VOLUME, tab_SFXVolume.value);
-            PlayerPrefs.SetInt(KEY_VOICE_LANGUAGE, voiceLanguageIndex);
-            PlayerPrefs.SetInt(KEY_BACKGROUND_SOUND, backgroundSoundEnabled ? 1 : 0);
+
+            // Audio
+            if (tab_MasterVolume != null) gs.masterVolume = tab_MasterVolume.value;
+            if (tab_MusicVolume != null) gs.musicVolume = tab_MusicVolume.value;
+            if (tab_SFXVolume != null) gs.sfxVolume = tab_SFXVolume.value;
+            gs.voiceLanguageIndex = voiceLanguageIndex;
+            gs.backgroundSoundEnabled = backgroundSoundEnabled;
 
             // Graphics
-            if (tab_Brightness != null)
-                PlayerPrefs.SetFloat(KEY_BRIGHTNESS, tab_Brightness.value);
+            if (tab_Brightness != null) gs.brightness = tab_Brightness.value;
+            gs.saturationEnabled = saturationEnabled;
+            if (tab_Contrast != null) gs.contrast = tab_Contrast.value;
+            gs.screenResolutionIndex = screenResolutionIndex;
+            gs.displayModeIndex = displayModeIndex;
+            gs.frameRate = currentFrameRate;
+            gs.chromaticAberrationEnabled = chromaticAberrationEnabled;
+            gs.sharpeningEnabled = sharpeningEnabled;
 
-            PlayerPrefs.SetInt(KEY_SATURATION, saturationEnabled ? 1 : 0);
-            if (tab_Contrast != null)
-                PlayerPrefs.SetFloat(KEY_CONTRAST, tab_Contrast.value);
-
-            // New Graphics Settings
-            PlayerPrefs.SetInt(KEY_SCREEN_RESOLUTION, screenResolutionIndex);
-            PlayerPrefs.SetInt(KEY_DISPLAY_MODE, displayModeIndex);
-            PlayerPrefs.SetInt(KEY_FRAME_RATE, currentFrameRate);
-
-            PlayerPrefs.SetInt(KEY_CHROMATIC_ABERRATION, chromaticAberrationEnabled ? 1 : 0);
-            PlayerPrefs.SetInt(KEY_SHARPENING, sharpeningEnabled ? 1 : 0);
+            // Gameplay (Camera Settings)
+            if (tab_CameraMouseSpeed != null) gs.cameraMouseSpeed = tab_CameraMouseSpeed.value;
+            if (tab_CameraRotateSpeed != null) gs.cameraRotateSpeed = tab_CameraRotateSpeed.value;
+            if (tab_CameraZoomSpeedGameplay != null) gs.cameraZoomSpeed = tab_CameraZoomSpeedGameplay.value;
+            gs.miniMapEnabled = miniMapEnabled;
 
             // Controls - Key Bindings
             SaveKeyBindings();
 
-            // Gameplay (Camera Settings)
-            if (tab_CameraMouseSpeed != null)
-                PlayerPrefs.SetFloat(KEY_CAMERA_MOUSE_SPEED, tab_CameraMouseSpeed.value);
-            if (tab_CameraRotateSpeed != null)
-                PlayerPrefs.SetFloat(KEY_CAMERA_ROTATE_SPEED, tab_CameraRotateSpeed.value);
-            if (tab_CameraZoomSpeedGameplay != null)
-                PlayerPrefs.SetFloat(KEY_CAMERA_ZOOM_SPEED_GAMEPLAY, tab_CameraZoomSpeedGameplay.value);
+            // Apply key bindings vào InputSystem (override InputActions runtime)
+            ApplyKeyBindingsToInputSystem();
 
-
-
-            // UI Settings
-            PlayerPrefs.SetInt(KEY_MINI_MAP, miniMapEnabled ? 1 : 0);
-
-            PlayerPrefs.Save();
-            Debug.Log("Settings applied!");
-
-            // Apply graphics quality settings to the game
-            ApplyGraphicsQualitySettings();
+            // Apply + Save qua GameSettings
+            gs.ApplyAndSave();
+            Debug.Log("[SettingsManager] Settings applied via GameSettings");
         }
 
         /// <summary>
@@ -1023,7 +1038,7 @@ namespace Artsystack.ArtsystackGui
         /// </summary>
         private void ApplyGraphicsQualitySettings()
         {
-            // Apply Screen Resolution
+            // Apply Screen Resolution + Display Mode cùng lúc
             if (screenResolutions.Count > 0 && screenResolutionIndex >= 0 && screenResolutionIndex < screenResolutions.Count)
             {
                 string selectedRes = screenResolutions[screenResolutionIndex];
@@ -1032,24 +1047,20 @@ namespace Artsystack.ArtsystackGui
                 {
                     if (int.TryParse(parts[0].Trim(), out int width) && int.TryParse(parts[1].Trim(), out int height))
                     {
-                        Screen.SetResolution(width, height, Screen.fullScreen);
+                        // FIX: Dùng displayModeIndex thay vì Screen.fullScreen
+                        FullScreenMode mode = displayModeIndex switch
+                        {
+                            0 => FullScreenMode.FullScreenWindow,
+                            1 => FullScreenMode.Windowed,
+                            2 => FullScreenMode.MaximizedWindow,
+                            _ => FullScreenMode.FullScreenWindow
+                        };
+                        Screen.SetResolution(width, height, mode);
                     }
                 }
             }
 
-            // Apply Display Mode (Fullscreen/Windowed/Borderless)
-            switch (displayModeIndex)
-            {
-                case 0: // Fullscreen
-                    Screen.fullScreenMode = FullScreenMode.FullScreenWindow;
-                    break;
-                case 1: // Windowed
-                    Screen.fullScreenMode = FullScreenMode.Windowed;
-                    break;
-                case 2: // Borderless
-                    Screen.fullScreenMode = FullScreenMode.MaximizedWindow;
-                    break;
-            }
+            // Display Mode đã được apply cùng SetResolution ở trên
 
             // Apply Frame Rate
             Application.targetFrameRate = currentFrameRate;
@@ -1070,38 +1081,33 @@ namespace Artsystack.ArtsystackGui
         /// </summary>
         public void LoadSettings()
         {
-            // Audio
-            float masterVol = PlayerPrefs.GetFloat(KEY_MASTER_VOLUME, defaultMasterVolume);
-            float musicVol = PlayerPrefs.GetFloat(KEY_MUSIC_VOLUME, defaultMusicVolume);
-            float sfxVol = PlayerPrefs.GetFloat(KEY_SFX_VOLUME, defaultSfxVolume);
-            voiceLanguageIndex = PlayerPrefs.GetInt(KEY_VOICE_LANGUAGE, 0);
-            backgroundSoundEnabled = PlayerPrefs.GetInt(KEY_BACKGROUND_SOUND, 1) == 1;
+            var gs = GameSettings.Instance;
+            if (gs == null) return;
 
-            if (tab_MasterVolume != null) tab_MasterVolume.value = masterVol;
-            if (tab_MusicVolume != null) tab_MusicVolume.value = musicVol;
-            if (tab_SFXVolume != null) tab_SFXVolume.value = sfxVol;
+            // Audio — đọc từ GameSettings
+            if (tab_MasterVolume != null) tab_MasterVolume.value = gs.masterVolume;
+            if (tab_MusicVolume != null) tab_MusicVolume.value = gs.musicVolume;
+            if (tab_SFXVolume != null) tab_SFXVolume.value = gs.sfxVolume;
+            voiceLanguageIndex = gs.voiceLanguageIndex;
+            backgroundSoundEnabled = gs.backgroundSoundEnabled;
 
-            AudioListener.volume = masterVol;
+            // Graphics — đọc từ GameSettings
+            if (tab_Brightness != null) tab_Brightness.value = gs.brightness;
+            saturationEnabled = gs.saturationEnabled;
+            if (tab_Contrast != null) tab_Contrast.value = gs.contrast;
 
-            // Graphics
-            float brightness = PlayerPrefs.GetFloat(KEY_BRIGHTNESS, defaultBrightness);
-            saturationEnabled = PlayerPrefs.GetInt(KEY_SATURATION, defaultSaturation ? 1 : 0) == 1;
-            float contrast = PlayerPrefs.GetFloat(KEY_CONTRAST, defaultContrast);
+            screenResolutionIndex = gs.screenResolutionIndex;
+            if (screenResolutions.Count > 0)
+                screenResolutionIndex = Mathf.Clamp(screenResolutionIndex, 0, screenResolutions.Count - 1);
 
-            if (tab_Brightness != null) tab_Brightness.value = brightness;
+            displayModeIndex = Mathf.Clamp(gs.displayModeIndex, 0, displayModes.Count - 1);
+            currentFrameRate = gs.frameRate;
 
-            if (tab_Contrast != null) tab_Contrast.value = contrast;
+            chromaticAberrationEnabled = gs.chromaticAberrationEnabled;
+            sharpeningEnabled = gs.sharpeningEnabled;
+            miniMapEnabled = gs.miniMapEnabled;
 
-            // New Graphics Settings
-            screenResolutionIndex = PlayerPrefs.GetInt(KEY_SCREEN_RESOLUTION, defaultScreenResolution);
-            displayModeIndex = PlayerPrefs.GetInt(KEY_DISPLAY_MODE, defaultDisplayMode);
-            currentFrameRate = PlayerPrefs.GetInt(KEY_FRAME_RATE, defaultFrameRate);
-
-            chromaticAberrationEnabled = PlayerPrefs.GetInt(KEY_CHROMATIC_ABERRATION, defaultChromaticAberration ? 1 : 0) == 1;
-            sharpeningEnabled = PlayerPrefs.GetInt(KEY_SHARPENING, defaultSharpening ? 1 : 0) == 1;
-            miniMapEnabled = PlayerPrefs.GetInt(KEY_MINI_MAP, defaultMiniMap ? 1 : 0) == 1;
-
-            // Update frame rate index based on loaded value
+            // Update frame rate index
             for (int i = 0; i < frameRates.Length; i++)
             {
                 if (frameRates[i] == currentFrameRate)
@@ -1111,9 +1117,16 @@ namespace Artsystack.ArtsystackGui
                 }
             }
 
-            UpdateGraphicsButtonTexts();
+            // Gameplay — đọc từ GameSettings
+            if (tab_CameraMouseSpeed != null) tab_CameraMouseSpeed.value = gs.cameraMouseSpeed;
+            if (tab_CameraRotateSpeed != null) tab_CameraRotateSpeed.value = gs.cameraRotateSpeed;
+            if (tab_CameraZoomSpeedGameplay != null) tab_CameraZoomSpeedGameplay.value = gs.cameraZoomSpeed;
 
-            // Controls - Key Bindings
+            UpdateGraphicsButtonTexts();
+            UpdateAudioButtonTexts();
+            UpdateGameplayButtonTexts();
+
+            // Controls - Key Bindings (vẫn load riêng)
             LoadKeyBindings();
             UpdateKeyBindTexts();
         }
@@ -1136,12 +1149,9 @@ namespace Artsystack.ArtsystackGui
             {
                 panel_GUISettings.SetActive(true);
 
-                // Bật tất cả child panels (Middle, Right Side, Controller_Button,...)
-                // để các panel bị tắt trong Inspector vẫn hiện đúng
-                foreach (Transform child in panel_GUISettings.transform)
-                {
-                    child.gameObject.SetActive(true);
-                }
+                // FIX: Chỉ bật các panel layout cần thiết, không bật ALL children
+                // (bật all sẽ hiện cùng lúc Gameplay+Controller+Graphics+Audio gây flash)
+                // SwitchToPanel sẽ tự ẩn/hiện đúng tab
 
                 // Default to Gameplay panel
                 SwitchToPanel(panel_Gameplay);
@@ -1196,6 +1206,32 @@ namespace Artsystack.ArtsystackGui
         public KeyCode GetKeyBinding(string action)
         {
             return keyBindings.ContainsKey(action) ? keyBindings[action] : KeyCode.None;
+        }
+
+        /// <summary>
+        /// Apply key bindings vào InputSystem (override InputActions runtime)
+        /// Tìm PlayerInput trên player GameObject
+        /// </summary>
+        private void ApplyKeyBindingsToInputSystem()
+        {
+            // Tìm PlayerInput trên Player
+            PlayerInput playerInput = null;
+            
+            GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+            if (playerObj != null)
+            {
+                playerInput = playerObj.GetComponent<PlayerInput>();
+            }
+
+            if (playerInput == null)
+            {
+                // Không tìm thấy player (có thể đang trong UI_Game lobby) — bỏ qua
+                Debug.Log("[SettingsManager] PlayerInput not found — key bindings saved but not applied to InputSystem");
+                return;
+            }
+
+            InputRebindHelper.ApplyAllBindings(playerInput, GetKeyBinding);
+            InputRebindHelper.SaveBindingOverrides(playerInput);
         }
 
         #endregion

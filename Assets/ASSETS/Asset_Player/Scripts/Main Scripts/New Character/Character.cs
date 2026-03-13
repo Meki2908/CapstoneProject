@@ -84,6 +84,9 @@ public class Character : MonoBehaviour
         controller = GetComponent<CharacterController>();
         animator = GetComponent<Animator>();
         playerInput = GetComponent<PlayerInput>();
+
+        // Load saved key binding overrides từ Settings
+        InputRebindHelper.LoadBindingOverrides(playerInput);
         cameraTransform = Camera.main.transform;
 
         movementSM = new StateMachine();
