@@ -287,6 +287,7 @@ public abstract class BaseEnemyAI : MonoBehaviour
 
     protected virtual void PickNewPatrolPoint()
     {
+        if (!agent.isOnNavMesh) return;
         Vector2 random = Random.insideUnitCircle * patrolRadius;
         Vector3 patrolPoint = new Vector3(spawnPos.x + random.x, spawnPos.y, spawnPos.z + random.y);
         agent.SetDestination(patrolPoint);
