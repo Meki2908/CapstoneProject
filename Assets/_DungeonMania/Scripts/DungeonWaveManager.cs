@@ -48,8 +48,17 @@ public class DungeonWaveManager : MonoBehaviour
     [Tooltip("Số lượng Lich mỗi wave")]
     public int[] lichCount = { 0, 0, 0, 1, 0 };
     
-    [Tooltip("Số lượng Boss mỗi wave")]
-    public int[] bossCount = { 0, 0, 0, 0, 2 };
+    [Tooltip("Số lượng Stoneogre mỗi wave")]
+    public int[] stoneogreCount = { 0, 0, 0, 0, 0 };
+    
+    [Tooltip("Số lượng Golem mỗi wave")]
+    public int[] golemCount = { 0, 0, 0, 0, 0 };
+    
+    [Tooltip("Số lượng Minotaur mỗi wave")]
+    public int[] minotaurCount = { 0, 0, 0, 0, 0 };
+    
+    [Tooltip("Số lượng Ifrit mỗi wave")]
+    public int[] ifritCount = { 0, 0, 0, 0, 0 };
     
     [Tooltip("Số lượng Demon mỗi wave")]
     public int[] demonCount = { 0, 0, 0, 0, 1 };
@@ -129,7 +138,10 @@ public class DungeonWaveManager : MonoBehaviour
     // Trackers for enemy spawn (tránh gọi GetEnemyCounts nhiều lần)
     private int currentSkeletCount = 0;
     private int currentLichCount = 0;
-    private int currentBossCount = 0;
+    private int currentStoneogreCount = 0;
+    private int currentGolemCount = 0;
+    private int currentMinotaurCount = 0;
+    private int currentIfritCount = 0;
     private int currentDemonCount = 0;
     private int currentMonsterCount = 0;
     
@@ -442,10 +454,13 @@ public class DungeonWaveManager : MonoBehaviour
         {
             int skelets = i < skeletCount.Length ? skeletCount[i] : 0;
             int liches = i < lichCount.Length ? lichCount[i] : 0;
-            int bosses = i < bossCount.Length ? bossCount[i] : 0;
+            int stoneogres = i < stoneogreCount.Length ? stoneogreCount[i] : 0;
+            int golems = i < golemCount.Length ? golemCount[i] : 0;
+            int minotaurs = i < minotaurCount.Length ? minotaurCount[i] : 0;
+            int ifrits = i < ifritCount.Length ? ifritCount[i] : 0;
             int demons = i < demonCount.Length ? demonCount[i] : 0;
             int monsters = i < monsterCount.Length ? monsterCount[i] : 0;
-            totalEnemiesPerWave[i] = skelets + liches + bosses + demons + monsters;
+            totalEnemiesPerWave[i] = skelets + liches + stoneogres + golems + minotaurs + ifrits + demons + monsters;
         }
     }
 
@@ -820,18 +835,22 @@ public class DungeonWaveManager : MonoBehaviour
         // Lấy số lượng enemy cho wave này (hệ thống mới)
         currentSkeletCount = waveIdx < skeletCount.Length ? skeletCount[waveIdx] : 0;
         currentLichCount = waveIdx < lichCount.Length ? lichCount[waveIdx] : 0;
-        currentBossCount = waveIdx < bossCount.Length ? bossCount[waveIdx] : 0;
+        currentStoneogreCount = waveIdx < stoneogreCount.Length ? stoneogreCount[waveIdx] : 0;
+        currentGolemCount = waveIdx < golemCount.Length ? golemCount[waveIdx] : 0;
+        currentMinotaurCount = waveIdx < minotaurCount.Length ? minotaurCount[waveIdx] : 0;
+        currentIfritCount = waveIdx < ifritCount.Length ? ifritCount[waveIdx] : 0;
         currentDemonCount = waveIdx < demonCount.Length ? demonCount[waveIdx] : 0;
         currentMonsterCount = waveIdx < monsterCount.Length ? monsterCount[waveIdx] : 0;
 
-        int totalEnemies = currentSkeletCount + currentLichCount + currentBossCount + currentDemonCount + currentMonsterCount;
+        int totalBoss = currentStoneogreCount + currentGolemCount + currentMinotaurCount + currentIfritCount;
+        int totalEnemies = currentSkeletCount + currentLichCount + totalBoss + currentDemonCount + currentMonsterCount;
         enemiesAlive = totalEnemies;
 
-        Debug.Log($"[DungeonWave] Wave {waveIndex}: Skelet={currentSkeletCount} Monster={currentMonsterCount} Lich={currentLichCount} Boss={currentBossCount} Demon={currentDemonCount} (Tổng: {totalEnemies})");
+        Debug.Log($"[DungeonWave] Wave {waveIndex}: Skelet={currentSkeletCount} Monster={currentMonsterCount} Lich={currentLichCount} Stoneogre={currentStoneogreCount} Golem={currentGolemCount} Minotaur={currentMinotaurCount} Ifrit={currentIfritCount} Demon={currentDemonCount} (Tổng: {totalEnemies})");
 
         // === CẤU HÌNH GAMEPLAY MANAGER (CÁCH A) ===
-        // enemyType[0] = skelet, [1] = monster, [2] = lich, [3] = boss, [4] = demon
-        ConfigureGamePlayManager(currentSkeletCount, currentMonsterCount, currentLichCount, currentBossCount, currentDemonCount);
+        ConfigureGamePlayManager(currentSkeletCount, currentMonsterCount, currentLichCount, currentDemonCount,
+            currentStoneogreCount, currentGolemCount, currentMinotaurCount, currentIfritCount);
 
         // Spawn từng enemy một
         for (int i = 0; i < totalEnemies; i++)
@@ -845,7 +864,8 @@ public class DungeonWaveManager : MonoBehaviour
     /// <summary>
     /// Cấu hình GamePlayManager trước khi spawn (CÁCH A - HỆ THỐNG MỚI)
     /// </summary>
-    private void ConfigureGamePlayManager(int skelets, int monsters, int liches, int bosses, int demons)
+    private void ConfigureGamePlayManager(int skelets, int monsters, int liches, int demons,
+        int stoneogres, int golems, int minotaurs, int ifrits)
     {
         // Reset static counters trong GamePlayManager
         GamePlayManager.archers = 0;
@@ -853,27 +873,25 @@ public class DungeonWaveManager : MonoBehaviour
         GamePlayManager.lich = 0;
         GamePlayManager.boss = 0;
         GamePlayManager.demon = 0;
+        GamePlayManager.stoneogre = 0;
+        GamePlayManager.golem = 0;
+        GamePlayManager.minotaur = 0;
+        GamePlayManager.ifrit = 0;
 
-        // Cấu hình level.enemyType [skelet, monster(ignored), lich, boss, demon]
-        // RandomEnemy sẽ đọc:
-        // - enemyType[0] = skelet (Skeleton + skeleton_archer)
-        // - enemyType[1] = monster (không dùng trong hệ thống mới)
-        // - enemyType[2] = lich
-        // - enemyType[3] = boss
-        // - enemyType[4] = demon
+        // Cấu hình level.enemyType (legacy compatibility)
         if (GamePlayManager.level.enemyType == null || GamePlayManager.level.enemyType.Length != 5)
         {
             GamePlayManager.level.enemyType = new int[5];
         }
         
-        // Đặt theo thứ tự mới
-        GamePlayManager.level.enemyType[0] = skelets; // Skelet
-        GamePlayManager.level.enemyType[1] = monsters; // Monster (không dùng)
-        GamePlayManager.level.enemyType[2] = liches;   // Lich
-        GamePlayManager.level.enemyType[3] = bosses;  // Boss
-        GamePlayManager.level.enemyType[4] = demons;   // Demon
+        int totalBoss = stoneogres + golems + minotaurs + ifrits;
+        GamePlayManager.level.enemyType[0] = skelets;
+        GamePlayManager.level.enemyType[1] = monsters;
+        GamePlayManager.level.enemyType[2] = liches;
+        GamePlayManager.level.enemyType[3] = totalBoss; // Legacy boss total
+        GamePlayManager.level.enemyType[4] = demons;
 
-        Debug.Log($"[DungeonWave] GamePlayManager configured: Skelet={skelets} Monster={monsters} Lich={liches} Boss={bosses} Demon={demons}");
+        Debug.Log($"[DungeonWave] GamePlayManager configured: Skelet={skelets} Monster={monsters} Lich={liches} Stoneogre={stoneogres} Golem={golems} Minotaur={minotaurs} Ifrit={ifrits} Demon={demons}");
     }
 
     /// <summary>
@@ -1246,7 +1264,10 @@ public class DungeonWaveManager : MonoBehaviour
             // FIX #7: Dựa vào config thực tế thay vì hardcode wave position
             string waveName = "";
             int waveIdx = wave - 1;
-            bool hasBoss = waveIdx < bossCount.Length && bossCount[waveIdx] > 0;
+            bool hasBoss = (waveIdx < stoneogreCount.Length && stoneogreCount[waveIdx] > 0)
+                        || (waveIdx < golemCount.Length && golemCount[waveIdx] > 0)
+                        || (waveIdx < minotaurCount.Length && minotaurCount[waveIdx] > 0)
+                        || (waveIdx < ifritCount.Length && ifritCount[waveIdx] > 0);
             bool hasDemon = waveIdx < demonCount.Length && demonCount[waveIdx] > 0;
             
             if (wave == totalWaves && (hasBoss || hasDemon))
@@ -1661,27 +1682,37 @@ public class DungeonWaveManager : MonoBehaviour
     /// <summary>
     /// Lấy số lượng enemy theo từng loại cho wave hiện tại
     /// </summary>
-    public void GetEnemyCounts(out int skeletOut, out int monsterOut, out int lichOut, out int bossOut, out int demonOut)
+    public void GetEnemyCounts(out int skeletOut, out int monsterOut, out int lichOut, out int bossOut, out int demonOut,
+        out int stoneogreOut, out int golemOut, out int minotaurOut, out int ifritOut)
     {
         int waveIdx = Mathf.Clamp(currentWave - 1, 0, totalWaves - 1);
         
         skeletOut = waveIdx < skeletCount.Length ? skeletCount[waveIdx] : 0;
         monsterOut = waveIdx < monsterCount.Length ? monsterCount[waveIdx] : 0;
         lichOut = waveIdx < lichCount.Length ? lichCount[waveIdx] : 0;
-        bossOut = waveIdx < bossCount.Length ? bossCount[waveIdx] : 0;
+        bossOut = 0; // Legacy — giờ dùng type riêng
         demonOut = waveIdx < demonCount.Length ? demonCount[waveIdx] : 0;
+        stoneogreOut = waveIdx < stoneogreCount.Length ? stoneogreCount[waveIdx] : 0;
+        golemOut = waveIdx < golemCount.Length ? golemCount[waveIdx] : 0;
+        minotaurOut = waveIdx < minotaurCount.Length ? minotaurCount[waveIdx] : 0;
+        ifritOut = waveIdx < ifritCount.Length ? ifritCount[waveIdx] : 0;
     }
 
     /// <summary>
     /// Lấy số lượng enemy còn lại có thể spawn (dùng trong RandomEnemy - KHÔNG reset counters)
     /// </summary>
-    public void GetRemainingEnemyCounts(out int skeletOut, out int monsterOut, out int lichOut, out int bossOut, out int demonOut)
+    public void GetRemainingEnemyCounts(out int skeletOut, out int monsterOut, out int lichOut, out int bossOut, out int demonOut,
+        out int stoneogreOut, out int golemOut, out int minotaurOut, out int ifritOut)
     {
         skeletOut = Mathf.Max(0, currentSkeletCount - GamePlayManager.archers);
         monsterOut = Mathf.Max(0, currentMonsterCount - GamePlayManager.monsteres);
         lichOut = Mathf.Max(0, currentLichCount - GamePlayManager.lich);
-        bossOut = Mathf.Max(0, currentBossCount - GamePlayManager.boss);
+        bossOut = 0; // Legacy
         demonOut = Mathf.Max(0, currentDemonCount - GamePlayManager.demon);
+        stoneogreOut = Mathf.Max(0, currentStoneogreCount - GamePlayManager.stoneogre);
+        golemOut = Mathf.Max(0, currentGolemCount - GamePlayManager.golem);
+        minotaurOut = Mathf.Max(0, currentMinotaurCount - GamePlayManager.minotaur);
+        ifritOut = Mathf.Max(0, currentIfritCount - GamePlayManager.ifrit);
     }
 }
 

@@ -55,7 +55,11 @@ public class EnemyScript : MonoBehaviour {
         monster,
         lich,
         boss,
-        demon
+        demon,
+        stoneogre,  // Boss riêng — dễ quản lý spawn theo dungeon
+        golem,
+        minotaur,
+        ifrit
     }
     public EnemyType enemyType = EnemyType.skelet;
     
@@ -86,6 +90,29 @@ public class EnemyScript : MonoBehaviour {
     public ParticleSystem[] bow, skill;
     [HideInInspector]public Bow[] bowScript;
     [HideInInspector]public Bow skillScript;
+    
+    [Header("Boss Skill VFX (PixPlays)")]
+    [Tooltip("Kéo VFX prefab từ PixPlays vào đây (Version_URP)")]
+    public GameObject skillVfxPrefab;
+    [Tooltip("Bán kính vùng damage của skill (mét)")]
+    public float skillVfxRadius = 3f;
+    [Tooltip("Skill hướng về trước (Golem quật xéo) hay 360° AoE (Stoneogre dậm)?")]
+    public bool skillIsDirectional = false;
+    [Tooltip("Góc cone phía trước (độ) — chỉ dùng khi skillIsDirectional = true")]
+    [Range(30, 180)]
+    public float skillAngle = 90f;
+    
+    [Header("Boss Skill Settings")]
+    [Tooltip("Khoảng cách tối đa để boss dùng skill (xa hơn attackDistance)")]
+    public float skillDistance = 8f;
+    [Tooltip("Thời gian hồi chiêu skill (giây)")]
+    public float skillCooldown = 8f;
+    [Tooltip("Hệ số damage skill (2.0 = gấp đôi attack thường)")]
+    public float skillDamageMultiplier = 2.0f;
+    
+    // Runtime tracking — không hiển thị trong Inspector
+    [HideInInspector] public float lastSkillTime = -999f; // Thời điểm dùng skill lần cuối
+    [HideInInspector] public bool skillOnCooldown = false;
     public AnimatorStateInfo anim;
     Transform parent;
     [HideInInspector]public RandomEnemy randomEnemyScript;
@@ -301,27 +328,24 @@ public class EnemyScript : MonoBehaviour {
                 attackDistanceOverride = 8f;   // RANGED — tấn công từ xa
                 break;
             case SpecificEnemyType.Stoneogre:
+                enemyType = EnemyType.stoneogre;
+                attackDistanceOverride = 2.5f;
+                boss = EnemyClass.Boss.Ogre;
+                break;
             case SpecificEnemyType.Golem:
+                enemyType = EnemyType.golem;
+                attackDistanceOverride = 2.5f;
+                boss = EnemyClass.Boss.Golem;
+                break;
             case SpecificEnemyType.Minotaur:
+                enemyType = EnemyType.minotaur;
+                attackDistanceOverride = 2.5f;
+                boss = EnemyClass.Boss.Mino;
+                break;
             case SpecificEnemyType.Ifrit:
-                enemyType = EnemyType.boss;
-                attackDistanceOverride = 2.5f; // Boss melee
-                // Cập nhật boss type
-                switch (specificEnemyType)
-                {
-                    case SpecificEnemyType.Stoneogre:
-                        boss = EnemyClass.Boss.Ogre;
-                        break;
-                    case SpecificEnemyType.Golem:
-                        boss = EnemyClass.Boss.Golem;
-                        break;
-                    case SpecificEnemyType.Minotaur:
-                        boss = EnemyClass.Boss.Mino;
-                        break;
-                    case SpecificEnemyType.Ifrit:
-                        boss = EnemyClass.Boss.Ifrit;
-                        break;
-                }
+                enemyType = EnemyType.ifrit;
+                attackDistanceOverride = 2.5f;
+                boss = EnemyClass.Boss.Ifrit;
                 break;
             case SpecificEnemyType.Demon:
                 enemyType = EnemyType.demon;
@@ -481,6 +505,103 @@ public class EnemyScript : MonoBehaviour {
     {
         ApplyInspectorValues();
         Debug.Log($"[EnemyScript] Applied inspector values manually: attackDamage={attackDamage}, attackDistance={attackDistanceOverride}");
+    }
+    
+    /// <summary>
+    /// Vẽ vùng damage + tầm skill trong Scene view
+    /// Xanh lá/Cam = vùng damage VFX | Xanh dương = tầm dùng skill (AI)
+    /// </summary>
+    private void OnDrawGizmosSelected()
+    {
+        // === Vẽ Skill Distance (tầm AI dùng skill) — XANH DƯƠNG ĐẬM ===
+        if (skillVfxPrefab != null && skillDistance > 0)
+        {
+            Gizmos.color = new Color(0f, 0.4f, 1f, 1f); // Xanh dương đậm, full opacity
+            Gizmos.DrawWireSphere(transform.position, skillDistance);
+            // Vẽ thêm vòng nhỏ hơn bên trong để dễ nhìn
+            Gizmos.color = new Color(0f, 0.4f, 1f, 0.5f);
+            Gizmos.DrawWireSphere(transform.position, skillDistance - 0.1f);
+            // Vẽ gạch đánh dấu quanh vòng
+            Gizmos.color = new Color(0f, 0.4f, 1f, 1f);
+            int rings = 12;
+            for (int i = 0; i < rings; i++)
+            {
+                float angle = (360f / rings) * i;
+                Vector3 dir = Quaternion.Euler(0, angle, 0) * Vector3.forward;
+                Gizmos.DrawLine(
+                    transform.position + dir * (skillDistance - 0.5f),
+                    transform.position + dir * skillDistance
+                );
+            }
+        }
+        
+        // === Vẽ Attack Distance — ĐỎ NHẠ ===
+        if (attackDistanceOverride > 0)
+        {
+            Gizmos.color = new Color(1f, 0f, 0f, 0.25f);
+            Gizmos.DrawWireSphere(transform.position, attackDistanceOverride);
+        }
+        
+        // === Vẽ Skill VFX Radius (vùng damage) ===
+        if (skillVfxPrefab != null && skillVfxRadius > 0)
+        {
+            if (skillIsDirectional)
+            {
+                // Tâm cone = phía trước boss 1.5m
+                Vector3 center = transform.position + transform.forward * 1.5f;
+                center.y = transform.position.y + 0.1f;
+                
+                float halfAngle = skillAngle / 2f;
+                int segments = 20;
+                
+                // Vẽ viền cung tròn (cam đậm)
+                Gizmos.color = new Color(1f, 0.5f, 0f, 0.8f);
+                Vector3 prevPoint = center + Quaternion.Euler(0, -halfAngle, 0) * transform.forward * skillVfxRadius;
+                for (int i = 1; i <= segments; i++)
+                {
+                    float angle = -halfAngle + (skillAngle * i / segments);
+                    Vector3 dir = Quaternion.Euler(0, angle, 0) * transform.forward;
+                    Vector3 point = center + dir * skillVfxRadius;
+                    Gizmos.DrawLine(prevPoint, point);
+                    prevPoint = point;
+                }
+                
+                // 2 cạnh biên
+                Vector3 leftEnd = center + Quaternion.Euler(0, -halfAngle, 0) * transform.forward * skillVfxRadius;
+                Vector3 rightEnd = center + Quaternion.Euler(0, halfAngle, 0) * transform.forward * skillVfxRadius;
+                Gizmos.DrawLine(center, leftEnd);
+                Gizmos.DrawLine(center, rightEnd);
+                
+                // Tô đầy (cam mờ)
+                Gizmos.color = new Color(1f, 0.5f, 0f, 0.15f);
+                for (int i = 0; i < segments; i++)
+                {
+                    float a1 = -halfAngle + (skillAngle * i / segments);
+                    float a2 = -halfAngle + (skillAngle * (i + 1) / segments);
+                    Vector3 p1 = center + Quaternion.Euler(0, a1, 0) * transform.forward * skillVfxRadius;
+                    Vector3 p2 = center + Quaternion.Euler(0, a2, 0) * transform.forward * skillVfxRadius;
+                    Gizmos.DrawLine(center, p1);
+                    Gizmos.DrawLine(center, p2);
+                    Gizmos.DrawLine(p1, p2);
+                }
+                
+                // Trục chính
+                Gizmos.color = Color.yellow;
+                Gizmos.DrawRay(center, transform.forward * skillVfxRadius);
+                
+                // Chấm tâm
+                Gizmos.color = Color.red;
+                Gizmos.DrawSphere(center, 0.15f);
+            }
+            else
+            {
+                // AoE: vòng tròn xanh lá
+                Gizmos.color = new Color(0f, 1f, 0f, 0.4f);
+                Gizmos.DrawWireSphere(transform.position, skillVfxRadius);
+                Gizmos.color = new Color(0f, 1f, 0f, 0.1f);
+                Gizmos.DrawSphere(transform.position, skillVfxRadius);
+            }
+        }
     }
 }
 
