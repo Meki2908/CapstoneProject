@@ -77,8 +77,8 @@ public class DungeonWaveManager : MonoBehaviour
     [Tooltip("Có drop EXP orb không")]
     public bool dropExpOrb = true;
 
-    [Tooltip("Số item tối đa rơi mỗi enemy")]
-    public int maxDropsPerEnemy = 3;
+    [Tooltip("Prefab cho item orb rơi (null = tự tạo sphere phát sáng)")]
+    public GameObject itemOrbPrefab;
 
     [Tooltip("Drop table cho Skeleton/Archer")]
     public List<DungeonDropEntry> skeletDrops = new List<DungeonDropEntry>();
@@ -1004,6 +1004,12 @@ public class DungeonWaveManager : MonoBehaviour
                 {
                     var spawner = activeEnemy.AddComponent<ItemDropSpawner>();
                     
+                    // Set orb prefab nếu có
+                    if (itemOrbPrefab != null)
+                    {
+                        spawner.SetOrbPrefab(itemOrbPrefab);
+                    }
+                    
                     // Chọn drop table theo enemy type
                     var enemyScript = activeEnemy.GetComponent<EnemyScript>();
                     List<DungeonDropEntry> selectedDrops = GetDropTableForEnemy(enemyScript);
@@ -1024,7 +1030,7 @@ public class DungeonWaveManager : MonoBehaviour
                                 maxQuantity = entry.maxQuantity
                             });
                         }
-                        spawner.SetDropTable(drops, dropExpOrb, maxDropsPerEnemy);
+                        spawner.SetDropTable(drops, dropExpOrb);
                     }
                     
                     string typeName = enemyScript != null ? enemyScript.enemyType.ToString() : "unknown";
