@@ -11,12 +11,20 @@ public class SpiderEnemyAI : BaseEnemyAI
 
     protected override void OnInitialize()
     {
-        // Spider-specific initialization can be added here
-        // For example: special spider behaviors, venom attacks, etc.
-        patrolSpeed = 2.5f; // Nhện chậm hơn sói
+        // TUTORIAL SPIDER - only for tutorial, no damage, no EXP, always aggro
+        patrolSpeed = 2.5f;
         chaseSpeed = 4.5f;
-        detectionRadius = 8f;
+        detectionRadius = 60f;    // Very large: always detects player for tutorial
         attackRange = 1.8f;
+        returnThreshold = 999f;   // Never returns to spawn
+        hysteresisBuffer = 0f;
+
+        // IMPORTANT: Awake() caches squared values before OnInitialize() runs,
+        // so we must recalculate them here after overriding the base values.
+        detectionRadiusSquared = detectionRadius * detectionRadius;
+        attackRangeSquared = attackRange * attackRange;
+        returnThresholdSquared = returnThreshold * returnThreshold;
+        returnThresholdWithHysteresis = (returnThreshold + hysteresisBuffer) * (returnThreshold + hysteresisBuffer);
     }
 
     // Override attack for spider-specific behavior if needed

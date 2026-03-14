@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 /// <summary>
@@ -8,6 +9,9 @@ using UnityEngine;
 /// </summary>
 public class EnemyDeathBridge : MonoBehaviour
 {
+    /// <summary>Fired once when this enemy dies. Used by TutorialTextDisplay to track kills.</summary>
+    public event Action OnEnemyDied;
+
     private TakeDamageTest takeDamage;
     private EnemyScript enemyScript;
     private bool hasCalledDeadEvent = false;
@@ -65,6 +69,9 @@ public class EnemyDeathBridge : MonoBehaviour
     void OnEnemyDead()
     {
         hasCalledDeadEvent = true;
+
+        // Notify tutorial / other listeners
+        OnEnemyDied?.Invoke();
 
         // QUAN TRỌNG: Set EnemyScript.alive = false để AI dừng lại
         // TakeDamageTest Die() không làm điều này!

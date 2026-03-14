@@ -17,10 +17,14 @@ public class ItemTooltipManager : MonoBehaviour
     [SerializeField] private Image tooltipBackground; // The Image component (for resizing)
     
     [Header("Settings")]
-    [SerializeField] private Vector2 offset = new Vector2(10f, 10f); // Offset from mouse cursor
-    [SerializeField] private float padding = 10f; // Padding around text
-    [SerializeField] private float minWidth = 200f; // Minimum tooltip width
-    [SerializeField] private float maxWidth = 400f; // Maximum tooltip width
+    [SerializeField] private Vector2 offset = new Vector2(-15f, -15f); // Offset from mouse cursor (4K)
+    [SerializeField] private float padding = 20f; // Padding around text (4K)
+    [SerializeField] private float minWidth = 350f; // Minimum tooltip width (4K)
+    [SerializeField] private float maxWidth = 700f; // Maximum tooltip width (4K)
+    [Header("Cursor Offset (Screen Pixels)")]
+    [Tooltip("X: khoảng cách ngang (tooltip sang phải chuột)\nY: khoảng cách dọc (tooltip xuống dưới chuột)\nGiá trị càng lớn = tooltip càng xa chuột")]
+    [SerializeField] private float cursorOffsetRight = 25f;
+    [SerializeField] private float cursorOffsetDown = 25f;
 
     private Canvas canvas;
     private RectTransform canvasRectTransform;
@@ -142,28 +146,62 @@ public class ItemTooltipManager : MonoBehaviour
     /// </summary>
     private void UpdateTooltipPosition()
     {
-        if (canvas == null || canvasRectTransform == null || tooltipRectTransform == null) return;
+        if (tooltipRectTransform == null) return;
 
-        Vector2 mousePosition;
+        // Force anchors & pivot: top-left → tooltip mở rộng sang phải + xuống dưới
+        tooltipRectTransform.anchorMin = Vector2.zero;
+        tooltipRectTransform.anchorMax = Vector2.zero;
+        tooltipRectTransform.pivot = new Vector2(0f, 1f);
+
+        // Lấy kích thước tooltip trong screen pixels
+        Vector3[] corners = new Vector3[4];
+        tooltipRectTransform.GetWorldCorners(corners);
+        // corners: 0=bottom-left, 1=top-left, 2=top-right, 3=bottom-right (world space)
+        float tooltipScreenWidth = 0f;
+        float tooltipScreenHeight = 0f;
+        
+        if (canvas != null)
+        {
+            Camera cam = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
+            Vector2 screenBL = RectTransformUtility.WorldToScreenPoint(cam, corners[0]);
+            Vector2 screenTR = RectTransformUtility.WorldToScreenPoint(cam, corners[2]);
+            tooltipScreenWidth = screenTR.x - screenBL.x;
+            tooltipScreenHeight = screenTR.y - screenBL.y;
+        }
+
+        // Vị trí chuột (screen space)
+        Vector2 mouseScreen = Input.mousePosition;
+
+        // Mặc định: tooltip bên phải + xuống dưới chuột
+        float posX = mouseScreen.x + cursorOffsetRight;
+        float posY = mouseScreen.y - cursorOffsetDown;
+
+        // Nếu vượt cạnh PHẢI → flip sang trái
+        if (posX + tooltipScreenWidth > Screen.width)
+            posX = mouseScreen.x - cursorOffsetRight - tooltipScreenWidth;
+
+        // Nếu vượt cạnh TRÊN (y lớn = trên)
+        // pivot(0,1) nên tooltip mở xuống dưới từ posY
+        if (posY > Screen.height)
+            posY = Screen.height;
+
+        // Nếu tooltip quá dài xuống dưới → đẩy lên
+        if (posY - tooltipScreenHeight < 0)
+            posY = tooltipScreenHeight;
+
+        // Nếu vượt cạnh TRÁI
+        if (posX < 0) posX = 0;
+
+        // Convert screen → canvas local
+        Vector2 localPos;
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
             canvasRectTransform,
-            Input.mousePosition,
-            canvas.worldCamera,
-            out mousePosition
+            new Vector2(posX, posY),
+            canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera,
+            out localPos
         );
 
-        // Apply offset
-        mousePosition += offset;
-
-        // Clamp to canvas bounds to prevent tooltip from going off-screen
-        Vector2 tooltipSize = tooltipRectTransform.sizeDelta;
-        float maxX = canvasRectTransform.rect.width - tooltipSize.x;
-        float maxY = canvasRectTransform.rect.height - tooltipSize.y;
-        
-        mousePosition.x = Mathf.Clamp(mousePosition.x, 0f, maxX);
-        mousePosition.y = Mathf.Clamp(mousePosition.y, 0f, maxY);
-
-        tooltipRectTransform.anchoredPosition = mousePosition;
+        tooltipRectTransform.anchoredPosition = localPos;
     }
 
     /// <summary>

@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using DamageNumbersPro;
 
@@ -22,6 +23,8 @@ using DamageNumbersPro;
 /// </summary>
 public class TakeDamageTest : MonoBehaviour
 {
+    /// <summary>Fired once when this enemy is killed. Listeners can use this for tutorial kill tracking.</summary>
+    public event Action OnEnemyDied;
     [Header("Damage Number Settings")]
     public DamageNumber damageNumberPrefab;
 
@@ -553,6 +556,9 @@ public class TakeDamageTest : MonoBehaviour
         {
             Debug.Log($"[TakeDamageTest] {gameObject.name} has been defeated!");
         }
+
+        // Notify listeners (e.g. tutorial kill tracker)
+        OnEnemyDied?.Invoke();
 
         // Grant EXP to player's current weapon
         if (WeaponMasteryManager.Instance != null && playerWeaponController != null)

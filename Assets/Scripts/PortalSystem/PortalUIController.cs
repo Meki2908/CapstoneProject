@@ -21,49 +21,81 @@ public class PortalUIController : MonoBehaviour
     [Tooltip("Kéo thả Player của bạn vào đây nếu bạn muốn gán cứng, nếu không script sẽ tự tìm qua Tag 'Player'")]
     public Transform playerOverride;
 
-    [Header("Root Panel (panel con bên trong Canvas)")]
-    [Tooltip("Kéo Panel con vào đây. Canvas luôn bật, chỉ panel con được ẩn/hiện.")]
-    public GameObject rootPanel;
-
+    // Lưu lại vị trí người chơi lúc nhận trigger cổng
     private Transform currentPlayer;
-
-    private void Awake()
-    {
-        // Đăng ký listeners ngay khi Awake để sẵn sàng trước khi trigger gọi ShowPortalMenu
-        if (btnPortal1 != null) btnPortal1.onClick.AddListener(() => TeleportTo(portal1_Dest));
-        if (btnPortal2 != null) btnPortal2.onClick.AddListener(() => TeleportTo(portal2_Dest));
-        if (btnPortal3 != null) btnPortal3.onClick.AddListener(() => TeleportTo(portal3_Dest));
-        if (btnClose   != null) btnClose.onClick.AddListener(ClosePortalMenu);
-    }
 
     private void Start()
     {
-        // Ẩn panel con khi bắt đầu — Canvas vẫn bật để Awake/Start chạy đúng
-        if (rootPanel != null) rootPanel.SetActive(false);
-        else Debug.LogError("[PortalUI] rootPanel chưa được gán! Kéo Panel con vào Inspector.");
+        // Bật canvas lên khi game chạy (dù đang tắt trong Editor)
+        var canvas = GetComponent<Canvas>();
+        if (canvas != null) canvas.enabled = true;
+        else gameObject.SetActive(true);
 
+        Debug.Log("[PortalUI] PortalUIController Start() đang chạy...");
+
+        // Kiểm tra Canvas và GraphicRaycaster
+        Canvas parentCanvas = GetComponentInParent<Canvas>();
+        if (parentCanvas != null && parentCanvas.GetComponent<GraphicRaycaster>() == null)
+        {
+            Debug.LogError($"[PortalUI] KHÔNG TÌM THẤY 'Graphic Raycaster' trên Canvas '{parentCanvas.name}'! Các nút bấm sẽ không nhận chuột.");
+        }
+
+        // Kiểm tra EventSystem
         if (UnityEngine.EventSystems.EventSystem.current == null)
-            Debug.LogError("[PortalUI] KHÔNG TÌM THẤY 'Event System' trong Scene!");
+        {
+            Debug.LogError("[PortalUI] KHÔNG TÌM THẤY 'Event System' trong Scene! Hãy chuột phải vào Hierarchy -> UI -> Event System.");
+        }
 
-        if (btnPortal1 == null) Debug.LogWarning("[PortalUI] Btn Portal 1 chưa gán!");
-        if (btnPortal2 == null) Debug.LogWarning("[PortalUI] Btn Portal 2 chưa gán!");
-        if (btnPortal3 == null) Debug.LogWarning("[PortalUI] Btn Portal 3 chưa gán!");
-        if (btnClose   == null) Debug.LogWarning("[PortalUI] Btn Close chưa gán!");
+        // Gán chức năng khi nhấn nút với Debug Log để theo dõi
+        if (btnPortal1 != null) {
+            btnPortal1.onClick.AddListener(() => { Debug.Log("[PortalUI] Bấm nút Cổng 1"); TeleportTo(portal1_Dest); });
+            Debug.Log("[PortalUI] Đã gán thành công listener cho nút Cổng 1");
+        } else Debug.LogWarning("[PortalUI] Ô 'Btn Portal 1' đang bị trống (Null). Hãy kéo nút vào Inspector!");
+        
+        if (btnPortal2 != null) {
+            btnPortal2.onClick.AddListener(() => { Debug.Log("[PortalUI] Bấm nút Cổng 2"); TeleportTo(portal2_Dest); });
+            Debug.Log("[PortalUI] Đã gán thành công listener cho nút Cổng 2");
+        } else Debug.LogWarning("[PortalUI] Ô 'Btn Portal 2' đang bị trống (Null). Hãy kéo nút vào Inspector!");
+        
+        if (btnPortal3 != null) {
+            btnPortal3.onClick.AddListener(() => { Debug.Log("[PortalUI] Bấm nút Cổng 3"); TeleportTo(portal3_Dest); });
+            Debug.Log("[PortalUI] Đã gán thành công listener cho nút Cổng 3");
+        } else Debug.LogWarning("[PortalUI] Ô 'Btn Portal 3' đang bị trống (Null). Hãy kéo nút vào Inspector!");
+        
+        if (btnClose != null) {
+            btnClose.onClick.AddListener(() => { Debug.Log("[PortalUI] Bấm nút Đóng"); ClosePortalMenu(); });
+            Debug.Log("[PortalUI] Đã gán thành công listener cho nút Đóng");
+        } else Debug.LogWarning("[PortalUI] Ô 'Btn Close' đang bị trống (Null). Hãy kéo nút vào Inspector!");
+        
+        // Ẩn Menu lúc mới bắt đầu game
+        gameObject.SetActive(false);
     }
 
     public void OpenPortalMenu(Transform triggeredPlayer)
     {
+        // Luôn ưu tiên dùng playerOverride nếu được gán trong Inspector
         currentPlayer = (playerOverride != null) ? playerOverride : triggeredPlayer;
-        if (rootPanel != null) rootPanel.SetActive(true);
+        
+        // Hiện UI
+        gameObject.SetActive(true);
+        
+        // Ép chuột hiển thị và mở khóa
         Cursor.visible = true;
         Cursor.lockState = CursorLockMode.None;
+        
+        Debug.Log("[PortalUI] Menu đã mở. Hãy kiểm tra nếu nút bấm vẫn không phản hồi.");
     }
 
     public void ClosePortalMenu()
     {
-        if (rootPanel != null) rootPanel.SetActive(false);
+        // Ẩn UI
+        gameObject.SetActive(false);
+        
+        // Khóa chuột lại để tiếp tục điều khiển camera
         Cursor.visible = false;
         Cursor.lockState = CursorLockMode.Locked;
+
+        // Xoá focus khỏi UI để trigger tiếp theo không bị chặn
         if (EventSystem.current != null)
             EventSystem.current.SetSelectedGameObject(null);
     }
