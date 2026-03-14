@@ -20,23 +20,11 @@ public enum SoundType
     Mage_Normal_2,
     Mage_Normal_3,
 
-    // Skills - Sword
-    Sword_Skill_E,
-    Sword_Skill_R,
-    Sword_Skill_T,
-    Sword_Skill_Q,
-
-    // Skills - Axe
+    // Skills - Axe (Sword/Mage skill SFX không dùng – gọi từ AE riêng hoặc tắt)
     Axe_Skill_E,
     Axe_Skill_R,
     Axe_Skill_T,
     Axe_Skill_Q,
-
-    // Skills - Mage
-    Mage_Skill_E,
-    Mage_Skill_R,
-    Mage_Skill_T,
-    Mage_Skill_Q,
 
     // Mage projectile impact
     Mage_Projectile_Hit,
@@ -50,17 +38,11 @@ public enum SoundType
     GetHit,
     Die,
 
-    // Weapon draw/sheath per type (phase 0 = first sound, phase 1 = second sound in same motion)
+    // Weapon draw/sheath (phase 2 không dùng nữa)
     Sword_Draw,
     Sword_Sheath,
     Axe_Draw,
     Axe_Sheath,
     Mage_Draw,
-    Mage_Sheath,
-    Sword_Draw_2,
-    Sword_Sheath_2,
-    Axe_Draw_2,
-    Axe_Sheath_2,
-    Mage_Draw_2,
-    Mage_Sheath_2
+    Mage_Sheath
 }
