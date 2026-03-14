@@ -113,6 +113,7 @@ public class EnemyScript : MonoBehaviour {
     // Runtime tracking — không hiển thị trong Inspector
     [HideInInspector] public float lastSkillTime = -999f; // Thời điểm dùng skill lần cuối
     [HideInInspector] public bool skillOnCooldown = false;
+    [HideInInspector] public BossMultiSkill bossMultiSkill; // Multi-skill system (Phase 2)
     public AnimatorStateInfo anim;
     Transform parent;
     [HideInInspector]public RandomEnemy randomEnemyScript;
