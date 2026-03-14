@@ -7,10 +7,17 @@ public class PlayerAudioEmitter : MonoBehaviour
     [SerializeField] private WeaponType fallbackWeaponType = WeaponType.Sword;
     [SerializeField, Range(0f, 1f)] private float defaultVolume = 1f;
 
+    private Character character;
+
     private void Reset()
     {
         localSource = GetComponent<AudioSource>();
         weaponController = GetComponentInChildren<WeaponController>();
+    }
+
+    private void Awake()
+    {
+        character = GetComponent<Character>();
     }
 
     public void AE_PlayBasicAttackSound(int comboIndex)
@@ -26,7 +33,19 @@ public class PlayerAudioEmitter : MonoBehaviour
 
     public void AE_PlayMageProjectileHitSound() => SoundManager.PlayMageProjectileHit(localSource, defaultVolume);
 
-    public void AE_PlayFootstepSound() => SoundManager.PlayFootstep(localSource, defaultVolume);
+    /// <summary>Chỉ phát khi vũ khí đang sheath (Base Layer). Gọi từ clip trên Base Layer.</summary>
+    public void AE_PlayFootstepSound()
+    {
+        if (character != null && character.isWeaponDrawn) return;
+        SoundManager.PlayFootstep(localSource, defaultVolume);
+    }
+
+    /// <summary>Chỉ phát khi vũ khí đang draw (weapon layer). Gọi từ clip Locomotion/Combat Blend Tree trên Sword/Axe/Mage Layer.</summary>
+    public void AE_PlayFootstepSoundFromWeaponLayer()
+    {
+        if (character == null || !character.isWeaponDrawn) return;
+        SoundManager.PlayFootstep(localSource, defaultVolume);
+    }
     public void AE_PlayDashSound() => SoundManager.PlayDash(localSource, defaultVolume);
     public void AE_PlayJumpSound() => SoundManager.PlayJump(localSource, defaultVolume);
     public void AE_PlayLandSound() => SoundManager.PlayLand(localSource, defaultVolume);
