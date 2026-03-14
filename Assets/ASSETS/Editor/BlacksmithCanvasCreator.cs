@@ -8,6 +8,7 @@ using TMPro;
 /// Tạo toàn bộ cây hierarchy UI giống hệt BlacksmithUIBuilder.BuildUI()
 /// trong Scene (edit mode) để có thể kéo thả chỉnh sửa.
 /// Tự động gán tất cả references vào BlacksmithUI component.
+/// Reference resolution: 3840×2160 (4K native) — tất cả kích thước ×2 so với bản 1080p gốc.
 /// </summary>
 public class BlacksmithCanvasCreator : Editor
 {
@@ -36,7 +37,7 @@ public class BlacksmithCanvasCreator : Editor
             _font = Resources.Load<TMP_FontAsset>("Fonts & Materials/LiberationSans SDF");
 
         // ================================================================
-        // ROOT CANVAS
+        // ROOT CANVAS (4K: 3840×2160)
         // ================================================================
         GameObject canvasGO = new GameObject("Canvas_Blacksmith");
         Undo.RegisterCreatedObjectUndo(canvasGO, "Create Blacksmith Canvas");
@@ -47,7 +48,7 @@ public class BlacksmithCanvasCreator : Editor
 
         var scaler = canvasGO.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920, 1080);
+        scaler.referenceResolution = new Vector2(3840, 2160);
         scaler.matchWidthOrHeight = 0.5f;
 
         canvasGO.AddComponent<GraphicRaycaster>();
@@ -67,57 +68,57 @@ public class BlacksmithCanvasCreator : Editor
         mainRect.offsetMax = Vector2.zero;
 
         // ================================================================
-        // CENTER CONTAINER (fixed size 900×750)
+        // CENTER CONTAINER (4K: 1800×1500)
         // ================================================================
         GameObject centerContainer = CreatePanel(mainPanel.transform, "CenterContainer",
             new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, PANEL_BG);
-        SetSize(centerContainer, 900, 750);
-        AddOutline(centerContainer, SLOT_BORDER, 2);
+        SetSize(centerContainer, 1800, 1500);
+        AddOutline(centerContainer, SLOT_BORDER, 4);
 
         // ================================================================
-        // HEADER BAR (top 50px)
+        // HEADER BAR (top 100px)
         // ================================================================
         GameObject header = CreatePanel(centerContainer.transform, "Header",
-            new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, -50), Vector2.zero, HEADER_BG);
+            new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, -100), Vector2.zero, HEADER_BG);
         var headerLayout = header.AddComponent<HorizontalLayoutGroup>();
-        headerLayout.padding = new RectOffset(15, 10, 8, 8);
+        headerLayout.padding = new RectOffset(30, 20, 16, 16);
         headerLayout.childAlignment = TextAnchor.MiddleLeft;
         headerLayout.childForceExpandWidth = true;
 
         // Title
-        TextMeshProUGUI titleText = CreateText(header.transform, "Title", "NPC THO REN", 22, GOLD, TextAlignmentOptions.Left);
+        TextMeshProUGUI titleText = CreateText(header.transform, "Title", "NPC THO REN", 44, GOLD, TextAlignmentOptions.Left);
         titleText.fontStyle = FontStyles.Bold;
 
         // Close button [X]
-        Button closeButton = CreateButton(header.transform, "CloseBtn", "X", 24, 40, 34,
+        Button closeButton = CreateButton(header.transform, "CloseBtn", "X", 48, 80, 68,
             new Color(0.7f, 0.2f, 0.2f, 0.9f), Color.white);
 
         // ================================================================
         // BODY (below header)
         // ================================================================
         GameObject body = CreatePanel(centerContainer.transform, "Body",
-            Vector2.zero, new Vector2(1, 1), Vector2.zero, new Vector2(0, -50), new Color(0, 0, 0, 0));
+            Vector2.zero, new Vector2(1, 1), Vector2.zero, new Vector2(0, -100), new Color(0, 0, 0, 0));
 
-        // ─── LEFT SIDEBAR: Tabs (width 140) ─────────────────────
+        // ─── LEFT SIDEBAR: Tabs (width 280) ─────────────────────
         GameObject sidebar = CreatePanel(body.transform, "Sidebar",
-            new Vector2(0, 0), new Vector2(0, 1), Vector2.zero, new Vector2(140, 0),
+            new Vector2(0, 0), new Vector2(0, 1), Vector2.zero, new Vector2(280, 0),
             new Color(0.1f, 0.1f, 0.15f, 0.9f));
 
         var sidebarLayout = sidebar.AddComponent<VerticalLayoutGroup>();
-        sidebarLayout.padding = new RectOffset(8, 8, 15, 15);
-        sidebarLayout.spacing = 10;
+        sidebarLayout.padding = new RectOffset(16, 16, 30, 30);
+        sidebarLayout.spacing = 20;
         sidebarLayout.childAlignment = TextAnchor.UpperCenter;
         sidebarLayout.childForceExpandWidth = true;
         sidebarLayout.childForceExpandHeight = false;
 
-        Button weaponTabButton = CreateButton(sidebar.transform, "WeaponTabBtn", "VU KHI", 16, 120, 45,
+        Button weaponTabButton = CreateButton(sidebar.transform, "WeaponTabBtn", "VU KHI", 32, 240, 90,
             GOLD, Color.black);
-        Button equipmentTabButton = CreateButton(sidebar.transform, "EquipTabBtn", "TRANG BI", 16, 120, 45,
+        Button equipmentTabButton = CreateButton(sidebar.transform, "EquipTabBtn", "TRANG BI", 32, 240, 90,
             BTN_NORMAL, TEXT_WHITE);
 
         // ─── RIGHT CONTENT AREA (right of sidebar) ──────────────
         GameObject content = CreatePanel(body.transform, "ContentArea",
-            new Vector2(0, 0), new Vector2(1, 1), new Vector2(140, 0), Vector2.zero,
+            new Vector2(0, 0), new Vector2(1, 1), new Vector2(280, 0), Vector2.zero,
             new Color(0, 0, 0, 0));
 
         // ================================================================
@@ -127,28 +128,28 @@ public class BlacksmithCanvasCreator : Editor
             Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, new Color(0, 0, 0, 0));
 
         var weaponLayout = weaponTabPanel.AddComponent<VerticalLayoutGroup>();
-        weaponLayout.padding = new RectOffset(15, 15, 10, 10);
-        weaponLayout.spacing = 8;
+        weaponLayout.padding = new RectOffset(30, 30, 20, 20);
+        weaponLayout.spacing = 16;
         weaponLayout.childAlignment = TextAnchor.UpperCenter;
         weaponLayout.childForceExpandWidth = true;
         weaponLayout.childForceExpandHeight = false;
 
         // ── Weapon Info Row ──
-        GameObject weaponInfoRow = CreateLayoutRow(weaponTabPanel.transform, "WeaponInfoRow", 70);
-        Image weaponIcon = CreateImageSlot(weaponInfoRow.transform, "WeaponIcon", 60, 60, SLOT_EMPTY);
-        TextMeshProUGUI weaponNameText = CreateText(weaponInfoRow.transform, "WeaponName", "Vũ khí hiện tại", 18, TEXT_WHITE, TextAlignmentOptions.Left);
+        GameObject weaponInfoRow = CreateLayoutRow(weaponTabPanel.transform, "WeaponInfoRow", 140);
+        Image weaponIcon = CreateImageSlot(weaponInfoRow.transform, "WeaponIcon", 120, 120, SLOT_EMPTY);
+        TextMeshProUGUI weaponNameText = CreateText(weaponInfoRow.transform, "WeaponName", "Vũ khí hiện tại", 36, TEXT_WHITE, TextAlignmentOptions.Left);
         weaponNameText.fontStyle = FontStyles.Bold;
         var weaponNameLE = weaponNameText.gameObject.AddComponent<LayoutElement>();
         weaponNameLE.flexibleWidth = 1;
 
         // ── Weapon Gem Slots Row ──
-        GameObject weaponGemRow = CreateLayoutRow(weaponTabPanel.transform, "WeaponGemRow", 105);
+        GameObject weaponGemRow = CreateLayoutRow(weaponTabPanel.transform, "WeaponGemRow", 210);
         var wgResult = CreateGemSlotsRow(weaponGemRow.transform, "WeaponGemSlots", 3);
         Transform weaponGemSlotsParent = wgResult.parent;
         Button[] weaponRemoveBtns = wgResult.removeButtons;
 
         // ── Weapon Crystal Slot ──
-        GameObject weaponCrystalRow = CreateLayoutRow(weaponTabPanel.transform, "WeaponCrystalRow", 65);
+        GameObject weaponCrystalRow = CreateLayoutRow(weaponTabPanel.transform, "WeaponCrystalRow", 130);
         var wcResult = CreateCrystalSlot(weaponCrystalRow.transform, "WeaponCrystal");
 
         // ================================================================
@@ -158,14 +159,14 @@ public class BlacksmithCanvasCreator : Editor
             Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, new Color(0, 0, 0, 0));
 
         var equipLayout = equipmentTabPanel.AddComponent<VerticalLayoutGroup>();
-        equipLayout.padding = new RectOffset(15, 15, 10, 10);
-        equipLayout.spacing = 8;
+        equipLayout.padding = new RectOffset(30, 30, 20, 20);
+        equipLayout.spacing = 16;
         equipLayout.childAlignment = TextAnchor.UpperCenter;
         equipLayout.childForceExpandWidth = true;
         equipLayout.childForceExpandHeight = false;
 
         // ── Equipment Selection Row (4 slots) ──
-        GameObject equipSelectRow = CreateLayoutRow(equipmentTabPanel.transform, "EquipSelectRow", 70);
+        GameObject equipSelectRow = CreateLayoutRow(equipmentTabPanel.transform, "EquipSelectRow", 140);
         string[] slotLabels = { "Head", "Body", "Legs", "Acc" };
         Button[] equipSlotButtons = new Button[4];
         Image[] equipSlotIcons = new Image[4];
@@ -174,16 +175,16 @@ public class BlacksmithCanvasCreator : Editor
             GameObject slotGO = CreatePanel(equipSelectRow.transform, $"EquipSlot_{i}",
                 Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero, SLOT_EMPTY);
             var slotLE = slotGO.AddComponent<LayoutElement>();
-            slotLE.preferredWidth = 60;
-            slotLE.preferredHeight = 60;
-            AddOutline(slotGO, SLOT_BORDER, 1);
+            slotLE.preferredWidth = 120;
+            slotLE.preferredHeight = 120;
+            AddOutline(slotGO, SLOT_BORDER, 2);
 
             equipSlotButtons[i] = slotGO.AddComponent<Button>();
             SetButtonColors(equipSlotButtons[i], SLOT_EMPTY, BTN_HIGHLIGHT);
 
             equipSlotIcons[i] = slotGO.GetComponent<Image>();
 
-            TextMeshProUGUI slotLabel = CreateText(slotGO.transform, "Label", slotLabels[i], 10, TEXT_DIM, TextAlignmentOptions.Bottom);
+            TextMeshProUGUI slotLabel = CreateText(slotGO.transform, "Label", slotLabels[i], 20, TEXT_DIM, TextAlignmentOptions.Bottom);
             var labelRect = slotLabel.GetComponent<RectTransform>();
             labelRect.anchorMin = Vector2.zero;
             labelRect.anchorMax = Vector2.one;
@@ -192,47 +193,47 @@ public class BlacksmithCanvasCreator : Editor
         }
 
         // ── Equipment Name ──
-        TextMeshProUGUI equipmentNameText = CreateText(equipmentTabPanel.transform, "EquipName", "Chọn slot trang bị", 16, TEXT_WHITE, TextAlignmentOptions.Center);
+        TextMeshProUGUI equipmentNameText = CreateText(equipmentTabPanel.transform, "EquipName", "Chọn slot trang bị", 32, TEXT_WHITE, TextAlignmentOptions.Center);
         var eqNameLE = equipmentNameText.gameObject.AddComponent<LayoutElement>();
-        eqNameLE.preferredHeight = 30;
+        eqNameLE.preferredHeight = 60;
 
         // ── Equipment Gem Slots Row ──
-        GameObject equipGemRow = CreateLayoutRow(equipmentTabPanel.transform, "EquipGemRow", 105);
+        GameObject equipGemRow = CreateLayoutRow(equipmentTabPanel.transform, "EquipGemRow", 210);
         var egResult = CreateGemSlotsRow(equipGemRow.transform, "EquipGemSlots", 1);
         Transform equipmentGemSlotsParent = egResult.parent;
         Button[] equipRemoveBtns = egResult.removeButtons;
 
         // ── Equipment Crystal Slot ──
-        GameObject equipCrystalRow = CreateLayoutRow(equipmentTabPanel.transform, "EquipCrystalRow", 65);
+        GameObject equipCrystalRow = CreateLayoutRow(equipmentTabPanel.transform, "EquipCrystalRow", 130);
         var ecResult = CreateCrystalSlot(equipCrystalRow.transform, "EquipCrystal");
 
         // ================================================================
         // SUCCESS RATE BAR (shared, at bottom of content)
         // ================================================================
         GameObject successArea = CreatePanel(content.transform, "SuccessArea",
-            new Vector2(0, 0), new Vector2(1, 0), new Vector2(15, 260), new Vector2(-15, 390),
+            new Vector2(0, 0), new Vector2(1, 0), new Vector2(30, 520), new Vector2(-30, 780),
             new Color(0, 0, 0, 0));
 
         var successLayout = successArea.AddComponent<VerticalLayoutGroup>();
         successLayout.padding = new RectOffset(0, 0, 0, 0);
-        successLayout.spacing = 8;
+        successLayout.spacing = 16;
         successLayout.childAlignment = TextAnchor.MiddleCenter;
         successLayout.childForceExpandWidth = true;
         successLayout.childForceExpandHeight = false;
 
         // ── Success Rate Text ──
         TextMeshProUGUI successRateText = CreateText(successArea.transform, "SuccessRateText",
-            "Tỉ lệ thành công: 0%", 15, TEXT_WHITE, TextAlignmentOptions.Center);
+            "Tỉ lệ thành công: 0%", 30, TEXT_WHITE, TextAlignmentOptions.Center);
         var srTextLE = successRateText.gameObject.AddComponent<LayoutElement>();
-        srTextLE.preferredHeight = 28;
+        srTextLE.preferredHeight = 56;
 
         // ── Success Rate Bar ──
         GameObject barBG = CreatePanel(successArea.transform, "BarBG",
             Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero,
             new Color(0.15f, 0.15f, 0.2f, 0.9f));
         var barBGLE = barBG.AddComponent<LayoutElement>();
-        barBGLE.preferredHeight = 20;
-        AddOutline(barBG, SLOT_BORDER, 1);
+        barBGLE.preferredHeight = 40;
+        AddOutline(barBG, SLOT_BORDER, 2);
 
         GameObject barFill = CreatePanel(barBG.transform, "BarFill",
             Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, SUCCESS_GREEN);
@@ -248,10 +249,10 @@ public class BlacksmithCanvasCreator : Editor
         successRateBar.fillAmount = 0f;
 
         // ── Socket Button ──
-        Button socketButton = CreateButton(successArea.transform, "SocketBtn", "KHAM GEM", 18, 250, 45,
+        Button socketButton = CreateButton(successArea.transform, "SocketBtn", "KHAM GEM", 36, 500, 90,
             new Color(0.6f, 0.4f, 0.1f, 0.9f), Color.white);
         TextMeshProUGUI socketButtonText = socketButton.GetComponentInChildren<TextMeshProUGUI>();
-        socketButton.GetComponent<LayoutElement>().preferredHeight = 45;
+        socketButton.GetComponent<LayoutElement>().preferredHeight = 90;
 
         // ── Gem Drop Slot (shared, below socket button, center) ──
         var gemDropResult = CreateGemDropSlot(successArea.transform, "GemDrop");
@@ -262,40 +263,40 @@ public class BlacksmithCanvasCreator : Editor
         GameObject resultPanel = CreatePanel(centerContainer.transform, "ResultPanel",
             new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero,
             new Color(0.05f, 0.05f, 0.1f, 0.92f));
-        SetSize(resultPanel, 350, 120);
-        AddOutline(resultPanel, GOLD, 2);
+        SetSize(resultPanel, 700, 240);
+        AddOutline(resultPanel, GOLD, 4);
         resultPanel.SetActive(false);
 
         var resultLayout = resultPanel.AddComponent<VerticalLayoutGroup>();
-        resultLayout.padding = new RectOffset(15, 15, 15, 15);
-        resultLayout.spacing = 10;
+        resultLayout.padding = new RectOffset(30, 30, 30, 30);
+        resultLayout.spacing = 20;
         resultLayout.childAlignment = TextAnchor.MiddleCenter;
 
-        Image resultIcon = CreateImageSlot(resultPanel.transform, "ResultIcon", 40, 40, new Color(0, 0, 0, 0));
-        TextMeshProUGUI resultText = CreateText(resultPanel.transform, "ResultText", "", 20, SUCCESS_GREEN, TextAlignmentOptions.Center);
+        Image resultIcon = CreateImageSlot(resultPanel.transform, "ResultIcon", 80, 80, new Color(0, 0, 0, 0));
+        TextMeshProUGUI resultText = CreateText(resultPanel.transform, "ResultText", "", 40, SUCCESS_GREEN, TextAlignmentOptions.Center);
         resultText.fontStyle = FontStyles.Bold;
 
         // ================================================================
         // INVENTORY SCROLL VIEW (bottom section of content)
         // ================================================================
         GameObject scrollArea = CreatePanel(content.transform, "InventoryScrollArea",
-            new Vector2(0, 0), new Vector2(1, 0), new Vector2(15, 10), new Vector2(-15, 255),
+            new Vector2(0, 0), new Vector2(1, 0), new Vector2(30, 20), new Vector2(-30, 510),
             new Color(0, 0, 0, 0));
 
         // Label
         GameObject scrollLabelGO = CreatePanel(scrollArea.transform, "ScrollLabel",
-            new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, -22), Vector2.zero, new Color(0, 0, 0, 0));
-        TextMeshProUGUI scrollLabel = CreateText(scrollLabelGO.transform, "Label", "HANH TRANG", 13, GOLD, TextAlignmentOptions.Left);
+            new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, -44), Vector2.zero, new Color(0, 0, 0, 0));
+        TextMeshProUGUI scrollLabel = CreateText(scrollLabelGO.transform, "Label", "HANH TRANG", 26, GOLD, TextAlignmentOptions.Left);
         scrollLabel.fontStyle = FontStyles.Bold;
         var scrollLabelRect = scrollLabel.GetComponent<RectTransform>();
         scrollLabelRect.anchorMin = Vector2.zero;
         scrollLabelRect.anchorMax = Vector2.one;
-        scrollLabelRect.offsetMin = new Vector2(5, 0);
+        scrollLabelRect.offsetMin = new Vector2(10, 0);
         scrollLabelRect.offsetMax = Vector2.zero;
 
         // Scroll View
         GameObject scrollView = CreateScrollView(scrollArea.transform, "InventoryScroll",
-            new Vector2(0, 0), new Vector2(1, 1), new Vector2(0, 0), new Vector2(0, -24));
+            new Vector2(0, 0), new Vector2(1, 1), new Vector2(0, 0), new Vector2(0, -48));
         Transform inventoryContent = scrollView.transform.Find("Viewport/Content");
 
         // ================================================================
@@ -367,13 +368,13 @@ public class BlacksmithCanvasCreator : Editor
         // Select in hierarchy
         Selection.activeGameObject = canvasGO;
 
-        Debug.Log("[BlacksmithCanvasCreator] ✅ Canvas_Blacksmith created successfully in Scene! " +
+        Debug.Log("[BlacksmithCanvasCreator] ✅ Canvas_Blacksmith (4K) created successfully in Scene! " +
                   "All references assigned to BlacksmithUI. " +
                   "You can now drag it to your Prefabs folder.");
     }
 
     // ================================================================
-    // HELPER METHODS (giống hệt BlacksmithUIBuilder)
+    // HELPER METHODS (giống hệt BlacksmithUIBuilder, sizes ×2 cho 4K)
     // ================================================================
 
     static GameObject CreatePanel(Transform parent, string name, Vector2 anchorMin, Vector2 anchorMax,
@@ -466,7 +467,7 @@ public class BlacksmithCanvasCreator : Editor
         GameObject go = new GameObject(name, typeof(RectTransform));
         go.transform.SetParent(parent, false);
         var hlg = go.AddComponent<HorizontalLayoutGroup>();
-        hlg.spacing = 10;
+        hlg.spacing = 20;
         hlg.childAlignment = TextAnchor.MiddleCenter;
         hlg.childForceExpandWidth = false;
         hlg.childForceExpandHeight = false;
@@ -489,7 +490,7 @@ public class BlacksmithCanvasCreator : Editor
         GameObject container = new GameObject(name, typeof(RectTransform));
         container.transform.SetParent(parent, false);
         var hlg = container.AddComponent<HorizontalLayoutGroup>();
-        hlg.spacing = 15;
+        hlg.spacing = 30;
         hlg.childAlignment = TextAnchor.MiddleCenter;
         hlg.childForceExpandWidth = false;
         hlg.childForceExpandHeight = false;
@@ -504,7 +505,7 @@ public class BlacksmithCanvasCreator : Editor
             GameObject slotGroup = new GameObject($"SlotGroup_{i}", typeof(RectTransform));
             slotGroup.transform.SetParent(container.transform, false);
             var vlg = slotGroup.AddComponent<VerticalLayoutGroup>();
-            vlg.spacing = 3;
+            vlg.spacing = 6;
             vlg.childAlignment = TextAnchor.MiddleCenter;
             vlg.childForceExpandWidth = false;
             vlg.childForceExpandHeight = false;
@@ -513,9 +514,9 @@ public class BlacksmithCanvasCreator : Editor
             GameObject slot = CreatePanel(slotGroup.transform, $"GemSlot_{i}",
                 Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero, SLOT_EMPTY);
             var slotLE = slot.AddComponent<LayoutElement>();
-            slotLE.preferredWidth = 60;
-            slotLE.preferredHeight = 60;
-            AddOutline(slot, SLOT_BORDER, 1);
+            slotLE.preferredWidth = 120;
+            slotLE.preferredHeight = 120;
+            AddOutline(slot, SLOT_BORDER, 2);
 
             slot.AddComponent<SocketingSlotUI>();
 
@@ -525,13 +526,13 @@ public class BlacksmithCanvasCreator : Editor
                 new Color(0.5f, 0.5f, 0.5f, 0.3f));
             // highlight border
             GameObject borderGO = CreatePanel(slot.transform, "HighlightBorder",
-                Vector2.zero, Vector2.one, new Vector2(-2, -2), new Vector2(2, 2),
+                Vector2.zero, Vector2.one, new Vector2(-4, -4), new Vector2(4, 4),
                 new Color(1f, 0.84f, 0, 0.8f));
             borderGO.GetComponent<Image>().enabled = false;
             borderGO.GetComponent<Image>().raycastTarget = false;
 
             // label
-            TextMeshProUGUI label = CreateText(slot.transform, "Label", "Trống", 9, TEXT_DIM, TextAlignmentOptions.Bottom);
+            TextMeshProUGUI label = CreateText(slot.transform, "Label", "Trống", 18, TEXT_DIM, TextAlignmentOptions.Bottom);
             var labelRect = label.GetComponent<RectTransform>();
             labelRect.anchorMin = Vector2.zero;
             labelRect.anchorMax = new Vector2(1, 0.3f);
@@ -539,7 +540,7 @@ public class BlacksmithCanvasCreator : Editor
             labelRect.offsetMax = Vector2.zero;
 
             // Remove button "X" below slot
-            removeBtns[i] = CreateButton(slotGroup.transform, $"RemoveBtn_{i}", "X", 11, 50, 18,
+            removeBtns[i] = CreateButton(slotGroup.transform, $"RemoveBtn_{i}", "X", 22, 100, 36,
                 new Color(0.5f, 0.15f, 0.15f, 0.9f), Color.white);
         }
 
@@ -561,29 +562,29 @@ public class BlacksmithCanvasCreator : Editor
         GameObject container = CreatePanel(parent, name,
             Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero, CRYSTAL_BG);
         var containerLE = container.AddComponent<LayoutElement>();
-        containerLE.preferredWidth = 250;
-        containerLE.preferredHeight = 55;
-        AddOutline(container, new Color(0.5f, 0.3f, 0.7f, 0.6f), 1);
+        containerLE.preferredWidth = 500;
+        containerLE.preferredHeight = 110;
+        AddOutline(container, new Color(0.5f, 0.3f, 0.7f, 0.6f), 2);
 
         var hlg = container.AddComponent<HorizontalLayoutGroup>();
-        hlg.padding = new RectOffset(8, 8, 5, 5);
-        hlg.spacing = 8;
+        hlg.padding = new RectOffset(16, 16, 10, 10);
+        hlg.spacing = 16;
         hlg.childAlignment = TextAnchor.MiddleLeft;
         hlg.childForceExpandWidth = false;
         hlg.childForceExpandHeight = false;
 
         // Crystal icon
-        Image crystalIcon = CreateImageSlot(container.transform, "CrystalIcon", 40, 40,
+        Image crystalIcon = CreateImageSlot(container.transform, "CrystalIcon", 80, 80,
             new Color(0.3f, 0.3f, 0.3f, 0.3f));
 
         // Crystal name text
         TextMeshProUGUI crystalText = CreateText(container.transform, "CrystalText",
-            "Chọn Crystal Stone", 13, TEXT_DIM, TextAlignmentOptions.Left);
+            "Chọn Crystal Stone", 26, TEXT_DIM, TextAlignmentOptions.Left);
         var textLE = crystalText.gameObject.AddComponent<LayoutElement>();
         textLE.flexibleWidth = 1;
 
         // Clear button
-        Button clearBtn = CreateButton(container.transform, "ClearBtn", "✕", 14, 28, 28,
+        Button clearBtn = CreateButton(container.transform, "ClearBtn", "✕", 28, 56, 56,
             new Color(0.5f, 0.2f, 0.2f, 0.8f), Color.white);
 
         // Add CrystalSlotUI component
@@ -606,24 +607,24 @@ public class BlacksmithCanvasCreator : Editor
             Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero,
             new Color(0.15f, 0.2f, 0.15f, 0.8f));
         var containerLE = container.AddComponent<LayoutElement>();
-        containerLE.preferredWidth = 250;
-        containerLE.preferredHeight = 60;
-        AddOutline(container, new Color(0.3f, 0.7f, 0.3f, 0.6f), 1);
+        containerLE.preferredWidth = 500;
+        containerLE.preferredHeight = 120;
+        AddOutline(container, new Color(0.3f, 0.7f, 0.3f, 0.6f), 2);
 
         var hlg = container.AddComponent<HorizontalLayoutGroup>();
-        hlg.padding = new RectOffset(8, 8, 5, 5);
-        hlg.spacing = 8;
+        hlg.padding = new RectOffset(16, 16, 10, 10);
+        hlg.spacing = 16;
         hlg.childAlignment = TextAnchor.MiddleLeft;
         hlg.childForceExpandWidth = false;
         hlg.childForceExpandHeight = false;
 
         // Gem icon
-        Image gemDropIcon = CreateImageSlot(container.transform, "GemDropIcon", 45, 45,
+        Image gemDropIcon = CreateImageSlot(container.transform, "GemDropIcon", 90, 90,
             new Color(0.3f, 0.3f, 0.3f, 0.3f));
 
         // Label
         TextMeshProUGUI gemDropText = CreateText(container.transform, "GemDropText",
-            "Chon Gem de kham", 13, TEXT_DIM, TextAlignmentOptions.Left);
+            "Chon Gem de kham", 26, TEXT_DIM, TextAlignmentOptions.Left);
         var textLE = gemDropText.gameObject.AddComponent<LayoutElement>();
         textLE.flexibleWidth = 1;
 
@@ -642,7 +643,7 @@ public class BlacksmithCanvasCreator : Editor
         scrollRect.horizontal = false;
         scrollRect.vertical = true;
         scrollRect.movementType = ScrollRect.MovementType.Clamped;
-        AddOutline(scrollView, SLOT_BORDER, 1);
+        AddOutline(scrollView, SLOT_BORDER, 2);
 
         // Viewport
         GameObject viewport = CreatePanel(scrollView.transform, "Viewport",
@@ -658,14 +659,14 @@ public class BlacksmithCanvasCreator : Editor
         contentRT.anchorMin = new Vector2(0, 1);
         contentRT.anchorMax = new Vector2(1, 1);
         contentRT.pivot = new Vector2(0.5f, 1);
-        contentRT.offsetMin = new Vector2(5, 0);
-        contentRT.offsetMax = new Vector2(-5, 0);
+        contentRT.offsetMin = new Vector2(10, 0);
+        contentRT.offsetMax = new Vector2(-10, 0);
 
         // Grid layout for items
         var grid = content.AddComponent<GridLayoutGroup>();
-        grid.cellSize = new Vector2(90, 100);
-        grid.spacing = new Vector2(8, 8);
-        grid.padding = new RectOffset(5, 5, 5, 5);
+        grid.cellSize = new Vector2(180, 200);
+        grid.spacing = new Vector2(16, 16);
+        grid.padding = new RectOffset(10, 10, 10, 10);
         grid.constraint = GridLayoutGroup.Constraint.Flexible;
 
         // Content size fitter
