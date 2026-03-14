@@ -124,6 +124,9 @@ public class EnemyAttack : MonoBehaviour {
     public void PowerDamage(int hit){
         if(enemyScript == null) return;
 
+        // Spawn Boss Skill VFX nếu có
+        SpawnSkillVFX();
+
         // Check if using DungeonManiaPlayerBridge (user's player system)
         if (enemyScript.playerManager == null) {
             // Luôn tìm lại bridge nếu chưa có
@@ -134,6 +137,13 @@ public class EnemyAttack : MonoBehaviour {
             if (cachedBridge != null) {
                 // Gọi skill effects trước khi gây damage
                 if (attackEffects != null) attackEffects.PlaySkillAttack();
+                
+                // Nếu có VFX skill → damage do BossSkillDamage xử lý (trigger collider)
+                // Không gây damage trực tiếp ở đây nữa
+                if (enemyScript.skillVfxPrefab != null) {
+                    Debug.Log("[EnemyAttack] PowerDamage: VFX skill spawned, damage handled by BossSkillDamage trigger");
+                    return;
+                }
                 
                 damageStruct = D();
                 damageStruct.damage += enemyScript.enemy.attack.value;
@@ -196,11 +206,20 @@ public class EnemyAttack : MonoBehaviour {
         }
     }
     public void Skill(int hit){
-        if(enemyScript == null || enemyScript.skillScript == null) return;
+        if(enemyScript == null) return;
 
         // Gọi skill particle effects
         if (attackEffects != null) attackEffects.PlaySkillAttack();
 
+        // Spawn Boss Skill VFX nếu có (thay thế skill cũ)
+        if (enemyScript.skillVfxPrefab != null) {
+            SpawnSkillVFX();
+            Debug.Log("[EnemyAttack] Skill: VFX skill spawned, damage handled by BossSkillDamage trigger");
+            return;
+        }
+
+        // Fallback: dùng skill cũ (Bow + particle collision) nếu không có VFX mới
+        if (enemyScript.skillScript == null) return;
         HitSkill();
         damageStruct = D();
         enemyScript.skillScript.DamageBow(damageStruct, hit);
@@ -217,6 +236,61 @@ public class EnemyAttack : MonoBehaviour {
                 new Vector3(targetPos.x, targetPos.y + 0.5f, targetPos.z);
             enemyScript.enemyManager.generalEffects[3].Play();
         }
+    }
+    /// <summary>
+    /// Spawn VFX prefab từ PixPlays tại vị trí boss
+    /// Hỗ trợ 2 chế độ: AoE (360°) và Directional (cone phía trước)
+    /// </summary>
+    void SpawnSkillVFX(){
+        if (enemyScript == null || enemyScript.skillVfxPrefab == null) return;
+        
+        Vector3 spawnPos;
+        Quaternion spawnRot;
+        
+        if (enemyScript.skillIsDirectional) {
+            // Directional: spawn VFX phía trước boss
+            spawnPos = transform.position + transform.forward * 1.5f;
+            spawnPos.y = transform.position.y + 0.2f;
+            spawnRot = transform.rotation;
+        } else {
+            // AoE: spawn VFX tại vị trí boss
+            spawnPos = transform.position;
+            spawnPos.y += 0.2f;
+            spawnRot = Quaternion.identity;
+        }
+        
+        GameObject vfx = Object.Instantiate(enemyScript.skillVfxPrefab, spawnPos, spawnRot);
+        
+        // Setup BossSkillDamage component
+        BossSkillDamage skillDmg = vfx.GetComponent<BossSkillDamage>();
+        if (skillDmg == null) {
+            skillDmg = vfx.AddComponent<BossSkillDamage>();
+        }
+        
+        // Tính damage cho skill — dùng skillDamageMultiplier
+        damageStruct = D();
+        int skillDamage = (int)(damageStruct.damage * enemyScript.skillDamageMultiplier);
+        int skillMagic = damageStruct.damageElemental + enemyScript.enemy.magicValue;
+        
+        if (enemyScript.skillIsDirectional) {
+            // Directional: truyền hướng boss để check góc
+            skillDmg.SetupDirectional(
+                skillDamage, skillMagic, damageStruct.crit,
+                damageStruct.elementalType,
+                enemyScript.skillVfxRadius, 4f,
+                transform.position, transform.forward,
+                enemyScript.skillAngle
+            );
+        } else {
+            // AoE: damage 360°
+            skillDmg.Setup(
+                skillDamage, skillMagic, damageStruct.crit,
+                damageStruct.elementalType,
+                enemyScript.skillVfxRadius, 4f
+            );
+        }
+        
+        Debug.Log($"[EnemyAttack] SpawnSkillVFX: {enemyScript.skillVfxPrefab.name} at {spawnPos}, directional={enemyScript.skillIsDirectional}, damage={skillDamage}+{skillMagic}");
     }
     public Damage D () {
         if (enemyScript == null || enemyScript.enemy == null) {
