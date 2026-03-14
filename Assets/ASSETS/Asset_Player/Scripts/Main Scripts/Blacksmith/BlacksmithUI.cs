@@ -576,14 +576,14 @@ public class BlacksmithUI : MonoBehaviour
             }
             var rarityOutline = go.AddComponent<Outline>();
             rarityOutline.effectColor = GetRarityBorderColor(rarity);
-            rarityOutline.effectDistance = new Vector2(3, 3);
+            rarityOutline.effectDistance = new Vector2(6, 6);
 
-            // ── Resize to fit Blacksmith grid cells (90×100) ──
+            // ── Resize to fit Blacksmith grid cells (180×200 for 4K) ──
             var iconTf = go.transform.Find("Item Icon");
             if (iconTf != null)
             {
                 var iconRT = iconTf.GetComponent<RectTransform>();
-                if (iconRT != null) iconRT.sizeDelta = new Vector2(55, 55);
+                if (iconRT != null) iconRT.sizeDelta = new Vector2(130, 130);
             }
             var nameText = go.transform.Find("Item name");
             if (nameText != null)
@@ -591,7 +591,7 @@ public class BlacksmithUI : MonoBehaviour
                 var tmp = nameText.GetComponent<TMPro.TextMeshProUGUI>();
                 if (tmp != null)
                 {
-                    tmp.fontSize = 11;
+                    tmp.fontSize = 33;
                     tmp.enableWordWrapping = true;
                     tmp.overflowMode = TMPro.TextOverflowModes.Ellipsis;
                     tmp.maxVisibleLines = 2;
@@ -601,7 +601,12 @@ public class BlacksmithUI : MonoBehaviour
             if (amountText != null)
             {
                 var tmp = amountText.GetComponent<TMPro.TextMeshProUGUI>();
-                if (tmp != null) tmp.fontSize = 11;
+                if (tmp != null)
+                {
+                    tmp.fontSize = 26;
+                    tmp.enableWordWrapping = false;
+                    tmp.overflowMode = TMPro.TextOverflowModes.Overflow;
+                }
             }
 
             // ── Click behavior — use existing Button from prefab ──
@@ -619,7 +624,7 @@ public class BlacksmithUI : MonoBehaviour
                 {
                     var outline = go.AddComponent<Outline>();
                     outline.effectColor = new Color(1f, 0.84f, 0f);
-                    outline.effectDistance = new Vector2(3, 3);
+                    outline.effectDistance = new Vector2(6, 6);
                 }
             }
             else if (item.itemType == ItemType.CrystalStone)
@@ -630,7 +635,7 @@ public class BlacksmithUI : MonoBehaviour
                 {
                     var outline = go.AddComponent<Outline>();
                     outline.effectColor = new Color(0.6f, 0.2f, 0.9f);
-                    outline.effectDistance = new Vector2(3, 3);
+                    outline.effectDistance = new Vector2(6, 6);
                 }
             }
             // All other items (equipment, etc.) — display normally, no dimming
@@ -827,12 +832,12 @@ public class BlacksmithUI : MonoBehaviour
         bsTooltipText.text = $"<color=#FFCC00>{hint}</color>";
         bsTooltipPanel.SetActive(true);
 
-        float pad = 15f;
-        float maxW = 350f;
+        float pad = 45f;
+        float maxW = 1050f;
         bsTooltipText.rectTransform.sizeDelta = new Vector2(maxW, 0);
         bsTooltipText.ForceMeshUpdate();
         Vector2 pref = bsTooltipText.GetPreferredValues(bsTooltipText.text, maxW, 0);
-        float textW = Mathf.Clamp(pref.x, 150f, maxW);
+        float textW = Mathf.Clamp(pref.x, 450f, maxW);
         float textH = pref.y;
 
         bsTooltipText.rectTransform.anchoredPosition = new Vector2(pad, -pad);
@@ -857,7 +862,7 @@ public class BlacksmithUI : MonoBehaviour
 
         bsTooltipRect = bsTooltipPanel.GetComponent<RectTransform>();
         bsTooltipRect.pivot = new Vector2(0f, 1f);
-        bsTooltipRect.sizeDelta = new Vector2(350, 200); // default, will be resized
+        bsTooltipRect.sizeDelta = new Vector2(1050, 600); // default, will be resized (4K ×3)
 
         // Background
         var bg = bsTooltipPanel.AddComponent<Image>();
@@ -867,13 +872,13 @@ public class BlacksmithUI : MonoBehaviour
         // Gold border
         var outline = bsTooltipPanel.AddComponent<Outline>();
         outline.effectColor = new Color(0.8f, 0.65f, 0.2f, 1f);
-        outline.effectDistance = new Vector2(2, 2);
+        outline.effectDistance = new Vector2(6, 6);
 
         // Text child — use SAME anchor as panel (top-left), manual position
         GameObject textGO = new GameObject("TooltipText", typeof(RectTransform));
         textGO.transform.SetParent(bsTooltipPanel.transform, false);
         bsTooltipText = textGO.AddComponent<TextMeshProUGUI>();
-        bsTooltipText.fontSize = 15;
+        bsTooltipText.fontSize = 45;
         bsTooltipText.color = Color.white;
         bsTooltipText.alignment = TextAlignmentOptions.TopLeft;
         bsTooltipText.enableWordWrapping = true;
@@ -917,8 +922,8 @@ public class BlacksmithUI : MonoBehaviour
         bsTooltipText.text = BuildTooltipContent(item, rarity);
         bsTooltipPanel.SetActive(true);
 
-        float pad = 15f;
-        float minW = 280f, maxW = 650f;
+        float pad = 45f;
+        float minW = 840f, maxW = 1950f;
 
         // First pass: get unconstrained preferred size
         bsTooltipText.rectTransform.sizeDelta = new Vector2(maxW, 0);
@@ -950,7 +955,7 @@ public class BlacksmithUI : MonoBehaviour
 
     void Update()
     {
-        // Follow mouse when tooltip is showing
+        // Follow mouse when tooltip is showing, flip upward near screen bottom
         if (bsTooltipPanel != null && bsTooltipPanel.activeSelf && bsTooltipRect != null)
         {
             Vector2 localPos;
@@ -958,9 +963,25 @@ public class BlacksmithUI : MonoBehaviour
             if (parentCanvas != null)
             {
                 Camera cam = parentCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : parentCanvas.worldCamera;
+                float tooltipH = bsTooltipRect.sizeDelta.y;
+                float mouseY = Input.mousePosition.y;
+
+                // If tooltip would go below screen bottom → flip upward
+                Vector3 offset;
+                if (mouseY - tooltipH - 45f < 0f)
+                {
+                    // Show above cursor
+                    offset = new Vector3(45, tooltipH + 45f, 0);
+                }
+                else
+                {
+                    // Show below cursor (default)
+                    offset = new Vector3(45, -45, 0);
+                }
+
                 RectTransformUtility.ScreenPointToLocalPointInRectangle(
                     parentCanvas.GetComponent<RectTransform>(),
-                    Input.mousePosition + new Vector3(15, -15, 0),
+                    Input.mousePosition + offset,
                     cam, out localPos);
                 bsTooltipRect.localPosition = localPos;
             }

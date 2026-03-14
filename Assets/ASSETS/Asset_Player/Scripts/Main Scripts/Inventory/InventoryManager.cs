@@ -14,7 +14,7 @@ public class InventoryItemData
     public int amount;
     public int rarity; // Rarity enum as int
 
-    public InventoryItemData(int id, int amt, int rar = 0)
+    public InventoryItemData(int id, int amt, int rar = 1)
     {
         itemId = id;
         amount = amt;
@@ -214,7 +214,7 @@ public class InventoryManager : MonoBehaviour
     /// </summary>
     public bool AddItem(int itemId, int amount, float probability = 1.0f)
     {
-        Rarity r = itemLookup.ContainsKey(itemId) ? itemLookup[itemId].rarity : Rarity.Common;
+        Rarity r = itemLookup.ContainsKey(itemId) ? itemLookup[itemId].rarity : Rarity.None;
         return AddItem(itemId, amount, r, probability);
     }
 
@@ -417,8 +417,8 @@ public class InventoryManager : MonoBehaviour
         Item randomItem = validItems[UnityEngine.Random.Range(0, validItems.Length)];
         int randomAmount = UnityEngine.Random.Range(1, 4);
 
-        // Random rarity cho test
-        Rarity randomRarity = (Rarity)UnityEngine.Random.Range(0, 5);
+        // Random rarity cho test (skip None=0, bắt đầu từ Common=1)
+        Rarity randomRarity = (Rarity)UnityEngine.Random.Range(1, 7);
 
         AddItem(randomItem, randomAmount, randomRarity);
         Debug.Log($"[InventoryManager] Added random: {randomItem.itemName} [{randomRarity}] x{randomAmount}");
@@ -455,6 +455,19 @@ public class InventoryManager : MonoBehaviour
     private void LoadInventory()
     {
         string filePath = Path.Combine(Application.persistentDataPath, saveFileName);
+
+        // === AUTO-RESET: Xóa save cũ vì Rarity enum đã thêm None ở đầu ===
+        string versionFile = Path.Combine(Application.persistentDataPath, "inventory_v2.flag");
+        if (File.Exists(filePath) && !File.Exists(versionFile))
+        {
+            Debug.LogWarning("[InventoryManager] Detected old inventory save (pre-None rarity). Deleting...");
+            File.Delete(filePath);
+            File.WriteAllText(versionFile, "v2");
+        }
+        if (!File.Exists(versionFile))
+        {
+            File.WriteAllText(versionFile, "v2");
+        }
 
         if (!File.Exists(filePath))
         {
