@@ -3,7 +3,7 @@ using UnityEngine;
 public enum ItemType { Equipment, Consumable, Material, Gems, CrystalStone }
 public enum Rarity { None, Common, Uncommon, Rare, Epic, Legendary, Mythic }
 public enum GemType { MovementSpeed, CooldownReduction, Damage }
-public enum EquipmentSlotType { Head, Body, Legs, Accessory }
+public enum EquipmentSlotType { None, Head, Body, Legs, Accessory }
 
 [CreateAssetMenu(fileName = "Item", menuName = "Scriptable Objects/Item")]
 public class Item : ScriptableObject
@@ -13,6 +13,8 @@ public class Item : ScriptableObject
     public Sprite icon;
     [Tooltip("Rarity mặc định của SO (dùng làm base). Runtime rarity có thể khác.")]
     public Rarity rarity;
+    [Tooltip("BẬT = khi drop sẽ random rarity theo loại quái. TẮT = luôn dùng rarity mặc định của SO này.")]
+    public bool useRandomRarity = false;
     public bool isStackable;
     public int maxStackSize;
     public string description;

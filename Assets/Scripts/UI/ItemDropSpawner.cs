@@ -79,7 +79,7 @@ public class ItemDropSpawner : MonoBehaviour
     {
         int dropCount = 0;
 
-        // 1. Item ScriptableObject drops — random rarity
+        // 1. Item ScriptableObject drops — check useRandomRarity toggle
         foreach (var drop in itemDropTable)
         {
             if (dropCount >= maxDropCount) break;
@@ -87,7 +87,11 @@ public class ItemDropSpawner : MonoBehaviour
             if (Random.value > drop.dropChance) continue;
 
             int qty = Random.Range(drop.minQuantity, drop.maxQuantity + 1);
-            Rarity rtRarity = RandomRarityFromEnemy();
+            // Nếu item BẬT random rarity → random theo loại quái
+            // Nếu TẮT → dùng rarity mặc định của SO
+            Rarity rtRarity = drop.item.useRandomRarity 
+                ? RandomRarityFromEnemy() 
+                : drop.item.rarity;
             SpawnOrb(deathPosition, drop.item, qty, rtRarity);
             dropCount++;
         }
@@ -354,7 +358,7 @@ public class ItemDropSpawner : MonoBehaviour
         for (int i = 0; i < weights.Length; i++)
         {
             cumulative += weights[i];
-            if (roll < cumulative) return (Rarity)i;
+            if (roll < cumulative) return (Rarity)(i + 1); // +1 vì None=0, Common=1
         }
 
         return Rarity.Common;
