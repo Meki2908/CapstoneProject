@@ -40,6 +40,11 @@ public class WeaponSwapper : MonoBehaviour
     [Tooltip("Gán TutorialTextDisplay.OnWeaponChanged vào đây trong Inspector")]
     public UnityEvent OnWeaponSwapped;
 
+    // ── Tutorial mode: bypass sheath / combat checks ──────────────────────
+    bool _tutorialMode = false;
+    /// <summary>Gọi từ TutorialTextDisplay để bỏ qua cảnh báo vũ khí / combat.</summary>
+    public void SetTutorialMode(bool active) => _tutorialMode = active;
+
     private WeaponType pendingWeaponType;
 
     private void Awake()
@@ -146,26 +151,29 @@ public class WeaponSwapper : MonoBehaviour
 
     private void OnConfirmWeaponSwitch()
     {
-        // Priority 1: Sheath warning if weapon is drawn
-        if (character != null && character.isWeaponDrawn)
+        if (!_tutorialMode)
         {
-            if (confirmationDialog != null)
-                confirmationDialog.SetActive(false);
-            ShowWarningDialog();
-            return;
-        }
+            // Priority 1: Sheath warning if weapon is drawn
+            if (character != null && character.isWeaponDrawn)
+            {
+                if (confirmationDialog != null)
+                    confirmationDialog.SetActive(false);
+                ShowWarningDialog();
+                return;
+            }
 
-        // Priority 2: Combat warning if currently in combat
-        bool isInCombat = false;
-        if (enemyDetection != null)
-            isInCombat = enemyDetection.IsInCombat();
+            // Priority 2: Combat warning if currently in combat
+            bool isInCombat = false;
+            if (enemyDetection != null)
+                isInCombat = enemyDetection.IsInCombat();
 
-        if (isInCombat)
-        {
-            if (confirmationDialog != null)
-                confirmationDialog.SetActive(false);
-            ShowCombatWarningDialog();
-            return;
+            if (isInCombat)
+            {
+                if (confirmationDialog != null)
+                    confirmationDialog.SetActive(false);
+                ShowCombatWarningDialog();
+                return;
+            }
         }
 
         if (weaponController == null)
