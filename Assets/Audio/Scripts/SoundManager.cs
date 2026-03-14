@@ -100,6 +100,7 @@ public class SoundManager : MonoBehaviour
 
     public static void PlaySkill(WeaponType weaponType, AbilityInput input, AudioSource source = null, float volume = 1f)
     {
+        if (weaponType == WeaponType.Sword || weaponType == WeaponType.Mage) return;
         SoundType soundType = GetSkillSoundType(weaponType, input);
         PlaySound(soundType, source, volume);
     }
@@ -147,20 +148,22 @@ public class SoundManager : MonoBehaviour
     {
         PlayDrawWeapon(weaponType, 0, source, volume);
     }
-    /// <param name="phase">0 = first sound, 1 = second sound in same draw motion.</param>
+    /// <param name="phase">0 = first sound; phase 1 (Draw_2/Sheath_2) không dùng nữa, bỏ qua.</param>
     public static void PlayDrawWeapon(WeaponType weaponType, int phase, AudioSource source = null, float volume = 1f)
     {
-        SoundType soundType = GetDrawWeaponSoundType(weaponType, phase);
+        if (phase != 0) return;
+        SoundType soundType = GetDrawWeaponSoundType(weaponType);
         PlaySound(soundType, source, volume);
     }
     public static void PlaySheathWeapon(WeaponType weaponType, AudioSource source = null, float volume = 1f)
     {
         PlaySheathWeapon(weaponType, 0, source, volume);
     }
-    /// <param name="phase">0 = first sound, 1 = second sound in same sheath motion.</param>
+    /// <param name="phase">0 = first sound; phase 1 không dùng nữa, bỏ qua.</param>
     public static void PlaySheathWeapon(WeaponType weaponType, int phase, AudioSource source = null, float volume = 1f)
     {
-        SoundType soundType = GetSheathWeaponSoundType(weaponType, phase);
+        if (phase != 0) return;
+        SoundType soundType = GetSheathWeaponSoundType(weaponType);
         PlaySound(soundType, source, volume);
     }
 
@@ -210,27 +213,25 @@ public class SoundManager : MonoBehaviour
         }
     }
 
-    private static SoundType GetDrawWeaponSoundType(WeaponType weaponType, int phase = 0)
+    private static SoundType GetDrawWeaponSoundType(WeaponType weaponType)
     {
-        bool usePhase2 = phase != 0;
         return weaponType switch
         {
-            WeaponType.Sword => usePhase2 ? SoundType.Sword_Draw_2 : SoundType.Sword_Draw,
-            WeaponType.Axe => usePhase2 ? SoundType.Axe_Draw_2 : SoundType.Axe_Draw,
-            WeaponType.Mage => usePhase2 ? SoundType.Mage_Draw_2 : SoundType.Mage_Draw,
-            _ => usePhase2 ? SoundType.Sword_Draw_2 : SoundType.Sword_Draw
+            WeaponType.Sword => SoundType.Sword_Draw,
+            WeaponType.Axe => SoundType.Axe_Draw,
+            WeaponType.Mage => SoundType.Mage_Draw,
+            _ => SoundType.Sword_Draw
         };
     }
 
-    private static SoundType GetSheathWeaponSoundType(WeaponType weaponType, int phase = 0)
+    private static SoundType GetSheathWeaponSoundType(WeaponType weaponType)
     {
-        bool usePhase2 = phase != 0;
         return weaponType switch
         {
-            WeaponType.Sword => usePhase2 ? SoundType.Sword_Sheath_2 : SoundType.Sword_Sheath,
-            WeaponType.Axe => usePhase2 ? SoundType.Axe_Sheath_2 : SoundType.Axe_Sheath,
-            WeaponType.Mage => usePhase2 ? SoundType.Mage_Sheath_2 : SoundType.Mage_Sheath,
-            _ => usePhase2 ? SoundType.Sword_Sheath_2 : SoundType.Sword_Sheath
+            WeaponType.Sword => SoundType.Sword_Sheath,
+            WeaponType.Axe => SoundType.Axe_Sheath,
+            WeaponType.Mage => SoundType.Mage_Sheath,
+            _ => SoundType.Sword_Sheath
         };
     }
 
@@ -267,37 +268,14 @@ public class SoundManager : MonoBehaviour
 
     private static SoundType GetSkillSoundType(WeaponType weaponType, AbilityInput input)
     {
-        switch (weaponType)
+        if (weaponType != WeaponType.Axe) return SoundType.Axe_Skill_E;
+        return input switch
         {
-            case WeaponType.Sword:
-                return input switch
-                {
-                    AbilityInput.E => SoundType.Sword_Skill_E,
-                    AbilityInput.R => SoundType.Sword_Skill_R,
-                    AbilityInput.T => SoundType.Sword_Skill_T,
-                    AbilityInput.Q_Ultimate => SoundType.Sword_Skill_Q,
-                    _ => SoundType.Sword_Skill_E
-                };
-            case WeaponType.Axe:
-                return input switch
-                {
-                    AbilityInput.E => SoundType.Axe_Skill_E,
-                    AbilityInput.R => SoundType.Axe_Skill_R,
-                    AbilityInput.T => SoundType.Axe_Skill_T,
-                    AbilityInput.Q_Ultimate => SoundType.Axe_Skill_Q,
-                    _ => SoundType.Axe_Skill_E
-                };
-            case WeaponType.Mage:
-                return input switch
-                {
-                    AbilityInput.E => SoundType.Mage_Skill_E,
-                    AbilityInput.R => SoundType.Mage_Skill_R,
-                    AbilityInput.T => SoundType.Mage_Skill_T,
-                    AbilityInput.Q_Ultimate => SoundType.Mage_Skill_Q,
-                    _ => SoundType.Mage_Skill_E
-                };
-            default:
-                return SoundType.Sword_Skill_E;
-        }
+            AbilityInput.E => SoundType.Axe_Skill_E,
+            AbilityInput.R => SoundType.Axe_Skill_R,
+            AbilityInput.T => SoundType.Axe_Skill_T,
+            AbilityInput.Q_Ultimate => SoundType.Axe_Skill_Q,
+            _ => SoundType.Axe_Skill_E
+        };
     }
 }

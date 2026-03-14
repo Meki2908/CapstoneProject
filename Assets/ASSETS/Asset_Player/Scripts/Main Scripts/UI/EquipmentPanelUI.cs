@@ -50,6 +50,14 @@ public class EquipmentPanelUI : MonoBehaviour
         }
     }
 
+    private void Start()
+    {
+        if (equipmentPanel != null)
+        {
+            equipmentPanel.SetActive(false);
+        }
+    }
+
     private void OnEnable()
     {
         RefreshAll();
