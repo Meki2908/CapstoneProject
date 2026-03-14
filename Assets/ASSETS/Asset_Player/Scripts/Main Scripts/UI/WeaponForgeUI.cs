@@ -61,6 +61,14 @@ public class WeaponForgeUI : MonoBehaviour
         }
     }
 
+    private void Start()
+    {
+        if (forgePanel != null)
+        {
+            forgePanel.SetActive(false);
+        }
+    }
+
     private void OnEnable()
     {
         Subscribe();

@@ -119,6 +119,24 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &496329967 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6835956488733550657, guid: a25327ca3848894439354699f472126a, type: 3}
+  m_PrefabInstance: {fileID: 4165113495087555010}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &496329970
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 496329967}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4dcc75fd145809545be065b6ce6655c8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  hoverType: 3
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
@@ -256,6 +274,60 @@ MonoBehaviour:
     m_MipBias: 0
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
+--- !u!1 &1056924908
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1056924910}
+  - component: {fileID: 1056924909}
+  m_Layer: 0
+  m_Name: GameCursorManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1056924909
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1056924908}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9182a37d5c99eca48ab121ddc52b0390, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  normalCursorTexture: {fileID: 2800000, guid: 81c11de65c5451d41a9a0eb359e343b5, type: 3}
+  buttonHoverCursorTexture: {fileID: 2800000, guid: 4fee88e7ef452b146aa4add22a3da773, type: 3}
+  itemHoverCursorTexture: {fileID: 0}
+  settingsHoverCursorTexture: {fileID: 2800000, guid: 8d61ce1a04c250b4799438ca6642dfde, type: 3}
+  normalHotspot: {x: 0, y: 0}
+  buttonHotspot: {x: 0, y: 0}
+  itemHotspot: {x: 0, y: 0}
+  settingsHotspot: {x: 0, y: 0}
+  syncVisibilityWithCursorLock: 1
+  keepRefreshingCursor: 0
+--- !u!4 &1056924910
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1056924908}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1269.88, y: 702.15564, z: -0.33583564}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1397806557
 GameObject:
   m_ObjectHideFlags: 0
@@ -743,7 +815,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6835956488733550657, guid: a25327ca3848894439354699f472126a, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 496329970}
   m_SourcePrefab: {fileID: 100100000, guid: a25327ca3848894439354699f472126a, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
@@ -752,3 +827,4 @@ SceneRoots:
   - {fileID: 519420032}
   - {fileID: 1397806558}
   - {fileID: 4165113495087555010}
+  - {fileID: 1056924910}

@@ -6043,6 +6043,7 @@ MonoBehaviour:
   btnPortal3: {fileID: 1384374801}
   btnClose: {fileID: 0}
   playerOverride: {fileID: 0}
+  rootPanel: {fileID: 0}
 --- !u!1 &647498992
 GameObject:
   m_ObjectHideFlags: 0
@@ -6538,7 +6539,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 178156860825758609, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1068612423306729459, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_SizeDelta.y
@@ -6715,6 +6716,10 @@ PrefabInstance:
     - target: {fileID: 7069795437127634594, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalPosition.z
       value: -3.1799998
+      objectReference: {fileID: 0}
+    - target: {fileID: 7162914952526654532, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7542521313094387615, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalRotation.w
@@ -10009,6 +10014,60 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 56388320373766458, guid: ed9c4372a6b19fa46b2ef675eb007bb7, type: 3}
   m_PrefabInstance: {fileID: 7705725300346340224}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1171463948
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1171463950}
+  - component: {fileID: 1171463949}
+  m_Layer: 0
+  m_Name: GameCursorManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1171463949
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1171463948}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9182a37d5c99eca48ab121ddc52b0390, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  normalCursorTexture: {fileID: 2800000, guid: 87d28997275f30943a4bf1cdc156bb73, type: 3}
+  buttonHoverCursorTexture: {fileID: 2800000, guid: 0f45821c9378469498c0044ff9068ea2, type: 3}
+  itemHoverCursorTexture: {fileID: 2800000, guid: 486d9c27e3b5dd047967d6c94bbd7fae, type: 3}
+  settingsHoverCursorTexture: {fileID: 0}
+  normalHotspot: {x: 0, y: 0}
+  buttonHotspot: {x: 0, y: 0}
+  itemHotspot: {x: 0, y: 0}
+  settingsHotspot: {x: 0, y: 0}
+  syncVisibilityWithCursorLock: 1
+  keepRefreshingCursor: 0
+--- !u!4 &1171463950
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1171463948}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1269.88, y: 702.15564, z: -0.33583564}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1171884496
 GameObject:
   m_ObjectHideFlags: 0
@@ -51239,6 +51298,7 @@ SceneRoots:
   - {fileID: 1853549367}
   - {fileID: 1033526016}
   - {fileID: 405496749}
+  - {fileID: 1171463950}
   - {fileID: 600511390}
   - {fileID: 1587189382}
   - {fileID: 2034198458}

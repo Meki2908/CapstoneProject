@@ -3,6 +3,7 @@ using UnityEngine;
 public class JumpingState : State
 {
     bool grounded;
+    bool landTriggered;
 
     float gravityValue;
     float jumpHeight;
@@ -21,6 +22,7 @@ public class JumpingState : State
         base.Enter();
 
         grounded = false;
+        landTriggered = false;
         gravityValue = character.gravityValue;
         jumpHeight = character.jumpHeight;
         playerSpeed = character.playerSpeed;
@@ -43,6 +45,12 @@ public class JumpingState : State
 
         if (grounded)
         {
+            if (!landTriggered)
+            {
+                // Base Layer Jumping Up -> LightLanding uses the "land" trigger.
+                character.animator.SetTrigger("land");
+                landTriggered = true;
+            }
             stateMachine.ChangeState(character.standing);
         }
     }
