@@ -4,6 +4,7 @@ public class PlayerAudioEmitter : MonoBehaviour
 {
     [SerializeField] private AudioSource localSource;
     [SerializeField] private WeaponController weaponController;
+    [SerializeField] private PlayerFootstepVFX footstepVfx;
     [SerializeField] private WeaponType fallbackWeaponType = WeaponType.Sword;
     [SerializeField, Range(0f, 1f)] private float defaultVolume = 1f;
 
@@ -13,6 +14,7 @@ public class PlayerAudioEmitter : MonoBehaviour
     {
         localSource = GetComponent<AudioSource>();
         weaponController = GetComponentInChildren<WeaponController>();
+        footstepVfx = GetComponent<PlayerFootstepVFX>();
     }
 
     private void Awake()
@@ -38,6 +40,7 @@ public class PlayerAudioEmitter : MonoBehaviour
     {
         if (character != null && character.isWeaponDrawn) return;
         SoundManager.PlayFootstep(localSource, defaultVolume);
+        footstepVfx?.EmitFromAnimationEvent();
     }
 
     /// <summary>Chỉ phát khi vũ khí đang draw (weapon layer). Gọi từ clip Locomotion/Combat Blend Tree trên Sword/Axe/Mage Layer.</summary>
@@ -45,7 +48,13 @@ public class PlayerAudioEmitter : MonoBehaviour
     {
         if (character == null || !character.isWeaponDrawn) return;
         SoundManager.PlayFootstep(localSource, defaultVolume);
+        footstepVfx?.EmitFromAnimationEvent();
     }
+    
+    /// <summary>Optional: use explicit foot animation events for more accurate spawn.</summary>
+    public void AE_PlayFootstepVFXLeft() => footstepVfx?.EmitLeftFromAnimationEvent();
+    /// <summary>Optional: use explicit foot animation events for more accurate spawn.</summary>
+    public void AE_PlayFootstepVFXRight() => footstepVfx?.EmitRightFromAnimationEvent();
     public void AE_PlayDashSound() => SoundManager.PlayDash(localSource, defaultVolume);
     public void AE_PlayJumpSound() => SoundManager.PlayJump(localSource, defaultVolume);
     public void AE_PlayLandSound() => SoundManager.PlayLand(localSource, defaultVolume);
