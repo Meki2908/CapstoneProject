@@ -9,17 +9,15 @@ using UnityEngine.InputSystem;
 #endif
 
 /// <summary>
-/// NPC General Maria – stationed at the City Gate.
-/// Quest 2, Step 3: Player talks to Maria → step advances to 4 (Enter Dungeon Gate).
+/// NPC Maria – warrior stationed outside the City Gate, near the newly appeared portal.
+/// Quest 2, Step 3: Player talks to Maria → she briefs to enter the dungeon → step 3→4.
 /// </summary>
 public class MariaDialogue : MonoBehaviour
 {
-    // ─── Quest Settings ───────────────────────────────────────────────────
     [Header("── Quest Settings ──")]
     public int questID   = 2;
-    public int stepIndex = 3;   // This NPC handles step 3
+    public int stepIndex = 3;   // Maria handles step 3
 
-    // ─── UI References ────────────────────────────────────────────────────
     [Header("── Prompt UI ──")]
     public GameObject promptPanel;
 
@@ -41,28 +39,31 @@ public class MariaDialogue : MonoBehaviour
     public Text            nextButtonLabelLegacy;
 
     // ─── Dialogue Lines ───────────────────────────────────────────────────
-    [Header("── Dialogue Lines ──")]
+
+    [Header("── Dialogue (Step 3 – First meeting at City Gate) ──")]
     [TextArea(2, 4)]
-    public string[] dialogueLines = {
-        "Halt! ...Oh. You must be the one Leona sent. I am General Maria.",
-        "The situation is dire. The dungeon gates have been breached — dark creatures pour out without end.",
-        "My soldiers have held the line, but we are stretched thin. We need every blade we can get.",
-        "Beyond that gate lies the source of this chaos. Someone has to go in and cut it off.",
-        "Are you willing to face what lurks inside? ...I can see it in your eyes. You are.",
-        "Then go, adventurer. Push through the dungeon gate. We are counting on you.",
-        "For the city. For everyone behind these walls. Good luck — you will need it."
+    public string[] openingLines = {
+        "You made it! Leona said she'd send someone — I'm glad it's you.",
+        "I'm Maria. I've been holding this position for two days now.",
+        "That portal — the one right behind me — it appeared out of nowhere.",
+        "At first it was just strange lights. Then the creatures started coming through.",
+        "My unit has been fighting around the clock. We can stop what comes out, but we can't close it.",
+        "Something on the other side is keeping it open. Someone has to go in and destroy it.",
+        "My soldiers are exhausted. I can't send them in — they've given everything already.",
+        "But you... you're fresh, and you're strong. I can feel it.",
+        "Please. Go through that portal and put an end to this. We'll hold the line as long as we can."
     };
 
+    [Header("── Reminder Dialogue (if player returns) ──")]
     [TextArea(2, 4)]
     public string[] reminderLines = {
-        "The dungeon gate is right ahead. Don't hesitate — we are counting on you!"
+        "The portal is right there. Go in — we'll hold the line out here!"
     };
 
-    // ─── Settings ─────────────────────────────────────────────────────────
     [Header("── Settings ──")]
-    public bool  typewriterEffect = true;
-    public float typewriterSpeed  = 0.03f;
-    public string playerTag       = "Player";
+    public bool   typewriterEffect = true;
+    public float  typewriterSpeed  = 0.03f;
+    public string playerTag        = "Player";
 
     // ─── Runtime ──────────────────────────────────────────────────────────
     string[] _activeLines;
@@ -79,34 +80,22 @@ public class MariaDialogue : MonoBehaviour
         if (promptPanel)   promptPanel.SetActive(false);
         if (dialoguePanel) dialoguePanel.SetActive(false);
         if (npcPortrait && mariaSprite) npcPortrait.sprite = mariaSprite;
-        SetText(npcNameTMP, npcNameLegacy, "General Maria");
+        SetText(npcNameTMP, npcNameLegacy, "Maria");
         if (nextButton) nextButton.onClick.AddListener(OnNextClicked);
     }
 
     void Update()
     {
         if (!_playerNear) return;
-
-        if (_isOpen)
-        {
-            if (IsFPressed()) OnNextClicked();
-            return;
-        }
-
-        // Only allow interaction at the correct quest step
-        if (!IsCorrectStep()) return;
-
-        if (IsFPressed()) OpenDialogue();
+        if (_isOpen) { if (IsFPressed()) OnNextClicked(); return; }
+        if (IsCorrectStep() && IsFPressed()) OpenDialogue();
     }
-
-    // ─── Trigger ──────────────────────────────────────────────────────────
 
     void OnTriggerEnter(Collider other)
     {
         if (!other.CompareTag(playerTag)) return;
         _playerNear = true;
-        if (IsCorrectStep() && promptPanel != null)
-            promptPanel.SetActive(true);
+        if (IsCorrectStep() && promptPanel) promptPanel.SetActive(true);
     }
 
     void OnTriggerExit(Collider other)
@@ -123,30 +112,24 @@ public class MariaDialogue : MonoBehaviour
         if (QuestManager.Instance == null) return false;
         var state = QuestManager.Instance.GetState(questID);
         int step  = QuestManager.Instance.GetStepIndex(questID);
-
-        if (state != QuestManager.QuestState.Active) return false;
-        // Show reminder if past this step (step > stepIndex)
-        return step >= stepIndex;
+        return state == QuestManager.QuestState.Active && step >= stepIndex;
     }
 
     void OpenDialogue()
     {
-        int currentStep = QuestManager.Instance != null
+        int step = QuestManager.Instance != null
             ? QuestManager.Instance.GetStepIndex(questID) : stepIndex;
 
-        // First time (step == stepIndex) → full dialogue; afterwards → reminder
-        _activeLines = (currentStep == stepIndex) ? dialogueLines : reminderLines;
+        _activeLines = (step == stepIndex) ? openingLines : reminderLines;
         _isOpen      = true;
         _lineIndex   = 0;
 
-        if (promptPanel)   promptPanel.SetActive(false);
+        if (promptPanel) promptPanel.SetActive(false);
         if (dialogueCanvas != null) dialogueCanvas.gameObject.SetActive(true);
-        if (dialoguePanel) dialoguePanel.SetActive(true);
+        if (dialoguePanel)  dialoguePanel.SetActive(true);
 
         Cursor.visible   = true;
         Cursor.lockState = CursorLockMode.None;
-
-        SetText(nextButtonLabelTMP, nextButtonLabelLegacy, "Continue →");
         ShowLine(0);
     }
 
@@ -154,8 +137,7 @@ public class MariaDialogue : MonoBehaviour
     {
         index = Mathf.Clamp(index, 0, _activeLines.Length - 1);
         bool isLast = index == _activeLines.Length - 1;
-        SetText(nextButtonLabelTMP, nextButtonLabelLegacy, isLast ? "Understood →" : "Continue →");
-
+        SetText(nextButtonLabelTMP, nextButtonLabelLegacy, isLast ? "Understood!" : "Continue →");
         if (typewriterEffect) StartCoroutine(TypeLine(_activeLines[index]));
         else SetText(dialogueBodyTMP, dialogueBodyLegacy, _activeLines[index]);
     }
@@ -182,41 +164,31 @@ public class MariaDialogue : MonoBehaviour
             SetText(dialogueBodyTMP, dialogueBodyLegacy, _activeLines[_lineIndex]);
             return;
         }
-
         _lineIndex++;
-        if (_lineIndex >= _activeLines.Length)
-        {
-            CloseDialogue();
-            OnDialogueFinished();
-            return;
-        }
+        if (_lineIndex >= _activeLines.Length) { CloseDialogue(); OnDialogueFinished(); return; }
         ShowLine(_lineIndex);
     }
 
     void OnDialogueFinished()
     {
-        // Advance only on first full dialogue (step == stepIndex)
         if (QuestManager.Instance == null) return;
         int step = QuestManager.Instance.GetStepIndex(questID);
         if (step == stepIndex)
         {
-            QuestManager.Instance.AdvanceStep(questID);   // step 3 → 4
-            Debug.Log("[MariaDialogue] Quest 2 advanced to step 4: Enter the Dungeon Gate.");
+            QuestManager.Instance.AdvanceStep(questID);   // step 3 → 4: Enter dungeon gate
+            Debug.Log("[MariaDialogue] Quest 2 step 3 → 4: Enter the Dungeon Gate.");
         }
     }
 
     void CloseDialogue()
     {
         _isOpen = false;
-        if (dialoguePanel) dialoguePanel.SetActive(false);
+        if (dialoguePanel)  dialoguePanel.SetActive(false);
         if (dialogueCanvas != null) dialogueCanvas.gameObject.SetActive(false);
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible   = false;
-        if (EventSystem.current != null)
-            EventSystem.current.SetSelectedGameObject(null);
+        if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
     }
-
-    // ─── Helpers ──────────────────────────────────────────────────────────
 
     bool IsFPressed()
     {
@@ -235,9 +207,10 @@ public class MariaDialogue : MonoBehaviour
 #if UNITY_EDITOR
     void OnDrawGizmosSelected()
     {
-        Gizmos.color = new Color(1f, 0.4f, 0f, 0.3f);
+        Gizmos.color = new Color(1f, 0.3f, 0f, 0.3f);
         Gizmos.DrawWireSphere(transform.position, 3f);
-        UnityEditor.Handles.Label(transform.position + Vector3.up * 2f, "Maria – Interact Zone");
+        UnityEditor.Handles.Label(transform.position + Vector3.up * 2f,
+            "Maria – Quest 2 Step 3\n(City Gate / Portal)");
     }
 #endif
 }

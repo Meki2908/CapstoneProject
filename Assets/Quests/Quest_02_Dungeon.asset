@@ -13,13 +13,29 @@ MonoBehaviour:
   m_Name: Quest_02_Dungeon
   m_EditorClassIdentifier: 
   questID: 2
-  questTitle: Dungeon Desert Quest
-  questDescription: Use the teleport point to teleport to the dungeon gate.
+  questTitle: "The City Gate"
+  questDescription: "Leona has asked you to head to the City Gate and support General
+    Maria, who is leading the defense against the dungeon threat."
   steps:
-  - stepTitle: Find the Gate
-    instruction: Approach the glowing teleport points on the map to find the Dungeon
-      Gate.
+  - stepTitle: "Talk to Leona"
+    instruction: "Speak with Leona at the town square."
+    targetTag: NPC_Leona
+    targetSceneName: 
+  - stepTitle: "Find the Teleport Point"
+    instruction: "Head to the nearby teleport point on the map."
+    targetTag: TeleportPoint_CityGate
+    targetSceneName: 
+  - stepTitle: "Use the Teleport"
+    instruction: "Step into the teleport to reach the City Gate."
+    targetTag: TeleportPoint_CityGate
+    targetSceneName: 
+  - stepTitle: "Talk to General Maria"
+    instruction: "Find General Maria stationed at the City Gate."
+    targetTag: NPC_Maria
+    targetSceneName: 
+  - stepTitle: "Enter the Dungeon Gate"
+    instruction: "Follow Maria's orders and enter the dungeon gate."
     targetTag: DungeonGate
     targetSceneName: 
-  rewardGold: 0
-  rewardExp: 0
+  rewardGold: 150
+  rewardExp: 300

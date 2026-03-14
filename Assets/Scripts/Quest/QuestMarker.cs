@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 
 /// <summary>
 /// Marker chỉ đường hiển thị trên đầu NPC/cổng mục tiêu hiện tại.
@@ -21,15 +22,16 @@ public class QuestMarker : MonoBehaviour
     public GameObject markerObject;  // Gán icon hoặc mũi tên (có thể là sprite, particle...)
 
     [Header("Bobbing animation (tuỳ chọn)")]
-    public bool enableBobbing = true;
+    public bool enableBobbing = false;
     public float bobbingHeight = 0.3f;
     public float bobbingSpeed  = 2f;
 
     Vector3 _startPos;
 
-    void Start()
+    IEnumerator Start()
     {
         _startPos = transform.localPosition;
+        yield return null;  // Wait 1 frame: ensure QuestManager.Awake() has run
         Refresh(-1);
     }
 
@@ -69,7 +71,26 @@ public class QuestMarker : MonoBehaviour
 
     void SetVisible(bool visible)
     {
-        if (markerObject) markerObject.SetActive(visible);
+        if (markerObject == null) return;
+
+        // Nếu markerObject là chính GameObject này → KHÔNG dùng SetActive
+        // (vì sẽ disable script và mất event subscription!)
+        // Thay vào đó toggle Renderer, Light, ParticleSystem
+        if (markerObject == gameObject)
+        {
+            foreach (var r  in GetComponentsInChildren<Renderer>(true))       r.enabled = visible;
+            foreach (var l  in GetComponentsInChildren<Light>(true))          l.enabled = visible;
+            foreach (var ps in GetComponentsInChildren<ParticleSystem>(true))
+            {
+                if (visible) ps.Play();
+                else         { ps.Stop(); ps.Clear(); }
+            }
+        }
+        else
+        {
+            // markerObject là child riêng → SetActive bình thường
+            markerObject.SetActive(visible);
+        }
     }
 
 #if UNITY_EDITOR
