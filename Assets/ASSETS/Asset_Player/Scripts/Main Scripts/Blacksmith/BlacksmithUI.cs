@@ -1,6 +1,8 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using TMPro;
 
 /// <summary>
@@ -26,6 +28,7 @@ public class BlacksmithUI : MonoBehaviour
     [SerializeField] private Image weaponIcon;
     [SerializeField] private TextMeshProUGUI weaponNameText;
     [SerializeField] private Transform weaponGemSlotsParent; // Contains 3 SocketingSlotUI
+    private Button[] weaponGemRemoveButtons;
     [SerializeField] private Image weaponCrystalSlotIcon;
     [SerializeField] private TextMeshProUGUI weaponCrystalSlotText;
     [SerializeField] private Button weaponCrystalClearButton;
@@ -35,9 +38,14 @@ public class BlacksmithUI : MonoBehaviour
     [SerializeField] private Image[] equipmentSlotIcons = new Image[4];
     [SerializeField] private TextMeshProUGUI equipmentNameText;
     [SerializeField] private Transform equipmentGemSlotsParent; // Contains 4 SocketingSlotUI
+    private Button[] equipmentGemRemoveButtons;
     [SerializeField] private Image equipmentCrystalSlotIcon;
     [SerializeField] private TextMeshProUGUI equipmentCrystalSlotText;
     [SerializeField] private Button equipmentCrystalClearButton;
+
+    [Header("Gem Drop Slot (shared)")]
+    [SerializeField] private Image gemDropIcon;
+    [SerializeField] private TextMeshProUGUI gemDropText;
 
     [Header("Success Rate")]
     [SerializeField] private Image successRateBar;
@@ -56,6 +64,13 @@ public class BlacksmithUI : MonoBehaviour
     [SerializeField] private Transform inventoryContent; // Grid content parent
     [SerializeField] private GameObject itemUIPrefab; // Same prefab as main inventory
 
+    [Header("Blacksmith Tooltip (self-contained)")]
+    private GameObject bsTooltipPanel;
+    private TextMeshProUGUI bsTooltipText;
+    private RectTransform bsTooltipRect;
+
+
+
     // ─── Runtime State ───────────────────────────────────────────
     private enum ActiveTab { Weapon, Equipment }
     private ActiveTab currentTab = ActiveTab.Weapon;
@@ -64,6 +79,7 @@ public class BlacksmithUI : MonoBehaviour
     private Item selectedGem = null;
     private int selectedGemSlotIndex = -1;
     private Item selectedCrystal = null;
+    private bool _isClosing = false; // Guard against double Close() invocation
 
     // Cached gem slot UIs
     private SocketingSlotUI[] weaponGemSlots;
@@ -73,6 +89,9 @@ public class BlacksmithUI : MonoBehaviour
 
     void Start()
     {
+        // Create self-contained tooltip (previously done in SetupReferences)
+        CreateBlacksmithTooltip();
+
         // Button listeners
         if (closeButton) closeButton.onClick.AddListener(Close);
         if (weaponTabButton) weaponTabButton.onClick.AddListener(() => SwitchTab(ActiveTab.Weapon));
@@ -99,7 +118,28 @@ public class BlacksmithUI : MonoBehaviour
 
         // Initialize slot callbacks
         InitializeGemSlots(weaponGemSlots, 3);
-        InitializeGemSlots(equipmentGemSlots, 4);
+        InitializeGemSlots(equipmentGemSlots, 1);
+
+        // Wire remove buttons for weapon gem slots
+        if (weaponGemRemoveButtons != null)
+        {
+            for (int i = 0; i < weaponGemRemoveButtons.Length; i++)
+            {
+                int slotIdx = i;
+                if (weaponGemRemoveButtons[i] != null)
+                    weaponGemRemoveButtons[i].onClick.AddListener(() => OnRemoveGemSlot(slotIdx, true));
+            }
+        }
+        // Wire remove buttons for equipment gem slots
+        if (equipmentGemRemoveButtons != null)
+        {
+            for (int i = 0; i < equipmentGemRemoveButtons.Length; i++)
+            {
+                int slotIdx = i;
+                if (equipmentGemRemoveButtons[i] != null)
+                    equipmentGemRemoveButtons[i].onClick.AddListener(() => OnRemoveGemSlot(slotIdx, false));
+            }
+        }
 
         if (resultPanel) resultPanel.SetActive(false);
         if (mainPanel) mainPanel.SetActive(false);
@@ -167,12 +207,17 @@ public class BlacksmithUI : MonoBehaviour
 
     public void Close()
     {
+        if (_isClosing) return; // Prevent double-invocation loop
+        _isClosing = true;
+
         if (mainPanel) mainPanel.SetActive(false);
         ClearSelection();
 
         // Notify NPC to close
         var npc = FindFirstObjectByType<BlacksmithNPC>();
         if (npc != null) npc.CloseBlacksmith();
+
+        _isClosing = false;
     }
 
     // ─── Tab Switching ───────────────────────────────────────────
@@ -243,12 +288,31 @@ public class BlacksmithUI : MonoBehaviour
         RefreshAll();
     }
 
+    void OnRemoveGemSlot(int slotIndex, bool isWeapon)
+    {
+        if (isWeapon)
+        {
+            var wc = FindFirstObjectByType<WeaponController>();
+            if (wc != null && WeaponGemManager.Instance != null)
+            {
+                WeaponGemManager.Instance.RemoveGem(wc.GetCurrentWeapon().weaponType, slotIndex);
+            }
+        }
+        else if (selectedEquipmentSlot >= 0)
+        {
+            EquipmentManager.Instance?.RemoveGemFromSlot(selectedEquipmentSlot, slotIndex);
+        }
+        RefreshAll();
+    }
+
     // ─── Gem / Crystal Selection from Viewports ──────────────────
 
     public void SelectGem(Item gem)
     {
         selectedGem = gem;
+        UpdateGemDropDisplay();
         UpdateSuccessRate();
+        RefreshViewports(); // Highlight selected in inventory
     }
 
     public void SelectCrystal(Item crystal)
@@ -270,6 +334,7 @@ public class BlacksmithUI : MonoBehaviour
         selectedGem = null;
         selectedCrystal = null;
         selectedGemSlotIndex = -1;
+        UpdateGemDropDisplay();
     }
 
     void ClearSelection()
@@ -345,13 +410,14 @@ public class BlacksmithUI : MonoBehaviour
                 break;
         }
 
-        // Auto-hide after 2 seconds (unscaled time since game is paused)
-        CancelInvoke(nameof(HideResult));
-        Invoke(nameof(HideResult), 2f);
+        // Auto-hide after 2 seconds (unscaled time — works even when timeScale=0)
+        StopCoroutine(nameof(HideResultCoroutine));
+        StartCoroutine(HideResultCoroutine());
     }
 
-    void HideResult()
+    IEnumerator HideResultCoroutine()
     {
+        yield return new WaitForSecondsRealtime(2f);
         if (resultPanel) resultPanel.SetActive(false);
     }
 
@@ -364,6 +430,7 @@ public class BlacksmithUI : MonoBehaviour
         RefreshGemSlots();
         RefreshViewports();
         UpdateCrystalSlotDisplay();
+        UpdateGemDropDisplay();
         UpdateSuccessRate();
     }
 
@@ -498,52 +565,83 @@ public class BlacksmithUI : MonoBehaviour
             if (itemUI != null)
             {
                 itemUI.Initialize(item, amount, null, rarity);
+                itemUI.SetRemoveButtonVisible(false);
             }
 
-            // Add click behavior based on item type
+            // ── Rarity background color + border ──
+            var bgImage = go.GetComponent<Image>();
+            if (bgImage != null)
+            {
+                bgImage.color = GetRarityBgColor(rarity);
+            }
+            var rarityOutline = go.AddComponent<Outline>();
+            rarityOutline.effectColor = GetRarityBorderColor(rarity);
+            rarityOutline.effectDistance = new Vector2(3, 3);
+
+            // ── Resize to fit Blacksmith grid cells (90×100) ──
+            var iconTf = go.transform.Find("Item Icon");
+            if (iconTf != null)
+            {
+                var iconRT = iconTf.GetComponent<RectTransform>();
+                if (iconRT != null) iconRT.sizeDelta = new Vector2(55, 55);
+            }
+            var nameText = go.transform.Find("Item name");
+            if (nameText != null)
+            {
+                var tmp = nameText.GetComponent<TMPro.TextMeshProUGUI>();
+                if (tmp != null)
+                {
+                    tmp.fontSize = 11;
+                    tmp.enableWordWrapping = true;
+                    tmp.overflowMode = TMPro.TextOverflowModes.Ellipsis;
+                    tmp.maxVisibleLines = 2;
+                }
+            }
+            var amountText = go.transform.Find("Item amount");
+            if (amountText != null)
+            {
+                var tmp = amountText.GetComponent<TMPro.TextMeshProUGUI>();
+                if (tmp != null) tmp.fontSize = 11;
+            }
+
+            // ── Click behavior — use existing Button from prefab ──
             var btn = go.GetComponent<Button>();
             if (btn == null) btn = go.AddComponent<Button>();
+            // Clear any prefab listeners, add Blacksmith-specific ones
+            btn.onClick.RemoveAllListeners();
             Item capturedItem = item;
 
             if (item.itemType == ItemType.Gems)
             {
-                // Click gem → select for socketing
                 btn.onClick.AddListener(() => SelectGem(capturedItem));
 
-                // Highlight if selected
                 if (selectedGem != null && selectedGem.id == item.id)
                 {
                     var outline = go.AddComponent<Outline>();
-                    outline.effectColor = new Color(1f, 0.84f, 0f); // Gold
+                    outline.effectColor = new Color(1f, 0.84f, 0f);
                     outline.effectDistance = new Vector2(3, 3);
                 }
             }
             else if (item.itemType == ItemType.CrystalStone)
             {
-                // Click crystal → select as crystal stone
                 btn.onClick.AddListener(() => SelectCrystal(capturedItem));
 
-                // Highlight if selected
                 if (selectedCrystal != null && selectedCrystal.id == item.id)
                 {
                     var outline = go.AddComponent<Outline>();
-                    outline.effectColor = new Color(0.6f, 0.2f, 0.9f); // Purple
+                    outline.effectColor = new Color(0.6f, 0.2f, 0.9f);
                     outline.effectDistance = new Vector2(3, 3);
                 }
             }
-            else
-            {
-                // Other items: display only, dim slightly
-                var canvasGroup = go.AddComponent<CanvasGroup>();
-                canvasGroup.alpha = 0.5f;
-                btn.interactable = false;
-            }
+            // All other items (equipment, etc.) — display normally, no dimming
+
+            // ── Tooltip hover via EventTrigger ──
+            AddTooltipTrigger(go, item, rarity);
         }
     }
 
     void UpdateCrystalSlotDisplay()
     {
-        // Update crystal slot display for active tab
         Image icon = (currentTab == ActiveTab.Weapon) ? weaponCrystalSlotIcon : equipmentCrystalSlotIcon;
         TextMeshProUGUI text = (currentTab == ActiveTab.Weapon) ? weaponCrystalSlotText : equipmentCrystalSlotText;
 
@@ -564,16 +662,39 @@ public class BlacksmithUI : MonoBehaviour
 
         if (text != null)
         {
-            if (selectedCrystal != null)
+            text.text = (selectedCrystal != null)
+                ? $"<color={Item.GetRarityColorHex(selectedCrystal.rarity)}>{selectedCrystal.itemName}</color>"
+                : "";
+        }
+
+        SetDropSlotTooltip(icon, selectedCrystal, "Chon Crystal Stone tu hanh trang\nde tang ti le kham thanh cong");
+    }
+
+    void UpdateGemDropDisplay()
+    {
+        if (gemDropIcon != null)
+        {
+            if (selectedGem != null)
             {
-                string colorHex = Item.GetRarityColorHex(selectedCrystal.rarity);
-                text.text = $"<color={colorHex}>{selectedCrystal.itemName}</color>";
+                gemDropIcon.sprite = selectedGem.icon;
+                gemDropIcon.enabled = true;
+                gemDropIcon.color = Color.white;
             }
             else
             {
-                text.text = "Chọn Crystal Stone";
+                gemDropIcon.enabled = true;
+                gemDropIcon.color = new Color(0.3f, 0.3f, 0.3f, 0.3f);
             }
         }
+
+        if (gemDropText != null)
+        {
+            gemDropText.text = (selectedGem != null)
+                ? $"<color={Item.GetRarityColorHex(selectedGem.rarity)}>{selectedGem.itemName}</color>"
+                : "";
+        }
+
+        SetDropSlotTooltip(gemDropIcon, selectedGem, "Chon Gem tu hanh trang\nde kham vao trang bi hoac vu khi");
     }
 
     void UpdateSuccessRate()
@@ -626,7 +747,270 @@ public class BlacksmithUI : MonoBehaviour
 
         if (socketButtonText)
         {
-            socketButtonText.text = canSocket ? "🔨 KHẢM GEM" : "Chọn Gem + Crystal + Slot";
+            socketButtonText.text = canSocket ? "KHAM GEM" : "Chon Gem + Crystal + Slot";
         }
+    }
+
+    // ─── Rarity Color Helpers ────────────────────────────────────
+
+    /// <summary>
+    /// Background color sáng cho ô item theo rarity
+    /// </summary>
+    static Color GetRarityBgColor(Rarity r)
+    {
+        switch (r)
+        {
+            case Rarity.Common:    return new Color(1f, 1f, 1f, 1f);       // Trắng
+            case Rarity.Uncommon:  return new Color(0f, 1f, 0f, 1f);       // Xanh lá 100%
+            case Rarity.Rare:      return new Color(0.2f, 0.6f, 1f, 1f);   // Xanh dương 100%
+            case Rarity.Epic:      return new Color(0.6f, 0.2f, 0.9f, 1f); // Tím 100%
+            case Rarity.Legendary: return new Color(1f, 0.84f, 0f, 1f);    // Vàng 100%
+            case Rarity.Mythic:    return new Color(1f, 0.27f, 0.27f, 1f); // Đỏ 100%
+            default:               return new Color(0.7f, 0.7f, 0.7f, 1f);
+        }
+    }
+
+    /// <summary>
+    /// Border color đậm theo rarity
+    /// </summary>
+    static Color GetRarityBorderColor(Rarity r)
+    {
+        switch (r)
+        {
+            case Rarity.Common:    return new Color(0.4f, 0.4f, 0.4f, 1f);     // Xám đậm
+            case Rarity.Uncommon:  return new Color(0f, 0.5f, 0f, 1f);         // Xanh lá đậm
+            case Rarity.Rare:      return new Color(0.1f, 0.3f, 0.6f, 1f);     // Xanh dương đậm
+            case Rarity.Epic:      return new Color(0.35f, 0.1f, 0.55f, 1f);   // Tím đậm
+            case Rarity.Legendary: return new Color(0.6f, 0.45f, 0f, 1f);      // Vàng đậm
+            case Rarity.Mythic:    return new Color(0.6f, 0.1f, 0.1f, 1f);     // Đỏ đậm
+            default:               return new Color(0.3f, 0.3f, 0.3f, 1f);
+        }
+    }
+
+    void SetDropSlotTooltip(Image slotIcon, Item item, string emptyHint = "")
+    {
+        if (slotIcon == null) return;
+        GameObject container = slotIcon.transform.parent != null ? slotIcon.transform.parent.gameObject : slotIcon.gameObject;
+
+        // Remove old EventTrigger if any
+        var oldTrigger = container.GetComponent<EventTrigger>();
+        if (oldTrigger != null) Destroy(oldTrigger);
+
+        var trigger = container.AddComponent<EventTrigger>();
+
+        if (item != null)
+        {
+            // Has item → show item info tooltip
+            var rarity = item.rarity;
+            var enterEntry = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
+            enterEntry.callback.AddListener((data) => ShowBsTooltip(item, rarity));
+            trigger.triggers.Add(enterEntry);
+        }
+        else if (!string.IsNullOrEmpty(emptyHint))
+        {
+            // Empty slot → show hint tooltip
+            var enterEntry = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
+            enterEntry.callback.AddListener((data) => ShowHintTooltip(emptyHint));
+            trigger.triggers.Add(enterEntry);
+        }
+
+        // PointerExit → always hide
+        var exitEntry = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
+        exitEntry.callback.AddListener((data) => HideBsTooltip());
+        trigger.triggers.Add(exitEntry);
+    }
+
+    void ShowHintTooltip(string hint)
+    {
+        if (bsTooltipPanel == null || bsTooltipText == null) return;
+
+        bsTooltipText.text = $"<color=#FFCC00>{hint}</color>";
+        bsTooltipPanel.SetActive(true);
+
+        float pad = 15f;
+        float maxW = 350f;
+        bsTooltipText.rectTransform.sizeDelta = new Vector2(maxW, 0);
+        bsTooltipText.ForceMeshUpdate();
+        Vector2 pref = bsTooltipText.GetPreferredValues(bsTooltipText.text, maxW, 0);
+        float textW = Mathf.Clamp(pref.x, 150f, maxW);
+        float textH = pref.y;
+
+        bsTooltipText.rectTransform.anchoredPosition = new Vector2(pad, -pad);
+        bsTooltipText.rectTransform.sizeDelta = new Vector2(textW, textH);
+        bsTooltipRect.sizeDelta = new Vector2(textW + pad * 2, textH + pad * 2);
+    }
+
+    // ─── Self-Contained Blacksmith Tooltip ────────────────────────
+
+    void CreateBlacksmithTooltip()
+    {
+        if (mainPanel == null) return;
+
+        // Create panel on the Blacksmith Canvas
+        bsTooltipPanel = new GameObject("BS_Tooltip", typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster));
+        bsTooltipPanel.transform.SetParent(mainPanel.transform, false);
+
+        // Override sorting → always on top
+        var tooltipCanvas = bsTooltipPanel.GetComponent<Canvas>();
+        tooltipCanvas.overrideSorting = true;
+        tooltipCanvas.sortingOrder = 10000;
+
+        bsTooltipRect = bsTooltipPanel.GetComponent<RectTransform>();
+        bsTooltipRect.pivot = new Vector2(0f, 1f);
+        bsTooltipRect.sizeDelta = new Vector2(350, 200); // default, will be resized
+
+        // Background
+        var bg = bsTooltipPanel.AddComponent<Image>();
+        bg.color = new Color(0.05f, 0.05f, 0.1f, 0.95f);
+        bg.raycastTarget = false;
+
+        // Gold border
+        var outline = bsTooltipPanel.AddComponent<Outline>();
+        outline.effectColor = new Color(0.8f, 0.65f, 0.2f, 1f);
+        outline.effectDistance = new Vector2(2, 2);
+
+        // Text child — use SAME anchor as panel (top-left), manual position
+        GameObject textGO = new GameObject("TooltipText", typeof(RectTransform));
+        textGO.transform.SetParent(bsTooltipPanel.transform, false);
+        bsTooltipText = textGO.AddComponent<TextMeshProUGUI>();
+        bsTooltipText.fontSize = 15;
+        bsTooltipText.color = Color.white;
+        bsTooltipText.alignment = TextAlignmentOptions.TopLeft;
+        bsTooltipText.enableWordWrapping = true;
+        bsTooltipText.overflowMode = TMPro.TextOverflowModes.Overflow;
+        bsTooltipText.raycastTarget = false;
+        bsTooltipText.richText = true;
+
+        // Anchor top-left, pivot top-left — position via anchoredPosition
+        var textRT = textGO.GetComponent<RectTransform>();
+        textRT.anchorMin = new Vector2(0, 1);
+        textRT.anchorMax = new Vector2(0, 1);
+        textRT.pivot = new Vector2(0, 1);
+
+        bsTooltipPanel.SetActive(false);
+    }
+
+    void AddTooltipTrigger(GameObject go, Item item, Rarity rarity)
+    {
+        var trigger = go.GetComponent<EventTrigger>();
+        if (trigger == null) trigger = go.AddComponent<EventTrigger>();
+
+        // PointerEnter
+        var enterEntry = new EventTrigger.Entry();
+        enterEntry.eventID = EventTriggerType.PointerEnter;
+        Item capturedItem = item;
+        Rarity capturedRarity = rarity;
+        enterEntry.callback.AddListener((data) => ShowBsTooltip(capturedItem, capturedRarity));
+        trigger.triggers.Add(enterEntry);
+
+        // PointerExit
+        var exitEntry = new EventTrigger.Entry();
+        exitEntry.eventID = EventTriggerType.PointerExit;
+        exitEntry.callback.AddListener((data) => HideBsTooltip());
+        trigger.triggers.Add(exitEntry);
+    }
+
+    void ShowBsTooltip(Item item, Rarity rarity)
+    {
+        if (bsTooltipPanel == null || bsTooltipText == null || item == null) return;
+
+        bsTooltipText.text = BuildTooltipContent(item, rarity);
+        bsTooltipPanel.SetActive(true);
+
+        float pad = 15f;
+        float minW = 280f, maxW = 650f;
+
+        // First pass: get unconstrained preferred size
+        bsTooltipText.rectTransform.sizeDelta = new Vector2(maxW, 0);
+        bsTooltipText.ForceMeshUpdate();
+        Vector2 pref = bsTooltipText.GetPreferredValues(bsTooltipText.text, maxW, 0);
+        float textW = Mathf.Clamp(pref.x, minW, maxW);
+        float textH = pref.y;
+
+        // If width clamped, recalculate height
+        if (textW < pref.x)
+        {
+            pref = bsTooltipText.GetPreferredValues(bsTooltipText.text, textW, 0);
+            textH = pref.y;
+        }
+
+        // Set text rect: top-left anchor, offset by padding
+        bsTooltipText.rectTransform.anchoredPosition = new Vector2(pad, -pad);
+        bsTooltipText.rectTransform.sizeDelta = new Vector2(textW, textH);
+
+        // Panel = text + padding on all sides
+        bsTooltipRect.sizeDelta = new Vector2(textW + pad * 2, textH + pad * 2);
+    }
+
+    void HideBsTooltip()
+    {
+        if (bsTooltipPanel != null)
+            bsTooltipPanel.SetActive(false);
+    }
+
+    void Update()
+    {
+        // Follow mouse when tooltip is showing
+        if (bsTooltipPanel != null && bsTooltipPanel.activeSelf && bsTooltipRect != null)
+        {
+            Vector2 localPos;
+            var parentCanvas = mainPanel.GetComponentInParent<Canvas>();
+            if (parentCanvas != null)
+            {
+                Camera cam = parentCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : parentCanvas.worldCamera;
+                RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                    parentCanvas.GetComponent<RectTransform>(),
+                    Input.mousePosition + new Vector3(15, -15, 0),
+                    cam, out localPos);
+                bsTooltipRect.localPosition = localPos;
+            }
+        }
+    }
+
+    string BuildTooltipContent(Item item, Rarity rarity)
+    {
+        var sb = new System.Text.StringBuilder();
+        string rarityColor = Item.GetRarityColorHex(rarity);
+        sb.AppendLine($"<color={rarityColor}><b>{item.itemName}</b></color>");
+        sb.AppendLine($"<color=#888888>{rarity}</color>");
+        sb.AppendLine();
+
+        switch (item.itemType)
+        {
+            case ItemType.Equipment:
+                sb.AppendLine($"<color=#FFD700>Slot: {item.equipmentSlot}</color>");
+                if (item.ScaledHPBonus(rarity) > 0f) sb.AppendLine($"<color=#00FF00>HP: +{item.ScaledHPBonus(rarity):F0}</color>");
+                if (item.ScaledDefenseBonus(rarity) > 0f) sb.AppendLine($"<color=#00AAFF>Defense: +{item.ScaledDefenseBonus(rarity):F0}</color>");
+                if (item.ScaledCritRateBonus(rarity) > 0f) sb.AppendLine($"<color=#FF00FF>Crit Rate: +{item.ScaledCritRateBonus(rarity)*100:F1}%</color>");
+                if (item.ScaledCritDamageMultiplier(rarity) > 1f) sb.AppendLine($"<color=#FF00FF>Crit Dmg: +{(item.ScaledCritDamageMultiplier(rarity)-1)*100:F1}%</color>");
+                if (item.ScaledMovementSpeedBonus(rarity) > 0f) sb.AppendLine($"<color=#00FFFF>Move Speed: +{item.ScaledMovementSpeedBonus(rarity)*100:F1}%</color>");
+                if (item.ScaledAttackSpeedBonus(rarity) > 0f) sb.AppendLine($"<color=#FFAA00>Atk Speed: +{item.ScaledAttackSpeedBonus(rarity)*100:F1}%</color>");
+                if (!string.IsNullOrEmpty(item.passiveDescription))
+                {
+                    sb.AppendLine();
+                    sb.AppendLine($"<color=#FFD700>Passive:</color>");
+                    sb.AppendLine($"<color=#FFFF00>{item.passiveDescription}</color>");
+                }
+                break;
+            case ItemType.Gems:
+                sb.AppendLine($"<color=#FFD700>Type: {item.gemType}</color>");
+                string gemStat = item.GetGemStatText();
+                if (!string.IsNullOrEmpty(gemStat)) sb.AppendLine($"<color=#00FF00>{gemStat}</color>");
+                break;
+            case ItemType.CrystalStone:
+                sb.AppendLine("<color=#00FFFF>Crystal Stone</color>");
+                sb.AppendLine("<color=#888888>Dung de kham gem vao trang bi</color>");
+                break;
+            case ItemType.Consumable:
+                if (item.itemName != null && item.itemName.ToLower().Contains("health potion"))
+                    sb.AppendLine("<color=#00FF00>+ 50% HP</color>");
+                else
+                    sb.AppendLine("<color=#FFD700>Consumable</color>");
+                break;
+            default:
+                sb.AppendLine("<color=#FFD700>Material</color>");
+                break;
+        }
+        return sb.ToString().TrimEnd();
     }
 }

@@ -439,10 +439,10 @@ public class InventoryController : MonoBehaviour
             return;
         }
 
-        // Clear existing UI items
-        foreach (Transform child in itemsContentContainer)
+        // Clear existing UI items — dùng DestroyImmediate để xoá ngay, tránh lộn thứ tự
+        for (int i = itemsContentContainer.childCount - 1; i >= 0; i--)
         {
-            Destroy(child.gameObject);
+            DestroyImmediate(itemsContentContainer.GetChild(i).gameObject);
         }
         currentItemUIs.Clear();
 

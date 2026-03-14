@@ -314,7 +314,7 @@ public class InventoryManager : MonoBehaviour
     /// </summary>
     public List<(Item item, int amount, Rarity rarity)> GetAllItemsWithRarity()
     {
-        var result = new List<(Item, int, Rarity)>();
+        var result = new List<(Item item, int amount, Rarity rarity)>();
 
         foreach (var kvp in inventoryItems)
         {
@@ -324,6 +324,25 @@ public class InventoryManager : MonoBehaviour
             {
                 result.Add((itemLookup[id], kvp.Value, r));
             }
+        }
+
+        // Auto-sort: ItemType → Rarity (desc) → Name (asc)
+        result.Sort((a, b) =>
+        {
+            int typeCompare = a.item.itemType.CompareTo(b.item.itemType);
+            if (typeCompare != 0) return typeCompare;
+
+            int rarityCompare = b.rarity.CompareTo(a.rarity); // descending
+            if (rarityCompare != 0) return rarityCompare;
+
+            return string.Compare(a.item.itemName, b.item.itemName, System.StringComparison.OrdinalIgnoreCase);
+        });
+
+        // Debug: print sorted order
+        for (int i = 0; i < result.Count && i < 15; i++)
+        {
+            var entry = result[i];
+            Debug.Log($"[InventoryManager] Sort[{i}]: {entry.item.itemType} | {entry.rarity} | {entry.item.itemName}");
         }
 
         return result;
