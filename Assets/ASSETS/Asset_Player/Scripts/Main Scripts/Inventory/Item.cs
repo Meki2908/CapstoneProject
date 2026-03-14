@@ -1,7 +1,7 @@
 using UnityEngine;
 
 public enum ItemType { Equipment, Consumable, Material, Gems, CrystalStone }
-public enum Rarity { Common, Uncommon, Rare, Epic, Legendary, Mythic }
+public enum Rarity { None, Common, Uncommon, Rare, Epic, Legendary, Mythic }
 public enum GemType { MovementSpeed, CooldownReduction, Damage }
 public enum EquipmentSlotType { Head, Body, Legs, Accessory }
 
@@ -63,6 +63,7 @@ public class Item : ScriptableObject
     {
         switch (r)
         {
+            case Rarity.None:      return 1.0f;
             case Rarity.Common:    return 1.0f;
             case Rarity.Uncommon:  return 1.5f;
             case Rarity.Rare:      return 1.75f;
@@ -88,6 +89,7 @@ public class Item : ScriptableObject
     {
         switch (r)
         {
+            case Rarity.None:      return "#AAAAAA"; // Xám (không có rarity)
             case Rarity.Common:    return "#FFFFFF"; // Trắng
             case Rarity.Uncommon:  return "#00FF00"; // Xanh lá
             case Rarity.Rare:      return "#3498DB"; // Xanh dương
