@@ -107,86 +107,32 @@ MonoBehaviour:
     changePitch: 0
     pitchMin: 0
     pitchMax: 0
-  - name: Sword_Skill_E
+  - name: Axe_Skill_E
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: bcf0e4aa91f7a9444a25f64ee8d22ea2, type: 3}
+    changePitch: 0
+    pitchMin: 0
+    pitchMax: 0
+  - name: Axe_Skill_R
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: c0fbd0b7d67506b43a8531d98be75774, type: 3}
+    changePitch: 0
+    pitchMin: 0
+    pitchMax: 0
+  - name: Axe_Skill_T
     volume: 1
     mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
     sounds: []
     changePitch: 0
     pitchMin: 0
     pitchMax: 0
-  - name: Sword_Skill_R
-    volume: 1
-    mixer: {fileID: 0}
-    sounds: []
-    changePitch: 0
-    pitchMin: 0
-    pitchMax: 0
-  - name: Sword_Skill_T
-    volume: 1
-    mixer: {fileID: 0}
-    sounds: []
-    changePitch: 0
-    pitchMin: 0
-    pitchMax: 0
-  - name: Sword_Skill_Q
-    volume: 1
-    mixer: {fileID: 0}
-    sounds: []
-    changePitch: 0
-    pitchMin: 0
-    pitchMax: 0
-  - name: Axe_Skill_E
-    volume: 1
-    mixer: {fileID: 0}
-    sounds: []
-    changePitch: 0
-    pitchMin: 0
-    pitchMax: 0
-  - name: Axe_Skill_R
-    volume: 1
-    mixer: {fileID: 0}
-    sounds: []
-    changePitch: 0
-    pitchMin: 0
-    pitchMax: 0
-  - name: Axe_Skill_T
-    volume: 1
-    mixer: {fileID: 0}
-    sounds: []
-    changePitch: 0
-    pitchMin: 0
-    pitchMax: 0
   - name: Axe_Skill_Q
     volume: 1
-    mixer: {fileID: 0}
-    sounds: []
-    changePitch: 0
-    pitchMin: 0
-    pitchMax: 0
-  - name: Mage_Skill_E
-    volume: 1
-    mixer: {fileID: 0}
-    sounds: []
-    changePitch: 0
-    pitchMin: 0
-    pitchMax: 0
-  - name: Mage_Skill_R
-    volume: 1
-    mixer: {fileID: 0}
-    sounds: []
-    changePitch: 0
-    pitchMin: 0
-    pitchMax: 0
-  - name: Mage_Skill_T
-    volume: 1
-    mixer: {fileID: 0}
-    sounds: []
-    changePitch: 0
-    pitchMin: 0
-    pitchMax: 0
-  - name: Mage_Skill_Q
-    volume: 1
-    mixer: {fileID: 0}
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
     sounds: []
     changePitch: 0
     pitchMin: 0
@@ -199,12 +145,16 @@ MonoBehaviour:
     pitchMin: 0
     pitchMax: 0
   - name: Footstep_Default
-    volume: 0.2
+    volume: 0.4
     mixer: {fileID: 6968042113699393676, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
     sounds:
-    - {fileID: 8300000, guid: b2c060ec174e729498d3348867f30f29, type: 3}
-    - {fileID: 8300000, guid: 3bd76f0348255464e8edd660a65839af, type: 3}
-    changePitch: 1
+    - {fileID: 8300000, guid: 507e4d352bef6df4dbafef3b0b69145f, type: 3}
+    - {fileID: 8300000, guid: 1aba0011e43297440922439b7f63a99e, type: 3}
+    - {fileID: 8300000, guid: 64c02e6b087573543993cc76f448c29b, type: 3}
+    - {fileID: 8300000, guid: e3ad964d768158b4cac65ba28f0eae6e, type: 3}
+    - {fileID: 8300000, guid: d60c5c3442bcf9e4bbb68e456dc9114d, type: 3}
+    - {fileID: 8300000, guid: 68092ba7cab19264d8486a047ec1c495, type: 3}
+    changePitch: 0
     pitchMin: 0.92
     pitchMax: 1.08
   - name: Dash
@@ -288,8 +238,8 @@ MonoBehaviour:
     volume: 1
     mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
     sounds:
-    - {fileID: 8300000, guid: 947ed1d0ec65b5d41b396ca51d0ca811, type: 3}
-    changePitch: 1
+    - {fileID: 8300000, guid: 99cdf8671b8553d4c94a6f097ee1fafd, type: 3}
+    changePitch: 0
     pitchMin: 0
     pitchMax: 0
   - name: Mage_Sheath
@@ -300,49 +250,6 @@ MonoBehaviour:
     changePitch: 0
     pitchMin: 0
     pitchMax: 0
-  - name: Sword_Draw_2
-    volume: 1
-    mixer: {fileID: 0}
-    sounds: []
-    changePitch: 0
-    pitchMin: 0
-    pitchMax: 0
-  - name: Sword_Sheath_2
-    volume: 1
-    mixer: {fileID: 0}
-    sounds: []
-    changePitch: 0
-    pitchMin: 0
-    pitchMax: 0
-  - name: Axe_Draw_2
-    volume: 1
-    mixer: {fileID: 0}
-    sounds: []
-    changePitch: 0
-    pitchMin: 0
-    pitchMax: 0
-  - name: Axe_Sheath_2
-    volume: 1
-    mixer: {fileID: 0}
-    sounds: []
-    changePitch: 0
-    pitchMin: 0
-    pitchMax: 0
-  - name: Mage_Draw_2
-    volume: 1
-    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
-    sounds:
-    - {fileID: 8300000, guid: a6020f5118caab44cbf0b8a7abacae2a, type: 3}
-    changePitch: 1
-    pitchMin: 0
-    pitchMax: 0
-  - name: Mage_Sheath_2
-    volume: 1
-    mixer: {fileID: 0}
-    sounds: []
-    changePitch: 0
-    pitchMin: 0
-    pitchMax: 0
   sceneFootsteps:
   - sceneName: MapSaMac
     soundList:
@@ -350,8 +257,13 @@ MonoBehaviour:
       volume: 1
       mixer: {fileID: 6968042113699393676, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
       sounds:
-      - {fileID: 8300000, guid: 80d96d1f44d48df44b3ea787ff75605c, type: 3}
-      - {fileID: 8300000, guid: 1db5f2d3c03d75e4882f456376a60c92, type: 3}
-      changePitch: 1
+      - {fileID: 8300000, guid: 0323a3bec43f7d64daacfac39c209aa8, type: 3}
+      - {fileID: 8300000, guid: ec52cde7cd633d34ea4a904b24a4db2a, type: 3}
+      - {fileID: 8300000, guid: 037662ec904cb6d4897c03c6e434216d, type: 3}
+      - {fileID: 8300000, guid: 73823a9177ea4f94f8b3fbea6c10f391, type: 3}
+      - {fileID: 8300000, guid: c25510a682c92d14a878b3f38103bf24, type: 3}
+      - {fileID: 8300000, guid: fab438196a92063429200bbc4fb98250, type: 3}
+      - {fileID: 8300000, guid: 6fef95cb9695b9c41be47374b34fccc4, type: 3}
+      changePitch: 0
       pitchMin: 0
       pitchMax: 0
