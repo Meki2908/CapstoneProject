@@ -161,12 +161,16 @@ public class EnemyDeathBridge : MonoBehaviour
     {
         switch (enemyType)
         {
-            case 0: return 100;   // Skeleton
-            case 1: return 150;  // Archer
-            case 2: return 300;   // Monster
-            case 3: return 350;   // Lich
-            case 4: return 1500;  // Boss
-            case 5: return 3000;  // Demon
+            case 0: return 100;    // Skeleton
+            case 1: return 150;    // Archer
+            case 2: return 300;    // Monster
+            case 3: return 350;    // Lich
+            case 4: return 1500;   // Boss (chung)
+            case 5: return 3000;   // Demon
+            case 6: return 1500;   // Stoneogre
+            case 7: return 1800;   // Golem
+            case 8: return 2000;   // Minotaur
+            case 9: return 2500;   // Ifrit
             default: return 100;
         }
     }

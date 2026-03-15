@@ -82,18 +82,66 @@ public class DungeonWaveManager : MonoBehaviour
 
     [Tooltip("Drop table cho Skeleton/Archer")]
     public List<DungeonDropEntry> skeletDrops = new List<DungeonDropEntry>();
+    [Tooltip("Số item tối đa rơi mỗi Skeleton/Archer (0 = không giới hạn)")]
+    public int skeletMaxDrops = 2;
+    [Tooltip("EXP rơi mỗi Skeleton/Archer")]
+    public int skeletExp = 100;
 
     [Tooltip("Drop table cho Monster (Orc, Troll, Guul)")]
     public List<DungeonDropEntry> monsterDrops = new List<DungeonDropEntry>();
+    [Tooltip("Số item tối đa rơi mỗi Monster (0 = không giới hạn)")]
+    public int monsterMaxDrops = 3;
+    [Tooltip("EXP rơi mỗi Monster")]
+    public int monsterExp = 300;
 
     [Tooltip("Drop table cho Lich")]
     public List<DungeonDropEntry> lichDrops = new List<DungeonDropEntry>();
+    [Tooltip("Số item tối đa rơi mỗi Lich (0 = không giới hạn)")]
+    public int lichMaxDrops = 3;
+    [Tooltip("EXP rơi mỗi Lich")]
+    public int lichExp = 350;
 
-    [Tooltip("Drop table cho Boss (Stoneogre, Golem, Minotaur, Ifrit)")]
+    [Tooltip("Drop table cho Boss chung (fallback)")] 
     public List<DungeonDropEntry> bossDrops = new List<DungeonDropEntry>();
+    [Tooltip("Số item tối đa rơi mỗi Boss chung (0 = không giới hạn)")]
+    public int bossMaxDrops = 5;
+    [Tooltip("EXP rơi mỗi Boss chung")]
+    public int bossExp = 1500;
 
     [Tooltip("Drop table cho Demon")]
     public List<DungeonDropEntry> demonDrops = new List<DungeonDropEntry>();
+    [Tooltip("Số item tối đa rơi mỗi Demon (0 = không giới hạn)")]
+    public int demonMaxDrops = 5;
+    [Tooltip("EXP rơi mỗi Demon")]
+    public int demonExp = 3000;
+
+    [Tooltip("Drop table cho Stoneogre")]
+    public List<DungeonDropEntry> stoneogreDrops = new List<DungeonDropEntry>();
+    [Tooltip("Số item tối đa rơi mỗi Stoneogre (0 = không giới hạn)")]
+    public int stoneogreMaxDrops = 5;
+    [Tooltip("EXP rơi mỗi Stoneogre")]
+    public int stoneogreExp = 1500;
+
+    [Tooltip("Drop table cho Golem")]
+    public List<DungeonDropEntry> golemDrops = new List<DungeonDropEntry>();
+    [Tooltip("Số item tối đa rơi mỗi Golem (0 = không giới hạn)")]
+    public int golemMaxDrops = 5;
+    [Tooltip("EXP rơi mỗi Golem")]
+    public int golemExp = 1800;
+
+    [Tooltip("Drop table cho Minotaur")]
+    public List<DungeonDropEntry> minotaurDrops = new List<DungeonDropEntry>();
+    [Tooltip("Số item tối đa rơi mỗi Minotaur (0 = không giới hạn)")]
+    public int minotaurMaxDrops = 5;
+    [Tooltip("EXP rơi mỗi Minotaur")]
+    public int minotaurExp = 2000;
+
+    [Tooltip("Drop table cho Ifrit")]
+    public List<DungeonDropEntry> ifritDrops = new List<DungeonDropEntry>();
+    [Tooltip("Số item tối đa rơi mỗi Ifrit (0 = không giới hạn)")]
+    public int ifritMaxDrops = 5;
+    [Tooltip("EXP rơi mỗi Ifrit")]
+    public int ifritExp = 2500;
 
     [System.Serializable]
     public class DungeonDropEntry
@@ -233,6 +281,14 @@ public class DungeonWaveManager : MonoBehaviour
 
         // ĐẢM BẢO tất cả parent objects của UI đều active (GUI_Dungeon có thể bị tắt mặc định)
         EnsureUIParentsActive();
+
+        // Đảm bảo ItemPickupNotification tồn tại cho item drops (Genshin-style notification)
+        if (ItemPickupNotification.Instance == null)
+        {
+            var notifGO = new GameObject("ItemPickupNotification");
+            notifGO.AddComponent<ItemPickupNotification>();
+            Debug.Log("[DungeonWave] Created ItemPickupNotification singleton");
+        }
 
         // Ẩn tất cả UI
         HideAllUI();
@@ -1004,43 +1060,51 @@ public class DungeonWaveManager : MonoBehaviour
                     Debug.Log($"[DungeonWave] Added EnemyDeathBridge to {activeEnemy.name}");
                 }
 
-                // Thêm ItemDropSpawner để enemy rơi item khi chết
-                if (activeEnemy.GetComponent<ItemDropSpawner>() == null)
+                // Thêm hoặc lấy ItemDropSpawner (KHÔNG skip nếu đã có)
+                var spawner = activeEnemy.GetComponent<ItemDropSpawner>();
+                if (spawner == null)
                 {
-                    var spawner = activeEnemy.AddComponent<ItemDropSpawner>();
-                    
-                    // Set orb prefab nếu có
-                    if (itemOrbPrefab != null)
-                    {
-                        spawner.SetOrbPrefab(itemOrbPrefab);
-                    }
-                    
-                    // Chọn drop table theo enemy type
-                    var enemyScript = activeEnemy.GetComponent<EnemyScript>();
-                    List<DungeonDropEntry> selectedDrops = GetDropTableForEnemy(enemyScript);
-                    
-                    if (selectedDrops != null && selectedDrops.Count > 0)
-                    {
-                        var drops = new List<ItemDropSpawner.ItemDropEntry>();
-                        foreach (var entry in selectedDrops)
-                        {
-                            if (entry.item == null) continue;
-                            // Tự tính dropChance từ item.rarity
-                            float chance = GetDropChanceByRarity(entry.item.rarity);
-                            drops.Add(new ItemDropSpawner.ItemDropEntry
-                            {
-                                item = entry.item,
-                                dropChance = chance,
-                                minQuantity = entry.minQuantity,
-                                maxQuantity = entry.maxQuantity
-                            });
-                        }
-                        spawner.SetDropTable(drops, dropExpOrb);
-                    }
-                    
-                    string typeName = enemyScript != null ? enemyScript.enemyType.ToString() : "unknown";
-                    Debug.Log($"[DungeonWave] Added ItemDropSpawner to {activeEnemy.name} (type={typeName}, {selectedDrops?.Count ?? 0} items)");
+                    spawner = activeEnemy.AddComponent<ItemDropSpawner>();
                 }
+                    
+                // Set orb prefab nếu có
+                if (itemOrbPrefab != null)
+                {
+                    spawner.SetOrbPrefab(itemOrbPrefab);
+                }
+                    
+                // Chọn drop table theo enemy type
+                var enemyScript = activeEnemy.GetComponent<EnemyScript>();
+                List<DungeonDropEntry> selectedDrops = GetDropTableForEnemy(enemyScript);
+                    
+                // Build drop list
+                var drops = new List<ItemDropSpawner.ItemDropEntry>();
+                if (selectedDrops != null && selectedDrops.Count > 0)
+                {
+                    foreach (var entry in selectedDrops)
+                    {
+                        if (entry.item == null) continue;
+                        // useRandomRarity → 50% đồng đều, không phụ thuộc SO rarity
+                        float chance = entry.item.useRandomRarity 
+                            ? 0.5f 
+                            : GetDropChanceByRarity(entry.item.rarity);
+                        drops.Add(new ItemDropSpawner.ItemDropEntry
+                        {
+                            item = entry.item,
+                            dropChance = chance,
+                            minQuantity = entry.minQuantity,
+                            maxQuantity = entry.maxQuantity
+                        });
+                    }
+                }
+                    
+                // LUÔN gọi SetDropTable — cả khi drops rỗng (để set EXP + maxDrops)
+                int maxDrops = GetMaxDropsForEnemy(enemyScript);
+                int customExp = GetExpForEnemy(enemyScript);
+                spawner.SetDropTable(drops, dropExpOrb, maxDrops, customExp);
+                    
+                string typeName = enemyScript != null ? enemyScript.enemyType.ToString() : "unknown";
+                Debug.Log($"[DungeonWave] Setup ItemDropSpawner on {activeEnemy.name} (type={typeName}, {drops.Count} items, maxDrops={maxDrops}, exp={customExp})");
 
                 break; // Chỉ thêm vào một enemy đang active
             }
@@ -1052,7 +1116,7 @@ public class DungeonWaveManager : MonoBehaviour
     /// </summary>
     private List<DungeonDropEntry> GetDropTableForEnemy(EnemyScript enemyScript)
     {
-        if (enemyScript == null) return skeletDrops; // Fallback
+        if (enemyScript == null) return skeletDrops;
 
         switch (enemyScript.enemyType)
         {
@@ -1067,8 +1131,82 @@ public class DungeonWaveManager : MonoBehaviour
                 return bossDrops;
             case EnemyScript.EnemyType.demon:
                 return demonDrops;
+            case EnemyScript.EnemyType.stoneogre:
+                return stoneogreDrops.Count > 0 ? stoneogreDrops : bossDrops;
+            case EnemyScript.EnemyType.golem:
+                return golemDrops.Count > 0 ? golemDrops : bossDrops;
+            case EnemyScript.EnemyType.minotaur:
+                return minotaurDrops.Count > 0 ? minotaurDrops : bossDrops;
+            case EnemyScript.EnemyType.ifrit:
+                return ifritDrops.Count > 0 ? ifritDrops : bossDrops;
             default:
                 return skeletDrops;
+        }
+    }
+
+    /// <summary>
+    /// Lấy số item tối đa rơi theo enemy type
+    /// </summary>
+    private int GetMaxDropsForEnemy(EnemyScript enemyScript)
+    {
+        if (enemyScript == null) return skeletMaxDrops;
+
+        switch (enemyScript.enemyType)
+        {
+            case EnemyScript.EnemyType.skelet:
+            case EnemyScript.EnemyType.archer:
+                return skeletMaxDrops;
+            case EnemyScript.EnemyType.monster:
+                return monsterMaxDrops;
+            case EnemyScript.EnemyType.lich:
+                return lichMaxDrops;
+            case EnemyScript.EnemyType.boss:
+                return bossMaxDrops;
+            case EnemyScript.EnemyType.demon:
+                return demonMaxDrops;
+            case EnemyScript.EnemyType.stoneogre:
+                return stoneogreMaxDrops;
+            case EnemyScript.EnemyType.golem:
+                return golemMaxDrops;
+            case EnemyScript.EnemyType.minotaur:
+                return minotaurMaxDrops;
+            case EnemyScript.EnemyType.ifrit:
+                return ifritMaxDrops;
+            default:
+                return skeletMaxDrops;
+        }
+    }
+
+    /// <summary>
+    /// Lấy EXP rơi theo enemy type (chỉnh trong Inspector)
+    /// </summary>
+    private int GetExpForEnemy(EnemyScript enemyScript)
+    {
+        if (enemyScript == null) return skeletExp;
+
+        switch (enemyScript.enemyType)
+        {
+            case EnemyScript.EnemyType.skelet:
+            case EnemyScript.EnemyType.archer:
+                return skeletExp;
+            case EnemyScript.EnemyType.monster:
+                return monsterExp;
+            case EnemyScript.EnemyType.lich:
+                return lichExp;
+            case EnemyScript.EnemyType.boss:
+                return bossExp;
+            case EnemyScript.EnemyType.demon:
+                return demonExp;
+            case EnemyScript.EnemyType.stoneogre:
+                return stoneogreExp;
+            case EnemyScript.EnemyType.golem:
+                return golemExp;
+            case EnemyScript.EnemyType.minotaur:
+                return minotaurExp;
+            case EnemyScript.EnemyType.ifrit:
+                return ifritExp;
+            default:
+                return skeletExp;
         }
     }
 

@@ -60,6 +60,19 @@ public class ItemTooltipManager : MonoBehaviour
             tooltipText = GetComponentInChildren<TextMeshProUGUI>();
         }
 
+        // === FIX FLICKER: Tooltip KHÔNG BAO GIỜ chặn raycast ===
+        // Nếu tooltip chặn pointer → OnPointerExit trên item → hide → OnPointerEnter → show → chớp
+        CanvasGroup cg = tooltipPanel.GetComponent<CanvasGroup>();
+        if (cg == null) cg = tooltipPanel.AddComponent<CanvasGroup>();
+        cg.blocksRaycasts = false;  // Tooltip không chặn click/hover
+        cg.interactable = false;    // Không tương tác được
+
+        // Tắt raycastTarget trên từng component
+        if (tooltipBackground != null)
+            tooltipBackground.raycastTarget = false;
+        if (tooltipText != null)
+            tooltipText.raycastTarget = false;
+
         // Find canvas
         canvas = GetComponentInParent<Canvas>();
         if (canvas == null)
@@ -246,6 +259,13 @@ public class ItemTooltipManager : MonoBehaviour
         sb.AppendLine($"<color=#888888>{rarity}</color>");
         sb.AppendLine();
 
+        // Description
+        if (!string.IsNullOrEmpty(item.description))
+        {
+            sb.AppendLine(item.description);
+            sb.AppendLine();
+        }
+
         // Item type specific stats
         switch (item.itemType)
         {
@@ -254,6 +274,9 @@ public class ItemTooltipManager : MonoBehaviour
                 break;
             case ItemType.Gems:
                 sb.AppendLine(GetGemStats(item));
+                break;
+            case ItemType.CrystalStone:
+                sb.AppendLine(GetCrystalStoneStats(item));
                 break;
             case ItemType.Consumable:
                 sb.AppendLine(GetConsumableStats(item));
@@ -375,8 +398,32 @@ public class ItemTooltipManager : MonoBehaviour
         
         sb.AppendLine("<color=#FFD700>Material</color>");
         
-        // Add any material-specific stats here if needed
-        
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Get formatted crystal stone stats with success rates
+    /// </summary>
+    private string GetCrystalStoneStats(Item item)
+    {
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+
+        sb.AppendLine("<color=#00FFFF>Crystal Stone</color>");
+        sb.AppendLine("<color=#888888>Nguyên liệu khảm - tăng tỉ lệ thành công</color>");
+        sb.AppendLine();
+        sb.AppendLine("<color=#FFD700>Tỉ lệ thành công:</color>");
+
+        if (SocketingManager.Instance != null)
+        {
+            string[] rarityNames = { "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic" };
+            string[] rarityHexes = { "FFFFFF", "00FF00", "3498DB", "9B59B6", "FFD700", "FF4444" };
+            for (int ri = 0; ri < rarityNames.Length; ri++)
+            {
+                float rate = SocketingManager.Instance.CalculateSuccessRate((Rarity)(ri + 1), item.rarity);
+                sb.AppendLine($"  <color=#{rarityHexes[ri]}>{rarityNames[ri]}</color>: {rate * 100f:F0}%");
+            }
+        }
+
         return sb.ToString();
     }
 

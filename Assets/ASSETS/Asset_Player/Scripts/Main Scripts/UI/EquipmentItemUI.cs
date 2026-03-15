@@ -94,26 +94,9 @@ public class EquipmentItemUI : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         canvasGroup.alpha = 1f;
         canvasGroup.blocksRaycasts = true;
 
-        // Check if dropped on an equipment slot
-        EquipmentSlotDropZone dropZone = null;
-        if (eventData.pointerCurrentRaycast.gameObject != null)
-        {
-            dropZone = eventData.pointerCurrentRaycast.gameObject.GetComponent<EquipmentSlotDropZone>();
-        }
-
-        if (dropZone != null && dropZone.CanAcceptEquipment(equipmentItem))
-        {
-            // Drop successful - OnDrop in EquipmentSlotDropZone will handle equip and inventory removal
-            // Return to original position (the equipment will be removed from viewport by refresh)
-            transform.SetParent(originalParent);
-            rectTransform.anchoredPosition = Vector2.zero;
-        }
-        else
-        {
-            // Return to original position
-            transform.SetParent(originalParent);
-            rectTransform.anchoredPosition = Vector2.zero;
-        }
+        // Return to original position
+        transform.SetParent(originalParent);
+        rectTransform.anchoredPosition = Vector2.zero;
     }
 
     /// <summary>

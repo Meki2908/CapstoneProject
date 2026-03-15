@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 177615992860319219}
   - component: {fileID: 5943241317979072503}
   - component: {fileID: 6274178401700903171}
-  - component: {fileID: 2290411606237650361}
   m_Layer: 0
   m_Name: GUI_Dungeon
   m_TagString: Untagged
@@ -83,26 +82,8 @@ MonoBehaviour:
   slotBackgroundSprite: {fileID: 0}
   slotBorderSprite: {fileID: 0}
   spriteImageType: 1
---- !u!114 &2290411606237650361
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4250913773273599965}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 039c04e3ab644f64fb8d25ba50d602e7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  slotSize: 100
-  slotSpacing: 10
-  panelWidth: 800
-  panelHeight: 300
-  panelBackgroundSprite: {fileID: 4840479622272537927, guid: c1d0056efa7a4f547ac230e6a51f5ffc, type: 3}
-  slotBackgroundSprite: {fileID: 0}
-  slotBorderSprite: {fileID: 0}
-  spriteImageType: 1
+  rewardCanvasSortOrder: 999
+  tooltipSortOrder: 1000
 --- !u!1 &6778080640037621516
 GameObject:
   m_ObjectHideFlags: 0
