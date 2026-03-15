@@ -84,19 +84,6 @@ public class LeonaDialogue : MonoBehaviour
         "The Dungeon Gate is to the North. Don't keep it waiting!"
     };
 
-    [Header("── Dialogue: Quest 3 – Leona at New Battlefield (Step 3) ──")]
-    [TextArea(2, 4)]
-    public string[] quest3BattlefieldLines = {
-        "You tracked me down! I knew you would.",
-        "I won't lie — I was hoping to handle this myself. Old habit.",
-        "But look at that gate. It's bigger than the last one. Whatever is inside... it is not small.",
-        "My scouts haven't come back. That tells me everything I need to know.",
-        "I've been holding this position, but I can't push forward alone.",
-        "With you here, we have a real chance.",
-        "Go in. Clear the way. I'll be right behind you once the perimeter is secure.",
-        "And hey — try not to get yourself killed in there. I'd have to feel bad about it."
-    };
-
     [Header("── Dialogue: Mặc định (Khi lỗi hoặc xong hết) ──")]
     [TextArea(2, 4)]
     public string[] defaultLines = {
@@ -119,7 +106,7 @@ public class LeonaDialogue : MonoBehaviour
     bool     _isTyping   = false;
     bool     _playerNear = false;
 
-    enum DialogueMode { Quest1Accept, Quest2Guide, Quest2CityGate, Quest2Reminder, Quest3Battlefield, Default, None }
+    enum DialogueMode { Quest1Accept, Quest2Guide, Quest2CityGate, Quest2Reminder, Default, None }
     DialogueMode _mode = DialogueMode.None;
 
     // ─────────────────────────────────────────────────────────────────────
@@ -168,8 +155,8 @@ public class LeonaDialogue : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
-        Debug.Log($"[LeonaDialogue] OnTriggerEnter: {other.name} tag={other.tag}");
         if (!other.CompareTag(playerTag)) return;
+        Debug.Log($"[LeonaDialogue] OnTriggerEnter: {other.name} tag={other.tag}");
         
         _playerNear = true;
         if (promptPanel != null)
@@ -272,15 +259,6 @@ public class LeonaDialogue : MonoBehaviour
         if (q2 == QuestManager.QuestState.Active)
             return DialogueMode.Quest2Reminder;
 
-        // Quest 2 completed + Quest 3 active
-        var q3 = QuestManager.Instance.GetState(3);
-        if (q2 == QuestManager.QuestState.Completed && q3 == QuestManager.QuestState.Active)
-        {
-            int q3step = QuestManager.Instance.GetStepIndex(3);
-            if (q3step == 3) return DialogueMode.Quest3Battlefield;
-            if (q3step > 3)  return DialogueMode.Default;   // past it, done
-        }
-
         return DialogueMode.Default;
     }
 
@@ -292,7 +270,6 @@ public class LeonaDialogue : MonoBehaviour
             case DialogueMode.Quest2Guide:       return quest2GuideLines;
             case DialogueMode.Quest2CityGate:    return quest2CityGateLines;
             case DialogueMode.Quest2Reminder:    return quest2ReminderLines;
-            case DialogueMode.Quest3Battlefield: return quest3BattlefieldLines;
             case DialogueMode.Default:           return defaultLines;
             default:                             return defaultLines;
         }
@@ -399,19 +376,6 @@ public class LeonaDialogue : MonoBehaviour
                 break;
 
             case DialogueMode.Quest2Reminder:
-                break;
-
-            case DialogueMode.Quest3Battlefield:
-                // Leona at new battlefield: advance step 3 → 4 (Enter dungeon gate 2)
-                if (QuestManager.Instance != null)
-                {
-                    int step3 = QuestManager.Instance.GetStepIndex(3);
-                    if (step3 == 3)
-                    {
-                        QuestManager.Instance.AdvanceStep(3);
-                        Debug.Log("[LeonaDialogue] Quest 3 step 3 → 4: Enter dungeon gate 2.");
-                    }
-                }
                 break;
         }
     }

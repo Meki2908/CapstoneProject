@@ -21,20 +21,20 @@ MonoBehaviour:
     instruction: "Speak with the Paladin at the City Gate. He knows where Maria went."
     targetTag: NPC_Paladin
     targetSceneName: 
-  - stepTitle: "Find the teleport point"
-    instruction: "Head to the nearby teleport to reach the new battlefield."
-    targetTag: TeleportPoint_Battlefield
+  - stepTitle: "Return to the City Gate portal"
+    instruction: "Head back to the portal panel at the City Gate and select the Battlefield destination."
+    targetTag: TeleportPoint_CityGate
     targetSceneName: 
-  - stepTitle: "Use the teleport"
-    instruction: "Step into the teleport — it will take you to the new battlefield."
-    targetTag: TeleportPoint_Battlefield
+  - stepTitle: "Teleport to the Battlefield"
+    instruction: "Use the portal to teleport directly to the new battlefield."
+    targetTag: TeleportPoint_CityGate
     targetSceneName: 
-  - stepTitle: "Find and talk with Leona"
-    instruction: "Locate Leona at the new battlefield and speak with her."
-    targetTag: NPC_Leona
+  - stepTitle: "Find and talk with Maria"
+    instruction: "Locate Maria at the new battlefield and speak with her."
+    targetTag: NPC_Maria
     targetSceneName: 
   - stepTitle: "Enter the dungeon gate"
-    instruction: "Enter the dungeon gate Leona is guarding. The battle awaits inside."
+    instruction: "Enter the dungeon gate Maria is guarding. The battle awaits inside."
     targetTag: DungeonGate2
     targetSceneName: 
   rewardGold: 200
