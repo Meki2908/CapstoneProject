@@ -64,6 +64,10 @@ public class Character : MonoBehaviour
     public Animator animator;
     [HideInInspector]
     public Vector3 playerVelocity;
+    [HideInInspector]
+    public Vector3 cachedPlanarForward;
+    [HideInInspector]
+    public Vector3 cachedPlanarRight;
 
     public State currentLocomotionState;
     public State lastStateBeforeHit; // Track state before getting hit
@@ -87,6 +91,15 @@ public class Character : MonoBehaviour
         // Load saved key binding overrides từ Settings
         InputRebindHelper.LoadBindingOverrides(playerInput);
         cameraTransform = Camera.main.transform;
+        cachedPlanarForward = transform.forward;
+        cachedPlanarForward.y = 0f;
+        if (cachedPlanarForward.sqrMagnitude < 0.0001f) cachedPlanarForward = Vector3.forward;
+        cachedPlanarForward.Normalize();
+
+        cachedPlanarRight = transform.right;
+        cachedPlanarRight.y = 0f;
+        if (cachedPlanarRight.sqrMagnitude < 0.0001f) cachedPlanarRight = Vector3.right;
+        cachedPlanarRight.Normalize();
 
         movementSM = new StateMachine();
         standing = new StandingState(this, movementSM);

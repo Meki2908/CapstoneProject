@@ -51,8 +51,11 @@ public class BaseMoveState : State
         input = moveAction.ReadValue<Vector2>();
         velocity = new Vector3(input.x, 0, input.y);
 
-        // Align movement direction with the camera's forward and right vectors
-        velocity = velocity.x * character.cameraTransform.right.normalized + velocity.z * character.cameraTransform.forward.normalized;
+        // Align movement direction with stable planar camera basis (ignore camera pitch)
+        GetPlanarCameraBasis(out Vector3 camForward, out Vector3 camRight);
+
+        velocity = velocity.x * camRight + velocity.z * camForward;
+        if (velocity.sqrMagnitude > 1f) velocity.Normalize();
         velocity.y = 0f; // Ensure no vertical movement
 
         if (skillLock != null && skillLock.isPerformingSkill)
