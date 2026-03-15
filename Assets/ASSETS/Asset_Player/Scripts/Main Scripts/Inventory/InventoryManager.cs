@@ -149,6 +149,23 @@ public class InventoryManager : MonoBehaviour
             }
         }
 
+        // === AUTO-DISCOVER: Tìm TẤT CẢ Item SO trong project ===
+        // Đảm bảo không thiếu item nào kể cả khi chưa kéo vào Inspector
+        Item[] allItems = Resources.FindObjectsOfTypeAll<Item>();
+        int autoCount = 0;
+        foreach (Item item in allItems)
+        {
+            if (item != null && !itemLookup.ContainsKey(item.id))
+            {
+                itemLookup[item.id] = item;
+                autoCount++;
+            }
+        }
+        if (autoCount > 0)
+        {
+            Debug.Log($"[InventoryManager] Auto-discovered {autoCount} additional items not in manual database");
+        }
+
         Debug.Log($"[InventoryManager] Total items in database: {itemLookup.Count}");
     }
 
@@ -383,13 +400,51 @@ public class InventoryManager : MonoBehaviour
         return GetItemAmount(itemId) > 0;
     }
 
+    private InventoryController cachedInventoryController;
+
     private void RefreshInventoryUI()
     {
-        InventoryController inventoryController = FindFirstObjectByType<InventoryController>();
-        if (inventoryController != null)
+        // Unity null check handles destroyed objects (scene unload)
+        if (cachedInventoryController == null)
         {
-            inventoryController.RefreshInventoryUI();
+            // Tìm trong tất cả objects kể cả inactive
+            cachedInventoryController = FindFirstObjectByType<InventoryController>(FindObjectsInactive.Include);
+            
+            if (cachedInventoryController != null)
+            {
+                Debug.Log($"[InventoryManager] Found InventoryController on '{cachedInventoryController.gameObject.name}' (scene: {cachedInventoryController.gameObject.scene.name})");
+            }
+            else
+            {
+                Debug.LogWarning("[InventoryManager] InventoryController NOT FOUND in any scene! UI sẽ không cập nhật cho đến khi mở inventory.");
+            }
         }
+        
+        if (cachedInventoryController != null)
+        {
+            cachedInventoryController.RefreshInventoryUI();
+            Debug.Log($"[InventoryManager] RefreshInventoryUI called successfully. Items in dict: {inventoryItems.Count}");
+        }
+    }
+
+    /// <summary>
+    /// Gọi khi scene thay đổi để clear cache (InventoryController có thể bị destroy)
+    /// </summary>
+    private void OnEnable()
+    {
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private void OnDisable()
+    {
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    private void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
+    {
+        // Clear cache khi scene mới load → tìm lại InventoryController
+        cachedInventoryController = null;
+        Debug.Log($"[InventoryManager] Scene loaded: {scene.name} — cleared InventoryController cache");
     }
 
     #region Test Methods

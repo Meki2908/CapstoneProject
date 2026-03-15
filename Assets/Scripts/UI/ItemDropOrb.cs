@@ -130,11 +130,16 @@ public class ItemDropOrb : MonoBehaviour
     }
 
     // === GIAI ĐOẠN 2: Lơ lửng tại chỗ ===
+    [SerializeField] private float hoverDelay = 1.5f; // Đợi 1.5s trước khi hút
+
     private void UpdateHover()
     {
         // Bob lên xuống
         float bob = Mathf.Sin(stateTimer * bobSpeed) * bobAmount;
         transform.position = hoverPosition + Vector3.up * bob;
+
+        // Đợi hoverDelay giây rồi mới kiểm tra magnet
+        if (stateTimer < hoverDelay) return;
 
         // Kiểm tra player gần → chuyển sang magnet
         if (playerTransform != null)
@@ -182,7 +187,7 @@ public class ItemDropOrb : MonoBehaviour
         // 1. Thêm vào inventory nếu có Item SO — dùng runtime rarity
         if (itemSO != null && InventoryManager.Instance != null)
         {
-            InventoryManager.Instance.AddItem(itemSO, quantity, runtimeRarity);
+            bool added = InventoryManager.Instance.AddItem(itemSO, quantity, runtimeRarity);
 
             // Track cho Dungeon Reward UI
             if (DungeonRewardUI.Instance != null)
@@ -190,7 +195,12 @@ public class ItemDropOrb : MonoBehaviour
                 DungeonRewardUI.Instance.TrackItem(itemSO, runtimeRarity, quantity);
             }
 
-            Debug.Log($"[ItemDrop] Added to inventory: {itemSO.itemName} [{runtimeRarity}] ×{quantity}");
+            Debug.Log($"[ItemDrop] ✅ Added to inventory: {itemSO.itemName} [{runtimeRarity}] ×{quantity} (success={added})");
+        }
+        else
+        {
+            // DEBUG: Tại sao không thêm được vào inventory?
+            Debug.LogWarning($"[ItemDrop] ❌ KHÔNG thêm vào inventory! itemSO={itemSO?.itemName ?? "NULL"}, InventoryManager={(InventoryManager.Instance != null ? "OK" : "NULL")}, itemName={itemName}");
         }
 
         // 2. Hiện notification
@@ -209,8 +219,12 @@ public class ItemDropOrb : MonoBehaviour
     {
         Color rarityCol = GetRarityLightColor();
 
-        // Nếu chưa có mesh → tạo sphere đơn giản
-        if (GetComponent<MeshFilter>() == null)
+        // Nếu chưa có mesh (cả root lẫn children) → tạo sphere đơn giản
+        // Nếu đã có prefab với mesh → KHÔNG tạo sphere, chỉ thêm light + particles
+        bool hasMesh = GetComponent<MeshFilter>() != null || GetComponentInChildren<MeshFilter>() != null
+                    || GetComponent<SkinnedMeshRenderer>() != null || GetComponentInChildren<SkinnedMeshRenderer>() != null;
+
+        if (!hasMesh)
         {
             var meshFilter = gameObject.AddComponent<MeshFilter>();
             meshFilter.mesh = CreateOrbMesh();

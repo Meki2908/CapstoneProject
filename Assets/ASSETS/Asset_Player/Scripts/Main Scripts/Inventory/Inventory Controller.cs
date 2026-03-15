@@ -76,9 +76,35 @@ public class InventoryController : MonoBehaviour
         {
             InventoryManager.Instance.OnInventoryChanged += OnInventoryChanged;
         }
+        else
+        {
+            // Retry subscription nếu InventoryManager chưa Awake xong
+            StartCoroutine(RetrySubscribeInventoryManager());
+        }
 
         // Initial UI refresh
         RefreshInventoryUI();
+    }
+
+    private System.Collections.IEnumerator RetrySubscribeInventoryManager()
+    {
+        // Đợi tối đa 3s cho InventoryManager khởi tạo
+        float timeout = 3f;
+        while (InventoryManager.Instance == null && timeout > 0f)
+        {
+            timeout -= Time.unscaledDeltaTime;
+            yield return null;
+        }
+        if (InventoryManager.Instance != null)
+        {
+            InventoryManager.Instance.OnInventoryChanged += OnInventoryChanged;
+            RefreshInventoryUI();
+            Debug.Log("[InventoryController] Late-subscribed to InventoryManager.OnInventoryChanged");
+        }
+        else
+        {
+            Debug.LogError("[InventoryController] InventoryManager.Instance still null after 3s!");
+        }
     }
 
     void Update()

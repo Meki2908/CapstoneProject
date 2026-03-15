@@ -8,8 +8,7 @@ using UnityEngine;
 public class ItemDropSpawner : MonoBehaviour
 {
     [Header("=== Drop Settings ===")]
-    [Tooltip("Số item orb tối đa spawn khi chết")]
-    [SerializeField] private int maxDropCount = 3;
+    // Drops are now unlimited — each item rolls independently based on rarity
 
     [Tooltip("Prefab cho orb (null = tự tạo sphere)")]
     [SerializeField] private GameObject orbPrefab;
@@ -64,12 +63,20 @@ public class ItemDropSpawner : MonoBehaviour
     /// <summary>
     /// Inject drop table từ bên ngoài (DungeonWaveManager) — thay thế default drops
     /// </summary>
-    public void SetDropTable(List<ItemDropEntry> drops, bool enableExp, int maxDrops)
+    public void SetDropTable(List<ItemDropEntry> drops, bool enableExp)
     {
         itemDropTable = drops ?? new List<ItemDropEntry>();
         dropExp = enableExp;
-        maxDropCount = maxDrops;
-        Debug.Log($"[ItemDropSpawner] Drop table injected: {itemDropTable.Count} items, exp={enableExp}, max={maxDrops}");
+        Debug.Log($"[ItemDropSpawner] Drop table injected: {itemDropTable.Count} items, exp={enableExp}, unlimited drops");
+    }
+
+    /// <summary>
+    /// Set orb prefab từ bên ngoài (khi tạo bằng AddComponent)
+    /// </summary>
+    public void SetOrbPrefab(GameObject prefab, float scale = 0.3f)
+    {
+        orbPrefab = prefab;
+        orbScale = scale;
     }
 
     /// <summary>
@@ -79,10 +86,10 @@ public class ItemDropSpawner : MonoBehaviour
     {
         int dropCount = 0;
 
-        // 1. Item ScriptableObject drops — check useRandomRarity toggle
+        // 1. Item ScriptableObject drops — KHÔNG GIỚI HẠN số lượng
+        // Mỗi item roll độc lập theo dropChance (tính từ rarity)
         foreach (var drop in itemDropTable)
         {
-            if (dropCount >= maxDropCount) break;
             if (drop.item == null) continue;
             if (Random.value > drop.dropChance) continue;
 
@@ -99,7 +106,6 @@ public class ItemDropSpawner : MonoBehaviour
         // 2. Custom drops (tên — không kết nối inventory)
         foreach (var drop in customDropTable)
         {
-            if (dropCount >= maxDropCount) break;
             if (Random.value > drop.dropChance) continue;
 
             int qty = Random.Range(drop.minQuantity, drop.maxQuantity + 1);
@@ -108,7 +114,7 @@ public class ItemDropSpawner : MonoBehaviour
         }
 
         // 3. EXP orb (màu vàng nổi bật)
-        if (dropExp && dropCount < maxDropCount)
+        if (dropExp)
         {
             int exp = customExpAmount > 0 ? customExpAmount : GetExpFromEnemyType();
             if (exp > 0)
@@ -122,6 +128,8 @@ public class ItemDropSpawner : MonoBehaviour
         {
             SpawnDefaultDrops(deathPosition);
         }
+
+        Debug.Log($"[ItemDropSpawner] Dropped {dropCount} items from {itemDropTable.Count} entries");
     }
 
     /// <summary>

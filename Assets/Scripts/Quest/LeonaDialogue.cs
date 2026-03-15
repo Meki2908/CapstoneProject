@@ -155,8 +155,8 @@ public class LeonaDialogue : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
-        Debug.Log($"[LeonaDialogue] OnTriggerEnter: {other.name} tag={other.tag}");
         if (!other.CompareTag(playerTag)) return;
+        Debug.Log($"[LeonaDialogue] OnTriggerEnter: {other.name} tag={other.tag}");
         
         _playerNear = true;
         if (promptPanel != null)
@@ -266,12 +266,12 @@ public class LeonaDialogue : MonoBehaviour
     {
         switch (mode)
         {
-            case DialogueMode.Quest1Accept:   return quest1AcceptLines;
-            case DialogueMode.Quest2Guide:    return quest2GuideLines;
-            case DialogueMode.Quest2CityGate: return quest2CityGateLines;
-            case DialogueMode.Quest2Reminder: return quest2ReminderLines;
-            case DialogueMode.Default:        return defaultLines;
-            default:                          return defaultLines;
+            case DialogueMode.Quest1Accept:      return quest1AcceptLines;
+            case DialogueMode.Quest2Guide:       return quest2GuideLines;
+            case DialogueMode.Quest2CityGate:    return quest2CityGateLines;
+            case DialogueMode.Quest2Reminder:    return quest2ReminderLines;
+            case DialogueMode.Default:           return defaultLines;
+            default:                             return defaultLines;
         }
     }
 

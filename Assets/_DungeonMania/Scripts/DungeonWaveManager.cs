@@ -77,8 +77,8 @@ public class DungeonWaveManager : MonoBehaviour
     [Tooltip("Có drop EXP orb không")]
     public bool dropExpOrb = true;
 
-    [Tooltip("Số item tối đa rơi mỗi enemy")]
-    public int maxDropsPerEnemy = 3;
+    [Tooltip("Prefab cho item orb rơi (null = tự tạo sphere phát sáng)")]
+    public GameObject itemOrbPrefab;
 
     [Tooltip("Drop table cho Skeleton/Archer")]
     public List<DungeonDropEntry> skeletDrops = new List<DungeonDropEntry>();
@@ -331,12 +331,7 @@ public class DungeonWaveManager : MonoBehaviour
                 canvas.enabled = true;
             }
 
-            // === FIX 3: Sorting order - đảm bảo dungeon UI render trên các UI khác ===
-            if (canvas.sortingOrder < 10)
-            {
-                Debug.Log($"[DungeonWave] FIX: Setting Canvas sortingOrder from {canvas.sortingOrder} to 100");
-                canvas.sortingOrder = 100;
-            }
+            // sortingOrder: lấy từ scene, không tự set bằng code
 
             // === FIX 4: Kiểm tra và fix CanvasGroup alpha ===
             CanvasGroup[] groups = waveNotificationUI.GetComponentsInParent<CanvasGroup>(true);
@@ -356,7 +351,6 @@ public class DungeonWaveManager : MonoBehaviour
             // Tạo Canvas mới nếu không tìm thấy
             Canvas newCanvas = waveNotificationUI.transform.root.gameObject.AddComponent<Canvas>();
             newCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            newCanvas.sortingOrder = 100;
             waveNotificationUI.transform.root.gameObject.AddComponent<UnityEngine.UI.GraphicRaycaster>();
         }
 
@@ -431,6 +425,18 @@ public class DungeonWaveManager : MonoBehaviour
 
     void Update()
     {
+        // === TEST: F9 = Win ngay lập tức ===
+        #if UNITY_EDITOR
+        if (UnityEngine.InputSystem.Keyboard.current != null && 
+            UnityEngine.InputSystem.Keyboard.current.f9Key.wasPressedThisFrame &&
+            isDungeonActive && !isDungeonComplete)
+        {
+            Debug.Log("[DungeonWave] ⚡ TEST WIN — F9 pressed!");
+            CompleteDungeon();
+            return;
+        }
+        #endif
+
         if (!isDungeonActive) return;
 
         // Kiểm tra enemy còn sống
@@ -438,8 +444,6 @@ public class DungeonWaveManager : MonoBehaviour
         {
             OnWaveComplete();
         }
-
-        // Debug keys removed (were: K=kill all, N=next wave, 1-5=jump to wave)
     }
 
     // ===== DUNGEON FLOW =====
@@ -720,6 +724,7 @@ public class DungeonWaveManager : MonoBehaviour
 
         // Fallback: tìm từng panel riêng nếu Canvas_Menu không tìm thấy
         string[] uiNames = { 
+            "UI_HP+Inventory", "UI_HP+Invetory",
             "UI_HP_Invetory", "UI_HP_Inventory", "UI_HP-Invetory", "UI_HP-Inventory",
             "UI_HP", "UI_Invetory", "UI_Inventory",
             "AbilityIcons", "SkillBar", "UI_Skills"
@@ -1004,6 +1009,12 @@ public class DungeonWaveManager : MonoBehaviour
                 {
                     var spawner = activeEnemy.AddComponent<ItemDropSpawner>();
                     
+                    // Set orb prefab nếu có
+                    if (itemOrbPrefab != null)
+                    {
+                        spawner.SetOrbPrefab(itemOrbPrefab);
+                    }
+                    
                     // Chọn drop table theo enemy type
                     var enemyScript = activeEnemy.GetComponent<EnemyScript>();
                     List<DungeonDropEntry> selectedDrops = GetDropTableForEnemy(enemyScript);
@@ -1024,7 +1035,7 @@ public class DungeonWaveManager : MonoBehaviour
                                 maxQuantity = entry.maxQuantity
                             });
                         }
-                        spawner.SetDropTable(drops, dropExpOrb, maxDropsPerEnemy);
+                        spawner.SetDropTable(drops, dropExpOrb);
                     }
                     
                     string typeName = enemyScript != null ? enemyScript.enemyType.ToString() : "unknown";
@@ -1326,40 +1337,19 @@ public class DungeonWaveManager : MonoBehaviour
         }
     }
 
+    // EnsureCanvasOnTop đã được loại bỏ — sortingOrder quản lý từ scene/Inspector
+
     /// <summary>
-    /// Force Canvas chứa UI lên trên mọi UI khác + đảm bảo có GraphicRaycaster để click được
+    /// Đảm bảo Canvas có GraphicRaycaster để button click được
     /// </summary>
-    private void EnsureCanvasOnTop(GameObject uiObj, int order)
+    private void EnsureGraphicRaycaster(GameObject uiObj)
     {
         if (uiObj == null) return;
-
-        // Tìm Canvas gần nhất
         Canvas canvas = uiObj.GetComponentInParent<Canvas>();
-        if (canvas != null)
+        if (canvas != null && canvas.GetComponent<UnityEngine.UI.GraphicRaycaster>() == null)
         {
-            canvas.overrideSorting = true;
-            canvas.sortingOrder = order;
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-
-            // Đảm bảo có GraphicRaycaster để button clickable
-            if (canvas.GetComponent<UnityEngine.UI.GraphicRaycaster>() == null)
-                canvas.gameObject.AddComponent<UnityEngine.UI.GraphicRaycaster>();
-
-            Debug.Log($"[DungeonWave] Canvas '{canvas.gameObject.name}' → sortingOrder={order}, Overlay mode");
-        }
-        else
-        {
-            // Không có Canvas → tạo mới trên parent gốc
-            Canvas newCanvas = uiObj.transform.root.gameObject.GetComponent<Canvas>();
-            if (newCanvas == null)
-                newCanvas = uiObj.transform.root.gameObject.AddComponent<Canvas>();
-            newCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            newCanvas.sortingOrder = order;
-
-            if (newCanvas.GetComponent<UnityEngine.UI.GraphicRaycaster>() == null)
-                newCanvas.gameObject.AddComponent<UnityEngine.UI.GraphicRaycaster>();
-
-            Debug.LogWarning($"[DungeonWave] Created Canvas on '{newCanvas.gameObject.name}' → sortingOrder={order}");
+            canvas.gameObject.AddComponent<UnityEngine.UI.GraphicRaycaster>();
+            Debug.Log($"[DungeonWave] Added GraphicRaycaster to '{canvas.gameObject.name}'");
         }
     }
 
@@ -1382,8 +1372,8 @@ public class DungeonWaveManager : MonoBehaviour
             EnsureParentActive(dungeonCompleteUI);
             dungeonCompleteUI.SetActive(true);
             
-            // Force Canvas lên trên mọi UI khác
-            EnsureCanvasOnTop(dungeonCompleteUI, 500);
+            // Đảm bảo Canvas có GraphicRaycaster để button click được
+            EnsureGraphicRaycaster(dungeonCompleteUI);
             
             if (expRewardText)
                 expRewardText.text = $"EXP: +{totalExpGained}";
@@ -1411,8 +1401,8 @@ public class DungeonWaveManager : MonoBehaviour
             EnsureParentActive(dungeonFailedUI);
             dungeonFailedUI.SetActive(true);
 
-            // Force Canvas lên trên mọi UI khác (Notification=100, Wave=100)
-            EnsureCanvasOnTop(dungeonFailedUI, 500);
+            // Đảm bảo Canvas có GraphicRaycaster để button click được
+            EnsureGraphicRaycaster(dungeonFailedUI);
 
             Debug.Log($"[DungeonWave] UI: Showing dungeon failed (activeInHierarchy={dungeonFailedUI.activeInHierarchy})");
         }

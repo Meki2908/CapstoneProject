@@ -44,5 +44,8 @@ public enum SoundType
     Axe_Draw,
     Axe_Sheath,
     Mage_Draw,
-    Mage_Sheath
+    Mage_Sheath,
+
+    // Blacksmith socketing
+    Blacksmith_Forge
 }

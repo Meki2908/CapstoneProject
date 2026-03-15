@@ -350,18 +350,50 @@ public class BlacksmithUI : MonoBehaviour
         if (SocketingManager.Instance == null) return;
         if (selectedGem == null || selectedCrystal == null || selectedGemSlotIndex < 0) return;
 
+        // Disable button during animation
+        if (socketButton) socketButton.interactable = false;
+
+        StartCoroutine(SocketingAnimationCoroutine());
+    }
+
+    IEnumerator SocketingAnimationCoroutine()
+    {
+        // ── Play forge sound ──
+        SoundManager.PlaySound(SoundType.Blacksmith_Forge);
+
+        // ── Spin the gem drop icon during socketing (2 seconds) ──
+        float duration = 2f;
+        float elapsed = 0f;
+        float spinSpeed = 720f; // degrees per second
+
+        Transform spinTarget = null;
+        if (gemDropIcon != null) spinTarget = gemDropIcon.transform;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            if (spinTarget != null)
+                spinTarget.Rotate(0, 0, -spinSpeed * Time.unscaledDeltaTime);
+            yield return null;
+        }
+
+        // Reset rotation
+        if (spinTarget != null)
+            spinTarget.localRotation = Quaternion.identity;
+
+        // ── Perform actual socketing ──
         SocketResult result;
 
         if (currentTab == ActiveTab.Weapon)
         {
             var wc = FindFirstObjectByType<WeaponController>();
-            if (wc == null) return;
+            if (wc == null) { if (socketButton) socketButton.interactable = true; yield break; }
             result = SocketingManager.Instance.TrySocketWeapon(
                 wc.GetCurrentWeapon().weaponType, selectedGemSlotIndex, selectedGem, selectedCrystal);
         }
         else
         {
-            if (selectedEquipmentSlot < 0) return;
+            if (selectedEquipmentSlot < 0) { if (socketButton) socketButton.interactable = true; yield break; }
             result = SocketingManager.Instance.TrySocketEquipment(
                 selectedEquipmentSlot, selectedGemSlotIndex, selectedGem, selectedCrystal);
         }
@@ -554,11 +586,48 @@ public class BlacksmithUI : MonoBehaviour
         foreach (Transform child in inventoryContent)
             Destroy(child.gameObject);
 
-        // Populate with ALL items from inventory
+        // Populate with items from inventory (filtered when equipment slot is selected)
         var allItems = InventoryManager.Instance.GetAllItemsWithRarity();
+
+        // Determine filter: when in Equipment tab with a slot selected, only show matching items
+        EquipmentSlotType? filterSlot = null;
+        if (currentTab == ActiveTab.Equipment && selectedEquipmentSlot >= 0)
+        {
+            EquipmentSlotType[] slotMap = { EquipmentSlotType.Head, EquipmentSlotType.Body,
+                                             EquipmentSlotType.Legs, EquipmentSlotType.Accessory };
+            if (selectedEquipmentSlot < slotMap.Length)
+                filterSlot = slotMap[selectedEquipmentSlot];
+        }
+        // Sort: CrystalStone always first (primary socketing material)
+        allItems.Sort((a, b) =>
+        {
+            bool aIsCrystal = a.item != null && a.item.itemType == ItemType.CrystalStone;
+            bool bIsCrystal = b.item != null && b.item.itemType == ItemType.CrystalStone;
+            if (aIsCrystal != bIsCrystal) return aIsCrystal ? -1 : 1;
+            return 0;
+        });
+
         foreach (var (item, amount, rarity) in allItems)
         {
             if (item == null || amount <= 0) continue;
+
+            // Filter: Weapon tab → only Gems + CrystalStone
+            if (currentTab == ActiveTab.Weapon)
+            {
+                if (item.itemType != ItemType.Gems && item.itemType != ItemType.CrystalStone)
+                    continue;
+            }
+
+            // Filter: Equipment tab → Equipment + CrystalStone only (no Gems)
+            if (currentTab == ActiveTab.Equipment)
+            {
+                // Always hide non-equipment/non-crystal items
+                if (item.itemType != ItemType.Equipment && item.itemType != ItemType.CrystalStone)
+                    continue;
+                // If a slot is selected, further filter equipment by matching slot
+                if (filterSlot.HasValue && item.itemType == ItemType.Equipment && item.equipmentSlot != filterSlot.Value)
+                    continue;
+            }
 
             GameObject go = Instantiate(itemUIPrefab, inventoryContent);
             var itemUI = go.GetComponent<ItemUI>();

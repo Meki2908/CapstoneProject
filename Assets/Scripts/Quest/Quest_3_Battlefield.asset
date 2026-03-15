@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 68827f32ed027fe47807f9dafdc8ba2b, type: 3}
+  m_Name: Quest_3_Battlefield
+  m_EditorClassIdentifier: 
+  questID: 3
+  questTitle: "The New Battlefield"
+  questDescription: "Maria has pushed forward to a new front line. The Paladin says
+    she needs backup — use the teleport and head out to support her."
+  steps:
+  - stepTitle: "Talk with the Paladin"
+    instruction: "Speak with the Paladin at the City Gate. He knows where Maria went."
+    targetTag: NPC_Paladin
+    targetSceneName: 
+  - stepTitle: "Return to the City Gate portal"
+    instruction: "Head back to the portal panel at the City Gate and select the Battlefield destination."
+    targetTag: TeleportPoint_CityGate
+    targetSceneName: 
+  - stepTitle: "Teleport to the Battlefield"
+    instruction: "Use the portal to teleport directly to the new battlefield."
+    targetTag: TeleportPoint_CityGate
+    targetSceneName: 
+  - stepTitle: "Find and talk with Maria"
+    instruction: "Locate Maria at the new battlefield and speak with her."
+    targetTag: NPC_Maria
+    targetSceneName: 
+  - stepTitle: "Enter the dungeon gate"
+    instruction: "Enter the dungeon gate Maria is guarding. The battle awaits inside."
+    targetTag: DungeonGate2
+    targetSceneName: 
+  rewardGold: 200
+  rewardExp: 500
