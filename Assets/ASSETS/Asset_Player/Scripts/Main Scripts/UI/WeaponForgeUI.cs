@@ -22,14 +22,7 @@ public class WeaponForgeUI : MonoBehaviour
     [Header("Texts")]
     [SerializeField] private TextMeshProUGUI masteryText;
 
-    [Header("Gems Viewport")]
-    [SerializeField] private Transform gemsViewportContent;
-    [SerializeField] private InventoryController inventoryController; // To get itemUIPrefab
-
-    private GameObject itemUIPrefab; // Shared prefab from InventoryController
-
     private WeaponType currentWeaponType = WeaponType.None;
-    private List<GemItemUI> currentGemUIs = new List<GemItemUI>();
     private WeaponSO currentWeaponSO; // Store current weapon for icon
 
     private void Awake()
@@ -39,11 +32,7 @@ public class WeaponForgeUI : MonoBehaviour
             weaponController = FindFirstObjectByType<WeaponController>();
         }
 
-        // Get itemUIPrefab from InventoryController
-        if (inventoryController == null)
-        {
-            inventoryController = FindFirstObjectByType<InventoryController>();
-        }
+
 
         // Setup gem slot drop zones
         for (int i = 0; i < gemSlotDropZones.Length && i < 3; i++)
@@ -54,11 +43,7 @@ public class WeaponForgeUI : MonoBehaviour
             }
         }
 
-        // Subscribe to inventory changes
-        if (InventoryManager.Instance != null)
-        {
-            InventoryManager.Instance.OnInventoryChanged += RefreshGemsViewport;
-        }
+
     }
 
     private void Start()
@@ -80,13 +65,7 @@ public class WeaponForgeUI : MonoBehaviour
         Unsubscribe();
     }
 
-    private void OnDestroy()
-    {
-        if (InventoryManager.Instance != null)
-        {
-            InventoryManager.Instance.OnInventoryChanged -= RefreshGemsViewport;
-        }
-    }
+
 
     private void Subscribe()
     {
@@ -134,7 +113,6 @@ public class WeaponForgeUI : MonoBehaviour
         {
             Debug.Log($"[WeaponForgeUI] OnGemsChanged for {wt}, refreshing slots...");
             RefreshGemSlots();
-            RefreshGemsViewport(); // Refresh to show updated inventory
         }
     }
 
@@ -156,7 +134,6 @@ public class WeaponForgeUI : MonoBehaviour
             forgePanel.SetActive(true);
         }
         SetWeapon(weapon);
-        RefreshGemsViewport();
     }
 
     /// <summary>
@@ -263,93 +240,8 @@ public class WeaponForgeUI : MonoBehaviour
         }
     }
 
-    // Button: Equip Best
-    public void OnClick_EquipBest()
-    {
-        if (WeaponGemManager.Instance == null || currentWeaponType == WeaponType.None) return;
-        WeaponGemManager.Instance.EquipBest(currentWeaponType);
-        RefreshAfterGemEquip();
-    }
+    // Equip Best, Remove All, Gems Viewport đã chuyển sang NPC Thợ Rèn (BlacksmithUI)
 
-    /// <summary>
-    /// Refresh UI after gem equip/remove
-    /// </summary>
-    public void RefreshAfterGemEquip()
-    {
-        Debug.Log("[WeaponForgeUI] RefreshAfterGemEquip called");
-        // Small delay to ensure EquipGem has finished saving
-        StartCoroutine(RefreshAfterDelay());
-    }
-
-    private System.Collections.IEnumerator RefreshAfterDelay()
-    {
-        yield return new WaitForEndOfFrame();
-        RefreshGemSlots();
-        RefreshGemsViewport();
-    }
-
-    // Button: Remove All
-    public void OnClick_RemoveAll()
-    {
-        if (WeaponGemManager.Instance == null || currentWeaponType == WeaponType.None) return;
-        WeaponGemManager.Instance.RemoveAll(currentWeaponType);
-        RefreshGemSlots();
-        RefreshGemsViewport(); // Refresh to show returned gems
-    }
-
-    /// <summary>
-    /// Refresh the gems viewport with gems from inventory
-    /// Uses the same itemUIPrefab from InventoryController
-    /// </summary>
-    private void RefreshGemsViewport()
-    {
-        if (gemsViewportContent == null) return;
-
-        // Get itemUIPrefab from InventoryController
-        if (itemUIPrefab == null && inventoryController != null)
-        {
-            itemUIPrefab = inventoryController.ItemUIPrefab;
-        }
-
-        if (itemUIPrefab == null)
-        {
-            Debug.LogWarning("[WeaponForgeUI] itemUIPrefab is null! Make sure InventoryController has itemUIPrefab assigned.");
-            return;
-        }
-
-        // Clear existing UI
-        foreach (Transform child in gemsViewportContent)
-        {
-            Destroy(child.gameObject);
-        }
-        currentGemUIs.Clear();
-
-        // Get all gems from inventory
-        if (InventoryManager.Instance != null)
-        {
-            var allItems = InventoryManager.Instance.GetAllItems();
-            foreach (var (item, amount) in allItems)
-            {
-                if (item != null && item.itemType == ItemType.Gems)
-                {
-                    GameObject gemUIObject = Instantiate(itemUIPrefab, gemsViewportContent);
-                    
-                    // Add GemItemUI component if not exists (for drag & drop)
-                    GemItemUI gemUI = gemUIObject.GetComponent<GemItemUI>();
-                    if (gemUI == null)
-                    {
-                        gemUI = gemUIObject.AddComponent<GemItemUI>();
-                    }
-                    
-                    if (gemUI != null)
-                    {
-                        gemUI.Initialize(item, amount);
-                        currentGemUIs.Add(gemUI);
-                    }
-                }
-            }
-        }
-    }
 }
 
 

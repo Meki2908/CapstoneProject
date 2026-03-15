@@ -197,6 +197,40 @@ public class ItemDropOrb : MonoBehaviour
 
             Debug.Log($"[ItemDrop] ✅ Added to inventory: {itemSO.itemName} [{runtimeRarity}] ×{quantity} (success={added})");
         }
+        else if (itemName.StartsWith("EXP"))
+        {
+            // === EXP ORB: Cộng EXP vào vũ khí đang cầm ===
+            float expAmount = quantity; // quantity chứa số EXP
+            
+            if (WeaponMasteryManager.Instance != null)
+            {
+                // Tìm WeaponController trên player
+                WeaponController weaponCtrl = null;
+                if (playerTransform != null)
+                {
+                    weaponCtrl = playerTransform.GetComponent<WeaponController>();
+                    if (weaponCtrl == null) weaponCtrl = playerTransform.GetComponentInChildren<WeaponController>();
+                }
+                
+                if (weaponCtrl != null)
+                {
+                    WeaponSO currentWeapon = weaponCtrl.GetCurrentWeapon();
+                    if (currentWeapon != null)
+                    {
+                        WeaponMasteryManager.Instance.AddExp(currentWeapon.weaponType, expAmount, currentWeapon);
+                        Debug.Log($"[ItemDrop] ⚔️ EXP Orb: +{expAmount} EXP → {currentWeapon.weaponType}");
+                    }
+                    else
+                    {
+                        Debug.LogWarning("[ItemDrop] EXP Orb: Không có vũ khí đang cầm!");
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning("[ItemDrop] EXP Orb: Không tìm thấy WeaponController!");
+                }
+            }
+        }
         else
         {
             // DEBUG: Tại sao không thêm được vào inventory?
@@ -204,6 +238,13 @@ public class ItemDropOrb : MonoBehaviour
         }
 
         // 2. Hiện notification
+        // Auto-create nếu singleton chưa tồn tại (có thể chưa được gắn vào scene)
+        if (ItemPickupNotification.Instance == null)
+        {
+            var notifGO = new GameObject("ItemPickupNotification");
+            notifGO.AddComponent<ItemPickupNotification>();
+            Debug.Log("[ItemDrop] Auto-created ItemPickupNotification singleton");
+        }
         if (ItemPickupNotification.Instance != null)
         {
             Sprite icon = itemIcon != null ? itemIcon : (itemSO != null ? itemSO.icon : null);

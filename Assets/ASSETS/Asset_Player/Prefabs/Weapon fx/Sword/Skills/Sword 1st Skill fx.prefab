@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 4337688487835864}
   - component: {fileID: 198317043341340416}
   - component: {fileID: 199165944460559818}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Slashes
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4865,7 +4865,7 @@ GameObject:
   - component: {fileID: 4843406207826402}
   - component: {fileID: 198763090609850768}
   - component: {fileID: 199098841658027486}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Pivot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -9775,7 +9775,7 @@ GameObject:
   - component: {fileID: 4047460017203796}
   - component: {fileID: 198198474046642178}
   - component: {fileID: 199270765796616020}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Distortion(Delete for Mobile)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -14680,7 +14680,7 @@ GameObject:
   - component: {fileID: 199751865826450198}
   - component: {fileID: 4154985547398476383}
   - component: {fileID: 7397201867836249038}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Slashes2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -18468,7 +18468,7 @@ ParticleSystem:
     radiusScale: 5
     collidesWith:
       serializedVersion: 2
-      m_Bits: 4160
+      m_Bits: 64
     maxCollisionShapes: 256
     quality: 0
     voxelSize: 0.5
@@ -19647,7 +19647,7 @@ GameObject:
   - component: {fileID: 4522704683574406}
   - component: {fileID: 198979535971578782}
   - component: {fileID: 199304352774073358}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Sword 1st Skill fx
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -23320,8 +23320,8 @@ ParticleSystem:
     type: 1
     collisionMode: 0
     colliderForce: 0.3
-    multiplyColliderForceByParticleSize: 0
-    multiplyColliderForceByParticleSpeed: 0
+    multiplyColliderForceByParticleSize: 1
+    multiplyColliderForceByParticleSpeed: 1
     multiplyColliderForceByCollisionAngle: 1
     m_Planes:
     - {fileID: 0}
@@ -23494,11 +23494,11 @@ ParticleSystem:
     radiusScale: 1
     collidesWith:
       serializedVersion: 2
-      m_Bits: 4096
+      m_Bits: 64
     maxCollisionShapes: 256
     quality: 0
     voxelSize: 0.5
-    collisionMessages: 0
+    collisionMessages: 1
     collidesWithDynamic: 1
     interiorCollisions: 0
   TriggerModule:
@@ -24559,7 +24559,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 312974452598970108}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Plane Transform 1
   m_TagString: Untagged
   m_Icon: {fileID: 0}

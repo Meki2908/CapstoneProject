@@ -2,10 +2,10 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections;
-using System.Collections.Generic;
 
 /// <summary>
-/// Equipment Panel UI: display 4 equipment slots and actions (Equip Best / Remove All)
+/// Equipment Panel UI: hiện 4 slot trang bị (chỉ xem)
+/// Trang bị / gỡ equipment chỉ dùng ở NPC Thợ Rèn (BlacksmithUI)
 /// </summary>
 public class EquipmentPanelUI : MonoBehaviour
 {
@@ -15,22 +15,9 @@ public class EquipmentPanelUI : MonoBehaviour
     [Header("Equipment Slots")]
     [SerializeField] private EquipmentSlotDropZone[] equipmentSlotDropZones = new EquipmentSlotDropZone[4];
 
-    [Header("Equipment Viewport")]
-    [SerializeField] private Transform equipmentViewportContent;
-    [SerializeField] private InventoryController inventoryController; // To get itemUIPrefab
-
-    private GameObject itemUIPrefab; // Shared prefab from InventoryController
-    private List<EquipmentItemUI> currentEquipmentUIs = new List<EquipmentItemUI>();
-
     private void Awake()
     {
-        // Get itemUIPrefab from InventoryController
-        if (inventoryController == null)
-        {
-            inventoryController = FindFirstObjectByType<InventoryController>();
-        }
-
-        // Setup equipment slot drop zones (by index, not type)
+        // Setup equipment slot drop zones (by index)
         for (int i = 0; i < equipmentSlotDropZones.Length && i < 4; i++)
         {
             if (equipmentSlotDropZones[i] != null)
@@ -39,11 +26,7 @@ public class EquipmentPanelUI : MonoBehaviour
             }
         }
 
-        // Subscribe to inventory and equipment changes
-        if (InventoryManager.Instance != null)
-        {
-            InventoryManager.Instance.OnInventoryChanged += RefreshEquipmentViewport;
-        }
+        // Subscribe to equipment changes
         if (EquipmentManager.Instance != null)
         {
             EquipmentManager.Instance.OnEquipmentChanged += OnEquipmentChanged;
@@ -60,15 +43,11 @@ public class EquipmentPanelUI : MonoBehaviour
 
     private void OnEnable()
     {
-        RefreshAll();
+        RefreshEquipmentSlots();
     }
 
     private void OnDestroy()
     {
-        if (InventoryManager.Instance != null)
-        {
-            InventoryManager.Instance.OnInventoryChanged -= RefreshEquipmentViewport;
-        }
         if (EquipmentManager.Instance != null)
         {
             EquipmentManager.Instance.OnEquipmentChanged -= OnEquipmentChanged;
@@ -78,7 +57,6 @@ public class EquipmentPanelUI : MonoBehaviour
     private void OnEquipmentChanged()
     {
         RefreshEquipmentSlots();
-        RefreshEquipmentViewport();
     }
 
     /// <summary>
@@ -90,7 +68,7 @@ public class EquipmentPanelUI : MonoBehaviour
         {
             equipmentPanel.SetActive(true);
         }
-        RefreshAll();
+        RefreshEquipmentSlots();
     }
 
     /// <summary>
@@ -104,10 +82,18 @@ public class EquipmentPanelUI : MonoBehaviour
         }
     }
 
-    private void RefreshAll()
+    /// <summary>
+    /// Refresh UI after equipment equip/remove (called from BlacksmithUI)
+    /// </summary>
+    public void RefreshAfterEquip()
     {
+        StartCoroutine(RefreshAfterDelay());
+    }
+
+    private IEnumerator RefreshAfterDelay()
+    {
+        yield return new WaitForEndOfFrame();
         RefreshEquipmentSlots();
-        RefreshEquipmentViewport();
     }
 
     private void RefreshEquipmentSlots()
@@ -120,7 +106,6 @@ public class EquipmentPanelUI : MonoBehaviour
         
         if (EquipmentManager.Instance == null)
         {
-            // Clear to empty
             for (int i = 0; i < equipmentSlotDropZones.Length; i++)
             {
                 if (equipmentSlotDropZones[i] != null)
@@ -131,7 +116,7 @@ public class EquipmentPanelUI : MonoBehaviour
             return;
         }
 
-        // Refresh slots by index (not by type)
+        // Refresh slots by index
         for (int i = 0; i < 4; i++)
         {
             var item = EquipmentManager.Instance.GetEquippedItemByIndex(i);
@@ -143,102 +128,5 @@ public class EquipmentPanelUI : MonoBehaviour
         }
     }
 
-    // Button: Equip Best
-    public void OnClick_EquipBest()
-    {
-        if (EquipmentManager.Instance == null) return;
-        EquipmentManager.Instance.EquipBest();
-        RefreshAfterEquip();
-    }
-
-    /// <summary>
-    /// Refresh UI after equipment equip/remove
-    /// </summary>
-    public void RefreshAfterEquip()
-    {
-        StartCoroutine(RefreshAfterDelay());
-    }
-
-    private IEnumerator RefreshAfterDelay()
-    {
-        yield return new WaitForEndOfFrame();
-        RefreshEquipmentSlots();
-        RefreshEquipmentViewport();
-    }
-
-    // Button: Remove All
-    public void OnClick_RemoveAll()
-    {
-        if (EquipmentManager.Instance == null) return;
-        EquipmentManager.Instance.RemoveAll();
-        RefreshEquipmentSlots();
-        RefreshEquipmentViewport(); // Refresh to show returned items
-    }
-
-    /// <summary>
-    /// Refresh the equipment viewport with equipment items from inventory
-    /// Uses the same itemUIPrefab from InventoryController
-    /// </summary>
-    private void RefreshEquipmentViewport()
-    {
-        if (equipmentViewportContent == null) return;
-
-        // Get itemUIPrefab from InventoryController (ensure it's available)
-        if (inventoryController == null)
-        {
-            inventoryController = FindFirstObjectByType<InventoryController>();
-        }
-
-        if (itemUIPrefab == null && inventoryController != null)
-        {
-            itemUIPrefab = inventoryController.ItemUIPrefab;
-        }
-
-        if (itemUIPrefab == null)
-        {
-            Debug.LogWarning("[EquipmentPanelUI] itemUIPrefab is null! Make sure InventoryController has itemUIPrefab assigned.");
-            return;
-        }
-
-        // Clear existing UI
-        foreach (Transform child in equipmentViewportContent)
-        {
-            Destroy(child.gameObject);
-        }
-        currentEquipmentUIs.Clear();
-
-        // Get all equipment items from inventory
-        if (InventoryManager.Instance != null)
-        {
-            var allItems = InventoryManager.Instance.GetAllItems();
-            foreach (var (item, amount) in allItems)
-            {
-                if (item != null && item.itemType == ItemType.Equipment)
-                {
-                    GameObject equipmentUIObject = Instantiate(itemUIPrefab, equipmentViewportContent);
-                    
-                    // Initialize ItemUI component first (for icon, name, amount display)
-                    ItemUI itemUI = equipmentUIObject.GetComponent<ItemUI>();
-                    if (itemUI != null && inventoryController != null)
-                    {
-                        itemUI.Initialize(item, amount, inventoryController);
-                    }
-                    
-                    // Add EquipmentItemUI component if not exists (for drag & drop)
-                    EquipmentItemUI equipmentUI = equipmentUIObject.GetComponent<EquipmentItemUI>();
-                    if (equipmentUI == null)
-                    {
-                        equipmentUI = equipmentUIObject.AddComponent<EquipmentItemUI>();
-                    }
-                    
-                    if (equipmentUI != null)
-                    {
-                        equipmentUI.Initialize(item, amount);
-                        currentEquipmentUIs.Add(equipmentUI);
-                    }
-                }
-            }
-        }
-    }
+    // Equip Best, Remove All, Equipment Viewport đã chuyển sang NPC Thợ Rèn (BlacksmithUI)
 }
-

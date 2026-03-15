@@ -567,28 +567,8 @@ public class TakeDamageTest : MonoBehaviour
             Debug.Log($"[TakeDamageTest] {gameObject.name} has been defeated!");
         }
 
-        // Grant EXP to player's current weapon
-        if (WeaponMasteryManager.Instance != null && playerWeaponController != null)
-        {
-            WeaponSO currentWeapon = playerWeaponController.GetCurrentWeapon();
-            if (currentWeapon != null)
-            {
-                WeaponMasteryManager.Instance.AddExp(currentWeapon.weaponType, expReward, currentWeapon);
-
-                if (showDebugInfo)
-                {
-                    Debug.Log($"[TakeDamageTest] Granted {expReward} EXP to {currentWeapon.weaponType} weapon!");
-                }
-            }
-            else
-            {
-                // If no weapon equipped, grant EXP to all weapons (or you can choose a default)
-                if (showDebugInfo)
-                {
-                    Debug.LogWarning("[TakeDamageTest] No weapon equipped, cannot grant EXP!");
-                }
-            }
-        }
+        // EXP vũ khí giờ được cộng khi nhặt EXP Orb (xem ItemDropOrb.OnPickup)
+        // Không cộng ngay khi giết nữa
 
         // Disable enemy behavior
         if (enableDetection)

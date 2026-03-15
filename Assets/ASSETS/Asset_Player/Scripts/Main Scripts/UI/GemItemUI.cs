@@ -94,27 +94,9 @@ public class GemItemUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDra
         canvasGroup.alpha = 1f;
         canvasGroup.blocksRaycasts = true;
 
-        // Check if dropped on a gem slot
-        GemSlotDropZone dropZone = null;
-        if (eventData.pointerCurrentRaycast.gameObject != null)
-        {
-            dropZone = eventData.pointerCurrentRaycast.gameObject.GetComponent<GemSlotDropZone>();
-        }
-
-        if (dropZone != null && dropZone.CanAcceptGem(gemItem))
-        {
-            // Drop successful - OnDrop in GemSlotDropZone will handle equip and inventory removal
-            // Note: RefreshGemSlots() will be called by RefreshAfterGemEquip() which will update the icon
-            // Return to original position (the gem will be removed from viewport by refresh)
-            transform.SetParent(originalParent);
-            rectTransform.anchoredPosition = Vector2.zero;
-        }
-        else
-        {
-            // Return to original position
-            transform.SetParent(originalParent);
-            rectTransform.anchoredPosition = Vector2.zero;
-        }
+        // Return to original position
+        transform.SetParent(originalParent);
+        rectTransform.anchoredPosition = Vector2.zero;
     }
 
     /// <summary>

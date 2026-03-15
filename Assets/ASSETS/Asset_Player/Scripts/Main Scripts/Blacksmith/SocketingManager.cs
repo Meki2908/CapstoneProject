@@ -99,16 +99,8 @@ public class SocketingManager : MonoBehaviour
         if (InventoryManager.Instance.GetItemAmount(crystal.id) <= 0)
             return SocketResult.NoCrystal;
 
-        // Lấy rarity của weapon (dùng SO rarity vì weapon không có runtime rarity riêng)
-        // Dùng rarity từ gem slot target — ở đây dùng crystal rarity vs weapon rarity
-        // Weapon rarity: dùng mặc định từ WeaponSO nếu có, nếu không dùng Common
-        WeaponController wc = UnityEngine.Object.FindFirstObjectByType<WeaponController>();
-        Rarity targetRarity = Rarity.Common;
-        if (wc != null && wc.GetCurrentWeapon() != null)
-        {
-            // Nếu WeaponSO có rarity field → dùng nó, nếu không → Common
-            targetRarity = Rarity.Common; // Weapon mặc định Common (có thể mở rộng sau)
-        }
+        // Weapon: tỉ lệ dựa trên rarity của gem (gem càng hiếm → cần crystal tốt hơn)
+        Rarity targetRarity = gem.rarity;
 
         // Tính tỉ lệ
         float successRate = CalculateSuccessRate(targetRarity, crystal.rarity);
