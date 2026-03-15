@@ -34,31 +34,6 @@ public class SocketingSlotUI : MonoBehaviour, IPointerClickHandler, IPointerEnte
     private float lastClickTime;
     private const float DOUBLE_CLICK_THRESHOLD = 0.3f;
 
-    void Awake()
-    {
-        // Auto-wire references if not assigned in Inspector
-        if (slotBackground == null)
-            slotBackground = GetComponent<Image>();
-
-        if (gemIcon == null)
-        {
-            var iconTf = transform.Find("GemIcon");
-            if (iconTf != null) gemIcon = iconTf.GetComponent<Image>();
-        }
-
-        if (highlightBorder == null)
-        {
-            var borderTf = transform.Find("HighlightBorder");
-            if (borderTf != null) highlightBorder = borderTf.GetComponent<Image>();
-        }
-
-        if (slotLabel == null)
-        {
-            var labelTf = transform.Find("Label");
-            if (labelTf != null) slotLabel = labelTf.GetComponent<TextMeshProUGUI>();
-        }
-    }
-
     /// <summary>
     /// Cập nhật hiển thị gem slot
     /// </summary>
