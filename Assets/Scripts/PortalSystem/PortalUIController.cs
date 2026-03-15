@@ -10,21 +10,28 @@ public class PortalUIController : MonoBehaviour
     public Transform portal1_Dest;
     public Transform portal2_Dest;
     public Transform portal3_Dest;
+    public Transform portal4_Dest;
 
     [Header("UI Buttons (Kéo 4 nút vào đây)")]
     public Button btnPortal1;
     public Button btnPortal2;
     public Button btnPortal3;
+    public Button btnPortal4;
     public Button btnClose;
 
-    [Header("── Quest Advance (tuỳ chọn) ──")]
-    [Tooltip("Set questID > 0 để tự advance step khi player dùng portal.")]
-    public int questID           = 0;
-    public int triggerAtStep     = 1;
-    [Tooltip("Số bước cần advance khi tele (mặc định 1). Set 2 để advance 2 bước liên tiếp.")]
-    public int advanceSteps      = 1;
-    [Tooltip("Portal nào thì advance quest: 1=btnPortal1, 2=btnPortal2, 3=btnPortal3, 0=bất kỳ")]
-    public int questPortalButton = 1;
+    [System.Serializable]
+    public struct PortalQuestConfig
+    {
+        [Tooltip("0 = không advance quest")]
+        public int questID;
+        public int triggerAtStep;
+        [Tooltip("Số bước advance (thường là 2 để skip step intermediate)")]
+        public int advanceSteps;
+    }
+
+    [Header("── Quest Advance – per portal button ──")]
+    [Tooltip("Index 0=btnPortal1, 1=btnPortal2, 2=btnPortal3, 3=btnPortal4")]
+    public PortalQuestConfig[] portalQuestConfigs = new PortalQuestConfig[4];
 
     int _lastPortalIndex = 0;
 
@@ -43,6 +50,7 @@ public class PortalUIController : MonoBehaviour
         if (btnPortal1 != null) btnPortal1.onClick.AddListener(() => TeleportTo(portal1_Dest, 1));
         if (btnPortal2 != null) btnPortal2.onClick.AddListener(() => TeleportTo(portal2_Dest, 2));
         if (btnPortal3 != null) btnPortal3.onClick.AddListener(() => TeleportTo(portal3_Dest, 3));
+        if (btnPortal4 != null) btnPortal4.onClick.AddListener(() => TeleportTo(portal4_Dest, 4));
         if (btnClose   != null) btnClose.onClick.AddListener(ClosePortalMenu);
     }
 
@@ -138,22 +146,38 @@ public class PortalUIController : MonoBehaviour
 
     void TryAdvanceQuest()
     {
-        if (questID <= 0 || QuestManager.Instance == null) return;
-        if (questPortalButton != 0 && _lastPortalIndex != questPortalButton) return;
+        if (QuestManager.Instance == null) return;
 
-        var state = QuestManager.Instance.GetState(questID);
-        int step  = QuestManager.Instance.GetStepIndex(questID);
-        int maxStep = triggerAtStep + advanceSteps - 1;   // Range cho phép
+        // Per-portal config: index = _lastPortalIndex - 1
+        int idx = _lastPortalIndex - 1;
+        if (idx >= 0 && idx < portalQuestConfigs.Length)
+        {
+            var cfg = portalQuestConfigs[idx];
+            if (cfg.questID > 0)
+            {
+                AdvanceQuestConfig(cfg.questID, cfg.triggerAtStep,
+                    cfg.advanceSteps > 0 ? cfg.advanceSteps : 1);
+                return;
+            }
+        }
+        // No config for this portal — skip
+        Debug.Log($"[Portal] No quest config for portal button {_lastPortalIndex}.");
+    }
 
-        // Chấp nhận nếu step nằm trong [triggerAtStep .. maxStep]
-        if (state != QuestManager.QuestState.Active || step < triggerAtStep || step > maxStep) return;
+    void AdvanceQuestConfig(int qID, int triggerStep, int steps)
+    {
+        var state = QuestManager.Instance.GetState(qID);
+        int step  = QuestManager.Instance.GetStepIndex(qID);
+        int maxStep = triggerStep + steps - 1;
 
-        int stepsLeft = maxStep - step + 1;   // Còn bao nhiêu bước cần advance
+        if (state != QuestManager.QuestState.Active || step < triggerStep || step > maxStep) return;
+
+        int stepsLeft = maxStep - step + 1;
         for (int i = 0; i < stepsLeft; i++)
         {
-            if (QuestManager.Instance.GetState(questID) != QuestManager.QuestState.Active) break;
-            QuestManager.Instance.AdvanceStep(questID);
+            if (QuestManager.Instance.GetState(qID) != QuestManager.QuestState.Active) break;
+            QuestManager.Instance.AdvanceStep(qID);
         }
-        Debug.Log($"[Portal] Quest {questID}: advanced {stepsLeft} step(s) from step {step} (portal {_lastPortalIndex}).");
+        Debug.Log($"[Portal] Quest {qID}: advanced {stepsLeft} step(s) from step {step} (portal btn {_lastPortalIndex}).");
     }
 }
