@@ -24,7 +24,8 @@ using UnityEngine.InputSystem;
 /// 12 I      - Open inventory
 /// 13 Change weapon  (OnWeaponChanged event)
 /// 14 I      - Close inventory
-/// 15 [Complete] show completion canvas → TutorialQuestFinisher
+/// 15 [Spawn 10 enemies wave 2] Kill Enemy: Defeat all 10 enemies!
+/// 16 [Complete] Congratulations → 5s → teleport to Map_Chinh
 /// </summary>
 public class TutorialTextDisplay : MonoBehaviour
 {
@@ -49,6 +50,13 @@ public class TutorialTextDisplay : MonoBehaviour
     public Transform[] waveSpawnPoints;
 
     // ─────────────────────────────────────────────────────────────────────────
+    //  Auto-wired references (found at runtime)
+    // ─────────────────────────────────────────────────────────────────────────
+    WeaponSwapper     _weaponSwapper;
+    EnemyDetection    _enemyDetection;
+    Character         _character;
+
+    // ─────────────────────────────────────────────────────────────────────────
     //  Step Constants
     // ─────────────────────────────────────────────────────────────────────────
     const int STEP_SPACE      = 0;
@@ -60,40 +68,47 @@ public class TutorialTextDisplay : MonoBehaviour
     const int STEP_KILL1      = 6;
     const int STEP_SKILL_T    = 7;
     const int STEP_KILL2      = 8;
-    const int STEP_ULT        = 9;
-    const int STEP_WAVE       = 10;   // After 5s pause
-    const int STEP_TAB_SHEATH = 11;
-    const int STEP_OPEN_INV   = 12;
-    const int STEP_CHANGE_WP  = 13;
-    const int STEP_CLOSE_INV  = 14;
-    const int WAVE_COUNT      = 10;
+    const int STEP_ULT         = 9;
+    const int STEP_WAVE        = 10;  // After 5s pause
+    const int STEP_TAB_SHEATH  = 11;
+    const int STEP_OPEN_INV    = 12;
+    const int STEP_CHANGE_WP   = 13;  // Đổi vũ khí + Ấn I để tắt (gộp 1 step)
+    const int STEP_TAB_DRAW2   = 14;  // Rút vũ khí mới
+    const int STEP_KILL_WAVE2  = 15;  // Wave 2
+    const int STEP_PRESS_F     = 16;  // Ấn F để về map
+    const int WAVE_COUNT       = 10;
 
     readonly string[] _texts =
     {
-        /* 0  */ "Press Space to jump",
-        /* 1  */ "Press Tab to equip your weapon",
-        /* 2  */ "Press Right Mouse Button to roll",
-        /* 3  */ "Press Left Mouse Button to attack",
-        /* 4  */ "Press E to use Skill 1",
-        /* 5  */ "Press R to use Skill 2",
+        /* 0  */ "Press <color=#FFD700><b>Space</b></color> to jump",
+        /* 1  */ "Press <color=#FFD700><b>Tab</b></color> to equip your weapon",
+        /* 2  */ "Press <color=#FFD700><b>Right Mouse Button</b></color> to roll",
+        /* 3  */ "Press <color=#FFD700><b>Left Mouse Button</b></color> to attack",
+        /* 4  */ "Press <color=#FFD700><b>E</b></color> to use Skill 1",
+        /* 5  */ "Press <color=#FFD700><b>R</b></color> to use Skill 2",
         /* 6  */ "Kill the enemy!",
-        /* 7  */ "Press T to use Skill 3",
+        /* 7  */ "Press <color=#FFD700><b>T</b></color> to use Skill 3",
         /* 8  */ "Kill the enemy!",
-        /* 9  */ "Press Q to use your Ultimate",
-        /* 10 */ "Defeat all 10 enemies!",
-        /* 11 */ "Press Tab to sheathe your weapon",
-        /* 12 */ "Press I to open your inventory",
+        /* 9  */ "Press <color=#FFD700><b>Q</b></color> to use your Ultimate",
+        /* 10 */ "Defeat all <color=#FFD700><b>10</b></color> enemies!",
+        /* 11 */ "Press <color=#FFD700><b>Tab</b></color> to sheathe your weapon",
+        /* 12 */ "Press <color=#FFD700><b>I</b></color> to open your inventory",
         /* 13 */ "Change your weapon",
-        /* 14 */ "Press I to close your inventory",
+        // 14 text handled dynamically after weapon change
+        /* 14 */ "Press <color=#FFD700><b>Tab</b></color> to draw your new weapon",
+        /* 15 */ "Kill Enemy: Defeat all <color=#FFD700><b>10</b></color> enemies!",
+        /* 16 */ "Congratulations! Tutorial Complete!\nPress <color=#FFD700><b>F</b></color> to return to the main map!",
     };
 
     // ─────────────────────────────────────────────────────────────────────────
     //  State
     // ─────────────────────────────────────────────────────────────────────────
-    int  _step      = 0;
-    bool _waiting   = false;
-    bool _completed = false;
-    int  _waveKills = 0;
+    int  _step          = 0;
+    bool _waiting       = false;
+    bool _completed     = false;
+    int  _waveKills     = 0;
+    bool _inWave2       = false;   // true khi đang ở wave kill lần 2
+    bool _weaponChanged = false;   // true sau khi player đã đổi vũ khí ở step 13
 
     // ─────────────────────────────────────────────────────────────────────────
     //  Lifecycle
@@ -103,6 +118,22 @@ public class TutorialTextDisplay : MonoBehaviour
     {
         if (completionCanvas != null) completionCanvas.SetActive(false);
         SetAllMasteryLevels(1);
+
+        // ── Auto-wire WeaponSwapper event ─────────────────────────────────
+        _weaponSwapper  = FindFirstObjectByType<WeaponSwapper>(FindObjectsInactive.Include);
+        _enemyDetection = FindFirstObjectByType<EnemyDetection>(FindObjectsInactive.Include);
+        _character      = FindFirstObjectByType<Character>(FindObjectsInactive.Include);
+
+        if (_weaponSwapper != null)
+        {
+            _weaponSwapper.OnWeaponSwapped.AddListener(OnWeaponChanged);
+            Debug.Log("[Tutorial] Auto-subscribed to WeaponSwapper.OnWeaponSwapped");
+        }
+        else
+        {
+            Debug.LogWarning("[Tutorial] WeaponSwapper not found – OnWeaponChanged must be wired in Inspector!");
+        }
+
         StartCoroutine(ShowDelayed(0));
     }
 
@@ -122,8 +153,12 @@ public class TutorialTextDisplay : MonoBehaviour
             case STEP_ULT:        if (IsKeyDown(KeyCode.Q, "q"))         Advance(); break;
             case STEP_TAB_SHEATH: if (IsKeyDown(KeyCode.Tab, "tab"))     Advance(); break;
             case STEP_OPEN_INV:   if (IsKeyDown(KeyCode.I, "i"))         Advance(); break;
-            case STEP_CLOSE_INV:  if (IsKeyDown(KeyCode.I, "i"))         Advance(); break;
-            // STEP_KILL1, STEP_KILL2, STEP_CHANGE_WP, STEP_WAVE → event-driven
+            // STEP_CHANGE_WP: đợi weapon changed event → sau đó đợi I press
+            case STEP_CHANGE_WP:
+                if (_weaponChanged && IsKeyDown(KeyCode.I, "i"))          Advance(); break;
+            case STEP_TAB_DRAW2:  if (IsKeyDown(KeyCode.Tab, "tab"))     Advance(); break;
+            case STEP_PRESS_F:    if (IsKeyDown(KeyCode.F, "f"))         TriggerCompletion(); break;
+            // STEP_KILL1, STEP_KILL2, STEP_WAVE, STEP_KILL_WAVE2 → event-driven
         }
     }
 
@@ -168,21 +203,47 @@ public class TutorialTextDisplay : MonoBehaviour
 
         if (_step >= _texts.Length) return;
 
-        bool instant = (_step == STEP_KILL1 || _step == STEP_KILL2 || _step == STEP_WAVE);
-        if (instant) ShowNow(_step);
-        else         StartCoroutine(ShowDelayed(_step));
+        // STEP_WAVE & STEP_KILL_WAVE2: text shown by spawn coroutines after delay, not here
+        bool skipText = (_step == STEP_WAVE || _step == STEP_KILL_WAVE2);
+        bool instant  = (_step == STEP_KILL1 || _step == STEP_KILL2 || _step == STEP_CHANGE_WP);
+        if      (skipText) { /* text handled by spawner */ }
+        else if (instant)  ShowNow(_step);
+        else               StartCoroutine(ShowDelayed(_step));
     }
 
     void OnEnterStep(int step)
     {
         switch (step)
         {
-            case STEP_KILL1:      SpawnEnemy1();              break;
-            case STEP_SKILL_T:    SetAllMasteryLevels(30);    break;
-            case STEP_KILL2:      SpawnEnemy2();              break;
-            case STEP_ULT:        SetAllMasteryLevels(60);    break;
-            case STEP_WAVE:       StartCoroutine(DelayedWaveSpawn()); break;
+            case STEP_KILL1:       SpawnEnemy1();              break;
+            case STEP_SKILL_T:     SetAllMasteryLevels(30);    break;
+            case STEP_KILL2:       SpawnEnemy2();              break;
+            case STEP_ULT:         SetAllMasteryLevels(60);    break;
+            case STEP_WAVE:        StartCoroutine(DelayedWaveSpawn()); break;
+            case STEP_CHANGE_WP:   PrepareForWeaponChange();   break;
+            case STEP_TAB_DRAW2:   ShowNow(STEP_TAB_DRAW2);   break;  // Show text ngay
+            case STEP_KILL_WAVE2:  SpawnWave2();               break;
+            case STEP_PRESS_F:     ShowNow(STEP_PRESS_F);      break;  // Show text ngay
         }
+    }
+
+    /// <summary>
+    /// Reset combat state và sheath weapon để WeaponSwapper không bị block.
+    /// </summary>
+    void PrepareForWeaponChange()
+    {
+        _weaponChanged = false;
+
+        if (_weaponSwapper != null)
+        {
+            _weaponSwapper.SetTutorialMode(true);
+            Debug.Log("[Tutorial] WeaponSwapper tutorial mode ON.");
+        }
+        if (_enemyDetection != null)
+            _enemyDetection.SetCombatState(false);
+
+        // Hiện "Change your weapon" ngay khi mở inventory
+        ShowNow(STEP_CHANGE_WP);
     }
 
     IEnumerator DelayedWaveSpawn()
@@ -238,7 +299,25 @@ public class TutorialTextDisplay : MonoBehaviour
         if (wavePrefab == null || waveSpawnPoints == null || waveSpawnPoints.Length == 0)
         { TriggerCompletion(); return; }
 
+        _inWave2   = false;
         _waveKills = 0;
+        int count = Mathf.Min(WAVE_COUNT, waveSpawnPoints.Length);
+        for (int i = 0; i < count; i++)
+        {
+            if (waveSpawnPoints[i] == null) continue;
+            var go = Instantiate(wavePrefab, waveSpawnPoints[i].position, waveSpawnPoints[i].rotation);
+            HookDeath(go, OnWaveKill);
+        }
+    }
+
+    void SpawnWave2()
+    {
+        if (wavePrefab == null || waveSpawnPoints == null || waveSpawnPoints.Length == 0)
+        { TriggerCompletion(); return; }
+
+        _inWave2   = true;
+        _waveKills = 0;
+        ShowNow(STEP_KILL_WAVE2);
         int count = Mathf.Min(WAVE_COUNT, waveSpawnPoints.Length);
         for (int i = 0; i < count; i++)
         {
@@ -270,12 +349,17 @@ public class TutorialTextDisplay : MonoBehaviour
     void OnWaveKill()
     {
         _waveKills++;
-        // Show live counter
+        string label = _inWave2 ? "Kill Enemy: Defeat all 10 enemies!" : "Defeat all 10 enemies!";
         if (tutorialText != null)
-            tutorialText.text = $"Defeat all 10 enemies! ({_waveKills}/{WAVE_COUNT})";
+            tutorialText.text = $"{label} ({_waveKills}/{WAVE_COUNT})";
 
         if (_waveKills >= WAVE_COUNT)
-            Advance(); // → STEP_TAB_SHEATH
+        {
+            if (_inWave2)
+                Advance();  // Wave 2 xong → STEP_PRESS_F ("Ấn F để về map")
+            else
+                Advance();  // Wave 1 xong → STEP_TAB_SHEATH
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -291,7 +375,7 @@ public class TutorialTextDisplay : MonoBehaviour
         {
             completionCanvas.SetActive(true);
             if (completionMessageText != null)
-                completionMessageText.text = "Tutorial Complete! Well done, adventurer!";
+                completionMessageText.text = "Congratulations! Tutorial Complete!";
             StartCoroutine(FinishAndReturn());
         }
         else
@@ -302,7 +386,8 @@ public class TutorialTextDisplay : MonoBehaviour
 
     IEnumerator FinishAndReturn()
     {
-        yield return new WaitForSeconds(3f);
+        SetAllMasteryLevels(1);  // Reset về level 1 trước khi về map
+        yield return null;       // No delay – teleport immediately
         if (completionMessageText != null) completionMessageText.text = "";
         if (questFinisher != null) questFinisher.FinishTutorial();
     }
@@ -324,10 +409,16 @@ public class TutorialTextDisplay : MonoBehaviour
     //  Public API
     // ─────────────────────────────────────────────────────────────────────────
 
-    /// <summary>Called by WeaponController.OnWeaponChanged Unity Event.</summary>
+    /// <summary>Called by WeaponSwapper.OnWeaponSwapped or WeaponController Unity Event.</summary>
     public void OnWeaponChanged()
     {
-        if (_step == STEP_CHANGE_WP && !_completed) Advance();
+        if (_step != STEP_CHANGE_WP || _completed || _weaponChanged) return;
+
+        // Đổi xong → set flag + show combined text + tắt tutorial mode
+        _weaponChanged = true;
+        if (_weaponSwapper != null) _weaponSwapper.SetTutorialMode(false);
+        if (tutorialText != null)
+            tutorialText.text = "Weapon changed!\nPress <color=#FFD700><b>I</b></color> to close your inventory";
     }
 
     /// <summary>Skip button — advance one step.</summary>

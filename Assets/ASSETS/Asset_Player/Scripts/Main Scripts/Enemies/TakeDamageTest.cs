@@ -492,6 +492,15 @@ public class TakeDamageTest : MonoBehaviour
         {
             return; // Already dead, don't process damage
         }
+        
+        // === SHIELD BLOCK — boss bất tử khi có shield ===
+        var bossSkill = GetComponent<BossMultiSkill>();
+        if (bossSkill == null) bossSkill = GetComponentInParent<BossMultiSkill>();
+        if (bossSkill != null && bossSkill.ShouldBlockDamage())
+        {
+            if (showDebugInfo) Debug.Log($"[TakeDamageTest] {gameObject.name} SHIELD BLOCKED {damage} damage!");
+            return;
+        }
 
         // Debug skill damage
         if (showDebugInfo && isSkill)
@@ -588,8 +597,27 @@ public class TakeDamageTest : MonoBehaviour
         }
         enableRaycastDamage = false;
 
-        // Trigger enemy-specific death behaviour (AI, animation, physics, etc.)
-        // Priority: EnemyDeathController -> specific AI Die() -> animator trigger fallback
+        // === DUNGEON MANIA: Trigger EnemyDamage.Death() ===
+        // EnemyDamage quản lý death animation, gold, score, quest progress
+        var enemyDamage = GetComponent<EnemyDamage>();
+        if (enemyDamage == null) enemyDamage = GetComponentInParent<EnemyDamage>();
+        if (enemyDamage == null) enemyDamage = GetComponentInChildren<EnemyDamage>();
+        if (enemyDamage != null)
+        {
+            // Đảm bảo EnemyScript.enemy.helth cũng = 0 
+            var enemyScript = GetComponent<EnemyScript>();
+            if (enemyScript == null) enemyScript = GetComponentInParent<EnemyScript>();
+            if (enemyScript != null && enemyScript.enemy != null)
+            {
+                enemyScript.enemy.helth.value = 0;
+                enemyScript.alive = false;
+            }
+            StartCoroutine(enemyDamage.Death());
+            if (showDebugInfo) Debug.Log("[TakeDamageTest] → EnemyDamage.Death() triggered!");
+            return; // EnemyDamage.Death() handles everything
+        }
+
+        // Fallback: Trigger enemy-specific death behaviour
         var deathController = GetComponent<EnemyDeathController>();
         if (deathController != null)
         {
@@ -604,7 +632,6 @@ public class TakeDamageTest : MonoBehaviour
             }
             else
             {
-                // If there is a generic Animator, at least try to play "Die"
                 var animator = GetComponent<Animator>();
                 if (animator != null)
                 {
@@ -613,7 +640,7 @@ public class TakeDamageTest : MonoBehaviour
             }
         }
 
-        // Optionally destroy the enemy after a short delay (tùy bạn bật/tắt)
+        // Optionally destroy the enemy after a short delay
         // Destroy(gameObject, 3f);
     }
 

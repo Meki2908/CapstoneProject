@@ -57,8 +57,8 @@ public class RandomEnemy : MonoBehaviour{
     
     // Hệ thống wave mới
     // Wave 1-3: Skelet (Skeleton + skeleton_archer) - index 0,1
-    // Wave 4: Skelet + Lich - index 0,1,5
-    // Wave 5: Boss + Demon - index 6,7,8,9,10
+    // Wave 4: Skelet + Lich/MiniBoss - index 0,1,5,6,7,8,9
+    // Wave 5: Boss chính + Demon - index 6,7,8,9,10
     void EnableNewWaveSystem()
     {
         if (DungeonWaveManager.Instance == null)
@@ -71,15 +71,16 @@ public class RandomEnemy : MonoBehaviour{
         
         // Sử dụng GetRemainingEnemyCounts để KHÔNG reset counters
         int skeletCount, monsterCount, lichCount, bossCount, demonCount;
-        DungeonWaveManager.Instance.GetRemainingEnemyCounts(out skeletCount, out monsterCount, out lichCount, out bossCount, out demonCount);
+        int stoneogreCount, golemCount, minotaurCount, ifritCount;
+        DungeonWaveManager.Instance.GetRemainingEnemyCounts(out skeletCount, out monsterCount, out lichCount, out bossCount, out demonCount,
+            out stoneogreCount, out golemCount, out minotaurCount, out ifritCount);
         
-        // KHÔNG reset counters ở đây nữa - đã được ConfigureGamePlayManager reset rồi
-        // GamePlayManager.archers, monsteres, boss, lich, demon đã được theo dõi trong EnemyChooseNewWave
-        
-        EnemyChooseNewWave(skeletCount, monsterCount, lichCount, bossCount, demonCount);
+        EnemyChooseNewWave(skeletCount, monsterCount, lichCount, demonCount,
+            stoneogreCount, golemCount, minotaurCount, ifritCount);
     }
     
-    void EnemyChooseNewWave(int skeletCount, int monsterCount, int lichCount, int bossCount, int demonCount)
+    void EnemyChooseNewWave(int skeletCount, int monsterCount, int lichCount, int demonCount,
+        int stoneogreCount, int golemCount, int minotaurCount, int ifritCount)
     {
         // Kiểm tra bounds cho mảng enemy trước
         if (enemys == null || enemys.Length == 0) {
@@ -90,16 +91,31 @@ public class RandomEnemy : MonoBehaviour{
         // Reset index về giá trị mặc định an toàn
         index = 0;
 
-        // Ưu tiên theo thứ tự: Demon > Boss > Lich > Monster > Skelet
+        // Ưu tiên theo thứ tự: Demon > Ifrit > Golem > Minotaur > Stoneogre > Lich > Monster > Skelet
         // Demon: index 10
         if (GamePlayManager.demon < demonCount) {
             index = 10; // Demon
             GamePlayManager.demon++;
         }
-        // Boss: index 6-9 (Stoneogre, Golem, Minotaur, Ifrit)
-        else if (GamePlayManager.boss < bossCount) {
-            index = Random.Range(6, 10); // Random Boss type
-            GamePlayManager.boss++;
+        // Ifrit: index 9
+        else if (GamePlayManager.ifrit < ifritCount) {
+            index = 9;
+            GamePlayManager.ifrit++;
+        }
+        // Golem: index 7
+        else if (GamePlayManager.golem < golemCount) {
+            index = 7;
+            GamePlayManager.golem++;
+        }
+        // Minotaur: index 8
+        else if (GamePlayManager.minotaur < minotaurCount) {
+            index = 8;
+            GamePlayManager.minotaur++;
+        }
+        // Stoneogre: index 6
+        else if (GamePlayManager.stoneogre < stoneogreCount) {
+            index = 6;
+            GamePlayManager.stoneogre++;
         }
         // Lich: index 5
         else if (GamePlayManager.lich < lichCount) {
@@ -121,7 +137,10 @@ public class RandomEnemy : MonoBehaviour{
             List<int> availableIndices = new List<int>();
             
             if (demonCount > 0) availableIndices.Add(10);
-            if (bossCount > 0) availableIndices.AddRange(new int[] {6, 7, 8, 9});
+            if (ifritCount > 0) availableIndices.Add(9);
+            if (golemCount > 0) availableIndices.Add(7);
+            if (minotaurCount > 0) availableIndices.Add(8);
+            if (stoneogreCount > 0) availableIndices.Add(6);
             if (lichCount > 0) availableIndices.Add(5);
             if (monsterCount > 0) availableIndices.AddRange(new int[] {2, 3, 4});
             if (skeletCount > 0) availableIndices.AddRange(new int[] {0, 1});

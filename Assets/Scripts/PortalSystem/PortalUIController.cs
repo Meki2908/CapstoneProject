@@ -17,6 +17,17 @@ public class PortalUIController : MonoBehaviour
     public Button btnPortal3;
     public Button btnClose;
 
+    [Header("── Quest Advance (tuỳ chọn) ──")]
+    [Tooltip("Set questID > 0 để tự advance step khi player dùng portal.")]
+    public int questID           = 0;
+    public int triggerAtStep     = 1;
+    [Tooltip("Số bước cần advance khi tele (mặc định 1). Set 2 để advance 2 bước liên tiếp.")]
+    public int advanceSteps      = 1;
+    [Tooltip("Portal nào thì advance quest: 1=btnPortal1, 2=btnPortal2, 3=btnPortal3, 0=bất kỳ")]
+    public int questPortalButton = 1;
+
+    int _lastPortalIndex = 0;
+
     [Header("Player Reference")]
     [Tooltip("Kéo thả Player của bạn vào đây nếu bạn muốn gán cứng, nếu không script sẽ tự tìm qua Tag 'Player'")]
     public Transform playerOverride;
@@ -29,10 +40,9 @@ public class PortalUIController : MonoBehaviour
 
     private void Awake()
     {
-        // Đăng ký listeners ngay khi Awake để sẵn sàng trước khi trigger gọi ShowPortalMenu
-        if (btnPortal1 != null) btnPortal1.onClick.AddListener(() => TeleportTo(portal1_Dest));
-        if (btnPortal2 != null) btnPortal2.onClick.AddListener(() => TeleportTo(portal2_Dest));
-        if (btnPortal3 != null) btnPortal3.onClick.AddListener(() => TeleportTo(portal3_Dest));
+        if (btnPortal1 != null) btnPortal1.onClick.AddListener(() => TeleportTo(portal1_Dest, 1));
+        if (btnPortal2 != null) btnPortal2.onClick.AddListener(() => TeleportTo(portal2_Dest, 2));
+        if (btnPortal3 != null) btnPortal3.onClick.AddListener(() => TeleportTo(portal3_Dest, 3));
         if (btnClose   != null) btnClose.onClick.AddListener(ClosePortalMenu);
     }
 
@@ -68,8 +78,9 @@ public class PortalUIController : MonoBehaviour
             EventSystem.current.SetSelectedGameObject(null);
     }
 
-    private void TeleportTo(Transform destination)
+    private void TeleportTo(Transform destination, int portalIndex = 0)
     {
+        _lastPortalIndex = portalIndex;
         // Fallback cuối cùng: Nếu vẫn chưa có Player, thử tìm bằng Tag
         if (currentPlayer == null)
         {
@@ -121,6 +132,28 @@ public class PortalUIController : MonoBehaviour
         if (cc != null) cc.enabled = true;
 
         ClosePortalMenu();
+        TryAdvanceQuest();
         Debug.Log($"[Portal] Dịch chuyển hoàn tất. Vị trí hiện tại: {currentPlayer.position}");
+    }
+
+    void TryAdvanceQuest()
+    {
+        if (questID <= 0 || QuestManager.Instance == null) return;
+        if (questPortalButton != 0 && _lastPortalIndex != questPortalButton) return;
+
+        var state = QuestManager.Instance.GetState(questID);
+        int step  = QuestManager.Instance.GetStepIndex(questID);
+        int maxStep = triggerAtStep + advanceSteps - 1;   // Range cho phép
+
+        // Chấp nhận nếu step nằm trong [triggerAtStep .. maxStep]
+        if (state != QuestManager.QuestState.Active || step < triggerAtStep || step > maxStep) return;
+
+        int stepsLeft = maxStep - step + 1;   // Còn bao nhiêu bước cần advance
+        for (int i = 0; i < stepsLeft; i++)
+        {
+            if (QuestManager.Instance.GetState(questID) != QuestManager.QuestState.Active) break;
+            QuestManager.Instance.AdvanceStep(questID);
+        }
+        Debug.Log($"[Portal] Quest {questID}: advanced {stepsLeft} step(s) from step {step} (portal {_lastPortalIndex}).");
     }
 }

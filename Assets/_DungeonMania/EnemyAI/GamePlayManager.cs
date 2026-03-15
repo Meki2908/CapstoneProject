@@ -9,6 +9,7 @@ public class GamePlayManager : MonoBehaviour {
     public static Slider sliderStatic;
     public static Level level;
     public static int lich, archers, monsteres, boss, demon;
+    public static int stoneogre, golem, minotaur, ifrit; // Boss riêng cho mỗi dungeon
     public Text textCurrentLevel;
     public static int leftEnemiesForDoor;
     public static int leftEnemiesArena;
@@ -137,17 +138,19 @@ public class GamePlayManager : MonoBehaviour {
         
         // Lấy số lượng enemy từ DungeonWaveManager
         int skeletCount, monsterCount, lichCount, bossCount, demonCount;
-        DungeonWaveManager.Instance.GetEnemyCounts(out skeletCount, out monsterCount, out lichCount, out bossCount, out demonCount);
+        int stoneogreCount, golemCount, minotaurCount, ifritCount;
+        DungeonWaveManager.Instance.GetEnemyCounts(out skeletCount, out monsterCount, out lichCount, out bossCount, out demonCount,
+            out stoneogreCount, out golemCount, out minotaurCount, out ifritCount);
         
         // Tính tổng số enemy trong wave
-        int totalEnemies = skeletCount + monsterCount + lichCount + bossCount + demonCount;
+        int totalBoss = stoneogreCount + golemCount + minotaurCount + ifritCount;
+        int totalEnemies = skeletCount + monsterCount + lichCount + totalBoss + demonCount;
         enemysOfWave = totalEnemies;
         
         // Thiết lập enemyType theo format cũ để tương thích
-        // enemyType[0] = archers (skelet), [1] = monsters, [2] = lich, [3] = boss, [4] = demon
-        level.enemyType = new int[] { skeletCount, monsterCount, lichCount, bossCount, demonCount };
+        level.enemyType = new int[] { skeletCount, monsterCount, lichCount, totalBoss, demonCount };
         
-        Debug.Log($"[GamePlayManager] Wave {waveOfArena}: Skelet={skeletCount}, Monster={monsterCount}, Lich={lichCount}, Boss={bossCount}, Demon={demonCount}, Total={totalEnemies}");
+        Debug.Log($"[GamePlayManager] Wave {waveOfArena}: Skelet={skeletCount}, Monster={monsterCount}, Lich={lichCount}, Stoneogre={stoneogreCount}, Golem={golemCount}, Minotaur={minotaurCount}, Ifrit={ifritCount}, Demon={demonCount}, Total={totalEnemies}");
     }
     
     // Hệ thống wave cũ - giữ nguyên để tương thích
