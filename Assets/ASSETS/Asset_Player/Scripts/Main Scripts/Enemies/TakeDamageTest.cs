@@ -540,7 +540,7 @@ public class TakeDamageTest : MonoBehaviour
         // Play hit animation if still alive (non-lethal hit)
         if (currentHealth > 0f)
         {
-            PlayHitAnimation();
+            PlayHitAnimation(isSkill);
         }
 
         // Check for death
@@ -612,8 +612,10 @@ public class TakeDamageTest : MonoBehaviour
                 enemyScript.enemy.helth.value = 0;
                 enemyScript.alive = false;
             }
-            StartCoroutine(enemyDamage.Death());
-            if (showDebugInfo) Debug.Log("[TakeDamageTest] → EnemyDamage.Death() triggered!");
+            // QUAN TRỌNG: Chạy Death trên EnemyDamage's MonoBehaviour, KHÔNG phải TakeDamageTest
+            // Vì Death() gọi gameObject.SetActive(false) → nếu chạy trên cùng GameObject thì coroutine bị hủy giữa chừng
+            enemyDamage.StartCoroutine(enemyDamage.Death());
+            if (showDebugInfo) Debug.Log("[TakeDamageTest] → EnemyDamage.Death() triggered on EnemyDamage!");
             return; // EnemyDamage.Death() handles everything
         }
 
@@ -726,35 +728,47 @@ public class TakeDamageTest : MonoBehaviour
     #endregion
 
     // Try to play "Hit" animation on this enemy if Animator supports it.
-    private void PlayHitAnimation()
+    private void PlayHitAnimation(bool isSkill = false)
     {
-        var animator = GetComponent<Animator>();
-        if (animator == null) return;
-
-        // Check animator parameters for a "Hit" parameter and set it appropriately.
-        foreach (var p in animator.parameters)
+        // Tìm EnemyScript để dùng animator đúng + interrupt attack
+        var enemyScript = GetComponent<EnemyScript>();
+        if (enemyScript == null) enemyScript = GetComponentInParent<EnemyScript>();
+        
+        if (enemyScript == null || enemyScript.animator == null) return;
+        
+        // Boss: CHỈ bị hit khi dính SKILL, đánh thường KHÔNG bị
+        // Dùng isBoss field (set trong Inspector) thay vì check enemyType enum
+        bool isBossType = enemyScript.isBoss;
+        if (isBossType && !isSkill)
+            return; // Boss không bị choáng bởi đánh thường
+        
+        // Hit animation
+        enemyScript.animator.SetBool("hit", true);
+        enemyScript.animator.SetBool("attack", false);
+        enemyScript.hit = true;
+        
+        // Dừng di chuyển khi bị hit
+        if (enemyScript.navMeshAgent != null && enemyScript.navMeshAgent.isOnNavMesh)
         {
-            if (p.name == "Hit")
-            {
-                if (p.type == AnimatorControllerParameterType.Trigger)
-                {
-                    animator.SetTrigger("Hit");
-                }
-                else if (p.type == AnimatorControllerParameterType.Bool)
-                {
-                    animator.SetBool("Hit", true);
-                    StartCoroutine(ResetAnimatorBool("Hit", 0.15f));
-                }
-                else
-                {
-                    animator.SetTrigger("Hit");
-                }
-                return;
-            }
+            enemyScript.navMeshAgent.isStopped = true;
         }
-
-        // Fallback: try trigger "Hit" anyway (safe if not present)
-        try { animator.SetTrigger("Hit"); } catch { }
+        
+        // Auto-reset — tránh bị đơ vĩnh viễn
+        float staggerTime = isBossType ? 0.6f : 0.4f;
+        StartCoroutine(ResetHitState(enemyScript, staggerTime));
+    }
+    
+    private System.Collections.IEnumerator ResetHitState(EnemyScript es, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        if (es == null || !es.alive) yield break;
+        
+        es.animator.SetBool("hit", false);
+        es.hit = false;
+        if (es.navMeshAgent != null && es.navMeshAgent.isOnNavMesh)
+        {
+            es.navMeshAgent.isStopped = false;
+        }
     }
 
     private System.Collections.IEnumerator ResetAnimatorBool(string param, float delay)

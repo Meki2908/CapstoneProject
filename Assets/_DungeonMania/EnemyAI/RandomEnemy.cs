@@ -55,6 +55,23 @@ public class RandomEnemy : MonoBehaviour{
         Enable();
     }
     
+    /// <summary>
+    /// Kích hoạt enemy loại cụ thể theo index — dùng cho BossMultiSkill summon.
+    /// Indices: 0-1=Skelet, 2-4=Monster, 5=Lich, 6=Stoneogre, 7=Golem, 8=Minotaur, 9=Ifrit, 10=Demon
+    /// </summary>
+    public void EnableSpecificType(int typeIndex)
+    {
+        if (enemys == null || enemys.Length == 0)
+        {
+            Debug.LogError("[RandomEnemy] enemys array is null or empty!");
+            return;
+        }
+        
+        index = Mathf.Clamp(typeIndex, 0, enemys.Length - 1);
+        Debug.Log($"[RandomEnemy] EnableSpecificType: index={index} on {gameObject.name}");
+        SetEnemy();
+    }
+    
     // Hệ thống wave mới
     // Wave 1-3: Skelet (Skeleton + skeleton_archer) - index 0,1
     // Wave 4: Skelet + Lich/MiniBoss - index 0,1,5,6,7,8,9

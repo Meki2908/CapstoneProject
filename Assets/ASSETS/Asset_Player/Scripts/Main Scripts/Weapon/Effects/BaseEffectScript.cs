@@ -104,7 +104,7 @@ public abstract class BaseEffectScript : MonoBehaviour
             if (debugMode) Debug.Log($"[{GetType().Name}] Particle hit: {enemy.name} for {finalDamage} damage (crit: {isCrit})");
 
             // Apply damage with weapon type and crit status
-            enemy.TakeDamage(finalDamage, weaponType, isCrit);
+            enemy.TakeSkillDamage(finalDamage, weaponType, isCrit);
 
             // Apply specific effect
             ApplyEffect(enemy);
@@ -151,7 +151,7 @@ public abstract class BaseEffectScript : MonoBehaviour
             if (debugMode) Debug.Log($"[{GetType().Name}] Collision hit: {enemy.name} for {finalDamage} damage (crit: {isCrit})");
 
             // Apply damage with weapon type and crit status
-            enemy.TakeDamage(finalDamage, weaponType, isCrit);
+            enemy.TakeSkillDamage(finalDamage, weaponType, isCrit);
 
             // Apply specific effect
             ApplyEffect(enemy);

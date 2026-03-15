@@ -42,6 +42,8 @@ public class BossMultiSkill : MonoBehaviour
     public int summonSkeletCount = 5;
     public int summonMonsterCount = 0;
     public float summonCooldown = 20f;
+    [Tooltip("Delay lần đầu tiên trước khi summon (giây)")]
+    public float summonInitialDelay = 10f;
     [Tooltip("Demon Phase 2: triệu hồi boss phụ (Stoneogre + Golem)")]
     public bool summonSubBosses = false;
     
@@ -62,7 +64,7 @@ public class BossMultiSkill : MonoBehaviour
     private GameObject shieldInstance;
     private float lastShieldTime = -999f;
     private float lastProjectileTime = -999f;
-    private float lastSummonTime = -999f;
+    private float lastSummonTime; // Sẽ set = Time.time + delay trong Start
     private bool hasSubBossSummoned = false;
     private int originalDamage;
     private float originalSpeed;
@@ -97,6 +99,9 @@ public class BossMultiSkill : MonoBehaviour
         {
             Debug.LogWarning("[BossMultiSkill] TakeDamageTest NOT found! Phase 2 sẽ không hoạt động.");
         }
+        
+        // Initial delay — lần triệu hồi đầu tiên sẽ đợi summonInitialDelay giây
+        lastSummonTime = Time.time + summonInitialDelay - summonCooldown;
     }
     
     void Update()
@@ -104,6 +109,13 @@ public class BossMultiSkill : MonoBehaviour
         if (enemyScript == null) return;
         if (!initialized) TryInit();
         if (!initialized) return;
+        
+        // === BOSS ĐÃ CHẾT → DỪNG TẤT CẢ ===
+        if (!enemyScript.alive)
+        {
+            StopAllSkills();
+            return;
+        }
         
         // Tìm player
         if (playerTarget == null && enemyScript.target != null)
@@ -125,6 +137,40 @@ public class BossMultiSkill : MonoBehaviour
             TryShield();
             TryProjectile();
         }
+    }
+    
+    /// <summary>
+    /// Dừng tất cả skill khi boss chết + đảm bảo enemy thực sự die
+    /// </summary>
+    void StopAllSkills()
+    {
+        StopAllCoroutines();
+        isShielded = false;
+        if (shieldInstance != null) Destroy(shieldInstance);
+        if (auraInstance != null) Destroy(auraInstance);
+        enabled = false; // Tắt script luôn
+        
+        // === ĐẢM BẢO BOSS THỰC SỰ CHẾT ===
+        if (enemyScript != null)
+        {
+            enemyScript.alive = false;
+            if (enemyScript.enemy != null)
+                enemyScript.enemy.helth.value = 0;
+            
+            // Tìm EnemyDamage và chạy Death trên CHÍNH NÓ (không phải trên BossMultiSkill)
+            EnemyDamage ed = enemyScript.GetComponent<EnemyDamage>();
+            if (ed != null)
+            {
+                ed.StartCoroutine(ed.Death());
+            }
+            else
+            {
+                // Fallback: tắt gameObject
+                enemyScript.gameObject.SetActive(false);
+            }
+        }
+        
+        if (showDebug) Debug.Log("[BossMultiSkill] Boss died — ALL skills stopped, Death triggered!");
     }
     
     void TryInit()
@@ -159,6 +205,11 @@ public class BossMultiSkill : MonoBehaviour
         
         // Bất tử ngắn
         isShielded = true;
+        
+        // === RESET TIMERS — delay trước khi dùng skill Phase 2 ===
+        float phase2InitialDelay = 5f;
+        lastProjectileTime = Time.time + phase2InitialDelay - projectileCooldown;
+        lastShieldTime = Time.time + phase2InitialDelay - shieldCooldown;
         
         // Spawn Aura VFX
         if (auraVfxPrefab != null)
@@ -321,18 +372,18 @@ public class BossMultiSkill : MonoBehaviour
     {
         if (showDebug) Debug.Log($"[BossMultiSkill] Summoning: {summonSkeletCount} Skelet + {summonMonsterCount} Monster!");
         
-        // Spawn Skeletons
+        // Spawn Skeletons (random giữa Skeleton=0 và Archer=1)
         for (int i = 0; i < summonSkeletCount; i++)
         {
-            SpawnSummonedEnemy(0); // 0 = skelet
-            yield return new WaitForSeconds(0.2f);
+            SpawnSummonedEnemy(Random.Range(0, 2)); // 0=Skeleton, 1=Archer
+            yield return new WaitForSeconds(0.3f);
         }
         
-        // Spawn Monsters
+        // Spawn Monsters (random giữa Orc=2, Troll=3, Guul=4)
         for (int i = 0; i < summonMonsterCount; i++)
         {
-            SpawnSummonedEnemy(2); // 2 = monster
-            yield return new WaitForSeconds(0.2f);
+            SpawnSummonedEnemy(Random.Range(2, 5)); // 2=Orc, 3=Troll, 4=Guul
+            yield return new WaitForSeconds(0.3f);
         }
     }
     
@@ -340,10 +391,11 @@ public class BossMultiSkill : MonoBehaviour
     {
         if (enemyNewPrefab == null) return;
         
-        // Random vị trí gần boss
+        // Random vị trí gần boss (dùng vị trí boss model thực)
+        Transform bossModel = enemyScript != null ? enemyScript.transform : transform;
         Vector3 offset = Random.insideUnitSphere * 4f;
         offset.y = 0;
-        Vector3 spawnPos = transform.position + offset;
+        Vector3 spawnPos = bossModel.position + offset;
         
         // Đảm bảo spawn trên NavMesh
         NavMeshHit hit;
@@ -352,44 +404,33 @@ public class BossMultiSkill : MonoBehaviour
             spawnPos = hit.position;
         }
         
+        // QUAN TRỌNG: Tắt prefab TRƯỚC khi Instantiate 
+        // để tránh OnEnable() chạy cho TẤT CẢ children → double VFX
+        enemyNewPrefab.SetActive(false);
         GameObject enemy = Instantiate(enemyNewPrefab, spawnPos, Quaternion.identity);
+        enemyNewPrefab.SetActive(true); // Bật lại prefab gốc
+        enemy.SetActive(true); // Bật parent container
         
-        // Enable enemy
+        // === QUAN TRỌNG: Tắt TẤT CẢ enemy con (đã inactive từ Instantiate) ===
+        // Đảm bảo tất cả children đều tắt trước khi bật đúng con
+        foreach (Transform child in enemy.transform)
+        {
+            child.gameObject.SetActive(false);
+        }
+        
+        // Enable CHỈ enemy type cụ thể
         RandomEnemy randomEnemy = enemy.GetComponent<RandomEnemy>();
         if (randomEnemy != null)
         {
-            randomEnemy.EnableDirect();
+            randomEnemy.EnableSpecificType(enemyTypeIndex);
         }
         
-        // Set enemy type cho active child
+        // Set player target cho enemy vừa spawn
         EnemyScript es = enemy.GetComponentInChildren<EnemyScript>(false);
-        if (es == null)
+        if (es != null && playerTarget != null)
         {
-            // Tìm trong tất cả children
-            foreach (Transform child in enemy.transform)
-            {
-                if (child.gameObject.activeSelf)
-                {
-                    es = child.GetComponent<EnemyScript>();
-                    if (es != null) break;
-                }
-            }
-        }
-        
-        if (es != null)
-        {
-            // Set enemy type
-            es.enemyType = (EnemyScript.EnemyType)enemyTypeIndex;
-            es.enemy = new EnemyClass(enemyTypeIndex);
-            es.enemy.UpdateEnemy();
-            
-            // Set target
-            if (playerTarget != null)
-            {
-                es.target = playerTarget;
-            }
-            
-            if (showDebug) Debug.Log($"[BossMultiSkill] Summoned {es.enemyType} at {spawnPos}");
+            es.target = playerTarget;
+            if (showDebug) Debug.Log($"[BossMultiSkill] Summoned index={enemyTypeIndex} at {spawnPos}");
         }
     }
     
