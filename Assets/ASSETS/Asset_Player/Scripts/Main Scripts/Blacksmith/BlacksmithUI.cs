@@ -92,14 +92,6 @@ public class BlacksmithUI : MonoBehaviour
         // Create self-contained tooltip (previously done in SetupReferences)
         CreateBlacksmithTooltip();
 
-        // Auto-create SocketingManager if not in scene
-        if (SocketingManager.Instance == null)
-        {
-            var smGO = new GameObject("SocketingManager");
-            smGO.AddComponent<SocketingManager>();
-            Debug.Log("[BlacksmithUI] Auto-created SocketingManager singleton.");
-        }
-
         // Button listeners
         if (closeButton) closeButton.onClick.AddListener(Close);
         if (weaponTabButton) weaponTabButton.onClick.AddListener(() => SwitchTab(ActiveTab.Weapon));
@@ -355,15 +347,8 @@ public class BlacksmithUI : MonoBehaviour
 
     void OnSocketButtonClicked()
     {
-        Debug.Log($"[BlacksmithUI] Socket button clicked! SocketingManager={SocketingManager.Instance != null}, " +
-                  $"gem={selectedGem?.itemName}, crystal={selectedCrystal?.itemName}, slotIdx={selectedGemSlotIndex}");
-
         if (SocketingManager.Instance == null) return;
-        if (selectedGem == null || selectedCrystal == null || selectedGemSlotIndex < 0)
-        {
-            Debug.LogWarning("[BlacksmithUI] Cannot socket: missing gem, crystal, or slot selection.");
-            return;
-        }
+        if (selectedGem == null || selectedCrystal == null || selectedGemSlotIndex < 0) return;
 
         // Disable button during animation
         if (socketButton) socketButton.interactable = false;
@@ -371,41 +356,18 @@ public class BlacksmithUI : MonoBehaviour
         StartCoroutine(SocketingAnimationCoroutine());
     }
 
-    /// <summary>
-    /// Get or create an AudioSource that works even when Time.timeScale = 0
-    /// </summary>
-    private AudioSource _bsAudioSource;
-    private AudioSource GetBlacksmithAudioSource()
-    {
-        if (_bsAudioSource == null)
-        {
-            _bsAudioSource = gameObject.AddComponent<AudioSource>();
-            _bsAudioSource.playOnAwake = false;
-        }
-        // CRITICAL: This makes audio play even when game is paused
-        _bsAudioSource.ignoreListenerPause = true;
-        return _bsAudioSource;
-    }
-
     IEnumerator SocketingAnimationCoroutine()
     {
-        Debug.Log("[BlacksmithUI] Starting socketing animation...");
+        // ── Play forge sound ──
+        SoundManager.PlaySound(SoundType.Blacksmith_Forge);
 
-        // ── Play forge sound (works even with timeScale=0) ──
-        var audioSrc = GetBlacksmithAudioSource();
-        SoundManager.PlaySound(SoundType.Blacksmith_Forge, audioSrc);
-
-        // ── Spin the socket button (gear icon) during socketing (2 seconds) ──
+        // ── Spin the gem drop icon during socketing (2 seconds) ──
         float duration = 2f;
         float elapsed = 0f;
         float spinSpeed = 720f; // degrees per second
 
         Transform spinTarget = null;
-        if (socketButton != null) spinTarget = socketButton.transform;
-
-        // Ensure AudioListener.pause is handled
-        bool wasPaused = AudioListener.pause;
-        AudioListener.pause = false;
+        if (gemDropIcon != null) spinTarget = gemDropIcon.transform;
 
         while (elapsed < duration)
         {
@@ -418,11 +380,6 @@ public class BlacksmithUI : MonoBehaviour
         // Reset rotation
         if (spinTarget != null)
             spinTarget.localRotation = Quaternion.identity;
-
-        // Restore AudioListener state
-        AudioListener.pause = wasPaused;
-
-        Debug.Log("[BlacksmithUI] Animation done, performing socketing...");
 
         // ── Perform actual socketing ──
         SocketResult result;
