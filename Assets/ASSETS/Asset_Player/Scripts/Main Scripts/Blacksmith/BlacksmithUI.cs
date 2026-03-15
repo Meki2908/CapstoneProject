@@ -81,6 +81,11 @@ public class BlacksmithUI : MonoBehaviour
     private Item selectedCrystal = null;
     private bool _isClosing = false; // Guard against double Close() invocation
 
+    // ─── Gem Removal Confirmation State ──────────────────────────
+    private int pendingRemoveSlotIndex = -1;       // Which gem slot is pending removal
+    private bool pendingRemoveIsWeapon = false;     // Is pending removal from weapon tab?
+    private Coroutine pendingRemoveResetCoroutine;  // Auto-reset timer
+
     // Cached gem slot UIs
     private SocketingSlotUI[] weaponGemSlots;
     private SocketingSlotUI[] equipmentGemSlots;
@@ -280,24 +285,49 @@ public class BlacksmithUI : MonoBehaviour
 
     void OnGemSlotDoubleClicked(int slotIndex)
     {
-        // Remove gem from slot
-        if (currentTab == ActiveTab.Weapon)
-        {
-            var wc = FindFirstObjectByType<WeaponController>();
-            if (wc != null && WeaponGemManager.Instance != null)
-            {
-                WeaponGemManager.Instance.RemoveGem(wc.GetCurrentWeapon().weaponType, slotIndex);
-            }
-        }
-        else if (currentTab == ActiveTab.Equipment && selectedEquipmentSlot >= 0)
-        {
-            EquipmentManager.Instance?.RemoveGemFromSlot(selectedEquipmentSlot, slotIndex);
-        }
-        RefreshAll();
+        // Double-click on gem slot → trigger removal with confirmation
+        bool isWeapon = (currentTab == ActiveTab.Weapon);
+        OnRemoveGemSlot(slotIndex, isWeapon);
     }
 
     void OnRemoveGemSlot(int slotIndex, bool isWeapon)
     {
+        // Check if this slot actually has a gem
+        Item gemInSlot = null;
+        if (isWeapon)
+        {
+            var wc = FindFirstObjectByType<WeaponController>();
+            if (wc != null && WeaponGemManager.Instance != null)
+                gemInSlot = WeaponGemManager.Instance.GetEquippedGem(wc.GetCurrentWeapon().weaponType, slotIndex);
+        }
+        else if (selectedEquipmentSlot >= 0 && EquipmentManager.Instance != null)
+        {
+            gemInSlot = EquipmentManager.Instance.GetEquippedGem(selectedEquipmentSlot, slotIndex);
+        }
+
+        if (gemInSlot == null) return; // Slot trống → không làm gì
+
+        // ── Lần nhấn 1: Hiện cảnh báo ──
+        if (pendingRemoveSlotIndex != slotIndex || pendingRemoveIsWeapon != isWeapon)
+        {
+            pendingRemoveSlotIndex = slotIndex;
+            pendingRemoveIsWeapon = isWeapon;
+
+            // Hiện cảnh báo
+            ShowRemovalWarning(gemInSlot);
+
+            // Auto-reset sau 3 giây nếu không nhấn lần 2
+            if (pendingRemoveResetCoroutine != null)
+                StopCoroutine(pendingRemoveResetCoroutine);
+            pendingRemoveResetCoroutine = StartCoroutine(ResetPendingRemovalCoroutine());
+
+            Debug.Log($"[BlacksmithUI] Removal warning shown for {gemInSlot.itemName} at slot {slotIndex}");
+            return;
+        }
+
+        // ── Lần nhấn 2: Thực hiện gỡ gem ──
+        Debug.Log($"[BlacksmithUI] Confirmed removal of {gemInSlot.itemName} at slot {slotIndex}");
+
         if (isWeapon)
         {
             var wc = FindFirstObjectByType<WeaponController>();
@@ -310,13 +340,67 @@ public class BlacksmithUI : MonoBehaviour
         {
             EquipmentManager.Instance?.RemoveGemFromSlot(selectedEquipmentSlot, slotIndex);
         }
+
+        // Reset trạng thái và hiện kết quả
+        ClearPendingRemoval();
+        ShowRemovalSuccess(gemInSlot);
         RefreshAll();
+    }
+
+    // ─── Removal Confirmation Helpers ────────────────────────────
+
+    void ShowRemovalWarning(Item gem)
+    {
+        if (resultPanel == null || resultText == null) return;
+        resultPanel.SetActive(true);
+        resultText.text = $"⚠ Gỡ <color={Item.GetRarityColorHex(gem.rarity)}>{gem.itemName}</color> sẽ bị XÓA VĨNH VIỄN!\nNhấn lần nữa để xác nhận gỡ.";
+        resultText.color = new Color(1f, 0.7f, 0.2f); // Cam cảnh báo
+    }
+
+    void ShowRemovalSuccess(Item gem)
+    {
+        if (resultPanel == null || resultText == null) return;
+        resultPanel.SetActive(true);
+        resultText.text = $"Đã gỡ {gem.itemName}. Gem đã bị hủy.";
+        resultText.color = new Color(0.9f, 0.3f, 0.2f); // Đỏ
+
+        StopCoroutine(nameof(HideResultCoroutine));
+        StartCoroutine(HideResultCoroutine());
+    }
+
+    void ClearPendingRemoval()
+    {
+        pendingRemoveSlotIndex = -1;
+        pendingRemoveIsWeapon = false;
+        if (pendingRemoveResetCoroutine != null)
+        {
+            StopCoroutine(pendingRemoveResetCoroutine);
+            pendingRemoveResetCoroutine = null;
+        }
+    }
+
+    IEnumerator ResetPendingRemovalCoroutine()
+    {
+        yield return new WaitForSecondsRealtime(3f);
+        pendingRemoveSlotIndex = -1;
+        pendingRemoveIsWeapon = false;
+        pendingRemoveResetCoroutine = null;
+
+        // Ẩn cảnh báo
+        if (resultPanel) resultPanel.SetActive(false);
+        Debug.Log("[BlacksmithUI] Removal confirmation timed out — reset.");
     }
 
     // ─── Gem / Crystal Selection from Viewports ──────────────────
 
     public void SelectGem(Item gem)
     {
+        // Only accept actual Gems — reject potions, materials, etc.
+        if (gem == null || gem.itemType != ItemType.Gems)
+        {
+            Debug.LogWarning($"[BlacksmithUI] Rejected non-gem item: {gem?.itemName} (type={gem?.itemType})");
+            return;
+        }
         selectedGem = gem;
         UpdateGemDropDisplay();
         UpdateSuccessRate();
@@ -342,6 +426,7 @@ public class BlacksmithUI : MonoBehaviour
         selectedGem = null;
         selectedCrystal = null;
         selectedGemSlotIndex = -1;
+        ClearPendingRemoval(); // Reset removal confirmation khi đổi context
         UpdateGemDropDisplay();
     }
 
@@ -641,14 +726,7 @@ public class BlacksmithUI : MonoBehaviour
             if (selectedEquipmentSlot < slotMap.Length)
                 filterSlot = slotMap[selectedEquipmentSlot];
         }
-        // Sort: CrystalStone always first (primary socketing material)
-        allItems.Sort((a, b) =>
-        {
-            bool aIsCrystal = a.item != null && a.item.itemType == ItemType.CrystalStone;
-            bool bIsCrystal = b.item != null && b.item.itemType == ItemType.CrystalStone;
-            if (aIsCrystal != bIsCrystal) return aIsCrystal ? -1 : 1;
-            return 0;
-        });
+        // Items already sorted by InventoryManager: Equipment → Crystal → Gems, rarity ascending
 
         foreach (var (item, amount, rarity) in allItems)
         {
@@ -753,7 +831,14 @@ public class BlacksmithUI : MonoBehaviour
             // All other items (equipment, etc.) — display normally, no dimming
 
             // ── Tooltip hover via EventTrigger ──
-            AddTooltipTrigger(go, item, rarity);
+            // Pass rolled value for gems
+            float rolledVal = -1f;
+            if (item.HasRandomStats && InventoryManager.Instance != null)
+            {
+                float peek = InventoryManager.Instance.PeekNextRoll(item.id, rarity);
+                if (peek >= 0f) rolledVal = peek;
+            }
+            AddTooltipTrigger(go, item, rarity, rolledVal);
         }
     }
 
@@ -827,8 +912,8 @@ public class BlacksmithUI : MonoBehaviour
 
             if (currentTab == ActiveTab.Weapon)
             {
-                // Weapon default rarity = Common (có thể mở rộng)
-                targetRarity = Rarity.Common;
+                // Weapon: tỉ lệ dựa trên rarity của gem (gem càng hiếm → cần crystal tốt hơn)
+                targetRarity = (selectedGem != null) ? selectedGem.rarity : Rarity.Common;
                 canSocket = selectedGem != null && selectedGemSlotIndex >= 0;
             }
             else if (selectedEquipmentSlot >= 0 && EquipmentManager.Instance != null)
@@ -1007,7 +1092,7 @@ public class BlacksmithUI : MonoBehaviour
         bsTooltipPanel.SetActive(false);
     }
 
-    void AddTooltipTrigger(GameObject go, Item item, Rarity rarity)
+    void AddTooltipTrigger(GameObject go, Item item, Rarity rarity, float rolledValue = -1f)
     {
         var trigger = go.GetComponent<EventTrigger>();
         if (trigger == null) trigger = go.AddComponent<EventTrigger>();
@@ -1017,7 +1102,8 @@ public class BlacksmithUI : MonoBehaviour
         enterEntry.eventID = EventTriggerType.PointerEnter;
         Item capturedItem = item;
         Rarity capturedRarity = rarity;
-        enterEntry.callback.AddListener((data) => ShowBsTooltip(capturedItem, capturedRarity));
+        float capturedRoll = rolledValue;
+        enterEntry.callback.AddListener((data) => ShowBsTooltip(capturedItem, capturedRarity, capturedRoll));
         trigger.triggers.Add(enterEntry);
 
         // PointerExit
@@ -1027,11 +1113,11 @@ public class BlacksmithUI : MonoBehaviour
         trigger.triggers.Add(exitEntry);
     }
 
-    void ShowBsTooltip(Item item, Rarity rarity)
+    void ShowBsTooltip(Item item, Rarity rarity, float rolledValue = -1f)
     {
         if (bsTooltipPanel == null || bsTooltipText == null || item == null) return;
 
-        bsTooltipText.text = BuildTooltipContent(item, rarity);
+        bsTooltipText.text = BuildTooltipContent(item, rarity, rolledValue);
         bsTooltipPanel.SetActive(true);
 
         float pad = 45f;
@@ -1100,7 +1186,7 @@ public class BlacksmithUI : MonoBehaviour
         }
     }
 
-    string BuildTooltipContent(Item item, Rarity rarity)
+    string BuildTooltipContent(Item item, Rarity rarity, float rolledValue = -1f)
     {
         var sb = new System.Text.StringBuilder();
         string rarityColor = Item.GetRarityColorHex(rarity);
@@ -1112,12 +1198,18 @@ public class BlacksmithUI : MonoBehaviour
         {
             case ItemType.Equipment:
                 sb.AppendLine($"<color=#FFD700>Slot: {item.equipmentSlot}</color>");
-                if (item.ScaledHPBonus(rarity) > 0f) sb.AppendLine($"<color=#00FF00>HP: +{item.ScaledHPBonus(rarity):F0}</color>");
-                if (item.ScaledDefenseBonus(rarity) > 0f) sb.AppendLine($"<color=#00AAFF>Defense: +{item.ScaledDefenseBonus(rarity):F0}</color>");
-                if (item.ScaledCritRateBonus(rarity) > 0f) sb.AppendLine($"<color=#FF00FF>Crit Rate: +{item.ScaledCritRateBonus(rarity)*100:F1}%</color>");
-                if (item.ScaledCritDamageMultiplier(rarity) > 1f) sb.AppendLine($"<color=#FF00FF>Crit Dmg: +{(item.ScaledCritDamageMultiplier(rarity)-1)*100:F1}%</color>");
-                if (item.ScaledMovementSpeedBonus(rarity) > 0f) sb.AppendLine($"<color=#00FFFF>Move Speed: +{item.ScaledMovementSpeedBonus(rarity)*100:F1}%</color>");
-                if (item.ScaledAttackSpeedBonus(rarity) > 0f) sb.AppendLine($"<color=#FFAA00>Atk Speed: +{item.ScaledAttackSpeedBonus(rarity)*100:F1}%</color>");
+                // Show rolled multiplier if available
+                if (rolledValue >= 0f)
+                {
+                    sb.AppendLine($"<color=#FF8800>⚡ Stat Roll: {rolledValue*100f:F0}%</color>");
+                }
+                float mult = (rolledValue >= 0f) ? rolledValue : 1f;
+                if (item.ScaledHPBonus(rarity) > 0f) sb.AppendLine($"<color=#00FF00>HP: +{item.ScaledHPBonus(rarity)*mult:F0}</color>");
+                if (item.ScaledDefenseBonus(rarity) > 0f) sb.AppendLine($"<color=#00AAFF>Defense: +{item.ScaledDefenseBonus(rarity)*mult:F0}</color>");
+                if (item.ScaledCritRateBonus(rarity) > 0f) sb.AppendLine($"<color=#FF00FF>Crit Rate: +{item.ScaledCritRateBonus(rarity)*mult*100:F1}%</color>");
+                if (item.ScaledCritDamageMultiplier(rarity) > 1f) sb.AppendLine($"<color=#FF00FF>Crit Dmg: +{(item.ScaledCritDamageMultiplier(rarity)-1)*mult*100:F1}%</color>");
+                if (item.ScaledMovementSpeedBonus(rarity) > 0f) sb.AppendLine($"<color=#00FFFF>Move Speed: +{item.ScaledMovementSpeedBonus(rarity)*mult*100:F1}%</color>");
+                if (item.ScaledAttackSpeedBonus(rarity) > 0f) sb.AppendLine($"<color=#FFAA00>Atk Speed: +{item.ScaledAttackSpeedBonus(rarity)*mult*100:F1}%</color>");
                 if (!string.IsNullOrEmpty(item.passiveDescription))
                 {
                     sb.AppendLine();
@@ -1127,12 +1219,38 @@ public class BlacksmithUI : MonoBehaviour
                 break;
             case ItemType.Gems:
                 sb.AppendLine($"<color=#FFD700>Type: {item.gemType}</color>");
-                string gemStat = item.GetGemStatText();
-                if (!string.IsNullOrEmpty(gemStat)) sb.AppendLine($"<color=#00FF00>{gemStat}</color>");
+                // Show ROLLED value if available, otherwise show max
+                if (rolledValue >= 0f)
+                {
+                    string gemStat = item.GetGemStatTextWithRoll(rolledValue);
+                    if (!string.IsNullOrEmpty(gemStat)) sb.AppendLine($"<color=#00FF00>{gemStat}</color>");
+                }
+                else
+                {
+                    string gemStat = item.GetGemStatText();
+                    if (!string.IsNullOrEmpty(gemStat)) sb.AppendLine($"<color=#00FF00>{gemStat} <color=#888888>(max)</color></color>");
+                }
                 break;
             case ItemType.CrystalStone:
                 sb.AppendLine("<color=#00FFFF>Crystal Stone</color>");
-                sb.AppendLine("<color=#888888>Dung de kham gem vao trang bi</color>");
+                sb.AppendLine("<color=#888888>Nguyên liệu khảm - tăng tỉ lệ thành công</color>");
+                sb.AppendLine();
+                sb.AppendLine("<color=#FFD700>Tỉ lệ thành công:</color>");
+                if (SocketingManager.Instance != null)
+                {
+                    string[] rarityNames = { "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic" };
+                    Color[] rarityColors = {
+                        Color.white, new Color(0, 1, 0), new Color(0.2f, 0.6f, 1f),
+                        new Color(0.6f, 0.2f, 0.9f), new Color(1, 0.84f, 0), new Color(1, 0.27f, 0.27f)
+                    };
+                    for (int ri = 1; ri <= 6; ri++)
+                    {
+                        float rate = SocketingManager.Instance.CalculateSuccessRate((Rarity)ri, rarity);
+                        string rName = (ri - 1 < rarityNames.Length) ? rarityNames[ri - 1] : "???";
+                        string rHex = ColorUtility.ToHtmlStringRGB(ri - 1 < rarityColors.Length ? rarityColors[ri - 1] : Color.white);
+                        sb.AppendLine($"  <color=#{rHex}>{rName}</color>: <color=#FFFFFF>{rate * 100f:F0}%</color>");
+                    }
+                }
                 break;
             case ItemType.Consumable:
                 if (item.itemName != null && item.itemName.ToLower().Contains("health potion"))

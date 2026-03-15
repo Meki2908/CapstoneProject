@@ -23,8 +23,10 @@ public class EquipmentManager : MonoBehaviour
     {
         public int[] slotItemIds = new int[NUM_SLOTS] { -1, -1, -1, -1 };
         public int[] slotRarities = new int[NUM_SLOTS] { 0, 0, 0, 0 }; // Rarity enum as int
+        public float[] equipStatRolls = new float[NUM_SLOTS] { 1f, 1f, 1f, 1f }; // NEW: rolled stat multiplier per equipment
         // Gem slots: [equipSlot][gemSlot] — flat array for JSON serialization
         public int[] gemSlotIds = new int[NUM_SLOTS * NUM_GEM_SLOTS]; // -1 = empty
+        public float[] gemRolledValues = new float[NUM_SLOTS * NUM_GEM_SLOTS]; // NEW: rolled gem values
     }
 
     [Serializable]
@@ -63,6 +65,12 @@ public class EquipmentManager : MonoBehaviour
         for (int i = 0; i < equipmentSlots.gemSlotIds.Length; i++)
         {
             equipmentSlots.gemSlotIds[i] = -1;
+            equipmentSlots.gemRolledValues[i] = 0f;
+        }
+        // Initialize stat rolls to 1.0 (100%)
+        for (int i = 0; i < NUM_SLOTS; i++)
+        {
+            equipmentSlots.equipStatRolls[i] = 1f;
         }
     }
 
@@ -98,6 +106,16 @@ public class EquipmentManager : MonoBehaviour
                 if (equipmentSlots.slotRarities == null || equipmentSlots.slotRarities.Length != NUM_SLOTS)
                 {
                     equipmentSlots.slotRarities = new int[NUM_SLOTS];
+                }
+                // Ensure equipStatRolls array exists (backward compat)
+                if (equipmentSlots.equipStatRolls == null || equipmentSlots.equipStatRolls.Length != NUM_SLOTS)
+                {
+                    equipmentSlots.equipStatRolls = new float[NUM_SLOTS] { 1f, 1f, 1f, 1f };
+                }
+                // Ensure gemRolledValues array exists (backward compat)
+                if (equipmentSlots.gemRolledValues == null || equipmentSlots.gemRolledValues.Length != NUM_SLOTS * NUM_GEM_SLOTS)
+                {
+                    equipmentSlots.gemRolledValues = new float[NUM_SLOTS * NUM_GEM_SLOTS];
                 }
             }
         }
@@ -158,20 +176,29 @@ public class EquipmentManager : MonoBehaviour
             return false;
         }
 
-        // Return existing item to inventory
+        // Return existing item to inventory (PRESERVE its rolled value)
         int currentId = equipmentSlots.slotItemIds[slotIndex];
         if (currentId >= 0)
         {
             Rarity currentRarity = (Rarity)equipmentSlots.slotRarities[slotIndex];
-            InventoryManager.Instance.AddItem(currentId, 1, currentRarity);
+            float currentRoll = equipmentSlots.equipStatRolls[slotIndex];
+            InventoryManager.Instance.AddItemWithRoll(currentId, 1, currentRarity, currentRoll);
         }
 
         // Consume and equip
         bool removed = InventoryManager.Instance.RemoveItem(equipmentItem.id, 1, rarity);
         if (!removed) return false;
 
+        // Get the rolled stat multiplier from inventory queue
+        float rolledMultiplier = InventoryManager.Instance.LastRemovedRoll;
+        if (rolledMultiplier < 0f) rolledMultiplier = 1f; // fallback to 100%
+
         equipmentSlots.slotItemIds[slotIndex] = equipmentItem.id;
         equipmentSlots.slotRarities[slotIndex] = (int)rarity;
+        equipmentSlots.equipStatRolls[slotIndex] = rolledMultiplier;
+
+        Debug.Log($"[EquipmentManager] Equipped {equipmentItem.itemName} [{rarity}] with stat roll {rolledMultiplier:F2} ({rolledMultiplier*100f:F0}%)");
+
         Save();
         OnEquipmentChanged?.Invoke();
         return true;
@@ -199,10 +226,14 @@ public class EquipmentManager : MonoBehaviour
         int currentId = equipmentSlots.slotItemIds[slotIndex];
         if (currentId < 0) return false;
 
+        // PRESERVE rolled value when returning to inventory
         Rarity currentRarity = (Rarity)equipmentSlots.slotRarities[slotIndex];
-        InventoryManager.Instance.AddItem(currentId, 1, currentRarity);
+        float currentRoll = equipmentSlots.equipStatRolls[slotIndex];
+        InventoryManager.Instance.AddItemWithRoll(currentId, 1, currentRarity, currentRoll);
+
         equipmentSlots.slotItemIds[slotIndex] = -1;
         equipmentSlots.slotRarities[slotIndex] = 0;
+        equipmentSlots.equipStatRolls[slotIndex] = 1f;
         Save();
         OnEquipmentChanged?.Invoke();
         return true;
@@ -223,9 +254,11 @@ public class EquipmentManager : MonoBehaviour
             if (id >= 0)
             {
                 Rarity r = (Rarity)equipmentSlots.slotRarities[i];
-                InventoryManager.Instance.AddItem(id, 1, r);
+                float roll = equipmentSlots.equipStatRolls[i];
+                InventoryManager.Instance.AddItemWithRoll(id, 1, r, roll);
                 equipmentSlots.slotItemIds[i] = -1;
                 equipmentSlots.slotRarities[i] = 0;
+                equipmentSlots.equipStatRolls[i] = 1f;
             }
         }
         Save();
@@ -267,7 +300,16 @@ public class EquipmentManager : MonoBehaviour
         }
     }
 
-    // === STAT GETTERS — dùng runtime rarity ===
+    // === STAT GETTERS — dùng runtime rarity × rolled multiplier ===
+
+    /// <summary>
+    /// Get the rolled stat multiplier for a specific equipment slot
+    /// </summary>
+    public float GetEquipStatRoll(int slotIndex)
+    {
+        if (slotIndex < 0 || slotIndex >= NUM_SLOTS) return 1f;
+        return equipmentSlots.equipStatRolls[slotIndex];
+    }
 
     public float GetTotalHPBonus()
     {
@@ -278,7 +320,7 @@ public class EquipmentManager : MonoBehaviour
             if (item != null)
             {
                 Rarity r = GetEquippedRarity(i);
-                total += item.ScaledHPBonus(r);
+                total += item.ScaledHPBonus(r) * equipmentSlots.equipStatRolls[i];
             }
         }
         return total;
@@ -293,7 +335,7 @@ public class EquipmentManager : MonoBehaviour
             if (item != null)
             {
                 Rarity r = GetEquippedRarity(i);
-                total += item.ScaledCritRateBonus(r);
+                total += item.ScaledCritRateBonus(r) * equipmentSlots.equipStatRolls[i];
             }
         }
         return Mathf.Clamp01(total);
@@ -308,7 +350,7 @@ public class EquipmentManager : MonoBehaviour
             if (item != null)
             {
                 Rarity r = GetEquippedRarity(i);
-                total += (item.ScaledCritDamageMultiplier(r) - 1f);
+                total += (item.ScaledCritDamageMultiplier(r) - 1f) * equipmentSlots.equipStatRolls[i];
             }
         }
         return Mathf.Max(1f, total);
@@ -323,7 +365,7 @@ public class EquipmentManager : MonoBehaviour
             if (item != null)
             {
                 Rarity r = GetEquippedRarity(i);
-                total += item.ScaledMovementSpeedBonus(r);
+                total += item.ScaledMovementSpeedBonus(r) * equipmentSlots.equipStatRolls[i];
             }
         }
         return total;
@@ -338,7 +380,7 @@ public class EquipmentManager : MonoBehaviour
             if (item != null)
             {
                 Rarity r = GetEquippedRarity(i);
-                total += item.ScaledAttackSpeedBonus(r);
+                total += item.ScaledAttackSpeedBonus(r) * equipmentSlots.equipStatRolls[i];
             }
         }
         return total;
@@ -353,7 +395,7 @@ public class EquipmentManager : MonoBehaviour
             if (item != null)
             {
                 Rarity r = GetEquippedRarity(i);
-                total += item.ScaledDefenseBonus(r);
+                total += item.ScaledDefenseBonus(r) * equipmentSlots.equipStatRolls[i];
             }
         }
         return total;
@@ -405,21 +447,29 @@ public class EquipmentManager : MonoBehaviour
 
         int idx = GemIndex(equipSlotIndex, gemSlotIndex);
 
-        // Return existing gem to inventory
+        // Return existing gem to inventory (PRESERVE its rolled value)
         int currentGemId = equipmentSlots.gemSlotIds[idx];
         if (currentGemId >= 0)
         {
-            InventoryManager.Instance.AddItem(currentGemId, 1);
+            float existingRoll = equipmentSlots.gemRolledValues[idx];
+            Item existingGem = InventoryManager.Instance.GetItemById(currentGemId);
+            Rarity gemRarity = (existingGem != null) ? existingGem.rarity : Rarity.Common;
+            InventoryManager.Instance.AddItemWithRoll(currentGemId, 1, gemRarity, existingRoll);
         }
 
         // Consume gem from inventory and equip
         bool removed = InventoryManager.Instance.RemoveItem(gemItem.id, 1);
         if (!removed) return false;
 
+        // Get the rolled value from inventory queue
+        float rolledValue = InventoryManager.Instance.LastRemovedRoll;
+        if (rolledValue < 0f) rolledValue = gemItem.gemValuePercent; // fallback
+
         equipmentSlots.gemSlotIds[idx] = gemItem.id;
+        equipmentSlots.gemRolledValues[idx] = rolledValue;
         Save();
         OnEquipmentChanged?.Invoke();
-        Debug.Log($"[EquipmentManager] Socketed {gemItem.itemName} into equipment slot {equipSlotIndex} gem {gemSlotIndex}");
+        Debug.Log($"[EquipmentManager] Socketed {gemItem.itemName} (rolled: {rolledValue*100f:F1}%) into equipment slot {equipSlotIndex} gem {gemSlotIndex}");
         return true;
     }
 
@@ -436,8 +486,14 @@ public class EquipmentManager : MonoBehaviour
         int currentGemId = equipmentSlots.gemSlotIds[idx];
         if (currentGemId < 0) return false;
 
-        InventoryManager.Instance.AddItem(currentGemId, 1);
+        // PRESERVE rolled value when returning to inventory
+        float rolledValue = equipmentSlots.gemRolledValues[idx];
+        Item gem = InventoryManager.Instance.GetItemById(currentGemId);
+        Rarity gemRarity = (gem != null) ? gem.rarity : Rarity.Common;
+        InventoryManager.Instance.AddItemWithRoll(currentGemId, 1, gemRarity, rolledValue);
+
         equipmentSlots.gemSlotIds[idx] = -1;
+        equipmentSlots.gemRolledValues[idx] = 0f;
         Save();
         OnEquipmentChanged?.Invoke();
         return true;
@@ -467,7 +523,7 @@ public class EquipmentManager : MonoBehaviour
             {
                 var gem = GetEquippedGem(e, g);
                 if (gem != null && gem.gemType == GemType.MovementSpeed)
-                    total += gem.gemValuePercent;
+                    total += equipmentSlots.gemRolledValues[GemIndex(e, g)];
             }
         }
         return total;
@@ -482,7 +538,7 @@ public class EquipmentManager : MonoBehaviour
             {
                 var gem = GetEquippedGem(e, g);
                 if (gem != null && gem.gemType == GemType.CooldownReduction)
-                    total += gem.gemValuePercent;
+                    total += equipmentSlots.gemRolledValues[GemIndex(e, g)];
             }
         }
         return total;
@@ -497,10 +553,20 @@ public class EquipmentManager : MonoBehaviour
             {
                 var gem = GetEquippedGem(e, g);
                 if (gem != null && gem.gemType == GemType.Damage)
-                    total += gem.gemValuePercent;
+                    total += equipmentSlots.gemRolledValues[GemIndex(e, g)];
             }
         }
         return total;
+    }
+
+    /// <summary>
+    /// Get rolled gem value for a specific equipment gem slot
+    /// </summary>
+    public float GetRolledGemValue(int equipSlotIndex, int gemSlotIndex)
+    {
+        if (equipSlotIndex < 0 || equipSlotIndex >= NUM_SLOTS) return 0f;
+        if (gemSlotIndex < 0 || gemSlotIndex >= NUM_GEM_SLOTS) return 0f;
+        return equipmentSlots.gemRolledValues[GemIndex(equipSlotIndex, gemSlotIndex)];
     }
 
     /// <summary>

@@ -210,6 +210,9 @@ public class ItemTooltip : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
             case ItemType.Gems:
                 sb.AppendLine(GetGemStats(item));
                 break;
+            case ItemType.CrystalStone:
+                sb.AppendLine(GetCrystalStoneStats(item));
+                break;
             case ItemType.Consumable:
                 sb.AppendLine(GetConsumableStats(item));
                 break;
@@ -324,6 +327,32 @@ public class ItemTooltip : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
         
         // Add any material-specific stats here if needed
         
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Get formatted crystal stone stats with success rates
+    /// </summary>
+    private string GetCrystalStoneStats(Item item)
+    {
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+
+        sb.AppendLine("<color=#00FFFF>Crystal Stone</color>");
+        sb.AppendLine("<color=#888888>Nguyên liệu khảm - tăng tỉ lệ thành công</color>");
+        sb.AppendLine();
+        sb.AppendLine("<color=#FFD700>Tỉ lệ thành công:</color>");
+
+        if (SocketingManager.Instance != null)
+        {
+            string[] rarityNames = { "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic" };
+            string[] rarityHexes = { "FFFFFF", "00FF00", "3498DB", "9B59B6", "FFD700", "FF4444" };
+            for (int ri = 0; ri < rarityNames.Length; ri++)
+            {
+                float rate = SocketingManager.Instance.CalculateSuccessRate((Rarity)(ri + 1), item.rarity);
+                sb.AppendLine($"  <color=#{rarityHexes[ri]}>{rarityNames[ri]}</color>: {rate * 100f:F0}%");
+            }
+        }
+
         return sb.ToString();
     }
 
