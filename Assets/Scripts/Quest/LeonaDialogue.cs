@@ -43,22 +43,42 @@ public class LeonaDialogue : MonoBehaviour
     [Header("── Dialogue: Quest 1 (Available → Accept) ──")]
     [TextArea(2, 4)]
     public string[] quest1AcceptLines = {
-        "Oh, a new adventurer! Welcome. I am Leona.",
-        "I will help you start your journey in this world.",
-        "First, let's learn the basics of combat in the training area.",
-        "Look for me near the large red tree in the city if you need further guidance! Good luck!"
+        "Ah, you've finally arrived! I am Leona — I look after newcomers in this city.",
+        "I've been expecting someone like you. The city is in need of capable fighters.",
+        "But first, you can't just rush into battle without proper training.",
+        "Head to the training grounds nearby. Learn the basics — your life will depend on it.",
+        "Oh, and one more thing... Do you remember Maria? Your childhood friend?",
+        "She's been in the city guard for years now. She's been promoted — General Maria, they call her.",
+        "She's stationed at the City Gate right now. Once you finish training, come back and I'll tell you more.",
+        "Now go — the training area is right ahead. Good luck!"
     };
 
-    [Header("── Dialogue: Quest 2 (Desert Dungeon) ──")]
+    [Header("── Dialogue: Quest 2 – Leona sends player to Maria (Step 0) ──")]
     [TextArea(2, 4)]
     public string[] quest2GuideLines = {
-        "You've completed the training — well done!",
-        "Now it's time for the real challenge in the Desert.",
-        "Use the glowing teleport points on the map to reach the Dungeon Gate.",
-        "I'll be rooting for you. Go now!"
+        "You've returned! I'm relieved — there's no time to rest though.",
+        "I just received word from a warrior named Maria. She's stationed outside the City Gate.",
+        "Apparently, a mysterious portal appeared near the dungeon entrance two days ago.",
+        "Creatures have been pouring out ever since. Maria's unit is holding the line, but barely.",
+        "She's asking for reinforcements — someone strong enough to go through that portal.",
+        "There's a teleport point just nearby. It'll take you straight to the City Gate.",
+        "Find Maria when you get there. She'll explain everything. Please hurry — they're counting on you!"
     };
 
-    [Header("── Dialogue: Quest 2 đã Active (nhắc đường) ──")]
+
+    [Header("── Dialogue: Quest 2 – Leona at City Gate (Step 3) ──")]
+    [TextArea(2, 4)]
+    public string[] quest2CityGateLines = {
+        "You... you're here! I'm so glad. Honestly, I wasn't sure you'd make it.",
+        "Maria told me she'd send someone. I hoped it would be you.",
+        "Do you see that gate behind me? That's the dungeon entrance.",
+        "Creatures have been pouring out of there since yesterday. My guards can barely hold them back.",
+        "The source of this has to be deeper inside. Someone needs to go in and stop it.",
+        "I'd go myself, but I need to hold the line out here. That's why I need you.",
+        "I know it's a lot to ask. But I trust you more than anyone.",
+        "Please — go through that gate and deal with whatever is causing this. We're counting on you."
+    };
+
     [TextArea(2, 4)]
     public string[] quest2ReminderLines = {
         "The Dungeon Gate is to the North. Don't keep it waiting!"
@@ -86,7 +106,7 @@ public class LeonaDialogue : MonoBehaviour
     bool     _isTyping   = false;
     bool     _playerNear = false;
 
-    enum DialogueMode { Quest1Accept, Quest2Guide, Quest2Reminder, Default, None }
+    enum DialogueMode { Quest1Accept, Quest2Guide, Quest2CityGate, Quest2Reminder, Default, None }
     DialogueMode _mode = DialogueMode.None;
 
     // ─────────────────────────────────────────────────────────────────────
@@ -185,7 +205,6 @@ public class LeonaDialogue : MonoBehaviour
         if (dialoguePanel != null)
         {
             dialoguePanel.SetActive(true);
-            if (dialogueCanvas != null) dialogueCanvas.enabled = true;
         }
         else
         {
@@ -211,24 +230,34 @@ public class LeonaDialogue : MonoBehaviour
         var q2 = QuestManager.Instance.GetState(2);
         Debug.Log($"[LeonaDialogue] PickMode → q1={q1}, q2={q2}");
 
-        // TRƯỜNG HỢP ĐẶC BIỆT: Nếu cả 2 đều Locked -> Ép về Quest1 để Player có thể bắt đầu
+        // Both Locked → force Quest 1 to start
         if (q1 == QuestManager.QuestState.Locked && q2 == QuestManager.QuestState.Locked)
-        {
-            Debug.Log("[LeonaDialogue] Cả 2 quest đều Locked -> Ép về Quest1Accept để bắt đầu game.");
             return DialogueMode.Quest1Accept;
-        }
 
-        // Quest 1 chưa hoàn thành -> Giao tiếp nạp Quest 1
+        // Quest 1 not done → give/remind Quest 1
         if (q1 == QuestManager.QuestState.Available || q1 == QuestManager.QuestState.Active)
             return DialogueMode.Quest1Accept;
 
-        // Quest 1 đã xong
-        if (q1 == QuestManager.QuestState.Completed)
+        bool q2NotStarted = q2 == QuestManager.QuestState.Locked || q2 == QuestManager.QuestState.Available;
+        bool q2AtStep0    = q2 == QuestManager.QuestState.Active
+                            && QuestManager.Instance.GetStepIndex(2) == 0;
+
+        // Quest 1 done + Quest 2 active → check which step
+        if (q1 == QuestManager.QuestState.Completed && q2 == QuestManager.QuestState.Active)
         {
-            // Nếu quest 2 chưa hoàn thành -> Nhắc nhở/Giao quest 2
-            if (q2 != QuestManager.QuestState.Completed)
-                return DialogueMode.Quest2Reminder;
+            int q2step = QuestManager.Instance.GetStepIndex(2);
+            if (q2step == 3) return DialogueMode.Quest2CityGate;   // At city gate → full dialogue
+            if (q2step > 3)  return DialogueMode.Quest2Reminder;   // Past it → reminder
+            if (q2step > 0)  return DialogueMode.Quest2Reminder;   // Still en route → reminder
         }
+
+        // Quest 1 done + Quest 2 not started or at step 0 → Quest2Guide (Leona in town)
+        if (q1 == QuestManager.QuestState.Completed && (q2NotStarted || q2AtStep0))
+            return DialogueMode.Quest2Guide;
+
+        // Quest 2 active (fallback) → reminder
+        if (q2 == QuestManager.QuestState.Active)
+            return DialogueMode.Quest2Reminder;
 
         return DialogueMode.Default;
     }
@@ -239,9 +268,10 @@ public class LeonaDialogue : MonoBehaviour
         {
             case DialogueMode.Quest1Accept:   return quest1AcceptLines;
             case DialogueMode.Quest2Guide:    return quest2GuideLines;
+            case DialogueMode.Quest2CityGate: return quest2CityGateLines;
             case DialogueMode.Quest2Reminder: return quest2ReminderLines;
             case DialogueMode.Default:        return defaultLines;
-            default:                          return defaultLines; // Luôn trả về fallback thay vì null
+            default:                          return defaultLines;
         }
     }
 
@@ -309,30 +339,43 @@ public class LeonaDialogue : MonoBehaviour
             case DialogueMode.Quest1Accept:
                 if (QuestManager.Instance != null)
                 {
-                    // Chào mừng -> Hoàn thành bước 'Gặp Leona' của Quest 1
                     QuestManager.Instance.AdvanceStep(1);
-                    
-                    // Nếu Quest 1 thực sự xong -> Nhận Quest 2
                     if (QuestManager.Instance.GetState(1) == QuestManager.QuestState.Completed)
-                    {
                         QuestManager.Instance.AcceptQuest(2);
-                    }
                     Debug.Log("[LeonaDialogue] Quest 1 advanced.");
                 }
-                // Teleport sang Tutorial để học kỹ năng
                 var teleporter = GetComponent<QuestSceneTeleporter>();
                 if (teleporter != null) teleporter.TeleportToScene();
                 else Debug.LogWarning("[LeonaDialogue] QuestSceneTeleporter not found!");
                 break;
 
             case DialogueMode.Quest2Guide:
-                // Nhắc đường đến dungeon (Quest 2 đã active rồi)
+                // Leona in town: Accept Quest 2 + advance step 0 → 1 (heading to teleport)
+                if (QuestManager.Instance != null)
+                {
+                    QuestManager.Instance.AcceptQuest(2);
+                    if (QuestManager.Instance.GetStepIndex(2) == 0)
+                    {
+                        QuestManager.Instance.AdvanceStep(2);
+                        Debug.Log("[LeonaDialogue] Quest 2 step 0 → 1: heading to teleport.");
+                    }
+                }
+                break;
+
+            case DialogueMode.Quest2CityGate:
+                // Leona at city gate: advance step 3 → 4 (Enter dungeon gate)
+                if (QuestManager.Instance != null)
+                {
+                    int step = QuestManager.Instance.GetStepIndex(2);
+                    if (step == 3)
+                    {
+                        QuestManager.Instance.AdvanceStep(2);
+                        Debug.Log("[LeonaDialogue] Quest 2 step 3 → 4: Enter the Dungeon Gate.");
+                    }
+                }
                 break;
 
             case DialogueMode.Quest2Reminder:
-                // Thử accept Quest 2 (phòng trường hợp còn Locked/Available)
-                if (QuestManager.Instance != null)
-                    QuestManager.Instance.AcceptQuest(2);
                 break;
         }
     }

@@ -119,6 +119,45 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &27402453 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1981453737875036455, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
+  m_PrefabInstance: {fileID: 714640498}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &27402464
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 27402453}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e8d619961af815347bf8d0b522c38c90, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  phase2Threshold: 0.5
+  auraVfxPrefab: {fileID: 207745087118991948, guid: 4ae2e109edc58d14cb7a6bca147f2c46, type: 3}
+  phase2DmgMultiplier: 1.5
+  phase2SpdMultiplier: 1.3
+  phase2InvulDuration: 3
+  shieldVfxPrefab: {fileID: 6924677203671909923, guid: 6cbdce7f66fff054db116bbaf290493e, type: 3}
+  shieldDuration: 5
+  shieldCooldown: 15
+  projectileVfxPrefab: {fileID: 2268428576765071778, guid: 228bee46d226b36499dcd84f26eaaec2, type: 3}
+  projectileCooldown: 10
+  projectileBaseDamage: 20
+  projectileMagicDamage: 5
+  canSummon: 0
+  summonAvailablePhase1: 0
+  summonSkeletCount: 5
+  summonMonsterCount: 0
+  summonCooldown: 20
+  summonSubBosses: 0
+  enemyNewPrefab: {fileID: 0}
+  showDebug: 1
+  isPhase2: 0
+  isShielded: 0
 --- !u!1 &320729078
 GameObject:
   m_ObjectHideFlags: 0
@@ -223,12 +262,51 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 3, y: 3, z: 3}
+  m_LocalScale: {x: 6, y: 6, z: 6}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 635692826}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &542070933 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1981453737595719412, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
+  m_PrefabInstance: {fileID: 714640498}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &542070944
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 542070933}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e8d619961af815347bf8d0b522c38c90, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  phase2Threshold: 0.5
+  auraVfxPrefab: {fileID: 2692375763741349971, guid: 5a44a1c199dc9f140bbd1710995a7479, type: 3}
+  phase2DmgMultiplier: 1.5
+  phase2SpdMultiplier: 1.3
+  phase2InvulDuration: 3
+  shieldVfxPrefab: {fileID: 490251359132586323, guid: 928bbd75355fdc34687e1d20f168582b, type: 3}
+  shieldDuration: 5
+  shieldCooldown: 15
+  projectileVfxPrefab: {fileID: 2883180979609552342, guid: 71c50caf01f68ff4aae9ae69f916a9f0, type: 3}
+  projectileCooldown: 10
+  projectileBaseDamage: 20
+  projectileMagicDamage: 5
+  canSummon: 0
+  summonAvailablePhase1: 0
+  summonSkeletCount: 5
+  summonMonsterCount: 0
+  summonCooldown: 20
+  summonSubBosses: 0
+  enemyNewPrefab: {fileID: 0}
+  showDebug: 1
+  isPhase2: 0
+  isShielded: 0
 --- !u!1 &635692825
 GameObject:
   m_ObjectHideFlags: 0
@@ -361,6 +439,10 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1981453737284768619, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
+      propertyPath: m_TagString
+      value: Enemy
+      objectReference: {fileID: 0}
     - target: {fileID: 1981453737296457118, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
       propertyPath: isBoss
       value: 1
@@ -396,6 +478,10 @@ PrefabInstance:
     - target: {fileID: 1981453737562475106, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
       propertyPath: m_IsActive
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1981453737562475106, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
+      propertyPath: m_TagString
+      value: Enemy
       objectReference: {fileID: 0}
     - target: {fileID: 1981453737562574188, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
       propertyPath: isBoss
@@ -435,7 +521,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1981453737577277606, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1981453737577277606, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
+      propertyPath: m_TagString
+      value: Enemy
       objectReference: {fileID: 0}
     - target: {fileID: 1981453737577575554, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -977,6 +1067,10 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1981453737595719412, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
+      propertyPath: m_TagString
+      value: Enemy
+      objectReference: {fileID: 0}
     - target: {fileID: 1981453737595818624, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
       value: -83.58879
@@ -1469,6 +1563,10 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1981453737633395161, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
+      propertyPath: m_TagString
+      value: Enemy
+      objectReference: {fileID: 0}
     - target: {fileID: 1981453737656957608, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
       propertyPath: isBoss
       value: 1
@@ -1535,7 +1633,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1981453737875036455, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1981453737875036455, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
+      propertyPath: m_TagString
+      value: Enemy
       objectReference: {fileID: 0}
     - target: {fileID: 1981453737905689290, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
       propertyPath: attackDistanceOverride
@@ -1549,13 +1651,25 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1981453738775135029, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
+      propertyPath: m_TagString
+      value: Enemy
+      objectReference: {fileID: 0}
     - target: {fileID: 1981453738804655696, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1981453738804655696, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
+      propertyPath: m_TagString
+      value: Enemy
+      objectReference: {fileID: 0}
     - target: {fileID: 1981453738820298958, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
       propertyPath: m_IsActive
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1981453738820298958, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
+      propertyPath: m_TagString
+      value: Enemy
       objectReference: {fileID: 0}
     - target: {fileID: 1981453739036939255, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
       propertyPath: isBoss
@@ -1617,15 +1731,71 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1981453739209936326, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
+      propertyPath: m_TagString
+      value: Enemy
+      objectReference: {fileID: 0}
     - target: {fileID: 1981453739218914787, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1981453739218914787, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
+      propertyPath: m_TagString
+      value: Enemy
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1981453737875036455, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
+      insertIndex: 8
+      addedObject: {fileID: 27402464}
+    - targetCorrespondingSourceObject: {fileID: 1981453737595719412, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
+      insertIndex: 8
+      addedObject: {fileID: 542070944}
+    - targetCorrespondingSourceObject: {fileID: 1981453737577277606, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 953851066}
   m_SourcePrefab: {fileID: 100100000, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
+--- !u!1 &953851055 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1981453737577277606, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
+  m_PrefabInstance: {fileID: 714640498}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &953851066
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 953851055}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e8d619961af815347bf8d0b522c38c90, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  phase2Threshold: 0.5
+  auraVfxPrefab: {fileID: 0}
+  phase2DmgMultiplier: 1.5
+  phase2SpdMultiplier: 1.3
+  phase2InvulDuration: 3
+  shieldVfxPrefab: {fileID: 0}
+  shieldDuration: 5
+  shieldCooldown: 15
+  projectileVfxPrefab: {fileID: 0}
+  projectileCooldown: 10
+  projectileBaseDamage: 20
+  projectileMagicDamage: 5
+  canSummon: 0
+  summonAvailablePhase1: 0
+  summonSkeletCount: 5
+  summonMonsterCount: 0
+  summonCooldown: 20
+  summonSubBosses: 0
+  enemyNewPrefab: {fileID: 0}
+  showDebug: 1
+  isPhase2: 0
+  isShielded: 0
 --- !u!1001 &958677423
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1737,6 +1907,10 @@ PrefabInstance:
     - target: {fileID: 7069795437127634594, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7069795437127634594, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.417
       objectReference: {fileID: 0}
     - target: {fileID: 7069795437127634594, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalPosition.z
@@ -1902,6 +2076,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1627025872}
   - component: {fileID: 1627025871}
+  - component: {fileID: 1627025873}
   m_Layer: 0
   m_Name: Directional Light
   m_TagString: Untagged
@@ -1989,6 +2164,29 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+--- !u!114 &1627025873
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1627025870}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Version: 3
+  m_UsePipelineSettings: 1
+  m_AdditionalLightsShadowResolutionTier: 2
+  m_LightLayerMask: 1
+  m_RenderingLayers: 1
+  m_CustomShadowLayers: 0
+  m_ShadowLayerMask: 1
+  m_ShadowRenderingLayers: 1
+  m_LightCookieSize: {x: 1, y: 1}
+  m_LightCookieOffset: {x: 0, y: 0}
+  m_SoftShadowQuality: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

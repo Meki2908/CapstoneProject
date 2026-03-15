@@ -1,152 +1,117 @@
 using UnityEngine;
 using TMPro;
+using System.Text;
 
 /// <summary>
-/// Hiển thị thông tin nhiệm vụ hiện tại lên giao diện Cuốn sổ (Book UI).
-/// Kế thừa logic từ QuestManager để tự động cập nhật khi có thay đổi.
+/// Quest Journal UI – hiển thị quest đang active và danh sách steps kèm trạng thái.
+/// Nhấn J để mở/đóng.
 /// </summary>
 public class QuestJournalUI : MonoBehaviour
 {
-    [Header("UI Text Components")]
-    [Tooltip("Text hiển thị tên nhiệm vụ")]
-    public TextMeshProUGUI titleText;
-    
-    [Tooltip("Text hiển thị mô tả tổng quan của nhiệm vụ")]
-    public TextMeshProUGUI descriptionText;
-    
-    [Tooltip("Text hiển thị hướng dẫn bước hiện tại (Mục tiêu)")]
-    public TextMeshProUGUI instructionText;
-
-    [Header("HUD (Corner Screen)")]
-    public TextMeshProUGUI hudTitleText;
-
-    [Header("Toggle Settings")]
+    [Header("── Journal Panel ──")]
+    public GameObject rootPanel;
     public KeyCode toggleKey = KeyCode.J;
-    public GameObject rootPanel; // Object chính cần bật/tắt
 
-    [Header("Placeholder Strings")]
-    public string emptyQuestTitle = "No Active Quest";
-    public string emptyQuestDesc = "Visit NPC Leona or check the Tavern to find new adventures.";
+    [Header("── Text Fields ──")]
+    public TextMeshProUGUI titleText;
+    public TextMeshProUGUI instructionText;
+    public TextMeshProUGUI descriptionText;
+
+    [Header("── HUD (góc màn hình) ──")]
+    public TextMeshProUGUI hudTitleText;
+    public TextMeshProUGUI hudStepText;
+
+    [Header("── Empty State ──")]
+    public string emptyQuestTitle       = "No Active Quest";
+    public string emptyQuestDesc        = "Visit NPC Leona or check the Tavern to find new adventures.";
     public string emptyQuestInstruction = "Explore the city and talk to NPCs.";
 
-    private bool _isOpen = false;
+    bool _isOpen = false;
 
-    private void Start()
+    // ──────────────────────────────────────────────────────────────────────
+
+    void Start()
     {
-        if (rootPanel != null)
-        {
-            rootPanel.SetActive(false);
-        }
-        else
-        {
-            Debug.LogError("[QuestJournalUI] rootPanel is NOT assigned! Please drag the Journal Panel into the inspector slot.");
-        }
-        _isOpen = false;
+        if (rootPanel) rootPanel.SetActive(false);
+        else Debug.LogError("[QuestJournalUI] rootPanel is NOT assigned!");
     }
 
-    private void Update()
+    void Update()
     {
-        if (IsTogglePressedThisFrame())
-        {
-            ToggleJournal();
-        }
+        if (IsTogglePressedThisFrame()) ToggleJournal();
     }
 
-    private bool IsTogglePressedThisFrame()
+    bool IsTogglePressedThisFrame()
     {
 #if ENABLE_INPUT_SYSTEM
-        if (UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.jKey.wasPressedThisFrame)
-            return true;
+        if (UnityEngine.InputSystem.Keyboard.current != null &&
+            UnityEngine.InputSystem.Keyboard.current.jKey.wasPressedThisFrame) return true;
 #endif
         return Input.GetKeyDown(toggleKey);
+    }
+
+    void OnEnable()
+    {
+        QuestManager.OnQuestAccepted     += RefreshUI;
+        QuestManager.OnQuestStepAdvanced += RefreshUI;
+        QuestManager.OnQuestCompleted    += RefreshUI;
+        RefreshUI(0);
+    }
+
+    void OnDisable()
+    {
+        QuestManager.OnQuestAccepted     -= RefreshUI;
+        QuestManager.OnQuestStepAdvanced -= RefreshUI;
+        QuestManager.OnQuestCompleted    -= RefreshUI;
     }
 
     public void ToggleJournal()
     {
         if (rootPanel == null) return;
-
         _isOpen = !rootPanel.activeSelf;
         rootPanel.SetActive(_isOpen);
-
-        if (_isOpen)
-        {
-            RefreshUI(0);
-            Cursor.visible = true;
-            Cursor.lockState = CursorLockMode.None;
-        }
-        else
-        {
-            Cursor.visible = false;
-            Cursor.lockState = CursorLockMode.Locked;
-        }
+        Cursor.visible   = _isOpen;
+        Cursor.lockState = _isOpen ? CursorLockMode.None : CursorLockMode.Locked;
+        if (_isOpen) RefreshUI(0);
     }
 
-    private void OnEnable()
-    {
-        // Đăng ký sự kiện để tự động cập nhật UI khi quest thay đổi
-        QuestManager.OnQuestAccepted += RefreshUI;
-        QuestManager.OnQuestStepAdvanced += RefreshUI;
-        QuestManager.OnQuestCompleted += RefreshUI;
-        
-        // Cập nhật ngay khi mở bảng
-        RefreshUI(0);
-    }
+    // ── Core ──────────────────────────────────────────────────────────────
 
-    private void OnDisable()
-    {
-        QuestManager.OnQuestAccepted -= RefreshUI;
-        QuestManager.OnQuestStepAdvanced -= RefreshUI;
-        QuestManager.OnQuestCompleted -= RefreshUI;
-    }
-
-    /// <summary>
-    /// Làm mới toàn bộ thông tin trên trang sách
-    /// </summary>
     public void RefreshUI(int questID)
     {
-        var manager = QuestManager.Instance;
-        
-        // Cố định lỗi NULL nếu manager chưa kịp Awake
-        if (manager == null)
-        {
-            manager = FindFirstObjectByType<QuestManager>();
-            if (manager == null)
-            {
-                Debug.LogWarning("[QuestJournal] QuestManager not found in scene! UI cannot be updated.");
-                return;
-            }
-        }
+        var mgr = QuestManager.Instance ?? FindFirstObjectByType<QuestManager>();
+        if (mgr == null) { Debug.LogWarning("[QuestJournal] QuestManager not found!"); return; }
 
-        // Fetch the first Active quest
-        QuestData activeQuest = manager.GetActiveQuest();
-        QuestStep activeStep = manager.GetActiveStep();
+        QuestData quest = mgr.GetActiveQuest();
+        QuestStep step  = mgr.GetActiveStep();
 
-        if (activeQuest != null)
-        {
-            Debug.Log($"[QuestJournal] Displaying Active Quest: {activeQuest.questTitle} (ID: {activeQuest.questID})");
-            
-            if (titleText) titleText.text = activeQuest.questTitle;
-            if (descriptionText) descriptionText.text = activeQuest.questDescription;
-            if (hudTitleText) hudTitleText.text = activeQuest.questTitle;
-            
-            if (instructionText)
-            {
-                if (activeStep != null)
-                {
-                    instructionText.text = $"<b>Objective:</b> {activeStep.instruction}";
-                    Debug.Log($"[QuestJournal] Current Step: {activeStep.stepTitle}");
-                }
-                else
-                {
-                    instructionText.text = "Goal reached! Check your rewards.";
-                }
-            }
-        }
-        else
-        {
-            if (titleText) titleText.text = emptyQuestTitle;
-            if (descriptionText) descriptionText.text = emptyQuestDesc;
-            if (instructionText) instructionText.text = emptyQuestInstruction;
-        }
+        if (quest == null) { SetEmpty(); return; }
+
+        Debug.Log($"[QuestJournal] Displaying Active Quest: {quest.questTitle} (ID: {quest.questID})");
+
+        // 1. Quest title
+        if (titleText)    titleText.text    = quest.questTitle;
+        if (hudTitleText) hudTitleText.text = quest.questTitle;
+
+        // 2. Current step activity (stepTitle)
+        string activity = step != null ? step.stepTitle : "Quest Complete!";
+        Debug.Log($"[QuestJournal] Current Step: {activity}");
+        if (instructionText) instructionText.text = activity;
+        if (hudStepText)     hudStepText.text     = $"► {activity}";
+
+        // 3. Quest description
+        if (descriptionText) descriptionText.text = quest.questDescription;
+
+
+    }
+
+    void SetEmpty()
+    {
+        if (titleText)       titleText.text       = emptyQuestTitle;
+        if (descriptionText) descriptionText.text = emptyQuestDesc;
+        if (instructionText) instructionText.text = emptyQuestInstruction;
+
+        if (hudTitleText)    hudTitleText.text     = "";
+        if (hudStepText)     hudStepText.text      = "";
     }
 }

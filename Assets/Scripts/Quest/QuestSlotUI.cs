@@ -55,11 +55,20 @@ public class QuestSlotUI : MonoBehaviour
                                 ? ""
                                 : $"Phần thưởng: {_data.rewardGold} Gold | {_data.rewardExp} EXP";
 
-        // Nếu đang Active → hiện bước hiện tại
-        if (state == QuestManager.QuestState.Active && _data.steps != null && _data.steps.Length > 0)
+        // Hiện step title cho Active và Completed
+        if (_data.steps != null && _data.steps.Length > 0)
         {
-            int idx = Mathf.Clamp(step, 0, _data.steps.Length - 1);
-            descStr += $"\n→ {_data.steps[idx].instruction}";
+            if (state == QuestManager.QuestState.Active)
+            {
+                int idx = Mathf.Clamp(step, 0, _data.steps.Length - 1);
+                descStr += $"\n<color=#FFD700>► {_data.steps[idx].stepTitle}</color>";
+            }
+            else if (state == QuestManager.QuestState.Completed)
+            {
+                // Show last step as done
+                var lastStep = _data.steps[_data.steps.Length - 1];
+                descStr += $"\n<color=#55FF55>✓ {lastStep.stepTitle}</color>";
+            }
         }
 
         Color col = StateColor(state);

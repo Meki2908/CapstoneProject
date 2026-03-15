@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 public class EnemyDamage : MonoBehaviour{
@@ -28,6 +28,13 @@ public class EnemyDamage : MonoBehaviour{
     }
     public void Damage(Damage d) {
         if(enemyScript == null || !enemyScript.alive) return;
+        
+        // Shield check — boss bất tử khi có shield
+        if (enemyScript.bossMultiSkill != null && enemyScript.bossMultiSkill.ShouldBlockDamage())
+        {
+            return; // Block toàn bộ damage
+        }
+        
         enemyScript.hit = true;
         Hit(d);
     }
