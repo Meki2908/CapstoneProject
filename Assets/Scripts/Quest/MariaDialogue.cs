@@ -15,8 +15,10 @@ using UnityEngine.InputSystem;
 public class MariaDialogue : MonoBehaviour
 {
     [Header("── Quest Settings ──")]
-    public int questID   = 2;
-    public int stepIndex = 3;   // Maria handles step 3 (City Gate, Quest 2)
+    [Tooltip("Quest 2 = City Gate. Quest 3 = Battlefield. Script auto-detects which is active.")]
+    public int quest2ID  = 2;
+    public int quest3ID  = 3;
+    public int stepIndex = 3;   // Maria handles step 3 in both quests
 
     [Header("── Prompt UI ──")]
     public GameObject promptPanel;
@@ -54,16 +56,17 @@ public class MariaDialogue : MonoBehaviour
         "Please. Go through that portal and put an end to this. We'll hold the line as long as we can."
     };
 
-    [Header("── Dialogue: Step 3 – Quest 3 Battlefield (Maria B) ──")]
+    [Header("── Dialogue: Quest 3 – Battlefield ──")]
     [TextArea(2, 4)]
-    public string[] quest3OpeningLines = {
-        "You made it! I wasn't sure the teleport was still active.",
-        "I'm glad you're here. Things are worse than I expected.",
+    public string[] quest3Lines = {
+        "You made it! I wasn't sure the teleport was still working properly.",
+        "I'm glad you're here. This situation is... worse than I reported.",
         "We pushed forward after the City Gate was secured, but this new gate appeared overnight.",
-        "It's bigger than the last one. My scouts went in and never came back.",
-        "The soldiers are holding the perimeter, but no one wants to step inside. Can't blame them.",
-        "But you and I both know someone has to go in and end this.",
-        "Go in. Do what you did at the last gate. I'll be right here watching the door."
+        "It's larger. Whatever came through the last one, this one is hiding something bigger.",
+        "I've got soldiers holding the perimeter, but no one willing to go inside. Can't blame them.",
+        "But you and I both know someone has to.",
+        "Go in. Do what you did at the last gate. End it.",
+        "I'll be right here when you come back."
     };
 
     [Header("── Reminder Dialogue (if player returns) ──")]
@@ -122,18 +125,37 @@ public class MariaDialogue : MonoBehaviour
     bool IsCorrectStep()
     {
         if (QuestManager.Instance == null) return false;
-        var state = QuestManager.Instance.GetState(questID);
-        int step  = QuestManager.Instance.GetStepIndex(questID);
-        return state == QuestManager.QuestState.Active && step >= stepIndex;
+        // Check Quest 2 first, then Quest 3
+        foreach (int qid in new[] { quest2ID, quest3ID })
+        {
+            var state = QuestManager.Instance.GetState(qid);
+            int step  = QuestManager.Instance.GetStepIndex(qid);
+            if (state == QuestManager.QuestState.Active && step >= stepIndex) return true;
+        }
+        return false;
+    }
+
+    int ActiveQuestID()
+    {
+        if (QuestManager.Instance == null) return quest2ID;
+        foreach (int qid in new[] { quest2ID, quest3ID })
+        {
+            var state = QuestManager.Instance.GetState(qid);
+            int step  = QuestManager.Instance.GetStepIndex(qid);
+            if (state == QuestManager.QuestState.Active && step >= stepIndex) return qid;
+        }
+        return quest2ID;
     }
 
     void OpenDialogue()
     {
+        int activeQID = ActiveQuestID();
         int step = QuestManager.Instance != null
-            ? QuestManager.Instance.GetStepIndex(questID) : stepIndex;
+            ? QuestManager.Instance.GetStepIndex(activeQID) : stepIndex;
 
+        // Pick lines: Q3 gets quest3Lines, Q2 gets openingLines; reminder if past stepIndex
         if (step == stepIndex)
-            _activeLines = (questID == 3) ? quest3OpeningLines : openingLines;
+            _activeLines = (activeQID == quest3ID) ? quest3Lines : openingLines;
         else
             _activeLines = reminderLines;
         _isOpen      = true;
@@ -187,11 +209,12 @@ public class MariaDialogue : MonoBehaviour
     void OnDialogueFinished()
     {
         if (QuestManager.Instance == null) return;
-        int step = QuestManager.Instance.GetStepIndex(questID);
+        int activeQID = ActiveQuestID();
+        int step = QuestManager.Instance.GetStepIndex(activeQID);
         if (step == stepIndex)
         {
-            QuestManager.Instance.AdvanceStep(questID);
-            Debug.Log("[MariaDialogue] Quest 2 step 3 → 4: Enter the Dungeon Gate.");
+            QuestManager.Instance.AdvanceStep(activeQID);
+            Debug.Log($"[MariaDialogue] Quest {activeQID} step {stepIndex} → {stepIndex + 1}: Enter dungeon gate.");
         }
     }
 

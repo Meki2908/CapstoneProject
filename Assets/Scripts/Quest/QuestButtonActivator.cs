@@ -3,22 +3,26 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Enables/disables a UI Button based on quest state & step.
-/// Works with existing ButtonStateController if present (calls SetEnable/SetDisable).
+/// Attach to the same GameObject as the Button, or assign buttonTarget.
+/// 
+/// Use case: Battlefield teleport button – disabled until Quest 3 step >= 1.
 /// </summary>
+[RequireComponent(typeof(Button))]
 public class QuestButtonActivator : MonoBehaviour
 {
     [Header("── Quest Condition ──")]
     public int questID      = 3;
-    public int enableAtStep = 1;
+    public int enableAtStep = 1;   // Enable when step >= this value
 
-    // ─── Runtime ──────────────────────────────────────────────────────────
-    Button                _btn;
-    ButtonStateController _bsc;
+    [Header("── Optional ──")]
+    [Tooltip("Leave empty to use Button on this GameObject")]
+    public Button buttonTarget;
+
+    Button _btn;
 
     void Awake()
     {
-        _btn = GetComponent<Button>();
-        _bsc = GetComponent<ButtonStateController>();
+        _btn = buttonTarget != null ? buttonTarget : GetComponent<Button>();
     }
 
     void OnEnable()
@@ -35,42 +39,28 @@ public class QuestButtonActivator : MonoBehaviour
         QuestManager.OnQuestCompleted    -= Refresh;
     }
 
-    void Start() => StartCoroutine(DelayedRefresh());
+    void Start()
+    {
+        StartCoroutine(DelayedRefresh());
+    }
 
     System.Collections.IEnumerator DelayedRefresh()
     {
-        // Wait until QuestManager is ready (up to 2 seconds)
-        float waited = 0f;
-        while (QuestManager.Instance == null && waited < 2f)
-        {
-            yield return null;
-            waited += Time.deltaTime;
-        }
+        yield return null;
         Refresh(0);
     }
 
     void Refresh(int id)
     {
-        if (QuestManager.Instance == null) return;
+        if (_btn == null || QuestManager.Instance == null) return;
 
         var state = QuestManager.Instance.GetState(questID);
         int step  = QuestManager.Instance.GetStepIndex(questID);
 
-        bool shouldEnable = (state == QuestManager.QuestState.Active && step >= enableAtStep)
+        bool shouldEnable = state == QuestManager.QuestState.Active && step >= enableAtStep
                          || state == QuestManager.QuestState.Completed;
 
-        Debug.Log($"[QuestButtonActivator] Quest {questID} step {step} → {(shouldEnable ? "ENABLE" : "DISABLE")} {gameObject.name}");
-
-        // Use ButtonStateController if present, otherwise direct interactable
-        if (_bsc != null)
-        {
-            if (shouldEnable) _bsc.SetEnable();
-            else              _bsc.SetDisable();
-        }
-        else if (_btn != null)
-        {
-            _btn.interactable = shouldEnable;
-        }
+        _btn.interactable = shouldEnable;
+        Debug.Log($"[QuestButtonActivator] Quest {questID} step {step} → button {(shouldEnable ? "ENABLED" : "DISABLED")}");
     }
 }
-
