@@ -14,13 +14,13 @@ public class DungeonRewardUI : MonoBehaviour
 
     [Header("=== Settings ===")]
     [Tooltip("Kích thước mỗi ô item")]
-    [SerializeField] private float slotSize = 100f;
+    [SerializeField] private float slotSize = 200f;
     [Tooltip("Khoảng cách giữa các ô")]
-    [SerializeField] private float slotSpacing = 10f;
+    [SerializeField] private float slotSpacing = 20f;
     [Tooltip("Chiều rộng panel")]
-    [SerializeField] private float panelWidth = 800f;
+    [SerializeField] private float panelWidth = 1600f;
     [Tooltip("Chiều cao panel")]
-    [SerializeField] private float panelHeight = 300f;
+    [SerializeField] private float panelHeight = 600f;
 
     [Header("=== Custom Assets (kéo vào Inspector) ===")]
     [Tooltip("Sprite nền panel chính (null = dùng màu mặc định)")]
@@ -32,6 +32,12 @@ public class DungeonRewardUI : MonoBehaviour
     [Tooltip("Image Type cho panel/slot sprites")]
     [SerializeField] private Image.Type spriteImageType = Image.Type.Sliced;
 
+    [Header("=== Canvas Sorting ===")] 
+    [Tooltip("SortingOrder cho reward canvas (tạo bằng code)")]
+    [SerializeField] private int rewardCanvasSortOrder = 999;
+    [Tooltip("SortingOrder cho tooltip khi hover item trong reward")]
+    [SerializeField] private int tooltipSortOrder = 1000;
+
     // Danh sách item thu được trong dungeon
     private List<RewardEntry> collectedItems = new List<RewardEntry>();
 
@@ -40,7 +46,7 @@ public class DungeonRewardUI : MonoBehaviour
     private GameObject panelRoot;
     private GameObject contentContainer;
     private bool isShowing = false;
-    private int originalTooltipSortingOrder = 0; // lưu sortingOrder gốc
+    private int originalTooltipSortingOrder = 0;
 
     [System.Serializable]
     public class RewardEntry
@@ -166,19 +172,13 @@ public class DungeonRewardUI : MonoBehaviour
         GameObject canvasGO = new GameObject("DungeonRewardCanvas");
         rewardCanvas = canvasGO.AddComponent<Canvas>();
         rewardCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        rewardCanvas.sortingOrder = 999; // Luôn hiện trên cùng
+        rewardCanvas.sortingOrder = rewardCanvasSortOrder;
         canvasGO.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        canvasGO.GetComponent<CanvasScaler>().referenceResolution = new Vector2(1920, 1080);
+        canvasGO.GetComponent<CanvasScaler>().referenceResolution = new Vector2(3840, 2160);
+        canvasGO.GetComponent<CanvasScaler>().matchWidthOrHeight = 0.5f;
         canvasGO.AddComponent<GraphicRaycaster>();
 
-        // === DIMMED BACKGROUND ===
-        GameObject dimBG = CreateUIElement("DimBackground", canvasGO.transform);
-        RectTransform dimRT = dimBG.GetComponent<RectTransform>();
-        dimRT.anchorMin = Vector2.zero;
-        dimRT.anchorMax = Vector2.one;
-        dimRT.sizeDelta = Vector2.zero;
-        Image dimImg = dimBG.AddComponent<Image>();
-        dimImg.color = new Color(0, 0, 0, 0.6f);
+        // Dim background đã tắt
 
         // === MAIN PANEL ===
         panelRoot = CreateUIElement("RewardPanel", canvasGO.transform);
@@ -205,7 +205,7 @@ public class DungeonRewardUI : MonoBehaviour
         RectTransform scrollRT = scrollGO.GetComponent<RectTransform>();
         scrollRT.anchorMin = new Vector2(0, 0.1f);
         scrollRT.anchorMax = new Vector2(1, 0.95f);
-        scrollRT.sizeDelta = new Vector2(-40, 0);
+        scrollRT.sizeDelta = new Vector2(-80, 0);
         scrollRT.anchoredPosition = Vector2.zero;
 
         ScrollRect scrollRect = scrollGO.AddComponent<ScrollRect>();
@@ -233,7 +233,7 @@ public class DungeonRewardUI : MonoBehaviour
         HorizontalLayoutGroup layout = contentGO.AddComponent<HorizontalLayoutGroup>();
         layout.spacing = slotSpacing;
         layout.childAlignment = TextAnchor.MiddleLeft;
-        layout.padding = new RectOffset(20, 20, 10, 10);
+        layout.padding = new RectOffset(40, 40, 20, 20);
         layout.childForceExpandWidth = false;
         layout.childForceExpandHeight = false;
         layout.childControlWidth = false;
@@ -252,7 +252,7 @@ public class DungeonRewardUI : MonoBehaviour
         sbRT.anchorMin = new Vector2(0, 0);
         sbRT.anchorMax = new Vector2(1, 0);
         sbRT.pivot = new Vector2(0.5f, 0);
-        sbRT.sizeDelta = new Vector2(0, 12);
+        sbRT.sizeDelta = new Vector2(0, 24);
         sbRT.anchoredPosition = Vector2.zero;
 
         Image sbBG = scrollbarGO.AddComponent<Image>();
@@ -289,10 +289,10 @@ public class DungeonRewardUI : MonoBehaviour
             GameObject noItemGO = CreateUIElement("NoItems", contentGO.transform);
             TextMeshProUGUI noItemText = noItemGO.AddComponent<TextMeshProUGUI>();
             noItemText.text = "Không có vật phẩm";
-            noItemText.fontSize = 24;
+            noItemText.fontSize = 48;
             noItemText.alignment = TextAlignmentOptions.Center;
             noItemText.color = Color.gray;
-            noItemGO.GetComponent<RectTransform>().sizeDelta = new Vector2(300, slotSize);
+            noItemGO.GetComponent<RectTransform>().sizeDelta = new Vector2(600, slotSize);
         }
         else
         {
@@ -314,7 +314,7 @@ public class DungeonRewardUI : MonoBehaviour
         int totalItems = 0;
         foreach (var e in collectedItems) totalItems += e.quantity;
         countText.text = $"Tổng: {collectedItems.Count} loại, {totalItems} vật phẩm";
-        countText.fontSize = 18;
+        countText.fontSize = 36;
         countText.alignment = TextAlignmentOptions.Center;
         countText.color = new Color(0.7f, 0.7f, 0.7f);
     }
@@ -333,11 +333,11 @@ public class DungeonRewardUI : MonoBehaviour
         // === SLOT ROOT (border) ===
         GameObject slotGO = CreateUIElement($"Slot_{entry.item.itemName}", parent);
         RectTransform slotRT = slotGO.GetComponent<RectTransform>();
-        slotRT.sizeDelta = new Vector2(slotSize, slotSize + 35);
+        slotRT.sizeDelta = new Vector2(slotSize, slotSize + 70);
 
         LayoutElement le = slotGO.AddComponent<LayoutElement>();
         le.preferredWidth = slotSize;
-        le.preferredHeight = slotSize + 35;
+        le.preferredHeight = slotSize + 70;
 
         // Border image (rarity color)
         Image borderImg = slotGO.AddComponent<Image>();
@@ -353,7 +353,7 @@ public class DungeonRewardUI : MonoBehaviour
         RectTransform innerRT = innerGO.GetComponent<RectTransform>();
         innerRT.anchorMin = Vector2.zero;
         innerRT.anchorMax = Vector2.one;
-        innerRT.sizeDelta = new Vector2(-4, -4);
+        innerRT.sizeDelta = new Vector2(-8, -8);
         innerRT.anchoredPosition = Vector2.zero;
 
         Image innerBG = innerGO.AddComponent<Image>();
@@ -396,7 +396,7 @@ public class DungeonRewardUI : MonoBehaviour
 
             TextMeshProUGUI qtyText = qtyGO.AddComponent<TextMeshProUGUI>();
             qtyText.text = $"x{entry.quantity}";
-            qtyText.fontSize = 16;
+            qtyText.fontSize = 32;
             qtyText.alignment = TextAlignmentOptions.Right;
             qtyText.color = Color.white;
         }
@@ -411,7 +411,7 @@ public class DungeonRewardUI : MonoBehaviour
 
         TextMeshProUGUI nameText = nameGO.AddComponent<TextMeshProUGUI>();
         nameText.text = entry.item.itemName;
-        nameText.fontSize = 12;
+        nameText.fontSize = 24;
         nameText.alignment = TextAlignmentOptions.Center;
         nameText.color = borderColor;
         nameText.enableWordWrapping = true;
@@ -447,7 +447,7 @@ public class DungeonRewardUI : MonoBehaviour
         {
             originalTooltipSortingOrder = tooltipCanvas.sortingOrder;
             tooltipCanvas.overrideSorting = true;
-            tooltipCanvas.sortingOrder = 1000;
+            tooltipCanvas.sortingOrder = tooltipSortOrder;
         }
         else
         {

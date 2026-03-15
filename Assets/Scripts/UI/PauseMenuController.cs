@@ -149,7 +149,7 @@ public class PauseMenuController : MonoBehaviour
                 canvas = menuCanvas.AddComponent<Canvas>();
             }
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 1000;
+            // sortingOrder lấy từ scene, không tự set
             
             // Thêm CanvasScaler
             CanvasScaler scaler = menuCanvas.GetComponent<CanvasScaler>();

@@ -390,7 +390,7 @@ public class ItemPickupNotification : MonoBehaviour
         {
             canvas = gameObject.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 100;
+            // sortingOrder lấy từ scene, không tự set
         }
 
         var scaler = GetComponent<CanvasScaler>() ?? gameObject.AddComponent<CanvasScaler>();
