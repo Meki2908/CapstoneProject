@@ -345,16 +345,16 @@ public class BlacksmithUI : MonoBehaviour
     {
         if (resultPanel == null || resultText == null) return;
         resultPanel.SetActive(true);
-        resultText.text = $"⚠ Gỡ <color={Item.GetRarityColorHex(gem.rarity)}>{gem.itemName}</color> sẽ bị XÓA VĨNH VIỄN!\nNhấn lần nữa để xác nhận gỡ.";
-        resultText.color = new Color(1f, 0.7f, 0.2f); // Cam cảnh báo
+        resultText.text = $"⚠ Removing <color={Item.GetRarityColorHex(gem.rarity)}>{gem.itemName}</color> will DESTROY it permanently!\nClick again to confirm.";
+        resultText.color = new Color(1f, 0.7f, 0.2f); // Warning orange
     }
 
     void ShowRemovalSuccess(Item gem)
     {
         if (resultPanel == null || resultText == null) return;
         resultPanel.SetActive(true);
-        resultText.text = $"Đã gỡ {gem.itemName}. Gem đã bị hủy.";
-        resultText.color = new Color(0.9f, 0.3f, 0.2f); // Đỏ
+        resultText.text = $"Removed {gem.itemName}. Gem has been destroyed.";
+        resultText.color = new Color(0.9f, 0.3f, 0.2f); // Red
 
         StopCoroutine(nameof(HideResultCoroutine));
         StartCoroutine(HideResultCoroutine());
@@ -447,12 +447,12 @@ public class BlacksmithUI : MonoBehaviour
         SoundManager.PlaySound(SoundType.Blacksmith_Forge);
 
         // ── Spin the gem drop icon during socketing (2 seconds) ──
-        float duration = 2f;
+        float duration = 0.3f;
         float elapsed = 0f;
         float spinSpeed = 720f; // degrees per second
 
         Transform spinTarget = null;
-        if (gemDropIcon != null) spinTarget = gemDropIcon.transform;
+        if (socketButton != null) spinTarget = socketButton.transform;
 
         while (elapsed < duration)
         {
@@ -502,27 +502,27 @@ public class BlacksmithUI : MonoBehaviour
         switch (result)
         {
             case SocketResult.Success:
-                resultText.text = "KHẢM THÀNH CÔNG!";
+                resultText.text = "SOCKETING SUCCESS!";
                 resultText.color = new Color(0.2f, 0.9f, 0.3f);
                 break;
             case SocketResult.Fail:
-                resultText.text = "KHẢM THẤT BẠI!\nMất Crystal Stone, Gem được trả lại.";
+                resultText.text = "SOCKETING FAILED!\nCrystal Stone consumed. Gem returned.";
                 resultText.color = new Color(0.9f, 0.3f, 0.2f);
                 break;
             case SocketResult.NoGem:
-                resultText.text = "Chưa chọn Gem!";
+                resultText.text = "No Gem selected!";
                 resultText.color = Color.yellow;
                 break;
             case SocketResult.NoCrystal:
-                resultText.text = "Chưa chọn Crystal Stone!";
+                resultText.text = "No Crystal Stone selected!";
                 resultText.color = Color.yellow;
                 break;
             case SocketResult.NoTarget:
-                resultText.text = "Chưa có trang bị/vũ khí!";
+                resultText.text = "No equipment or weapon available!";
                 resultText.color = Color.yellow;
                 break;
             default:
-                resultText.text = "Lỗi khảm.";
+                resultText.text = "Socketing error.";
                 resultText.color = Color.gray;
                 break;
         }
@@ -565,7 +565,7 @@ public class BlacksmithUI : MonoBehaviour
         else
         {
             if (weaponIcon) weaponIcon.enabled = false;
-            if (weaponNameText) weaponNameText.text = "Không có vũ khí";
+            if (weaponNameText) weaponNameText.text = "No weapon equipped";
         }
     }
 
@@ -618,12 +618,12 @@ public class BlacksmithUI : MonoBehaviour
                 }
                 else
                 {
-                    equipmentNameText.text = $"Slot {slotNames[selectedEquipmentSlot]} — Trống";
+                    equipmentNameText.text = $"Slot {slotNames[selectedEquipmentSlot]} — Empty";
                 }
             }
             else
             {
-                equipmentNameText.text = "Chọn slot trang bị";
+                equipmentNameText.text = "Select equipment slot";
             }
         }
     }
@@ -826,7 +826,7 @@ public class BlacksmithUI : MonoBehaviour
                 : "";
         }
 
-        SetDropSlotTooltip(icon, selectedCrystal, "Chon Crystal Stone tu hanh trang\nde tang ti le kham thanh cong");
+        SetDropSlotTooltip(icon, selectedCrystal, "Select Crystal Stone from inventory\nto increase socketing success rate");
     }
 
     void UpdateGemDropDisplay()
@@ -853,7 +853,7 @@ public class BlacksmithUI : MonoBehaviour
                 : "";
         }
 
-        SetDropSlotTooltip(gemDropIcon, selectedGem, "Chon Gem tu hanh trang\nde kham vao trang bi hoac vu khi");
+        SetDropSlotTooltip(gemDropIcon, selectedGem, "Select Gem from inventory\nto socket into equipment or weapon");
     }
 
     void UpdateSuccessRate()
@@ -895,7 +895,7 @@ public class BlacksmithUI : MonoBehaviour
 
         if (successRateText)
         {
-            successRateText.text = $"Tỉ lệ thành công: {rate * 100f:F0}%";
+            successRateText.text = $"Success Rate: {rate * 100f:F0}%";
         }
 
         // Socket button state
@@ -906,7 +906,7 @@ public class BlacksmithUI : MonoBehaviour
 
         if (socketButtonText)
         {
-            socketButtonText.text = canSocket ? "KHAM GEM" : "Chon Gem + Crystal + Slot";
+            socketButtonText.text = canSocket ? "SOCKET GEM" : "Select Gem + Crystal + Slot";
         }
     }
 
@@ -1047,6 +1047,43 @@ public class BlacksmithUI : MonoBehaviour
         textRT.pivot = new Vector2(0, 1);
 
         bsTooltipPanel.SetActive(false);
+
+        // Match font from inventory UI → consistent look
+        ApplyInventoryFont();
+    }
+
+    /// <summary>
+    /// Find the font used in inventory/UI and apply it to Blacksmith tooltip
+    /// </summary>
+    void ApplyInventoryFont()
+    {
+        if (bsTooltipText == null) return;
+
+        // Try to get font from itemUIPrefab first (same prefab as player inventory)
+        if (itemUIPrefab != null)
+        {
+            var prefabTMP = itemUIPrefab.GetComponentInChildren<TextMeshProUGUI>(true);
+            if (prefabTMP != null && prefabTMP.font != null)
+            {
+                bsTooltipText.font = prefabTMP.font;
+                Debug.Log($"[BlacksmithUI] Tooltip font set from itemUIPrefab: {prefabTMP.font.name}");
+                return;
+            }
+        }
+
+        // Fallback: find any existing TMP text in the main panel
+        if (mainPanel != null)
+        {
+            var anyTMP = mainPanel.GetComponentInChildren<TextMeshProUGUI>(true);
+            if (anyTMP != null && anyTMP != bsTooltipText && anyTMP.font != null)
+            {
+                bsTooltipText.font = anyTMP.font;
+                Debug.Log($"[BlacksmithUI] Tooltip font set from panel: {anyTMP.font.name}");
+                return;
+            }
+        }
+
+        Debug.LogWarning("[BlacksmithUI] Could not find inventory font — using TMP default");
     }
 
     void AddTooltipTrigger(GameObject go, Item item, Rarity rarity, float rolledValue = -1f)
@@ -1190,9 +1227,9 @@ public class BlacksmithUI : MonoBehaviour
                 break;
             case ItemType.CrystalStone:
                 sb.AppendLine("<color=#00FFFF>Crystal Stone</color>");
-                sb.AppendLine("<color=#888888>Nguyên liệu khảm - tăng tỉ lệ thành công</color>");
+                sb.AppendLine("<color=#888888>Socketing material - increases success rate</color>");
                 sb.AppendLine();
-                sb.AppendLine("<color=#FFD700>Tỉ lệ thành công:</color>");
+                sb.AppendLine("<color=#FFD700>Success Rate:</color>");
                 if (SocketingManager.Instance != null)
                 {
                     string[] rarityNames = { "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic" };

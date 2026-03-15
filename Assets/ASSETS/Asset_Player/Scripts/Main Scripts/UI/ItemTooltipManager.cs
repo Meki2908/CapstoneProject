@@ -409,9 +409,9 @@ public class ItemTooltipManager : MonoBehaviour
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
 
         sb.AppendLine("<color=#00FFFF>Crystal Stone</color>");
-        sb.AppendLine("<color=#888888>Nguyên liệu khảm - tăng tỉ lệ thành công</color>");
+        sb.AppendLine("<color=#888888>Socketing material - increases success rate</color>");
         sb.AppendLine();
-        sb.AppendLine("<color=#FFD700>Tỉ lệ thành công:</color>");
+        sb.AppendLine("<color=#FFD700>Success Rate:</color>");
 
         if (SocketingManager.Instance != null)
         {
