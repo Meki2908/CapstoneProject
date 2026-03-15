@@ -14,19 +14,19 @@ OcclusionCullingSettings:
 RenderSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 10
-  m_Fog: 0
-  m_FogColor: {r: 0.8602941, g: 0.8602941, b: 0.8602941, a: 1}
+  m_Fog: 1
+  m_FogColor: {r: 0.735849, g: 0.45907718, b: 0.35751158, a: 1}
   m_FogMode: 1
   m_FogDensity: 0.011
   m_LinearFogStart: 200
   m_LinearFogEnd: 1800
-  m_AmbientSkyColor: {r: 0.212, g: 0.227, b: 0.259, a: 1}
-  m_AmbientEquatorColor: {r: 0.114, g: 0.125, b: 0.133, a: 1}
-  m_AmbientGroundColor: {r: 0.047, g: 0.043, b: 0.035, a: 1}
-  m_AmbientIntensity: 1
-  m_AmbientMode: 0
+  m_AmbientSkyColor: {r: 0.07849768, g: 0.14038213, b: 0.26415092, a: 1}
+  m_AmbientEquatorColor: {r: 0.6415094, g: 0.42453122, b: 0.39640442, a: 1}
+  m_AmbientGroundColor: {r: 0.1792453, g: 0.12072569, b: 0.090468146, a: 1}
+  m_AmbientIntensity: 0.66
+  m_AmbientMode: 1
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 2100000, guid: afbfe3ac664a7554a868ae038e66afb9, type: 2}
+  m_SkyboxMaterial: {fileID: 2100000, guid: 3c61e76411f29c6439de24d30dcf428c, type: 2}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -35,7 +35,7 @@ RenderSettings:
   m_DefaultReflectionMode: 0
   m_DefaultReflectionResolution: 2048
   m_ReflectionBounces: 1
-  m_ReflectionIntensity: 1
+  m_ReflectionIntensity: 0.35
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
   m_UseRadianceAmbientProbe: 0
@@ -93,7 +93,7 @@ LightmapSettings:
     m_ExportTrainingData: 0
     m_TrainingDataDestination: TrainingData
     m_LightProbeSampleCountMultiplier: 4
-  m_LightingDataAsset: {fileID: 112000002, guid: 53fbd540563f0114789fa5e1e71a0279, type: 2}
+  m_LightingDataAsset: {fileID: 112000000, guid: 8b7ac07b2e38f294f988a2835c690df8, type: 2}
   m_LightingSettings: {fileID: 4890085278179872738, guid: 1a903185898d6954d866fc93d2f3ab1d, type: 2}
 --- !u!196 &4
 NavMeshSettings:
@@ -32320,7 +32320,7 @@ Light:
   m_BounceIntensity: 1
   m_ColorTemperature: 4000
   m_UseColorTemperature: 1
-  m_BoundingSphereOverride: {x: 7.38927e-40, y: 2.524355e-29, z: 0, w: 1.6607025e+16}
+  m_BoundingSphereOverride: {x: 4.9839e-41, y: 2.524355e-29, z: 0, w: 1.4546743e-37}
   m_UseBoundingSphereOverride: 0
   m_UseViewFrustumForShadowCasterCull: 1
   m_ForceVisible: 0
@@ -79382,6 +79382,10 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 3
       objectReference: {fileID: 0}
+    - target: {fileID: 7844087411323808525, guid: e2875c1b538d6744caeb6200ef576a94, type: 3}
+      propertyPath: m_Resource
+      value: 
+      objectReference: {fileID: 8300000, guid: e9d76791bb22ccc42ac25776ce2acc30, type: 3}
     - target: {fileID: 7844579813745511460, guid: e2875c1b538d6744caeb6200ef576a94, type: 3}
       propertyPath: m_Layer
       value: 3
