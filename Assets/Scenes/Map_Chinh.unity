@@ -15,11 +15,11 @@ RenderSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 10
   m_Fog: 1
-  m_FogColor: {r: 0.735849, g: 0.45907718, b: 0.35751158, a: 1}
+  m_FogColor: {r: 0.5320754, g: 0.5167131, b: 0.51300097, a: 0}
   m_FogMode: 1
-  m_FogDensity: 0.011
-  m_LinearFogStart: 200
-  m_LinearFogEnd: 1800
+  m_FogDensity: 0.0381
+  m_LinearFogStart: 80
+  m_LinearFogEnd: 250
   m_AmbientSkyColor: {r: 0.07849768, g: 0.14038213, b: 0.26415092, a: 1}
   m_AmbientEquatorColor: {r: 0.6415094, g: 0.42453122, b: 0.39640442, a: 1}
   m_AmbientGroundColor: {r: 0.1792453, g: 0.12072569, b: 0.090468146, a: 1}
@@ -30699,6 +30699,65 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 917990009}
   m_CullTransparentMesh: 1
+--- !u!1 &925295574
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 925295576}
+  - component: {fileID: 925295575}
+  m_Layer: 0
+  m_Name: RedLightningEffect
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &925295575
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 925295574}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bd66994be3706354ea8e96fb6e19e7b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  followCamera: 1
+  skyHeight: 150
+  minTime: 0.3
+  maxTime: 1
+  flashDuration: 1
+  boltCount: 20
+  boltSegments: 20
+  boltJitter: 8
+  boltLength: 100
+  spawnRadius: 400
+  intensity: 1
+  coreWidth: 0.7
+  glowWidth: 3.5
+  coreColor: {r: 1, g: 0.85, b: 0.85, a: 1}
+  glowColor: {r: 1, g: 0.08, b: 0.04, a: 0.65}
+--- !u!4 &925295576
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 925295574}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0.3535534, y: -0.14644666, z: 0.3535534, w: -0.85355335}
+  m_LocalPosition: {x: 335, y: 200, z: 379}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 39.075, y: 0, z: -45}
 --- !u!1 &930408002
 GameObject:
   m_ObjectHideFlags: 0
@@ -32643,19 +32702,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7542521313094387615, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.00060806307
+      value: 0.0054541626
       objectReference: {fileID: 0}
     - target: {fileID: 7542521313094387615, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0.000045621036
+      value: -0.00040920931
       objectReference: {fileID: 0}
     - target: {fileID: 7542521313094387615, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0.99719715
+      value: 0.9971824
       objectReference: {fileID: 0}
     - target: {fileID: 7542521313094387615, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.07481665
+      value: 0.07481558
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -87711,3 +87770,4 @@ SceneRoots:
   - {fileID: 1095817072}
   - {fileID: 306300311}
   - {fileID: 1952067875}
+  - {fileID: 925295576}
