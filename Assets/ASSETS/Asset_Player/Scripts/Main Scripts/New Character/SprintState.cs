@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 public class SprintState : State
 {
     float gravityValue;
@@ -40,7 +40,10 @@ public class SprintState : State
         input = moveAction.ReadValue<Vector2>();
         velocity = new Vector3(input.x, 0, input.y);
 
-        velocity = velocity.x * character.cameraTransform.right.normalized + velocity.z * character.cameraTransform.forward.normalized;
+        GetPlanarCameraBasis(out Vector3 camForward, out Vector3 camRight);
+
+        velocity = velocity.x * camRight + velocity.z * camForward;
+        if (velocity.sqrMagnitude > 1f) velocity.Normalize();
         velocity.y = 0f;
 
         bool sprintButtonHeld = sprintAction.IsPressed();

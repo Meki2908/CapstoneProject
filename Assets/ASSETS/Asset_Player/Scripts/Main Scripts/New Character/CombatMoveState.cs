@@ -1,4 +1,4 @@
-﻿using UnityEditor.Timeline.Actions;
+using UnityEditor.Timeline.Actions;
 using UnityEngine;
 
 public class CombatMoveState : BaseMoveState
@@ -56,7 +56,6 @@ public class CombatMoveState : BaseMoveState
 
             // reset cờ để không loop
             sheathWeapon = false;
-
             character.isWeaponDrawn = false;
             character.currentLocomotionState = character.standing;
 

@@ -74,22 +74,14 @@ public class DashState : State
 
         // Calculate the dash direction based on input
         Vector2 input = moveAction.ReadValue<Vector2>();
-        Vector3 forward = character.cameraTransform.forward;
-        Vector3 right = character.cameraTransform.right;
-
-        // Normalize forward and right vectors to avoid diagonal speed boost
-        forward.y = 0;
-        right.y = 0;
-        forward.Normalize();
-        right.Normalize();
+        GetPlanarCameraBasis(out Vector3 forward, out Vector3 right);
 
         dashDirection = (forward * input.y + right * input.x).normalized;
 
         // If no input, dash forward
         if (dashDirection == Vector3.zero)
         {
-            dashDirection = character.cameraTransform.forward;
-            dashDirection.y = 0;
+            dashDirection = forward;
             dashDirection.Normalize();
         }
 

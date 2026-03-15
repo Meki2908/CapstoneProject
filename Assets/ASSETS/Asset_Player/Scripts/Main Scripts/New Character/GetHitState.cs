@@ -2,6 +2,8 @@ using UnityEngine;
 
 public class GetHitState : State
 {
+    private const float SheathedLayerWeight = 1f;
+
     bool dash;
     bool jump;
     bool toBaseMove;
@@ -44,10 +46,9 @@ public class GetHitState : State
 
         if (character.animator != null)
         {
-            // Use currentLocomotionState to determine which layer should play gethit animation
-            // If StandingState (weapon not drawn) -> play on base layer only
-            // If CombatMoveState (weapon drawn) -> play on weapon layer
-            bool isWeaponDrawn = character.currentLocomotionState is CombatMoveState;
+            // Single source of truth: use explicit draw flag instead of locomotion-state inference.
+            // currentLocomotionState can be stale in edge cases (e.g. hit/interrupt transitions).
+            bool isWeaponDrawn = character.isWeaponDrawn;
 
             if (isWeaponDrawn)
             {
@@ -82,10 +83,10 @@ public class GetHitState : State
         int axeLayer = 2;
         int mageLayer = 3;
 
-        // Disable all weapon layers
-        SetLayerWeightSafe(swordLayer, 0f);
-        SetLayerWeightSafe(axeLayer, 0f);
-        SetLayerWeightSafe(mageLayer, 0f);
+        // Keep tiny non-zero weights to avoid killing draw-layer evaluation/AE.
+        SetLayerWeightSafe(swordLayer, SheathedLayerWeight);
+        SetLayerWeightSafe(axeLayer, SheathedLayerWeight);
+        SetLayerWeightSafe(mageLayer, SheathedLayerWeight);
 
         // Ensure base layer is active
         SetLayerWeightSafe(baseLayer, 1f);
