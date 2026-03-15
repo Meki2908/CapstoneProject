@@ -70,9 +70,6 @@ public class TakeDamageTest : MonoBehaviour
     [SerializeField] private string bossName = "";
     [SerializeField] private Color healthBarColor = Color.red;
 
-    [Header("EXP Reward Settings")]
-    [Tooltip("Amount of EXP granted when this enemy is defeated")]
-    [SerializeField] private float expReward = 1000f;
 
     // Detection state
     private Transform player;
@@ -698,13 +695,6 @@ public class TakeDamageTest : MonoBehaviour
     public bool EnableRaycastDamage { get => enableRaycastDamage; set => enableRaycastDamage = value; }
     public void DisableRaycastDamage() => enableRaycastDamage = false;
 
-    // EXP API
-    public void SetExpReward(float exp)
-    {
-        expReward = exp;
-    }
-
-    public float GetExpReward() => expReward;
     #endregion
 
     // Try to play "Hit" animation on this enemy if Animator supports it.

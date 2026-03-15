@@ -116,6 +116,7 @@ public class EnemyScript : MonoBehaviour {
     [Tooltip("Thời gian VFX tồn tại (giây)")]
     public float spawnVfxDuration = 2f;
     private bool hasAwoken = false; // Tránh spawn VFX lúc Awake
+    public static bool suppressSpawnVfx = false; // Flag để tránh double VFX khi summon
     
     // Runtime tracking — không hiển thị trong Inspector
     [HideInInspector] public float lastSkillTime = -999f; // Thời điểm dùng skill lần cuối
@@ -376,26 +377,10 @@ public class EnemyScript : MonoBehaviour {
         Debug.Log($"[EnemyScript] Set specific type: {specificEnemyType}, category: {enemyType}, attackDistance: {attackDistanceOverride}");
     }  
     void OnEnable () {
-        // === SPAWN VFX ===
-        if (hasAwoken && spawnVfxPrefab != null)
+        // === SPAWN VFX (delay 1 frame để position chính xác) ===
+        if (hasAwoken && spawnVfxPrefab != null && !suppressSpawnVfx)
         {
-            Vector3 groundPos = transform.position;
-            GameObject vfx = Instantiate(spawnVfxPrefab, groundPos, Quaternion.identity);
-            
-            // Nếu có PixPlays BaseVfx (BeamVfx, etc.) → gọi Play() với VfxData
-            var baseVfx = vfx.GetComponent<PixPlays.ElementalVFX.BaseVfx>();
-            if (baseVfx != null)
-            {
-                // Cột sáng: từ chân enemy bắn lên trời 8m
-                Vector3 skyPos = groundPos + Vector3.up * 8f;
-                var vfxData = new PixPlays.ElementalVFX.VfxData(groundPos, skyPos, spawnVfxDuration, 1f);
-                baseVfx.Play(vfxData);
-            }
-            else
-            {
-                // Prefab đơn giản → tự hủy sau duration
-                Destroy(vfx, spawnVfxDuration);
-            }
+            StartCoroutine(SpawnVfxDelayed());
         }
         
         // Re-find player nếu target bị null
@@ -423,6 +408,38 @@ public class EnemyScript : MonoBehaviour {
         alive = true;
         cont = true;
         StartCoroutine(Delay());
+    }
+    
+    /// <summary>
+    /// Spawn VFX delay 1 frame để đảm bảo position chính xác 
+    /// và giữ nguyên scale đã chỉnh trên prefab
+    /// </summary>
+    IEnumerator SpawnVfxDelayed()
+    {
+        yield return null; // Chờ 1 frame → position đã ổn định
+        
+        if (spawnVfxPrefab == null || !gameObject.activeInHierarchy) yield break;
+        
+        Vector3 groundPos = transform.position;
+        
+        // Instantiate giữ nguyên scale từ prefab
+        GameObject vfx = Instantiate(spawnVfxPrefab);
+        vfx.transform.position = groundPos;
+        
+        // Nếu có PixPlays BaseVfx (BeamVfx, etc.) → gọi Play() với VfxData
+        var baseVfx = vfx.GetComponent<PixPlays.ElementalVFX.BaseVfx>();
+        if (baseVfx != null)
+        {
+            // Cột sáng: từ chân enemy bắn lên trời 8m
+            Vector3 skyPos = groundPos + Vector3.up * 8f;
+            var vfxData = new PixPlays.ElementalVFX.VfxData(groundPos, skyPos, spawnVfxDuration, 1f);
+            baseVfx.Play(vfxData);
+        }
+        else
+        {
+            // Prefab đơn giản → tự hủy sau duration
+            Destroy(vfx, spawnVfxDuration);
+        }
     }
     void OnDisable(){
         EnemyEvent.WaitEvent -= Wait;

@@ -372,6 +372,17 @@ public class BossMultiSkill : MonoBehaviour
     {
         if (showDebug) Debug.Log($"[BossMultiSkill] Summoning: {summonSkeletCount} Skelet + {summonMonsterCount} Monster!");
         
+        // Dừng boss di chuyển trong lúc summon
+        if (enemyScript != null)
+        {
+            enemyScript.attack = true; // Ngăn AI chạy
+            if (enemyScript.navMeshAgent != null && enemyScript.navMeshAgent.isOnNavMesh)
+            {
+                enemyScript.navMeshAgent.isStopped = true;
+                enemyScript.navMeshAgent.ResetPath();
+            }
+        }
+        
         // Spawn Skeletons (random giữa Skeleton=0 và Archer=1)
         for (int i = 0; i < summonSkeletCount; i++)
         {
@@ -384,6 +395,19 @@ public class BossMultiSkill : MonoBehaviour
         {
             SpawnSummonedEnemy(Random.Range(2, 5)); // 2=Orc, 3=Troll, 4=Guul
             yield return new WaitForSeconds(0.3f);
+        }
+        
+        // Đợi animation summon xong
+        yield return new WaitForSeconds(0.5f);
+        
+        // Reset boss state → tiếp tục AI bình thường
+        if (enemyScript != null)
+        {
+            enemyScript.attack = false;
+            if (enemyScript.navMeshAgent != null && enemyScript.navMeshAgent.isOnNavMesh)
+            {
+                enemyScript.navMeshAgent.isStopped = false;
+            }
         }
     }
     
@@ -404,21 +428,18 @@ public class BossMultiSkill : MonoBehaviour
             spawnPos = hit.position;
         }
         
-        // QUAN TRỌNG: Tắt prefab TRƯỚC khi Instantiate 
-        // để tránh OnEnable() chạy cho TẤT CẢ children → double VFX
-        enemyNewPrefab.SetActive(false);
+        // Suppress VFX trong lần OnEnable đầu tiên (tránh double VFX)
+        EnemyScript.suppressSpawnVfx = true;
         GameObject enemy = Instantiate(enemyNewPrefab, spawnPos, Quaternion.identity);
-        enemyNewPrefab.SetActive(true); // Bật lại prefab gốc
-        enemy.SetActive(true); // Bật parent container
         
-        // === QUAN TRỌNG: Tắt TẤT CẢ enemy con (đã inactive từ Instantiate) ===
-        // Đảm bảo tất cả children đều tắt trước khi bật đúng con
+        // Tắt TẤT CẢ enemy con trước
         foreach (Transform child in enemy.transform)
         {
             child.gameObject.SetActive(false);
         }
+        EnemyScript.suppressSpawnVfx = false; // Bật lại VFX cho lần enable đúng
         
-        // Enable CHỈ enemy type cụ thể
+        // Enable CHỈ enemy type cụ thể → OnEnable sẽ spawn VFX đúng vị trí
         RandomEnemy randomEnemy = enemy.GetComponent<RandomEnemy>();
         if (randomEnemy != null)
         {

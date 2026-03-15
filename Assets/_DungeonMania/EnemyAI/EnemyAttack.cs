@@ -302,19 +302,8 @@ public class EnemyAttack : MonoBehaviour {
         // Kiểm tra null cho bow
         if (enemyScript.bow != null && enemyScript.bow.Length != 0) isBow = true;
 
-        // ƯU TIÊN: Dùng enemy.attack.value (đã được gán từ Inspector qua ApplyInspectorValues)
-        // Nếu attack.value = 0 (chưa set), thì mới dùng sword
-        int damage;
-        if (enemyScript.enemy.attack.value > 0)
-        {
-            // Dùng attackDamage từ Inspector (đã được gán vào enemy.attack.value)
-            damage = enemyScript.enemy.attack.value;
-        }
-        else
-        {
-            // Fallback: dùng sword damage (giá trị mặc định từ EnemyClass)
-            damage = Random.Range(enemyScript.enemy.sword.damageMin, enemyScript.enemy.sword.damageMax + 1);
-        }
+        // Luôn dùng attackDamage từ Inspector (enemy.attack.value)
+        int damage = enemyScript.enemy.attack.value;
         int damageElemental = enemyScript.enemy.magicValue;
         int checkAccuracy = Random.Range ( 1 , 101 );
         if ( checkAccuracy > enemyScript.enemy.accuracy.value ) {
