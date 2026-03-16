@@ -420,6 +420,9 @@ public class EnemyScript : MonoBehaviour {
         
         if (spawnVfxPrefab == null || !gameObject.activeInHierarchy) yield break;
         
+        // === ENEMY SPAWN SOUND ===
+        SoundManager.PlaySound(SoundType.Enemy_Spawn, GetComponent<AudioSource>(), 0.6f);
+        
         Vector3 groundPos = transform.position;
         
         // Instantiate giữ nguyên scale từ prefab
