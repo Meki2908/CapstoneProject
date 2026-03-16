@@ -123,38 +123,20 @@ public class EnemyDeathBridge : MonoBehaviour
             Debug.Log("[EnemyDeathBridge] Item drops spawned!");
         }
 
-        StartCoroutine(DestroyEnemyAfterDelay());
-    }
-    
-    System.Collections.IEnumerator DestroyEnemyAfterDelay()
-    {
-        // Đợi một chút để đảm bảo animation death được play (nếu có)
-        yield return new WaitForSeconds(0.5f);
-        
         GameObject objToDestroy = gameObject;
-        
-        // KIỂM TRA: Nếu đây là child của EnemyNew prefab, cần destroy parent
         Transform parent = objToDestroy.transform.parent;
         if (parent != null && parent.name.Contains("EnemyNew"))
         {
-            Debug.Log("[EnemyDeathBridge] Destroying parent EnemyNew: " + parent.name);
+            Debug.Log("[EnemyDeathBridge] Queueing parent EnemyNew for destruction: " + parent.name);
             objToDestroy = parent.gameObject;
         }
         else
         {
-            Debug.Log("[EnemyDeathBridge] Destroying enemy directly: " + objToDestroy.name);
+            Debug.Log("[EnemyDeathBridge] Queueing enemy directly for destruction: " + objToDestroy.name);
         }
         
-        // Disable toàn bộ renderer để enemy biến mất ngay lập tức
-        var renderers = objToDestroy.GetComponentsInChildren<UnityEngine.Renderer>();
-        foreach (var renderer in renderers)
-        {
-            renderer.enabled = false;
-        }
-        
-        // Destroy ngay lập tức
-        Destroy(objToDestroy);
-        Debug.Log("[EnemyDeathBridge] Enemy destroyed: " + objToDestroy.name);
+        // Destroy sau 5.5s để đảm bảo EnemyDamage.Death() kịp chạy animation và spawn effect
+        Destroy(objToDestroy, 5.5f);
     }
 
     int GetExpByType(int enemyType)

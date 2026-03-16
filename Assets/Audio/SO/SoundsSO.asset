@@ -274,6 +274,165 @@ MonoBehaviour:
     changePitch: 0
     pitchMin: 0
     pitchMax: 0
+  - name: Enemy_Attack
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: 7a10fec0c7333473590349d8a12cba61, type: 3}
+    changePitch: 0
+    pitchMin: 0
+    pitchMax: 0
+  - name: Enemy_GetHit
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: 04b79248d25b14ac18eaad3d87ca0dce, type: 3}
+    changePitch: 0
+    pitchMin: 0
+    pitchMax: 0
+  - name: Enemy_Die
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: 2a0632631fb04405fa85f4a5a5d01a4d, type: 3}
+    changePitch: 0
+    pitchMin: 0
+    pitchMax: 0
+  - name: Enemy_Hurt
+    volume: 1
+    mixer: {fileID: 0}
+    sounds: []
+    changePitch: 0
+    pitchMin: 0
+    pitchMax: 0
+  - name: Enemy_Spawn
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: 364f6360fece1ff4f8be21f2430f0af4, type: 3}
+    changePitch: 0
+    pitchMin: 0
+    pitchMax: 0
+  - name: Enemy_Archer_Arrow
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: 40f967661af99449bb5e5b77ba901788, type: 3}
+    changePitch: 0
+    pitchMin: 0
+    pitchMax: 0
+  - name: Boss_Roar
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: 31572d31fe9bc4d4d909f5a91c767e4a, type: 3}
+    changePitch: 0
+    pitchMin: 0
+    pitchMax: 0
+  - name: Boss_Attack
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: 8f0365b1f68e44121b54bf7e8f9ff365, type: 3}
+    changePitch: 0
+    pitchMin: 0
+    pitchMax: 0
+  - name: Boss_Stoneogre_EarthSlam
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: 70a2d051802ebc5449f30d822f6a3c16, type: 3}
+    changePitch: 0
+    pitchMin: 0
+    pitchMax: 0
+  - name: Boss_Golem_WaterBlast
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: 3557a8b24c3840748a8abb4c7e1a8f3a, type: 3}
+    changePitch: 0
+    pitchMin: 0
+    pitchMax: 0
+  - name: Boss_Minotaur_EarthBlast
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: 9251c5ab5759da642b1f9c13aa65a3e4, type: 3}
+    changePitch: 0
+    pitchMin: 0
+    pitchMax: 0
+  - name: Boss_Lich_WindAoe
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: 1c1d362ba289ead4cbaac18e40832113, type: 3}
+    changePitch: 0
+    pitchMin: 0
+    pitchMax: 0
+  - name: Boss_Lich_WindAura
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: e94f34fa2ed1c2045a6891044572c6a3, type: 3}
+    changePitch: 0
+    pitchMin: 0
+    pitchMax: 0
+  - name: Boss_Lich_WindShield
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: e94f34fa2ed1c2045a6891044572c6a3, type: 3}
+    changePitch: 0
+    pitchMin: 0
+    pitchMax: 0
+  - name: Boss_Lich_WindBullet
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: 766c48d9b0b861e4fba7b1756b622940, type: 3}
+    changePitch: 0
+    pitchMin: 0
+    pitchMax: 0
+  - name: Boss_Ifrit_FireAoe
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: 56d933a729b6f66489966743709a6ae0, type: 3}
+    changePitch: 0
+    pitchMin: 0
+    pitchMax: 0
+  - name: Boss_Ifrit_FireAura
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: 34eaf78a69436934b86b3318a1d9ef76, type: 3}
+    changePitch: 0
+    pitchMin: 0
+    pitchMax: 0
+  - name: Boss_Ifrit_FireShield
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: dcf14b310eb66ae45bc87a492f7477db, type: 3}
+    changePitch: 0
+    pitchMin: 0
+    pitchMax: 0
+  - name: Boss_Ifrit_Fireball
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: 34e27604098e0cd4baccf96b7ff2cb9f, type: 3}
+    changePitch: 0
+    pitchMin: 0
+    pitchMax: 0
+  - name: Boss_Demon_FireBlast
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: db17846edcf32574bbb48f75a618154f, type: 3}
+    changePitch: 0
+    pitchMin: 0
+    pitchMax: 0
   sceneFootsteps:
   - sceneName: MapSaMac
     soundList:
