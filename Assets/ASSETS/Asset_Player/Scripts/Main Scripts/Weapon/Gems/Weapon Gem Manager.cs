@@ -22,6 +22,7 @@ public class WeaponGemManager : MonoBehaviour
     private class WeaponGemSlots
     {
         public int[] slotItemIds = new int[NUM_SLOTS] { -1, -1, -1 }; // -1 = empty
+        public float[] slotRolledValues = new float[NUM_SLOTS]; // Rolled gem stat values
     }
 
     [Serializable]
@@ -151,12 +152,14 @@ public class WeaponGemManager : MonoBehaviour
             return false;
         }
 
+        // Return existing gem to inventory (PRESERVE its rolled value)
         int currentId = weaponSlots[(int)weaponType].slotItemIds[slotIndex];
-
-        // Return existing gem to inventory
         if (currentId >= 0)
         {
-            InventoryManager.Instance.AddItem(currentId, 1, 1f);
+            float existingRoll = weaponSlots[(int)weaponType].slotRolledValues[slotIndex];
+            Item existingGem = InventoryManager.Instance.GetItemById(currentId);
+            Rarity existingRarity = (existingGem != null) ? existingGem.rarity : Rarity.Common;
+            InventoryManager.Instance.AddItemWithRoll(currentId, 1, existingRarity, existingRoll);
         }
 
         // Consume one from inventory and equip
@@ -167,7 +170,15 @@ public class WeaponGemManager : MonoBehaviour
             return false;
         }
 
+        // Get the rolled value that was popped from inventory queue
+        float rolledValue = InventoryManager.Instance.LastRemovedRoll;
+        if (rolledValue < 0f) rolledValue = gemItem.gemValuePercent; // fallback to SO value
+
         weaponSlots[(int)weaponType].slotItemIds[slotIndex] = gemItem.id;
+        weaponSlots[(int)weaponType].slotRolledValues[slotIndex] = rolledValue;
+
+        Debug.Log($"[WeaponGemManager] Equipped {gemItem.itemName} with rolled value {rolledValue:F4} ({rolledValue*100f:F1}%)");
+
         Save();
         OnGemsChanged?.Invoke(weaponType);
         return true;
@@ -183,8 +194,15 @@ public class WeaponGemManager : MonoBehaviour
         if (InventoryManager.Instance == null) return false;
         int currentId = weaponSlots[(int)weaponType].slotItemIds[slotIndex];
         if (currentId < 0) return false;
-        InventoryManager.Instance.AddItem(currentId, 1, 1f);
+
+        // PRESERVE rolled value when returning to inventory
+        float rolledValue = weaponSlots[(int)weaponType].slotRolledValues[slotIndex];
+        Item gem = InventoryManager.Instance.GetItemById(currentId);
+        Rarity gemRarity = (gem != null) ? gem.rarity : Rarity.Common;
+        InventoryManager.Instance.AddItemWithRoll(currentId, 1, gemRarity, rolledValue);
+
         weaponSlots[(int)weaponType].slotItemIds[slotIndex] = -1;
+        weaponSlots[(int)weaponType].slotRolledValues[slotIndex] = 0f;
         Save();
         OnGemsChanged?.Invoke(weaponType);
         return true;
@@ -205,8 +223,13 @@ public class WeaponGemManager : MonoBehaviour
             int id = weaponSlots[(int)weaponType].slotItemIds[i];
             if (id >= 0)
             {
-                InventoryManager.Instance.AddItem(id, 1, 1f);
+                // PRESERVE rolled value when returning to inventory
+                float rolledValue = weaponSlots[(int)weaponType].slotRolledValues[i];
+                Item gem = InventoryManager.Instance.GetItemById(id);
+                Rarity gemRarity = (gem != null) ? gem.rarity : Rarity.Common;
+                InventoryManager.Instance.AddItemWithRoll(id, 1, gemRarity, rolledValue);
                 weaponSlots[(int)weaponType].slotItemIds[i] = -1;
+                weaponSlots[(int)weaponType].slotRolledValues[i] = 0f;
             }
         }
         Save();
@@ -247,7 +270,19 @@ public class WeaponGemManager : MonoBehaviour
         }
     }
 
-    // Multipliers - sum all gems of each type across all slots
+    // ─── Rolled Gem Value API ────────────────────────────────────
+
+    /// <summary>
+    /// Get the rolled gem value for a specific slot
+    /// </summary>
+    public float GetRolledGemValue(WeaponType weaponType, int slotIndex)
+    {
+        if (!IsValidWeaponType(weaponType)) return 0f;
+        if (slotIndex < 0 || slotIndex >= NUM_SLOTS) return 0f;
+        return weaponSlots[(int)weaponType].slotRolledValues[slotIndex];
+    }
+
+    // Multipliers - use ROLLED values instead of SO values
     public float GetMovementSpeedMultiplier(WeaponType weaponType)
     {
         float total = 0f;
@@ -256,7 +291,7 @@ public class WeaponGemManager : MonoBehaviour
             var gem = GetEquippedGem(weaponType, i);
             if (gem != null && gem.gemType == GemType.MovementSpeed)
             {
-                total += gem.gemValuePercent;
+                total += weaponSlots[(int)weaponType].slotRolledValues[i];
             }
         }
         return 1f + total; // increase speed
@@ -270,7 +305,7 @@ public class WeaponGemManager : MonoBehaviour
             var gem = GetEquippedGem(weaponType, i);
             if (gem != null && gem.gemType == GemType.CooldownReduction)
             {
-                total += gem.gemValuePercent;
+                total += weaponSlots[(int)weaponType].slotRolledValues[i];
             }
         }
         // reduce cooldown: multiplier less than 1
@@ -285,7 +320,7 @@ public class WeaponGemManager : MonoBehaviour
             var gem = GetEquippedGem(weaponType, i);
             if (gem != null && gem.gemType == GemType.Damage)
             {
-                total += gem.gemValuePercent;
+                total += weaponSlots[(int)weaponType].slotRolledValues[i];
             }
         }
         return 1f + total;

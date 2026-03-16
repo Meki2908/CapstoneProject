@@ -35,7 +35,6 @@ public class EnemyDamage : MonoBehaviour{
             return; // Block toàn bộ damage
         }
         
-        enemyScript.hit = true;
         Hit(d);
     }
     void  Hit ( Damage damage ) {
@@ -44,9 +43,19 @@ public class EnemyDamage : MonoBehaviour{
         damage.damage -= enemyScript.enemy.armor.value;
         int damageFull = damage.damage + damage.damageElemental + damage.crit;
         if (damageFull < 1) damageFull = 1;
-        if (damage.isSpell) enemyScript.animator.SetBool("knock", true);
-        else {
-            if(enemyScript.enemyType == EnemyScript.EnemyType.skelet || enemyScript.enemyType == EnemyScript.EnemyType.archer) enemyScript.animator.SetBool("hit", true);
+        
+        // === HIT STAGGER ===
+        if (damage.isSpell)
+        {
+            // Phép → knock cho TẤT CẢ (kể cả boss)
+            enemyScript.animator.SetBool("knock", true);
+            StartCoroutine(HitStagger(0.6f));
+        }
+        else if (!enemyScript.isBoss)
+        {
+            // Đánh thường → chỉ enemy thường bị hit, BOSS KHÔNG bị
+            enemyScript.animator.SetBool("hit", true);
+            StartCoroutine(HitStagger(0.4f));
         }
 
         // Kiểm tra null và bounds cho particle arrays
@@ -91,37 +100,81 @@ public class EnemyDamage : MonoBehaviour{
             StartCoroutine(Death());
         }
     }
+    
+    /// <summary>
+    /// Auto-reset hit/knock sau thời gian stagger — tránh enemy bị đơ vĩnh viễn
+    /// </summary>
+    IEnumerator HitStagger(float duration)
+    {
+        yield return new WaitForSeconds(duration);
+        
+        if (enemyScript == null || !enemyScript.alive) yield break;
+        
+        // Reset animation bools
+        enemyScript.animator.SetBool("hit", false);
+        enemyScript.animator.SetBool("knock", false);
+        enemyScript.hit = false;
+        
+        // Resume di chuyển
+        if (enemyScript.navMeshAgent != null && enemyScript.navMeshAgent.isOnNavMesh)
+        {
+            enemyScript.navMeshAgent.isStopped = false;
+        }
+    }
+    
+    private bool isDying = false; // Tránh gọi Death() 2 lần
+    
     public IEnumerator Death(){
         if (enemyScript == null) yield break;
+        if (isDying) yield break; // Đã đang chết rồi
+        isDying = true;
 
         enemyScript.alive = false;
+        
+        // === DỪNG di chuyển ngay ===
+        if (enemyScript.navMeshAgent != null && enemyScript.navMeshAgent.isOnNavMesh)
+        {
+            enemyScript.navMeshAgent.isStopped = true;
+            enemyScript.navMeshAgent.velocity = Vector3.zero;
+        }
+        
+        // === CHẠY DEATH ANIMATION cho TẤT CẢ enemy ===
+        if (enemyScript.animator != null)
+        {
+            enemyScript.animator.SetBool("hit", false);
+            enemyScript.animator.SetBool("knock", false);
+            enemyScript.animator.SetBool("run", false);
+            enemyScript.animator.SetBool("attack", false);
+            enemyScript.animator.SetTrigger("dead");
+        }
+        
         switch((int)enemyScript.enemyType){
-            case 0:
+            case 0: // Skelet
                 Gold();
-                yield return new WaitForSeconds(0.25f);
+                yield return new WaitForSeconds(5f);
                 SkullBoneFX();
             break;
-            case 1:
+            case 1: // Archer
                 GamePlayManager.archers --;
                 Gold();
-                yield return new WaitForSeconds(0.25f);
-                SkullBoneFX() ;
+                yield return new WaitForSeconds(5f);
+                SkullBoneFX();
             break;
-            case 2:
+            case 2: // Monster
                 GamePlayManager.monsteres --;
                 Gold();
-                yield return new WaitForSeconds(0.25f);
+                yield return new WaitForSeconds(5f);
                 SkullBoneFX();
                 Chest(0);
             break;
-            case 3:
+            case 3: // Lich
                 GamePlayManager.lich --;
                 Gold();
-                yield return new WaitForSeconds(0.25f);
+                yield return new WaitForSeconds(5f);
                 SkullBoneFX();
                 Chest(0);
             break;
-            case 4:
+            case 4: // Boss
             GamePlayManager.boss --;
                 if (GamePlayManager.level.levelType == Level.LevelType.bossLevel) {
                 if (PlayerPrefs.GetInt("QUEST_COUNT") < 5) {
@@ -132,12 +185,6 @@ public class EnemyDamage : MonoBehaviour{
                 enemyScript.RunWinAudio(1);
                 if (gamePlayManager != null) gamePlayManager.SetBossSlider(false, 0);
             }
-                if (enemyScript.animator != null) {
-                    enemyScript.animator.SetBool("hit", false);
-                    enemyScript.animator.SetBool("knock", false);
-                    enemyScript.animator.SetBool("run", false);
-                    enemyScript.animator.Play("dead");
-                }
                 // Sửa: Kiểm tra bounds cho bossExpl
                 int i = number - 6;
                 if (enemyScript.enemyManager != null && enemyScript.enemyManager.bossExpl != null &&
@@ -145,31 +192,33 @@ public class EnemyDamage : MonoBehaviour{
                     yield return new WaitForSeconds(4f);
                     enemyScript.enemyManager.bossExpl[i].transform.position = transform.position;
                     enemyScript.enemyManager.bossExpl[i].Play();
+                    yield return new WaitForSeconds(1f);
                 } else {
-                    yield return new WaitForSeconds(4f);
+                    yield return new WaitForSeconds(5f);
                 }
                 Chest(1);
             break;
-            case 5:
+            case 5: // Demon
                 DemonBonus(3);
                 GamePlayManager.demon --;
                 GamePlayManager.level.isSweep = true;
                 enemyScript.RunWinAudio(2);
-                if (enemyScript.animator != null) {
-                    enemyScript.animator.SetBool("hit", false);
-                    enemyScript.animator.SetBool("knock", false);
-                    enemyScript.animator.SetBool("run", false);
-                    enemyScript.animator.Play("dead");
-                }
                 if (gamePlayManager != null) gamePlayManager.ActivateTeleport(1);
                 if (enemyScript.enemyManager != null && enemyScript.enemyManager.bossExpl != null && enemyScript.enemyManager.bossExpl.Length > 3) {
                     yield return new WaitForSeconds(4f);
                     enemyScript.enemyManager.bossExpl[3].transform.position = transform.position;
                     enemyScript.enemyManager.bossExpl[3].Play();
+                    yield return new WaitForSeconds(1f);
                 } else {
-                    yield return new WaitForSeconds(4f);
+                    yield return new WaitForSeconds(5f);
                 }
                 if (gamePlayManager != null) gamePlayManager.SetBossSlider(false, 0);
+            break;
+            default: // Stoneogre, Golem, Minotaur, Ifrit — boss phụ
+                Gold();
+                yield return new WaitForSeconds(5f);
+                SkullBoneFX();
+                Chest(0);
             break;
         }
         gameObject.SetActive(false);

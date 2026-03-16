@@ -113,6 +113,16 @@ public class ItemPickupNotification : MonoBehaviour
         {
             CreateDefaultContainer();
         }
+        else
+        {
+            // Container được kéo từ Inspector — vẫn cần đảm bảo Canvas sorting order đủ cao
+            Canvas existingCanvas = GetComponentInParent<Canvas>();
+            if (existingCanvas != null && existingCanvas.sortingOrder < 100)
+            {
+                existingCanvas.sortingOrder = 100;
+                Debug.Log($"[ItemPickupNotification] Raised existing Canvas '{existingCanvas.name}' sortingOrder to 100");
+            }
+        }
     }
 
     private void OnDestroy()
@@ -390,8 +400,10 @@ public class ItemPickupNotification : MonoBehaviour
         {
             canvas = gameObject.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            // sortingOrder lấy từ scene, không tự set
         }
+        // Đảm bảo notification luôn hiện TRÊN các UI khác (dungeon, HUD...)
+        // 100 = trên game UI, dưới DungeonRewardUI (999) và tooltip (10000)
+        canvas.sortingOrder = Mathf.Max(canvas.sortingOrder, 100);
 
         var scaler = GetComponent<CanvasScaler>() ?? gameObject.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;

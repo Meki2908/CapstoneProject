@@ -173,8 +173,38 @@ public class Item : ScriptableObject
         return Random.Range(min, max);
     }
 
+    // ========================================
+    // RANDOM STAT ROLL SYSTEM
+    // Min = 1% of max, Max = SO value
+    // ========================================
+
     /// <summary>
-    /// Get formatted stat text for display
+    /// Item có cần random stat không (Gems, Equipment)
+    /// </summary>
+    public bool HasRandomStats => itemType == ItemType.Gems || itemType == ItemType.Equipment;
+
+    /// <summary>
+    /// Roll gemValuePercent ngẫu nhiên (1% ~ 100% of SO max)
+    /// Chỉ dùng cho Gems
+    /// </summary>
+    public float RollGemValue()
+    {
+        if (itemType != ItemType.Gems || gemValuePercent <= 0f) return gemValuePercent;
+        float min = gemValuePercent * 0.01f; // 1% of max
+        return Random.Range(min, gemValuePercent);
+    }
+
+    /// <summary>
+    /// Roll stat multiplier cho Equipment (0.01 ~ 1.0)
+    /// Nhân với tất cả base stats (HP, Def, Crit, etc.)
+    /// </summary>
+    public float RollStatMultiplier()
+    {
+        return Random.Range(0.01f, 1.0f);
+    }
+
+    /// <summary>
+    /// Get formatted stat text for display (max value from SO)
     /// </summary>
     public string GetGemStatText()
     {
@@ -201,5 +231,36 @@ public class Item : ScriptableObject
 
         float percent = gemValuePercent * 100f;
         return $"{statName}: {sign}{percent:F1}%";
+    }
+
+    /// <summary>
+    /// Get formatted stat text with a specific rolled value
+    /// </summary>
+    public string GetGemStatTextWithRoll(float rolledValue)
+    {
+        if (itemType != ItemType.Gems) return "";
+
+        string statName = "";
+        string sign = "";
+
+        switch (gemType)
+        {
+            case GemType.MovementSpeed:
+                statName = "Speed";
+                sign = "+";
+                break;
+            case GemType.CooldownReduction:
+                statName = "CD";
+                sign = "-";
+                break;
+            case GemType.Damage:
+                statName = "Dmg";
+                sign = "+";
+                break;
+        }
+
+        float percent = rolledValue * 100f;
+        float maxPercent = gemValuePercent * 100f;
+        return $"{statName}: {sign}{percent:F1}% <color=#888888>(max {maxPercent:F1}%)</color>";
     }
 }

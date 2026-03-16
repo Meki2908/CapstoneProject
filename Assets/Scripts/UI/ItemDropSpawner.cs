@@ -63,12 +63,19 @@ public class ItemDropSpawner : MonoBehaviour
     /// <summary>
     /// Inject drop table từ bên ngoài (DungeonWaveManager) — thay thế default drops
     /// </summary>
-    public void SetDropTable(List<ItemDropEntry> drops, bool enableExp)
+    public void SetDropTable(List<ItemDropEntry> drops, bool enableExp, int maxDrops = 0, int customExp = 0)
     {
         itemDropTable = drops ?? new List<ItemDropEntry>();
         dropExp = enableExp;
-        Debug.Log($"[ItemDropSpawner] Drop table injected: {itemDropTable.Count} items, exp={enableExp}, unlimited drops");
+        maxDropCount = maxDrops;
+        customExpAmount = customExp;
+        Debug.Log($"[ItemDropSpawner] Drop table injected: {itemDropTable.Count} items, exp={enableExp}, maxDrops={maxDrops}, customExp={customExp}");
     }
+
+    /// <summary>
+    /// Số item tối đa rơi ra (0 = không giới hạn)
+    /// </summary>
+    private int maxDropCount = 0;
 
     /// <summary>
     /// Set orb prefab từ bên ngoài (khi tạo bằng AddComponent)
@@ -86,16 +93,15 @@ public class ItemDropSpawner : MonoBehaviour
     {
         int dropCount = 0;
 
-        // 1. Item ScriptableObject drops — KHÔNG GIỚI HẠN số lượng
-        // Mỗi item roll độc lập theo dropChance (tính từ rarity)
+        // 1. Item ScriptableObject drops
+        // Mỗi item roll độc lập theo dropChance, giới hạn bởi maxDropCount
         foreach (var drop in itemDropTable)
         {
+            if (maxDropCount > 0 && dropCount >= maxDropCount) break;
             if (drop.item == null) continue;
             if (Random.value > drop.dropChance) continue;
 
             int qty = Random.Range(drop.minQuantity, drop.maxQuantity + 1);
-            // Nếu item BẬT random rarity → random theo loại quái
-            // Nếu TẮT → dùng rarity mặc định của SO
             Rarity rtRarity = drop.item.useRandomRarity 
                 ? RandomRarityFromEnemy() 
                 : drop.item.rarity;
@@ -347,7 +353,11 @@ public class ItemDropSpawner : MonoBehaviour
             case 3: // Lich
                 weights = new float[] { 15, 20, 25, 22, 13, 5 };
                 break;
-            case 4: // Boss
+            case 4: // Boss (chung)
+            case 6: // Stoneogre
+            case 7: // Golem
+            case 8: // Minotaur
+            case 9: // Ifrit
                 weights = new float[] { 5, 10, 15, 30, 25, 15 };
                 break;
             case 5: // Demon

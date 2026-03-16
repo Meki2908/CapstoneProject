@@ -110,6 +110,14 @@ public class EnemyScript : MonoBehaviour {
     [Tooltip("Hệ số damage skill (2.0 = gấp đôi attack thường)")]
     public float skillDamageMultiplier = 2.0f;
     
+    [Header("=== SPAWN VFX ===")]
+    [Tooltip("VFX hiệu ứng khi enemy spawn (cột sáng/portal) — gán cùng 1 prefab cho tất cả")]
+    public GameObject spawnVfxPrefab;
+    [Tooltip("Thời gian VFX tồn tại (giây)")]
+    public float spawnVfxDuration = 2f;
+    private bool hasAwoken = false; // Tránh spawn VFX lúc Awake
+    public static bool suppressSpawnVfx = false; // Flag để tránh double VFX khi summon
+    
     // Runtime tracking — không hiển thị trong Inspector
     [HideInInspector] public float lastSkillTime = -999f; // Thời điểm dùng skill lần cuối
     [HideInInspector] public bool skillOnCooldown = false;
@@ -134,7 +142,7 @@ public class EnemyScript : MonoBehaviour {
     public static event WinAudio WinAudioEvent;
     Vector3 direction;
     public void RunWinAudio(int i){
-        WinAudioEvent(i);
+        WinAudioEvent?.Invoke(i);
     }
     private void Awake () {
         enemy = new EnemyClass((int)enemyType);
@@ -261,7 +269,9 @@ public class EnemyScript : MonoBehaviour {
         }
 
         // KHÔNG set active false trong Awake - để RandomEnemy quản lý
+        hasAwoken = true;
     }
+
 
     /// <summary>
     /// Setup PlayerManager/Bridge reference từ target
@@ -367,7 +377,13 @@ public class EnemyScript : MonoBehaviour {
         Debug.Log($"[EnemyScript] Set specific type: {specificEnemyType}, category: {enemyType}, attackDistance: {attackDistanceOverride}");
     }  
     void OnEnable () {
-        // Re-find player nếu target bị null (sau scene transition hoặc pooling)
+        // === SPAWN VFX (delay 1 frame để position chính xác) ===
+        if (hasAwoken && spawnVfxPrefab != null && !suppressSpawnVfx)
+        {
+            StartCoroutine(SpawnVfxDelayed());
+        }
+        
+        // Re-find player nếu target bị null
         if (target == null)
         {
             GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
@@ -376,7 +392,6 @@ public class EnemyScript : MonoBehaviour {
             }
             if (playerObj != null) {
                 target = playerObj.transform;
-                Debug.Log($"[EnemyScript] OnEnable: Re-found player target: {playerObj.name}");
             }
             SetupPlayerManagerReference();
         }
@@ -393,6 +408,38 @@ public class EnemyScript : MonoBehaviour {
         alive = true;
         cont = true;
         StartCoroutine(Delay());
+    }
+    
+    /// <summary>
+    /// Spawn VFX delay 1 frame để đảm bảo position chính xác 
+    /// và giữ nguyên scale đã chỉnh trên prefab
+    /// </summary>
+    IEnumerator SpawnVfxDelayed()
+    {
+        yield return null; // Chờ 1 frame → position đã ổn định
+        
+        if (spawnVfxPrefab == null || !gameObject.activeInHierarchy) yield break;
+        
+        Vector3 groundPos = transform.position;
+        
+        // Instantiate giữ nguyên scale từ prefab
+        GameObject vfx = Instantiate(spawnVfxPrefab);
+        vfx.transform.position = groundPos;
+        
+        // Nếu có PixPlays BaseVfx (BeamVfx, etc.) → gọi Play() với VfxData
+        var baseVfx = vfx.GetComponent<PixPlays.ElementalVFX.BaseVfx>();
+        if (baseVfx != null)
+        {
+            // Cột sáng: từ chân enemy bắn lên trời 8m
+            Vector3 skyPos = groundPos + Vector3.up * 8f;
+            var vfxData = new PixPlays.ElementalVFX.VfxData(groundPos, skyPos, spawnVfxDuration, 1f);
+            baseVfx.Play(vfxData);
+        }
+        else
+        {
+            // Prefab đơn giản → tự hủy sau duration
+            Destroy(vfx, spawnVfxDuration);
+        }
     }
     void OnDisable(){
         EnemyEvent.WaitEvent -= Wait;

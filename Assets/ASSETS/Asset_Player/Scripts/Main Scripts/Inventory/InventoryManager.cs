@@ -13,12 +13,14 @@ public class InventoryItemData
     public int itemId;
     public int amount;
     public int rarity; // Rarity enum as int
+    public float[] rolledValues; // NEW: one rolled stat value per item in stack (null for non-stat items)
 
-    public InventoryItemData(int id, int amt, int rar = 1)
+    public InventoryItemData(int id, int amt, int rar = 1, float[] rolls = null)
     {
         itemId = id;
         amount = amt;
         rarity = rar;
+        rolledValues = rolls;
     }
 }
 
@@ -61,6 +63,16 @@ public class InventoryManager : MonoBehaviour
     // Key = (itemId * 100 + rarity) → unique key per item+rarity combo
     private Dictionary<int, int> inventoryItems = new Dictionary<int, int>();
     private Dictionary<int, Item> itemLookup = new Dictionary<int, Item>();
+
+    // NEW: Queue of rolled stat values per inventory key (for items with random stats)
+    // Gems: each float = rolled gemValuePercent
+    // Equipment: each float = rolled stat multiplier (0.01-1.0)
+    private Dictionary<int, List<float>> rolledStats = new Dictionary<int, List<float>>();
+
+    /// <summary>
+    /// Last removed rolled value (set by RemoveItem for callers to retrieve)
+    /// </summary>
+    public float LastRemovedRoll { get; private set; } = -1f;
 
     // Events
     public event Action<int, int, Rarity> OnItemAddedWithRarity; // itemId, amount, rarity
@@ -214,6 +226,25 @@ public class InventoryManager : MonoBehaviour
             inventoryItems[key] = amount;
         }
 
+        // ── Roll random stats for items that need them ──
+        if (item.HasRandomStats)
+        {
+            if (!rolledStats.ContainsKey(key))
+                rolledStats[key] = new List<float>();
+
+            for (int i = 0; i < amount; i++)
+            {
+                float roll;
+                if (item.itemType == ItemType.Gems)
+                    roll = item.RollGemValue();
+                else // Equipment
+                    roll = item.RollStatMultiplier();
+
+                rolledStats[key].Add(roll);
+                Debug.Log($"[InventoryManager] Rolled stat for {item.itemName} [{rarity}]: {roll:F4}");
+            }
+        }
+
         Debug.Log($"[InventoryManager] Added {amount}x {item.itemName} [{rarity}] (ID:{itemId}) to inventory");
 
         OnItemAdded?.Invoke(itemId, amount);
@@ -254,6 +285,61 @@ public class InventoryManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Add item with a SPECIFIC pre-rolled stat value (không random lại).
+    /// Dùng khi trả gem/equipment từ slot về inventory để giữ nguyên rolled value.
+    /// </summary>
+    public bool AddItemWithRoll(int itemId, int amount, Rarity rarity, float rolledValue)
+    {
+        if (!itemLookup.ContainsKey(itemId))
+        {
+            Debug.LogWarning($"[InventoryManager] AddItemWithRoll: Item ID {itemId} not found!");
+            return false;
+        }
+
+        Item item = itemLookup[itemId];
+        int key = MakeKey(itemId, rarity);
+
+        if (inventoryItems.ContainsKey(key))
+        {
+            if (item.isStackable)
+            {
+                int currentAmount = inventoryItems[key];
+                int newAmount = currentAmount + amount;
+                if (item.maxStackSize > 0 && newAmount > item.maxStackSize)
+                    newAmount = item.maxStackSize;
+                inventoryItems[key] = newAmount;
+            }
+            else
+            {
+                inventoryItems[key] += amount;
+            }
+        }
+        else
+        {
+            inventoryItems[key] = amount;
+        }
+
+        // Insert the SPECIFIC rolled value (NO random)
+        if (item.HasRandomStats && rolledValue >= 0f)
+        {
+            if (!rolledStats.ContainsKey(key))
+                rolledStats[key] = new List<float>();
+
+            for (int i = 0; i < amount; i++)
+                rolledStats[key].Add(rolledValue);
+
+            Debug.Log($"[InventoryManager] Re-added {item.itemName} [{rarity}] with preserved roll {rolledValue:F4}");
+        }
+
+        OnItemAdded?.Invoke(itemId, amount);
+        OnItemAddedWithRarity?.Invoke(itemId, amount, rarity);
+        OnInventoryChanged?.Invoke();
+        SaveInventory();
+        RefreshInventoryUI();
+        return true;
+    }
+
+    /// <summary>
     /// Remove item với rarity cụ thể
     /// </summary>
     public bool RemoveItem(int itemId, int amount, Rarity rarity)
@@ -267,6 +353,18 @@ public class InventoryManager : MonoBehaviour
 
         int currentAmount = inventoryItems[key];
         int newAmount = currentAmount - amount;
+
+        // ── Pop rolled stat values (FIFO) ──
+        LastRemovedRoll = -1f;
+        if (rolledStats.ContainsKey(key) && rolledStats[key].Count > 0)
+        {
+            LastRemovedRoll = rolledStats[key][0];
+            for (int i = 0; i < amount && rolledStats[key].Count > 0; i++)
+                rolledStats[key].RemoveAt(0);
+
+            if (rolledStats[key].Count == 0)
+                rolledStats.Remove(key);
+        }
 
         if (newAmount <= 0)
         {
@@ -326,8 +424,24 @@ public class InventoryManager : MonoBehaviour
         return inventoryItems.ContainsKey(key) ? inventoryItems[key] : 0;
     }
 
+    // Custom sort order for ItemType
+    private static int GetTypeSortOrder(ItemType t)
+    {
+        switch (t)
+        {
+            case ItemType.Equipment:    return 0;
+            case ItemType.CrystalStone: return 1;
+            case ItemType.Gems:         return 2;
+            case ItemType.Consumable:   return 3;
+            case ItemType.Material:     return 4;
+            default:                    return 5;
+        }
+    }
+
     /// <summary>
     /// Get all items in inventory as list of (Item, amount, rarity)
+    /// Sort: Equipment → Crystal → Gems → Consumable → Material
+    /// Within same type: group by base item, rarity ascending (Common→Mythic)
     /// </summary>
     public List<(Item item, int amount, Rarity rarity)> GetAllItemsWithRarity()
     {
@@ -343,24 +457,105 @@ public class InventoryManager : MonoBehaviour
             }
         }
 
-        // Auto-sort: ItemType → Rarity (desc) → Name (asc)
         result.Sort((a, b) =>
         {
-            int typeCompare = a.item.itemType.CompareTo(b.item.itemType);
-            if (typeCompare != 0) return typeCompare;
+            // 1. Custom type order: Equipment → Crystal → Gems
+            int typeA = GetTypeSortOrder(a.item.itemType);
+            int typeB = GetTypeSortOrder(b.item.itemType);
+            if (typeA != typeB) return typeA.CompareTo(typeB);
 
-            int rarityCompare = b.rarity.CompareTo(a.rarity); // descending
+            // 2. Group same-base items together (gemType for gems, equipmentSlot for equipment)
+            if (a.item.itemType == ItemType.Gems)
+            {
+                int gemTypeCompare = a.item.gemType.CompareTo(b.item.gemType);
+                if (gemTypeCompare != 0) return gemTypeCompare;
+            }
+            else if (a.item.itemType == ItemType.Equipment)
+            {
+                int slotCompare = a.item.equipmentSlot.CompareTo(b.item.equipmentSlot);
+                if (slotCompare != 0) return slotCompare;
+            }
+
+            // 3. Same base → rarity ascending (Common → Mythic)
+            int rarityCompare = a.rarity.CompareTo(b.rarity);
+            if (rarityCompare != 0) return rarityCompare;
+
+            // 4. Same rarity → name A→Z
+            return string.Compare(a.item.itemName, b.item.itemName, System.StringComparison.OrdinalIgnoreCase);
+        });
+
+        return result;
+    }
+
+    // ─── Rolled Stats API ─────────────────────────────────────────
+
+    /// <summary>
+    /// Peek at the next rolled value for a specific item (first in queue).
+    /// Returns -1 if no rolled value exists.
+    /// </summary>
+    public float PeekNextRoll(int itemId, Rarity rarity)
+    {
+        int key = MakeKey(itemId, rarity);
+        if (rolledStats.ContainsKey(key) && rolledStats[key].Count > 0)
+            return rolledStats[key][0];
+        return -1f;
+    }
+
+    /// <summary>
+    /// Get all rolled values for a specific item key.
+    /// Returns null if no rolled values exist.
+    /// </summary>
+    public List<float> GetRolledValues(int itemId, Rarity rarity)
+    {
+        int key = MakeKey(itemId, rarity);
+        if (rolledStats.ContainsKey(key))
+            return rolledStats[key];
+        return null;
+    }
+
+    /// <summary>
+    /// Get all items with rolled stat info for UI display.
+    /// Returns (item, amount, rarity, rolls[]) — rolls may be null for non-stat items.
+    /// </summary>
+    public List<(Item item, int amount, Rarity rarity, List<float> rolls)> GetAllItemsWithRarityAndRolls()
+    {
+        var result = new List<(Item item, int amount, Rarity rarity, List<float> rolls)>();
+
+        foreach (var kvp in inventoryItems)
+        {
+            int id; Rarity r;
+            SplitKey(kvp.Key, out id, out r);
+            if (itemLookup.ContainsKey(id))
+            {
+                List<float> rolls = null;
+                if (rolledStats.ContainsKey(kvp.Key))
+                    rolls = rolledStats[kvp.Key];
+                result.Add((itemLookup[id], kvp.Value, r, rolls));
+            }
+        }
+
+        result.Sort((a, b) =>
+        {
+            int typeA = GetTypeSortOrder(a.item.itemType);
+            int typeB = GetTypeSortOrder(b.item.itemType);
+            if (typeA != typeB) return typeA.CompareTo(typeB);
+
+            if (a.item.itemType == ItemType.Gems)
+            {
+                int gemTypeCompare = a.item.gemType.CompareTo(b.item.gemType);
+                if (gemTypeCompare != 0) return gemTypeCompare;
+            }
+            else if (a.item.itemType == ItemType.Equipment)
+            {
+                int slotCompare = a.item.equipmentSlot.CompareTo(b.item.equipmentSlot);
+                if (slotCompare != 0) return slotCompare;
+            }
+
+            int rarityCompare = a.rarity.CompareTo(b.rarity); // ascending
             if (rarityCompare != 0) return rarityCompare;
 
             return string.Compare(a.item.itemName, b.item.itemName, System.StringComparison.OrdinalIgnoreCase);
         });
-
-        // Debug: print sorted order
-        for (int i = 0; i < result.Count && i < 15; i++)
-        {
-            var entry = result[i];
-            Debug.Log($"[InventoryManager] Sort[{i}]: {entry.item.itemType} | {entry.rarity} | {entry.item.itemName}");
-        }
 
         return result;
     }
@@ -491,7 +686,13 @@ public class InventoryManager : MonoBehaviour
         {
             int id; Rarity r;
             SplitKey(kvp.Key, out id, out r);
-            saveData.items.Add(new InventoryItemData(id, kvp.Value, (int)r));
+
+            // Save rolled values if they exist
+            float[] rolls = null;
+            if (rolledStats.ContainsKey(kvp.Key) && rolledStats[kvp.Key].Count > 0)
+                rolls = rolledStats[kvp.Key].ToArray();
+
+            saveData.items.Add(new InventoryItemData(id, kvp.Value, (int)r, rolls));
         }
 
         string json = JsonUtility.ToJson(saveData, true);
@@ -538,12 +739,19 @@ public class InventoryManager : MonoBehaviour
             if (saveData != null && saveData.items != null)
             {
                 inventoryItems.Clear();
+                rolledStats.Clear();
                 foreach (var itemData in saveData.items)
                 {
                     int key = MakeKey(itemData.itemId, itemData.rarity);
                     inventoryItems[key] = itemData.amount;
+
+                    // Restore rolled values
+                    if (itemData.rolledValues != null && itemData.rolledValues.Length > 0)
+                    {
+                        rolledStats[key] = new List<float>(itemData.rolledValues);
+                    }
                 }
-                Debug.Log($"[InventoryManager] Loaded {inventoryItems.Count} item slots from save");
+                Debug.Log($"[InventoryManager] Loaded {inventoryItems.Count} item slots from save (with rolled stats)");
             }
         }
         catch (Exception e)

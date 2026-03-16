@@ -14,13 +14,35 @@ public class DungeonRewardUI : MonoBehaviour
 
     [Header("=== Settings ===")]
     [Tooltip("Kích thước mỗi ô item")]
-    [SerializeField] private float slotSize = 200f;
+    [SerializeField] private float slotSize = 400f;
     [Tooltip("Khoảng cách giữa các ô")]
-    [SerializeField] private float slotSpacing = 20f;
+    [SerializeField] private float slotSpacing = 40f;
     [Tooltip("Chiều rộng panel")]
-    [SerializeField] private float panelWidth = 1600f;
+    [SerializeField] private float panelWidth = 3840f;
     [Tooltip("Chiều cao panel")]
-    [SerializeField] private float panelHeight = 600f;
+    [SerializeField] private float panelHeight = 2160f;
+
+    [Header("=== Font Size ===")]
+    [Tooltip("Font tên item")]
+    [SerializeField] private float itemNameFontSize = 48f;
+    [Tooltip("Font số lượng (x3)")]
+    [SerializeField] private float quantityFontSize = 64f;
+    [Tooltip("Font dòng tổng phía dưới")]
+    [SerializeField] private float countFontSize = 72f;
+    [Tooltip("Font khi không có vật phẩm")]
+    [SerializeField] private float noItemFontSize = 96f;
+
+    [Header("=== Slot Chi Tiết ===")]
+    [Tooltip("Chiều rộng thêm cho slot")]
+    [SerializeField] private float slotExtraWidth = 0f;
+    [Tooltip("Chiều cao thêm cho phần tên item dưới slot")]
+    [SerializeField] private float slotExtraHeight = 140f;
+    [Tooltip("Viền trong slot (px)")]
+    [SerializeField] private float slotBorderInset = 16f;
+    [Tooltip("Padding nội dung (trái/phải/trên/dưới)")]
+    [SerializeField] private float contentPadding = 80f;
+    [Tooltip("Chiều cao scrollbar")]
+    [SerializeField] private float scrollbarHeight = 48f;
 
     [Header("=== Custom Assets (kéo vào Inspector) ===")]
     [Tooltip("Sprite nền panel chính (null = dùng màu mặc định)")]
@@ -89,6 +111,28 @@ public class DungeonRewardUI : MonoBehaviour
             }
             Instance = null;
         }
+    }
+
+    /// <summary>
+    /// Auto-refresh khi thay đổi Inspector values trong Play mode
+    /// </summary>
+    private void OnValidate()
+    {
+        if (!Application.isPlaying || !isShowing) return;
+        
+        // Tạo lại panel với giá trị mới
+        if (panelRoot != null) Destroy(panelRoot);
+        if (rewardCanvas != null) Destroy(rewardCanvas.gameObject);
+        isShowing = false;
+        
+        // Delay 1 frame để tránh lỗi
+        StartCoroutine(RefreshNextFrame());
+    }
+
+    private System.Collections.IEnumerator RefreshNextFrame()
+    {
+        yield return null;
+        ShowRewardPanel();
     }
 
     /// <summary>
@@ -165,6 +209,7 @@ public class DungeonRewardUI : MonoBehaviour
     /// </summary>
     private void CreateRewardUI()
     {
+
         // Xóa UI cũ nếu có
         if (rewardCanvas != null) Destroy(rewardCanvas.gameObject);
 
@@ -233,7 +278,8 @@ public class DungeonRewardUI : MonoBehaviour
         HorizontalLayoutGroup layout = contentGO.AddComponent<HorizontalLayoutGroup>();
         layout.spacing = slotSpacing;
         layout.childAlignment = TextAnchor.MiddleLeft;
-        layout.padding = new RectOffset(40, 40, 20, 20);
+        int pad = (int)contentPadding;
+        layout.padding = new RectOffset(pad, pad, pad / 2, pad / 2);
         layout.childForceExpandWidth = false;
         layout.childForceExpandHeight = false;
         layout.childControlWidth = false;
@@ -252,7 +298,7 @@ public class DungeonRewardUI : MonoBehaviour
         sbRT.anchorMin = new Vector2(0, 0);
         sbRT.anchorMax = new Vector2(1, 0);
         sbRT.pivot = new Vector2(0.5f, 0);
-        sbRT.sizeDelta = new Vector2(0, 24);
+        sbRT.sizeDelta = new Vector2(0, scrollbarHeight);
         sbRT.anchoredPosition = Vector2.zero;
 
         Image sbBG = scrollbarGO.AddComponent<Image>();
@@ -289,10 +335,10 @@ public class DungeonRewardUI : MonoBehaviour
             GameObject noItemGO = CreateUIElement("NoItems", contentGO.transform);
             TextMeshProUGUI noItemText = noItemGO.AddComponent<TextMeshProUGUI>();
             noItemText.text = "Không có vật phẩm";
-            noItemText.fontSize = 48;
+            noItemText.fontSize = noItemFontSize;
             noItemText.alignment = TextAlignmentOptions.Center;
             noItemText.color = Color.gray;
-            noItemGO.GetComponent<RectTransform>().sizeDelta = new Vector2(600, slotSize);
+            noItemGO.GetComponent<RectTransform>().sizeDelta = new Vector2(1200, slotSize);
         }
         else
         {
@@ -314,7 +360,7 @@ public class DungeonRewardUI : MonoBehaviour
         int totalItems = 0;
         foreach (var e in collectedItems) totalItems += e.quantity;
         countText.text = $"Tổng: {collectedItems.Count} loại, {totalItems} vật phẩm";
-        countText.fontSize = 36;
+        countText.fontSize = countFontSize;
         countText.alignment = TextAlignmentOptions.Center;
         countText.color = new Color(0.7f, 0.7f, 0.7f);
     }
@@ -333,11 +379,11 @@ public class DungeonRewardUI : MonoBehaviour
         // === SLOT ROOT (border) ===
         GameObject slotGO = CreateUIElement($"Slot_{entry.item.itemName}", parent);
         RectTransform slotRT = slotGO.GetComponent<RectTransform>();
-        slotRT.sizeDelta = new Vector2(slotSize, slotSize + 70);
+        slotRT.sizeDelta = new Vector2(slotSize + slotExtraWidth, slotSize + slotExtraHeight);
 
         LayoutElement le = slotGO.AddComponent<LayoutElement>();
-        le.preferredWidth = slotSize;
-        le.preferredHeight = slotSize + 70;
+        le.preferredWidth = slotSize + slotExtraWidth;
+        le.preferredHeight = slotSize + slotExtraHeight;
 
         // Border image (rarity color)
         Image borderImg = slotGO.AddComponent<Image>();
@@ -353,7 +399,7 @@ public class DungeonRewardUI : MonoBehaviour
         RectTransform innerRT = innerGO.GetComponent<RectTransform>();
         innerRT.anchorMin = Vector2.zero;
         innerRT.anchorMax = Vector2.one;
-        innerRT.sizeDelta = new Vector2(-8, -8);
+        innerRT.sizeDelta = new Vector2(-slotBorderInset, -slotBorderInset);
         innerRT.anchoredPosition = Vector2.zero;
 
         Image innerBG = innerGO.AddComponent<Image>();
@@ -396,7 +442,7 @@ public class DungeonRewardUI : MonoBehaviour
 
             TextMeshProUGUI qtyText = qtyGO.AddComponent<TextMeshProUGUI>();
             qtyText.text = $"x{entry.quantity}";
-            qtyText.fontSize = 32;
+            qtyText.fontSize = quantityFontSize;
             qtyText.alignment = TextAlignmentOptions.Right;
             qtyText.color = Color.white;
         }
@@ -411,7 +457,7 @@ public class DungeonRewardUI : MonoBehaviour
 
         TextMeshProUGUI nameText = nameGO.AddComponent<TextMeshProUGUI>();
         nameText.text = entry.item.itemName;
-        nameText.fontSize = 24;
+        nameText.fontSize = itemNameFontSize;
         nameText.alignment = TextAlignmentOptions.Center;
         nameText.color = borderColor;
         nameText.enableWordWrapping = true;
