@@ -8,6 +8,7 @@ public class Character : MonoBehaviour
     public float sprintSpeed = 7.0f;
     public float dashSpeed = 10.0f;
     public float jumpHeight = 0.8f;
+    [SerializeField] public float sprintJumpHeight = 1.0f;
     public float gravityMultiplier = 2;
     public float rotationSpeed = 5f;
     public float crouchColliderHeight = 1.35f;

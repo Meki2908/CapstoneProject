@@ -71,6 +71,12 @@ public class SprintState : State
 
     public override void LogicUpdate()
     {
+        if (sprintJump)
+        {
+            stateMachine.ChangeState(character.sprintjumping);
+            return;
+        }
+
         if (sprint)
         {
             character.animator.SetFloat("speed", input.magnitude + 0.5f, character.speedDampTime, Time.deltaTime);
@@ -82,11 +88,6 @@ public class SprintState : State
         else
         {
             stateMachine.ChangeState(character.currentLocomotionState);
-        }
-
-        if (sprintJump)
-        {
-            stateMachine.ChangeState(character.sprintjumping);
         }
         if (dash)
         {

@@ -51,7 +51,9 @@ public class JumpingState : State
                 character.animator.SetTrigger("land");
                 landTriggered = true;
             }
-            stateMachine.ChangeState(character.standing);
+            // Return to the active locomotion context (combat/standing) instead of forcing standing.
+            State nextState = character.currentLocomotionState != null ? character.currentLocomotionState : character.standing;
+            stateMachine.ChangeState(nextState);
         }
     }
 
