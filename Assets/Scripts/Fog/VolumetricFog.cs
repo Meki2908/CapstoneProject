@@ -75,26 +75,25 @@ public class VolumetricFog : MonoBehaviour
         rend.receiveShadows    = false;
         rend.sortingOrder      = 1;
 
-        // Tìm shader mờ (transparent / additive)
-        Shader sh = Shader.Find("Particles/Standard Unlit")
-                 ?? Shader.Find("Legacy Shaders/Particles/Alpha Blended")
+        // Ưu tiên shader Additive để fog không che khuất RedLightningEffect và các VFX phía sau
+        Shader sh = Shader.Find("Legacy Shaders/Particles/Additive")
+                 ?? Shader.Find("Particles/Additive")
+                 ?? Shader.Find("Particles/Standard Unlit")
                  ?? Shader.Find("Sprites/Default")
                  ?? Shader.Find("Standard");
 
         Material mat = new Material(sh);
-        // Blend mode: Alpha Blended (không phải additive — để sương trông tối hơn)
+        // Blend mode: Additive — fog cộng màu vào scene thay vì che đè,
+        // nhờ đó sét (renderQueue=4000) và VFX phía sau vẫn hiển thị qua fog.
+        mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+        mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One); // Additive
+        mat.SetInt("_ZWrite", 0);
         if (mat.HasProperty("_Mode"))
-        {
-            mat.SetFloat("_Mode", 2); // Fade
-            mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-            mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-            mat.SetInt("_ZWrite", 0);
-            mat.EnableKeyword("_ALPHAPREMULTIPLY_ON");
-        }
+            mat.SetFloat("_Mode", 1); // Additive mode
         Color c = fogColor;
         c.a = maxAlpha;
         mat.color = c;
-        mat.renderQueue = 3001;
+        mat.renderQueue = 3002; // thấp hơn sét (4000) — render trước, không che
         rend.material = mat;
 
         // ── Main module ──────────────────────────────────────────────────
