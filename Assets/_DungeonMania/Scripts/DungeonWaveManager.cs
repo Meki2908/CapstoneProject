@@ -182,6 +182,7 @@ public class DungeonWaveManager : MonoBehaviour
     private bool isDungeonActive = false;
     private bool isDungeonComplete = false;
     private bool showDebugLog = true;
+    private bool isWaveCompleting = false; // Guard: tránh gọi OnWaveComplete() 2 lần
     
     // Trackers for enemy spawn (tránh gọi GetEnemyCounts nhiều lần)
     private int currentSkeletCount = 0;
@@ -496,7 +497,7 @@ public class DungeonWaveManager : MonoBehaviour
         if (!isDungeonActive) return;
 
         // Kiểm tra enemy còn sống
-        if (isWaveActive && enemiesAlive <= 0 && !isCountingDown)
+        if (isWaveActive && !isWaveCompleting && enemiesAlive <= 0 && !isCountingDown)
         {
             OnWaveComplete();
         }
@@ -592,10 +593,13 @@ public class DungeonWaveManager : MonoBehaviour
     /// </summary>
     private void OnWaveComplete()
     {
+        // Guard: tránh gọi 2 lần nếu nhiều enemy chết cùng frame
+        if (isWaveCompleting) return;
+        isWaveCompleting = true;
         isWaveActive = false;
         OnWaveCompleted?.Invoke(currentWave);
 
-        Debug.Log($"[DungeonWave] Wave {currentWave} hoàn thành!");
+        Debug.Log($"[DungeonWave] Wave {currentWave} hoàn thành! (enemiesAlive={enemiesAlive})");
 
         // Kiểm tra nếu là wave cuối cùng
         if (currentWave >= totalWaves)
@@ -733,13 +737,13 @@ public class DungeonWaveManager : MonoBehaviour
             if (cc != null) cc.enabled = false;
         }
 
-        // Delay 3 giây rồi mới hiện GUI
+        // Delay 4 giây rồi mới hiện GUI
         StartCoroutine(DelayedShowCompleteUI());
     }
 
     private System.Collections.IEnumerator DelayedShowCompleteUI()
     {
-        yield return new WaitForSecondsRealtime(3f);
+        yield return new WaitForSecondsRealtime(4f);
 
         // Ẩn UI_HP và UI_Inventory của player
         HidePlayerUIOnComplete();
@@ -914,12 +918,22 @@ public class DungeonWaveManager : MonoBehaviour
             currentStoneogreCount, currentGolemCount, currentMinotaurCount, currentIfritCount);
 
         // Spawn từng enemy một
+        int spawnedCount = 0;
         for (int i = 0; i < totalEnemies; i++)
         {
-            SpawnEnemyFromEnemyNew();
+            if (SpawnEnemyFromEnemyNew())
+                spawnedCount++;
+        }
+
+        // Nếu spawn ít hơn dự kiến → cập nhật enemiesAlive
+        if (spawnedCount < totalEnemies)
+        {
+            Debug.LogWarning($"[DungeonWave] Chỉ spawn được {spawnedCount}/{totalEnemies} enemies! Cập nhật enemiesAlive.");
+            enemiesAlive = spawnedCount;
         }
 
         isWaveActive = true;
+        isWaveCompleting = false; // Reset guard cho wave mới
     }
 
     /// <summary>
@@ -959,12 +973,12 @@ public class DungeonWaveManager : MonoBehaviour
     /// Spawn 1 enemy từ EnemyNew prefab
     /// FIX: Không dùng static event broadcast nữa — gọi trực tiếp trên instance
     /// </summary>
-    private void SpawnEnemyFromEnemyNew()
+    private bool SpawnEnemyFromEnemyNew()
     {
         if (enemyNewPrefab == null || player == null)
         {
             Debug.LogWarning($"[DungeonWave] Không thể spawn enemy: enemyNewPrefab null hoặc player null");
-            return;
+            return false;
         }
 
         Vector3 spawnPos = GetRandomSpawnPosition();
@@ -1000,6 +1014,7 @@ public class DungeonWaveManager : MonoBehaviour
         SetPlayerTargetAndChaseForActiveEnemy(enemy);
 
         Debug.Log($"[DungeonWave] Spawned EnemyNew at {spawnPos} - AI activated (direct call)");
+        return true;
     }
 
     /// <summary>
@@ -1379,13 +1394,11 @@ public class DungeonWaveManager : MonoBehaviour
         enemiesAlive--;
         totalExpGained += expValue;
 
-        Debug.Log($"[DungeonWave] Enemy type {enemyType} died. Còn lại: {enemiesAlive}. EXP: {expValue}. isWaveActive={isWaveActive}");
+        Debug.Log($"[DungeonWave] Enemy type {enemyType} died. Còn lại: {enemiesAlive}. EXP: {expValue}. isWaveActive={isWaveActive}, isWaveCompleting={isWaveCompleting}");
 
         // Safety: Kiểm tra ngay khi enemy chết (không đợi Update)
-        if (enemiesAlive <= 0 && isWaveActive && !isCountingDown)
+        if (enemiesAlive <= 0 && isWaveActive && !isCountingDown && !isWaveCompleting)
         {
-            // === FIX: Set isWaveActive = false NGAY để Update() không gọi OnWaveComplete() lần nữa ===
-            isWaveActive = false;
             Debug.Log($"[DungeonWave] All enemies dead! Triggering OnWaveComplete from OnEnemyKilled");
             OnWaveComplete();
         }
