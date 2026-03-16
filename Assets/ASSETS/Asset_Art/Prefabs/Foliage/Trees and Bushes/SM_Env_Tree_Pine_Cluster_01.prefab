@@ -34,18 +34,6 @@ Transform:
   - {fileID: 8305975295021286917}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &3817711169078139764
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 7931788271489212924}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 299147e0b236560478d85010e9e1c387, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1001 &7931788271489212924
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -93,6 +81,14 @@ PrefabInstance:
     - target: {fileID: 2114334397029378041, guid: d16aca71e24fdd04ebc6d90a727f1288, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6598007026152115758, guid: d16aca71e24fdd04ebc6d90a727f1288, type: 3}
+      propertyPath: m_LODs.Array.data[0].screenRelativeHeight
+      value: 0.59797716
+      objectReference: {fileID: 0}
+    - target: {fileID: 6598007026152115758, guid: d16aca71e24fdd04ebc6d90a727f1288, type: 3}
+      propertyPath: m_LODs.Array.data[2].screenRelativeHeight
+      value: 0.15
       objectReference: {fileID: 0}
     - target: {fileID: 8949061082402899093, guid: d16aca71e24fdd04ebc6d90a727f1288, type: 3}
       propertyPath: m_Name
@@ -156,6 +152,18 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5650786846713901312, guid: 2d48a5bd75444114ba8f039c794690fd, type: 3}
+      propertyPath: m_LODs.Array.data[0].screenRelativeHeight
+      value: 0.5032511
+      objectReference: {fileID: 0}
+    - target: {fileID: 5650786846713901312, guid: 2d48a5bd75444114ba8f039c794690fd, type: 3}
+      propertyPath: m_LODs.Array.data[2].screenRelativeHeight
+      value: 0.15
+      objectReference: {fileID: 0}
+    - target: {fileID: 5650786846713901312, guid: 2d48a5bd75444114ba8f039c794690fd, type: 3}
+      propertyPath: m_LODs.Array.data[3].screenRelativeHeight
+      value: 0.065553024
+      objectReference: {fileID: 0}
     - target: {fileID: 7622913565504388027, guid: 2d48a5bd75444114ba8f039c794690fd, type: 3}
       propertyPath: m_Name
       value: TreePine_VarB (4)
@@ -218,6 +226,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5650786846713901312, guid: 2d48a5bd75444114ba8f039c794690fd, type: 3}
+      propertyPath: m_LODs.Array.data[0].screenRelativeHeight
+      value: 0.43403846
+      objectReference: {fileID: 0}
+    - target: {fileID: 5650786846713901312, guid: 2d48a5bd75444114ba8f039c794690fd, type: 3}
+      propertyPath: m_LODs.Array.data[2].screenRelativeHeight
+      value: 0.14977525
+      objectReference: {fileID: 0}
     - target: {fileID: 7622913565504388027, guid: 2d48a5bd75444114ba8f039c794690fd, type: 3}
       propertyPath: m_Name
       value: TreePine_VarB (2)
@@ -232,3 +248,15 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 625133050959993047, guid: 2d48a5bd75444114ba8f039c794690fd, type: 3}
   m_PrefabInstance: {fileID: 9184952108245775410}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &3817711169078139764
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: 
+  m_EditorClassIdentifier: 
