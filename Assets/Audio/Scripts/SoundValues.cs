@@ -48,6 +48,8 @@ public enum SoundType
 
     // Blacksmith socketing
     Blacksmith_Forge,
+    Blacksmith_Socket_Success,
+    Blacksmith_Socket_Fail,
 
     // === ENEMY COMMON SOUNDS ===
     Enemy_Attack,           // Monster melee attack swing
