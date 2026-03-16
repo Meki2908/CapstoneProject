@@ -47,5 +47,7 @@ public enum SoundType
     Mage_Sheath,
 
     // Blacksmith socketing
-    Blacksmith_Forge
+    Blacksmith_Forge,
+    Blacksmith_Socket_Success,
+    Blacksmith_Socket_Fail
 }

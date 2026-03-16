@@ -21,9 +21,7 @@ public class ItemPickupNotification : MonoBehaviour
     [Tooltip("Parent RectTransform chứa các notification entry (tự tạo nếu null)")]
     [SerializeField] private RectTransform notificationContainer;
 
-    [Header("=== Prefab (Optional) ===")]
-    [Tooltip("Prefab cho 1 dòng notification (tự tạo nếu null)")]
-    [SerializeField] private GameObject notificationEntryPrefab;
+
 
     [Header("=== Timing ===")]
     [SerializeField] private float displayDuration = 3f;
@@ -100,30 +98,25 @@ public class ItemPickupNotification : MonoBehaviour
     {
         if (_instance != null && _instance != this)
         {
-            // CHỈ xóa component — gameObject có thể là child của Canvas player
-            Destroy(this);
+            Destroy(gameObject);
             return;
         }
         _instance = this;
+        DontDestroyOnLoad(gameObject);
 
         // Tạo sprite bo góc runtime
         roundedSprite = CreateRoundedRectSprite(128, 64, 16);
 
+        // Chỉ dùng container đã gán từ Inspector
         if (notificationContainer == null)
         {
-            CreateDefaultContainer();
+            Debug.LogError("[ItemPickupNotification] notificationContainer chưa được gán trong Inspector!");
         }
-        else
-        {
-            // Container được kéo từ Inspector — vẫn cần đảm bảo Canvas sorting order đủ cao
-            Canvas existingCanvas = GetComponentInParent<Canvas>();
-            if (existingCanvas != null && existingCanvas.sortingOrder < 100)
-            {
-                existingCanvas.sortingOrder = 100;
-                Debug.Log($"[ItemPickupNotification] Raised existing Canvas '{existingCanvas.name}' sortingOrder to 100");
-            }
-        }
+
+        Debug.Log($"[ItemPickupNotification] ✅ Initialized (DontDestroyOnLoad, container={notificationContainer?.name})");
     }
+
+
 
     private void OnDestroy()
     {
@@ -145,6 +138,21 @@ public class ItemPickupNotification : MonoBehaviour
     /// </summary>
     public void ShowNotification(ItemData itemData)
     {
+        // Safety: đảm bảo host luôn active để coroutines chạy được
+        if (!gameObject.activeInHierarchy)
+        {
+            gameObject.SetActive(true);
+        }
+
+        Debug.Log($"[ItemPickupNotification] ShowNotification called: {itemData.itemName} ×{itemData.quantity} [{itemData.rarity}], container={(notificationContainer != null ? notificationContainer.name : "NULL")}, gameObject active={gameObject.activeInHierarchy}");
+
+        // Safety check
+        if (notificationContainer == null)
+        {
+            Debug.LogError("[ItemPickupNotification] notificationContainer is NULL! Hãy gán trong Inspector.");
+            return;
+        }
+
         // Merge duplicate
         foreach (var entry in activeEntries)
         {
@@ -210,6 +218,19 @@ public class ItemPickupNotification : MonoBehaviour
 
     private void CreateEntry(ItemData itemData)
     {
+        Debug.Log($"[ItemPickupNotification] CreateEntry: {itemData.itemName} ×{itemData.quantity}, container={(notificationContainer != null ? notificationContainer.name : "NULL")}, roundedSprite={(roundedSprite != null ? "OK" : "NULL")}");
+
+        // Safety: tạo lại roundedSprite nếu bị mất
+        if (roundedSprite == null)
+            roundedSprite = CreateRoundedRectSprite(128, 64, 16);
+
+        // Safety: kiểm tra container
+        if (notificationContainer == null)
+        {
+            Debug.LogError("[ItemPickupNotification] Container NULL in CreateEntry! Hãy gán trong Inspector.");
+            return;
+        }
+
         // === WRAPPER: LayoutGroup kiểm soát wrapper, animation kiểm soát inner ===
         var wrapperGO = new GameObject("NotificationWrapper");
         var wrapperRT = wrapperGO.AddComponent<RectTransform>();
@@ -220,18 +241,13 @@ public class ItemPickupNotification : MonoBehaviour
         wrapperLE.preferredHeight = EntryH;
         wrapperGO.transform.SetAsLastSibling();
 
-        // === INNER: actual entry visual ===
-        GameObject innerGO;
-        if (notificationEntryPrefab != null)
-            innerGO = Instantiate(notificationEntryPrefab, wrapperRT);
-        else
-        {
-            innerGO = CreateGenshinEntry(itemData.rarity);
-            innerGO.transform.SetParent(wrapperRT, false);
-        }
+        // === INNER: luôn tạo bằng CreateGenshinEntry (tránh prefab 3D không có RectTransform) ===
+        GameObject innerGO = CreateGenshinEntry(itemData.rarity);
+        innerGO.transform.SetParent(wrapperRT, false);
 
         // Inner stretch toàn bộ wrapper
         var innerRT = innerGO.GetComponent<RectTransform>();
+        if (innerRT == null) innerRT = innerGO.AddComponent<RectTransform>();
         innerRT.anchorMin = Vector2.zero;
         innerRT.anchorMax = Vector2.one;
         innerRT.offsetMin = Vector2.zero;
@@ -373,6 +389,7 @@ public class ItemPickupNotification : MonoBehaviour
             case ItemRarity.Rare: return rareColor;
             case ItemRarity.Epic: return epicColor;
             case ItemRarity.Legendary: return legendaryColor;
+            case ItemRarity.Mythic: return new Color(1f, 0.2f, 0.3f); // Mythic: đỏ hồng
             default: return commonColor;
         }
     }
@@ -386,58 +403,12 @@ public class ItemPickupNotification : MonoBehaviour
             case ItemRarity.Rare: return rareBgColor;
             case ItemRarity.Epic: return epicBgColor;
             case ItemRarity.Legendary: return legendaryBgColor;
+            case ItemRarity.Mythic: return new Color(0.55f, 0.12f, 0.18f); // Mythic bg
             default: return commonBgColor;
         }
     }
 
-    /// <summary>
-    /// Tạo Canvas + Container tự động — vị trí: PHẢI DƯỚI (giống Genshin)
-    /// </summary>
-    private void CreateDefaultContainer()
-    {
-        Canvas canvas = GetComponent<Canvas>();
-        if (canvas == null)
-        {
-            canvas = gameObject.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        }
-        // Đảm bảo notification luôn hiện TRÊN các UI khác (dungeon, HUD...)
-        // 100 = trên game UI, dưới DungeonRewardUI (999) và tooltip (10000)
-        canvas.sortingOrder = Mathf.Max(canvas.sortingOrder, 100);
 
-        var scaler = GetComponent<CanvasScaler>() ?? gameObject.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920, 1080);
-        scaler.matchWidthOrHeight = 0.5f;
-
-        if (GetComponent<GraphicRaycaster>() == null)
-            gameObject.AddComponent<GraphicRaycaster>();
-
-        // Container — BOTTOM RIGHT
-        var containerGO = new GameObject("NotificationContainer");
-        notificationContainer = containerGO.AddComponent<RectTransform>();
-        notificationContainer.SetParent(canvas.transform, false);
-
-        // Anchor: bottom-right
-        notificationContainer.anchorMin = new Vector2(1, 0);
-        notificationContainer.anchorMax = new Vector2(1, 0);
-        notificationContainer.pivot = new Vector2(1, 0);
-        notificationContainer.anchoredPosition = new Vector2(-marginRight, marginBottom);
-        notificationContainer.sizeDelta = new Vector2(EntryW + 20, 500);
-
-        // VerticalLayoutGroup — xếp entries, mới nhất ở dưới
-        var layout = containerGO.AddComponent<VerticalLayoutGroup>();
-        layout.childAlignment = TextAnchor.LowerRight;
-        layout.reverseArrangement = true;
-        layout.spacing = Spacing;
-        layout.childForceExpandWidth = true;
-        layout.childForceExpandHeight = false;
-        layout.childControlWidth = true;
-        layout.childControlHeight = true;
-
-        var fitter = containerGO.AddComponent<ContentSizeFitter>();
-        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-    }
 
     /// <summary>
     /// Tạo 1 entry notification — layout Genshin:
