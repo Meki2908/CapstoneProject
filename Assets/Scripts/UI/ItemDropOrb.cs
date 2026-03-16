@@ -248,7 +248,12 @@ public class ItemDropOrb : MonoBehaviour
         if (ItemPickupNotification.Instance != null)
         {
             Sprite icon = itemIcon != null ? itemIcon : (itemSO != null ? itemSO.icon : null);
+            Debug.Log($"[ItemDrop] 🔔 Calling ShowNotification: {itemName} ×{quantity} [{rarity}], icon={(icon != null ? "OK" : "NULL")}, Instance={ItemPickupNotification.Instance.gameObject.name}, active={ItemPickupNotification.Instance.gameObject.activeInHierarchy}");
             ItemPickupNotification.Instance.ShowNotification(itemName, icon, rarity, quantity);
+        }
+        else
+        {
+            Debug.LogError("[ItemDrop] ❌ ItemPickupNotification.Instance is STILL NULL after auto-create!");
         }
 
         Debug.Log($"[ItemDrop] Picked up: {itemName} [{runtimeRarity}] ×{quantity}");

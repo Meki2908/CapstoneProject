@@ -11,6 +11,11 @@ public class ItemTooltipManager : MonoBehaviour
 {
     public static ItemTooltipManager Instance { get; private set; }
 
+    /// <summary>
+    /// When true, all tooltip display is suppressed (used by Blacksmith UI)
+    /// </summary>
+    public bool SuppressTooltip { get; set; } = false;
+
     [Header("Tooltip References")]
     [SerializeField] private GameObject tooltipPanel; // The Image GameObject containing the tooltip
     [SerializeField] private TextMeshProUGUI tooltipText; // The TMP text component
@@ -118,6 +123,7 @@ public class ItemTooltipManager : MonoBehaviour
     /// </summary>
     public void ShowTooltip(Item item, Rarity rarity)
     {
+        if (SuppressTooltip) { HideTooltip(); return; }
         if (item == null || tooltipText == null || tooltipPanel == null) return;
 
         currentItem = item;
@@ -305,32 +311,32 @@ public class ItemTooltipManager : MonoBehaviour
 
         if (item.ScaledHPBonus(rarity) > 0f)
         {
-            sb.AppendLine($"<color=#00FF00>HP: +{item.ScaledHPBonus(rarity):F0}</color>");
+            sb.AppendLine($"<color=#00FF00>HP: +{item.ScaledHPBonus(rarity):F0}</color> <color=#888888>(max {item.ScaledHPBonus(rarity):F0})</color>");
             hasStats = true;
         }
         if (item.ScaledDefenseBonus(rarity) > 0f)
         {
-            sb.AppendLine($"<color=#00AAFF>Defense: +{item.ScaledDefenseBonus(rarity):F0}</color>");
+            sb.AppendLine($"<color=#00AAFF>Defense: +{item.ScaledDefenseBonus(rarity):F0}</color> <color=#888888>(max {item.ScaledDefenseBonus(rarity):F0})</color>");
             hasStats = true;
         }
         if (item.ScaledCritRateBonus(rarity) > 0f)
         {
-            sb.AppendLine($"<color=#FF00FF>Crit Rate: +{item.ScaledCritRateBonus(rarity) * 100f:F1}%</color>");
+            sb.AppendLine($"<color=#FF00FF>Crit Rate: +{item.ScaledCritRateBonus(rarity) * 100f:F1}%</color> <color=#888888>(max {item.ScaledCritRateBonus(rarity) * 100f:F1}%)</color>");
             hasStats = true;
         }
         if (item.ScaledCritDamageMultiplier(rarity) > 1f)
         {
-            sb.AppendLine($"<color=#FF00FF>Crit Damage: +{(item.ScaledCritDamageMultiplier(rarity) - 1f) * 100f:F1}%</color>");
+            sb.AppendLine($"<color=#FF00FF>Crit Damage: +{(item.ScaledCritDamageMultiplier(rarity) - 1f) * 100f:F1}%</color> <color=#888888>(max {(item.ScaledCritDamageMultiplier(rarity) - 1f) * 100f:F1}%)</color>");
             hasStats = true;
         }
         if (item.ScaledMovementSpeedBonus(rarity) > 0f)
         {
-            sb.AppendLine($"<color=#00FFFF>Movement Speed: +{item.ScaledMovementSpeedBonus(rarity) * 100f:F1}%</color>");
+            sb.AppendLine($"<color=#00FFFF>Movement Speed: +{item.ScaledMovementSpeedBonus(rarity) * 100f:F1}%</color> <color=#888888>(max {item.ScaledMovementSpeedBonus(rarity) * 100f:F1}%)</color>");
             hasStats = true;
         }
         if (item.ScaledAttackSpeedBonus(rarity) > 0f)
         {
-            sb.AppendLine($"<color=#FFAA00>Attack Speed: +{item.ScaledAttackSpeedBonus(rarity) * 100f:F1}%</color>");
+            sb.AppendLine($"<color=#FFAA00>Attack Speed: +{item.ScaledAttackSpeedBonus(rarity) * 100f:F1}%</color> <color=#888888>(max {item.ScaledAttackSpeedBonus(rarity) * 100f:F1}%)</color>");
             hasStats = true;
         }
 
@@ -363,7 +369,7 @@ public class ItemTooltipManager : MonoBehaviour
         string statText = item.GetGemStatText();
         if (!string.IsNullOrEmpty(statText))
         {
-            sb.AppendLine($"<color=#00FF00>{statText}</color>");
+            sb.AppendLine($"<color=#00FF00>{statText} <color=#888888>(max)</color></color>");
         }
 
         return sb.ToString();

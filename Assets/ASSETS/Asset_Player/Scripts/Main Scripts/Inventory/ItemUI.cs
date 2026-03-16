@@ -18,6 +18,11 @@ public class ItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     [Header("Tooltip")]
     [SerializeField] private bool useTooltip = true; // Enable/disable tooltip for this item
 
+    /// <summary>
+    /// Disable global ItemTooltipManager tooltip for this item (used by Blacksmith UI)
+    /// </summary>
+    public void SetUseTooltip(bool enabled) => useTooltip = enabled;
+
     [Header("Item Data")]
     private Item itemData;
     private int itemAmount = 1;
