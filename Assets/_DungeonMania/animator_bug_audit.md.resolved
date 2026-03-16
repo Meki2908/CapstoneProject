@@ -1,0 +1,269 @@
+# 🔍 Player Animator Bug Audit — Các Bug Ngầm Có Thể Kẹt Animator
+
+> [!IMPORTANT]
+> Đã kiểm tra **23 scripts** liên quan player: tất cả State classes, WeaponController, Skill scripts, PlayerHealth, SkillLock, DamageDealer, StuckDetection.
+
+---
+
+## 🔴 BUG NGHIÊM TRỌNG (Chắc chắn gây kẹt)
+
+### Bug #1: [AttackState](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/AttackState.cs#4-374) thay đổi `animator.speed` toàn cục nhưng KHÔNG reset khi exit
+**File**: [AttackState.cs](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/AttackState.cs#L357)
+
+```csharp
+// Line 357 — ApplyAttackSpeedToAnimator() gán:
+character.animator.speed = attackSpeedMultiplier;
+```
+
+**Vấn đề**: `animator.speed` là **global** — ảnh hưởng **TẤT CẢ layers và states**. Khi exit AttackState, [Exit()](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/AttackState.cs#264-271) không reset `animator.speed = 1f`. Nếu `attackSpeedMultiplier` ≠ 1 (ví dụ equipment có bonus attack speed), thì sau khi đánh xong:
+- Locomotion animations chạy sai tốc độ
+- Draw/Sheath weapon animation bị nhanh/chậm bất thường
+- Jump, Dash, GetHit, Die... đều ảnh hưởng
+
+> [!CAUTION]
+> Đây là bug nghiêm trọng nhất. Nếu bonus attack speed > 0, **mọi animation sau attack đều bị sai speed**.
+
+**Fix**:
+```diff
+ // AttackState.Exit()
+ public override void Exit()
+ {
+     base.Exit();
+     if (hitHandler != null) hitHandler.CancelCurrentHit();
+     character.animator.SetFloat("speed", 0f);
+     character.animator.ResetTrigger("attack");
++    character.animator.speed = 1f; // Reset global animator speed
+ }
+```
+
+---
+
+### Bug #2: [DrawWeaponState](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/DrawWeaponState.cs#3-36) / [SheathWeaponState](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/SheathWeaponState.cs#5-8) kẹt vĩnh viễn nếu tên state không khớp
+**Files**: [DrawWeaponState.cs](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/DrawWeaponState.cs#L22-L27), [SheathWeaponState.cs](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/SheathWeaponState.cs#L19-L24)
+
+```csharp
+// DrawWeaponState.cs line 22-23:
+AnimatorStateInfo stateInfo = character.animator.GetCurrentAnimatorStateInfo(0);
+if (stateInfo.IsName("DrawWeapon") && stateInfo.normalizedTime >= 1.0f)
+
+// SheathWeaponState.cs line 19-20:
+AnimatorStateInfo stateInfo = character.animator.GetCurrentAnimatorStateInfo(0);
+if (stateInfo.IsName("SheathWeapon") && stateInfo.normalizedTime >= 1.0f)
+```
+
+**Vấn đề**: 
+1. `IsName("DrawWeapon")` so sánh **chính xác tên state** trong Animator Controller. Nếu state tên khác (vd: `Draw_Weapon`, `DrawWeapon_Sword`, hoặc nằm trong sub‐state machine dạng `WeaponLayer.DrawWeapon`), điều kiện **KHÔNG BAO GIỜ true** → player **kẹt vĩnh viễn** trong state này, không thể di chuyển hay làm gì.
+2. Chỉ check layer 0 (Base Layer), nhưng draw/sheath animation có thể play trên weapon layers (1/2/3).
+3. **Không có timeout fallback** — nếu animation bị lỗi hoặc tên sai, player mãi mãi kẹt.
+
+**Fix**:
+```diff
+ public override void LogicUpdate()
+ {
+     base.LogicUpdate();
++    timePassed += Time.deltaTime;
+     AnimatorStateInfo stateInfo = character.animator.GetCurrentAnimatorStateInfo(0);
+-    if (stateInfo.IsName("DrawWeapon") && stateInfo.normalizedTime >= 1.0f)
++    // Use tag instead of exact name, OR add timeout fallback
++    bool animDone = stateInfo.IsTag("DrawWeapon") && stateInfo.normalizedTime >= 1.0f;
++    bool timeout = timePassed >= 2.0f; // Safety timeout
++    if (animDone || timeout)
+     {
+         stateMachine.ChangeState(character.currentLocomotionState);
+     }
+ }
+```
+
+---
+
+### Bug #3: [DieState](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/DieState.cs#3-140) dùng `currentLocomotionState` thay vì `isWeaponDrawn` → sai layer khi chết
+**File**: [DieState.cs](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/DieState.cs#L43)
+
+```csharp
+// Line 43:
+bool isWeaponDrawn = character.currentLocomotionState is CombatMoveState;
+```
+
+**Vấn đề**: `currentLocomotionState` **stale** — nếu player vừa bị hit/interrupt rồi chết, `currentLocomotionState` có thể vẫn là [CombatMoveState](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/CombatMoveState.cs#4-91) dù thực tế vũ khí đã cất. Hoặc ngược lại. [GetHitState](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/GetHitState.cs#3-230) đã fix pattern này bằng cách dùng `character.isWeaponDrawn`, nhưng [DieState](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/DieState.cs#3-140) vẫn dùng pattern cũ.
+
+**Fix**:
+```diff
+-bool isWeaponDrawn = character.currentLocomotionState is CombatMoveState;
++bool isWeaponDrawn = character.isWeaponDrawn;
+```
+
+---
+
+### Bug #4: [DieState](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/DieState.cs#3-140) tắt `playerInput` nhưng weapon layers không reset → die animation sai
+**File**: [DieState.cs](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/DieState.cs#L64-L83)
+
+```csharp
+// DisableWeaponLayersForBaseDie() sets weapon layers to 0
+// But Exit() does NOT restore them!
+```
+
+**Vấn đề**: Khi player chết rồi được respawn (Exit DieState), weapon layers vẫn = 0. Animator sẽ không play weapon animations nào nữa cho đến khi `WeaponController.ReapplyWeaponLayers()` hoặc tương tự được gọi. Nếu respawn logic không gọi → player vĩnh viễn mất weapon animations.
+
+---
+
+## 🟡 BUG TIỀM ẨN (Xảy ra trong điều kiện race / edge case)
+
+### Bug #5: `SprintState.LogicUpdate()` — chuyển state sau khi đã chuyển
+**File**: [SprintState.cs](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/SprintState.cs#L72-L96)
+
+```csharp
+if (sprintJump) { stateMachine.ChangeState(character.sprintjumping); return; }
+if (sprint) { ... }
+else if (input.sqrMagnitude == 0f) { stateMachine.ChangeState(character.hardStop); }
+else { stateMachine.ChangeState(character.currentLocomotionState); }
+// ❌ THIẾU return ở đây!
+if (dash) { stateMachine.ChangeState(character.dashing); } // Vẫn chạy!
+```
+
+**Vấn đề**: Nếu `sprintJump = false` và `sprint = false` và `input = 0` (hoặc != 0), code sẽ gọi [ChangeState(hardStop)](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/StateMachine.cs#11-18) hoặc [ChangeState(currentLocomotionState)](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/StateMachine.cs#11-18), rồi **TIẾP TỤC** check `dash` và có thể gọi [ChangeState(dashing)](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/StateMachine.cs#11-18) ngay sau. Kết quả: **double state change trong 1 frame** — state trước bị Exit rồi Enter, rồi lại Exit cho state mới. Animator trigger bị lộn xộn.
+
+**Fix**:
+```diff
+ else if (input.sqrMagnitude == 0f)
+ {
+     stateMachine.ChangeState(character.hardStop);
++    return;
+ }
+ else
+ {
+     stateMachine.ChangeState(character.currentLocomotionState);
++    return;
+ }
+```
+
+---
+
+### Bug #6: `SkillLock.isPerformingSkill` kẹt `true` nếu Animation Event không fire
+**File**: [SkillLock.cs](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/Combat/SkillLock.cs)
+
+**Vấn đề**: [BeginSkillRootMotion()](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/Combat/SkillLock.cs#18-28) / [AE_LockCCAndApplyRootMotion()](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/Combat/SkillLock.cs#40-50) set `isPerformingSkill = true`. Nếu animation bị interrupt (bị hit, chết, scene transition) trước khi AE_Unlock fires → `isPerformingSkill` kẹt `true` vĩnh viễn:
+- `BaseMoveState.HandleInput()` sẽ zero tất cả input
+- `BaseMoveState.PhysicsUpdate()` chỉ apply gravity
+- [CombatMoveState](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/CombatMoveState.cs#4-91) skip tất cả logic
+- **Player hoàn toàn đứng yên, không di chuyển/tấn công được**
+
+Không có safety timeout hay reset mechanism nào.
+
+**Fix**:
+```diff
++private float skillStartTime;
++private const float MAX_SKILL_DURATION = 5f; // Safety timeout
+
+ public void BeginSkillRootMotion(Animator animator, bool enableRootMotion = true)
+ {
+     isPerformingSkill = true;
++    skillStartTime = Time.time;
+     ...
+ }
+
++private void Update()
++{
++    // Safety timeout nếu AE không fire
++    if (isPerformingSkill && Time.time - skillStartTime > MAX_SKILL_DURATION)
++    {
++        Debug.LogWarning("[SkillLock] Safety timeout! Force-ending skill lock.");
++        EndSkillRootMotion(_animator);
++    }
++    ...
++}
+```
+
+---
+
+### Bug #7: [GetHitState](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/GetHitState.cs#3-230) → [ResumeAttackState()](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/GetHitState.cs#211-216) có thể gọi `AttackState.Enter()` khi `isWeaponDrawn = false`
+**File**: [GetHitState.cs](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/GetHitState.cs#L202-L214)
+
+```csharp
+private bool ShouldResumeAttack() {
+    return (character.lastStateBeforeHit == character.attacking) &&
+           (Time.time - character.lastAttackInputTime < 1.0f || ...);
+}
+// → Nếu true, gọi stateMachine.ChangeState(character.attacking)
+```
+
+**Vấn đề**: Nếu player bị hit trong lúc đang draw weapon → lúc resume, [ShouldResumeAttack()](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/GetHitState.cs#202-210) có thể return true dù vũ khí đã cất. `AttackState.Enter()` có guard check `isWeaponDrawn`, nhưng nếu vào rồi exit ngay lập tức, việc **liên tục Enter → Exit** có thể gây flicker animator triggers.
+
+---
+
+### Bug #8: [CombatMoveState](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/CombatMoveState.cs#4-91) set trigger `attack` trước [ChangeState(attacking)](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/StateMachine.cs#11-18) → double trigger
+**File**: [CombatMoveState.cs](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/CombatMoveState.cs#L72-L74)
+
+```csharp
+if (attack && stateMachine.currentState != character.attacking)
+{
+    character.animator.SetTrigger("attack");
+    stateMachine.ChangeState(character.attacking);
+}
+```
+
+Rồi `AttackState.Enter()` line 101:
+```csharp
+character.animator.SetTrigger("attack");
+```
+
+**Vấn đề**: Trigger `attack` được set **HAI LẦN** — một lần ở CombatMoveState, một lần ở AttackState.Enter(). Nếu Animator Controller consume trigger ở lần đầu và transition, lần thứ hai sẽ queue trigger cho transition tiếp theo → có thể **tự động chuyển sang attack clip thứ 2** mà player không nhấn.
+
+**Fix**: Bỏ `SetTrigger("attack")` ở [CombatMoveState](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/CombatMoveState.cs#4-91) vì `AttackState.Enter()` đã xử lý:
+```diff
+ if (attack && stateMachine.currentState != character.attacking)
+ {
+-    character.animator.SetTrigger("attack");
+     stateMachine.ChangeState(character.attacking);
+ }
+```
+
+---
+
+### Bug #9: `StandingState.Enter()` force set `isWeaponDrawn = false` → conflict khi weapon chưa cất xong
+**File**: [StandingState.cs](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/StandingState.cs#L15-L21)
+
+```csharp
+public override void Enter()
+{
+    base.Enter();
+    drawWeapon = false;
+    sheathWeapon = true;   // ← force sheathWeapon = true
+    character.isWeaponDrawn = false;  // ← force false mỗi khi enter
+}
+```
+
+**Vấn đề**: Nếu player transition vào StandingState từ GetHitState/DashState/JumpingState trong khi vũ khí **vẫn đang drawn** (do draw animation chưa kịp cất), `isWeaponDrawn` bị force `false` nhưng weapon visuals vẫn hiện. Animator state và logic state mất đồng bộ.
+
+---
+
+### Bug #10: [HardStopState](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/HardStopState.cs#3-73) không check input — player kẹt 0.5s không thể hành động
+**File**: [HardStopState.cs](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/HardStopState.cs)
+
+**Vấn đề**: [HandleInput()](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/JumpingState.cs#35-41) không được override → không đọc input nào. [LogicUpdate()](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/DrawWeaponState.cs#17-29) chỉ chờ timer hết. Trong 0.5 giây, player **hoàn toàn không responsive** — không jump, dash, attack, toggle weapon được. Nếu enemy đánh trong lúc này, player không có cách nào phản ứng.
+
+---
+
+## 🟢 LƯU Ý NHỎ (Không kẹt nhưng nên sửa)
+
+| # | Mô tả | File |
+|---|-------|------|
+| 11 | `SprintState.PhysicsUpdate()` gọi `GetComponent<WeaponController>()` **mỗi frame** — nên cache | SprintState.cs:112 |
+| 12 | `BaseMoveState.PhysicsUpdate()` cũng gọi `GetComponent<WeaponController>()` mỗi frame | BaseMoveState.cs:124 |
+| 13 | [AttackState](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/AttackState.cs#4-374) import `UnityEditor.Timeline.Actions` — sẽ **build fail** khi export game | AttackState.cs:1 |
+| 14 | [CombatMoveState](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/CombatMoveState.cs#4-91) cũng import `UnityEditor.Timeline.Actions` — build fail | CombatMoveState.cs:1 |
+| 15 | `SwordSkills.TryUse()` không check `skillLock.isPerformingSkill` trước khi dùng skill (Axe/Mage có check) | SwordSkills.cs:120-161 |
+
+---
+
+## 📋 Tóm Tắt — Bugs Cần Fix Khẩn Cấp
+
+| Priority | Bug # | Mô tả ngắn | Khó fix? |
+|----------|-------|------------|----------|
+| 🔴 P0 | #1 | `animator.speed` không reset sau attack | ⚡ 1 dòng |
+| 🔴 P0 | #2 | Draw/Sheath kẹt vĩnh viễn nếu tên state sai | ⚡ Thêm timeout |
+| 🔴 P0 | #6 | `SkillLock.isPerformingSkill` kẹt nếu AE miss | 💪 Thêm timeout |
+| 🟡 P1 | #5 | [SprintState](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/SprintState.cs#14-19) double state change | ⚡ Thêm return |
+| 🟡 P1 | #8 | Double attack trigger | ⚡ Bỏ 1 dòng |
+| 🟡 P1 | #3 | [DieState](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/DieState.cs#3-140) dùng sai flag để check weapon | ⚡ 1 dòng |
+| 🟡 P2 | #4 | [DieState](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Asset_Player/Scripts/Main%20Scripts/New%20Character/DieState.cs#3-140) không restore layers khi exit | 💪 Thêm logic |
+| 🟡 P2 | #13-14 | `using UnityEditor` gây build fail | ⚡ Xóa 2 dòng |
