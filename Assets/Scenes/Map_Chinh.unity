@@ -32529,7 +32529,7 @@ Light:
   m_LightShadowCasterMode: 2
   m_AreaSize: {x: 0.5, y: 0.5}
   m_BounceIntensity: 1
-  m_ColorTemperature: 4000
+  m_ColorTemperature: 12648
   m_UseColorTemperature: 1
   m_BoundingSphereOverride: {x: 4.9839e-41, y: 2.524355e-29, z: 0, w: 1.4546743e-37}
   m_UseBoundingSphereOverride: 0
@@ -40102,17 +40102,6 @@ MonoBehaviour:
   pingPong: 0
   faceMoveDirection: 1
   ignoreY: 0
---- !u!114 &1324118257 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 669381696938335316, guid: 2ff353cc0bc98564da251be2356a6586, type: 3}
-  m_PrefabInstance: {fileID: 1952067875}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!23 &1325304761 stripped
 MeshRenderer:
   m_CorrespondingSourceObject: {fileID: -4238134510136293435, guid: f5e220629da60214580190603203fdf0, type: 3}
@@ -40395,7 +40384,7 @@ CharacterController:
   m_StepOffset: 0.3
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
-  m_Center: {x: 0, y: 0.5, z: 0}
+  m_Center: {x: 0, y: 1, z: 0}
 --- !u!54 &1340270326
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -86115,7 +86104,7 @@ PrefabInstance:
     - target: {fileID: 430314936359024352, guid: 2ff353cc0bc98564da251be2356a6586, type: 3}
       propertyPath: socketButtonText
       value: 
-      objectReference: {fileID: 1324118257}
+      objectReference: {fileID: 0}
     - target: {fileID: 430314936359024352, guid: 2ff353cc0bc98564da251be2356a6586, type: 3}
       propertyPath: equipmentGemSlotsParent
       value: 
