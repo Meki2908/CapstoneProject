@@ -90,14 +90,14 @@ public class QuestJournalUI : MonoBehaviour
         Debug.Log($"[QuestJournal] Displaying Active Quest: {quest.questTitle} (ID: {quest.questID})");
 
         // 1. Quest title
-        if (titleText)    titleText.text    = quest.questTitle;
-        if (hudTitleText) hudTitleText.text = quest.questTitle;
+        if (titleText != null)    titleText.text    = quest.questTitle;
+        if (hudTitleText != null) hudTitleText.text = quest.questTitle;
 
         // 2. Current step activity (stepTitle)
         string activity = step != null ? step.stepTitle : "Quest Complete!";
-        Debug.Log($"[QuestJournal] Current Step: {activity}");
-        if (instructionText) instructionText.text = activity;
-        if (hudStepText)     hudStepText.text     = $"► {activity}";
+        // Debug.Log($"[QuestJournal] Current Step: {activity}");
+        if (instructionText != null) instructionText.text = activity;
+        if (hudStepText != null)     hudStepText.text     = $"► {activity}";
 
         // 3. Quest description
         if (descriptionText) descriptionText.text = quest.questDescription;
@@ -107,11 +107,11 @@ public class QuestJournalUI : MonoBehaviour
 
     void SetEmpty()
     {
-        if (titleText)       titleText.text       = emptyQuestTitle;
-        if (descriptionText) descriptionText.text = emptyQuestDesc;
-        if (instructionText) instructionText.text = emptyQuestInstruction;
+        if (titleText != null)       titleText.text       = emptyQuestTitle;
+        if (descriptionText != null) descriptionText.text = emptyQuestDesc;
+        if (instructionText != null) instructionText.text = emptyQuestInstruction;
 
-        if (hudTitleText)    hudTitleText.text     = "";
-        if (hudStepText)     hudStepText.text      = "";
+        if (hudTitleText != null)    hudTitleText.text     = "";
+        if (hudStepText != null)     hudStepText.text      = "";
     }
 }

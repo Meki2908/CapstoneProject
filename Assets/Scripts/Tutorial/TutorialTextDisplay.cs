@@ -55,6 +55,7 @@ public class TutorialTextDisplay : MonoBehaviour
     WeaponSwapper     _weaponSwapper;
     EnemyDetection    _enemyDetection;
     Character         _character;
+    WeaponController  _weaponController;
 
     // ─────────────────────────────────────────────────────────────────────────
     //  Step Constants
@@ -123,6 +124,13 @@ public class TutorialTextDisplay : MonoBehaviour
         _weaponSwapper  = FindFirstObjectByType<WeaponSwapper>(FindObjectsInactive.Include);
         _enemyDetection = FindFirstObjectByType<EnemyDetection>(FindObjectsInactive.Include);
         _character      = FindFirstObjectByType<Character>(FindObjectsInactive.Include);
+        _weaponController = FindFirstObjectByType<WeaponController>(FindObjectsInactive.Include);
+
+        if (_weaponController != null)
+        {
+            _weaponController.OnWeaponChanged += OnWeaponChangedFromController;
+            Debug.Log("[Tutorial] Auto-subscribed to WeaponController.OnWeaponChanged");
+        }
 
         if (_weaponSwapper != null)
         {
@@ -135,6 +143,19 @@ public class TutorialTextDisplay : MonoBehaviour
         }
 
         StartCoroutine(ShowDelayed(0));
+    }
+
+    void OnDestroy()
+    {
+        if (_weaponController != null)
+        {
+            _weaponController.OnWeaponChanged -= OnWeaponChangedFromController;
+        }
+    }
+
+    void OnWeaponChangedFromController(WeaponSO weapon)
+    {
+        OnWeaponChanged();
     }
 
     void Update()
