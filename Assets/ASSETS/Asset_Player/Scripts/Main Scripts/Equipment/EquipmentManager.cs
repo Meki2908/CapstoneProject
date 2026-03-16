@@ -486,11 +486,8 @@ public class EquipmentManager : MonoBehaviour
         int currentGemId = equipmentSlots.gemSlotIds[idx];
         if (currentGemId < 0) return false;
 
-        // PRESERVE rolled value when returning to inventory
-        float rolledValue = equipmentSlots.gemRolledValues[idx];
-        Item gem = InventoryManager.Instance.GetItemById(currentGemId);
-        Rarity gemRarity = (gem != null) ? gem.rarity : Rarity.Common;
-        InventoryManager.Instance.AddItemWithRoll(currentGemId, 1, gemRarity, rolledValue);
+        // Gem is DESTROYED when removed from equipment (not returned to inventory)
+        Debug.Log($"[EquipmentManager] Gem id={currentGemId} destroyed on removal from equipment slot {equipSlotIndex} gem {gemSlotIndex}");
 
         equipmentSlots.gemSlotIds[idx] = -1;
         equipmentSlots.gemRolledValues[idx] = 0f;

@@ -129,8 +129,9 @@ public class SocketingManager : MonoBehaviour
         }
         else
         {
-            // THẤT BẠI — chỉ mất crystal, gem KHÔNG mất
-            Debug.Log($"[SocketingManager] FAIL! Crystal consumed, gem returned. (rate={successRate:P0}, roll={roll:F2})");
+            // THẤT BẠI — mất cả crystal LẪN gem
+            InventoryManager.Instance.RemoveItem(gem.id, 1);
+            Debug.Log($"[SocketingManager] FAIL! Crystal + Gem destroyed. (rate={successRate:P0}, roll={roll:F2})");
             OnSocketAttempt?.Invoke(SocketResult.Fail, gem, crystal);
             return SocketResult.Fail;
         }
@@ -194,9 +195,67 @@ public class SocketingManager : MonoBehaviour
         }
         else
         {
-            // THẤT BẠI — chỉ mất crystal, gem KHÔNG mất
-            Debug.Log($"[SocketingManager] FAIL! Crystal consumed, gem returned. (rate={successRate:P0}, roll={roll:F2})");
+            // THẤT BẠI — mất cả crystal LẪN gem
+            InventoryManager.Instance.RemoveItem(gem.id, 1);
+            Debug.Log($"[SocketingManager] FAIL! Crystal + Gem destroyed. (rate={successRate:P0}, roll={roll:F2})");
             OnSocketAttempt?.Invoke(SocketResult.Fail, gem, crystal);
+            return SocketResult.Fail;
+        }
+    }
+
+    /// <summary>
+    /// Try to equip an equipment item using crystal stone (success rate mechanic).
+    /// Success: equipment consumed from inventory, placed in slot, crystal consumed.
+    /// Failure: only crystal consumed, equipment stays in inventory.
+    /// </summary>
+    public SocketResult TrySocketEquipmentItem(int equipSlotIndex, Item equipItem, Rarity equipRarity, Item crystal)
+    {
+        // Validate
+        if (equipItem == null || equipItem.itemType != ItemType.Equipment)
+            return SocketResult.NoGem; // reuse enum: NoGem = no item to socket
+        if (crystal == null || crystal.itemType != ItemType.CrystalStone)
+            return SocketResult.NoCrystal;
+        if (EquipmentManager.Instance == null || InventoryManager.Instance == null)
+            return SocketResult.NoTarget;
+        if (equipSlotIndex < 0 || equipSlotIndex >= 4)
+            return SocketResult.InvalidSlot;
+
+        // Check inventory has both items
+        if (InventoryManager.Instance.GetItemAmount(equipItem.id, equipRarity) <= 0)
+            return SocketResult.NoGem;
+        if (InventoryManager.Instance.GetItemAmount(crystal.id) <= 0)
+            return SocketResult.NoCrystal;
+
+        // Success rate based on equipment rarity vs crystal rarity
+        float successRate = CalculateSuccessRate(equipRarity, crystal.rarity);
+
+        // Always consume crystal
+        InventoryManager.Instance.RemoveItem(crystal.id, 1);
+
+        // Roll
+        float roll = UnityEngine.Random.Range(0f, 1f);
+        if (roll <= successRate)
+        {
+            // SUCCESS — equip item to slot
+            bool equipped = EquipmentManager.Instance.EquipItemByIndex(equipSlotIndex, equipItem, equipRarity);
+            if (equipped)
+            {
+                Debug.Log($"[SocketingManager] SUCCESS! Equipped {equipItem.itemName} [{equipRarity}] to slot {equipSlotIndex} (rate={successRate:P0})");
+                OnSocketAttempt?.Invoke(SocketResult.Success, equipItem, crystal);
+                return SocketResult.Success;
+            }
+            else
+            {
+                // Equip failed — refund crystal
+                InventoryManager.Instance.AddItem(crystal.id, 1, crystal.rarity);
+                return SocketResult.InvalidSlot;
+            }
+        }
+        else
+        {
+            // FAILURE — only crystal consumed, equipment stays in inventory
+            Debug.Log($"[SocketingManager] FAIL! Crystal consumed, equipment returned. (rate={successRate:P0}, roll={roll:F2})");
+            OnSocketAttempt?.Invoke(SocketResult.Fail, equipItem, crystal);
             return SocketResult.Fail;
         }
     }

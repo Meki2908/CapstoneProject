@@ -71,7 +71,7 @@ public class SocketingSlotUI : MonoBehaviour, IPointerClickHandler, IPointerEnte
                 gemIcon.color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
             }
             if (slotBackground) slotBackground.color = emptyColor;
-            if (slotLabel) slotLabel.text = "Trống";
+            if (slotLabel) slotLabel.text = "Empty";
         }
 
         // Highlight border

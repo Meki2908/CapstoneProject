@@ -79,6 +79,8 @@ public class BlacksmithUI : MonoBehaviour
     private Item selectedGem = null;
     private int selectedGemSlotIndex = -1;
     private Item selectedCrystal = null;
+    private Item selectedEquipment = null;       // Equipment tab: selected equipment item
+    private Rarity selectedEquipmentRarity;       // Equipment tab: rarity of selected equipment
     private bool _isClosing = false; // Guard against double Close() invocation
 
     // ─── Gem Removal Confirmation State ──────────────────────────
@@ -418,7 +420,8 @@ public class BlacksmithUI : MonoBehaviour
         selectedGem = null;
         selectedCrystal = null;
         selectedGemSlotIndex = -1;
-        ClearPendingRemoval(); // Reset removal confirmation khi đổi context
+        selectedEquipment = null;
+        ClearPendingRemoval();
         UpdateGemDropDisplay();
     }
 
@@ -428,12 +431,39 @@ public class BlacksmithUI : MonoBehaviour
         selectedEquipmentSlot = -1;
     }
 
+    // ─── Equipment Item Selection (Equipment Tab) ────────────────
+
+    /// <summary>
+    /// Select an equipment item from inventory for socketing (Equipment tab).
+    /// Auto-detects the target slot from the item's equipmentSlot.
+    /// </summary>
+    public void SelectEquipmentItem(Item equipItem, Rarity rarity)
+    {
+        if (equipItem == null || equipItem.itemType != ItemType.Equipment) return;
+        selectedEquipment = equipItem;
+        selectedEquipmentRarity = rarity;
+        selectedEquipmentSlot = EquipmentSlotToIndex(equipItem.equipmentSlot);
+        UpdateGemDropDisplay();
+        UpdateSuccessRate();
+        RefreshEquipmentDisplay();
+        RefreshViewports();
+    }
+
     // ─── Socket Button ───────────────────────────────────────────
 
     void OnSocketButtonClicked()
     {
         if (SocketingManager.Instance == null) return;
-        if (selectedGem == null || selectedCrystal == null || selectedGemSlotIndex < 0) return;
+
+        // Validate based on tab
+        if (currentTab == ActiveTab.Weapon)
+        {
+            if (selectedGem == null || selectedCrystal == null || selectedGemSlotIndex < 0) return;
+        }
+        else
+        {
+            if (selectedEquipment == null || selectedCrystal == null) return;
+        }
 
         // Disable button during animation
         if (socketButton) socketButton.interactable = false;
@@ -478,17 +508,20 @@ public class BlacksmithUI : MonoBehaviour
         }
         else
         {
-            if (selectedEquipmentSlot < 0) { if (socketButton) socketButton.interactable = true; yield break; }
-            result = SocketingManager.Instance.TrySocketEquipment(
-                selectedEquipmentSlot, selectedGemSlotIndex, selectedGem, selectedCrystal);
+            if (selectedEquipment == null || selectedEquipmentSlot < 0)
+            { if (socketButton) socketButton.interactable = true; yield break; }
+            result = SocketingManager.Instance.TrySocketEquipmentItem(
+                selectedEquipmentSlot, selectedEquipment, selectedEquipmentRarity, selectedCrystal);
         }
 
         ShowResult(result);
 
-        // Clear crystal selection (consumed)
+        // Clear consumed items
         if (result == SocketResult.Success || result == SocketResult.Fail)
         {
             selectedCrystal = null;
+            if (currentTab == ActiveTab.Equipment)
+                selectedEquipment = null; // Clear equipment selection after attempt
         }
 
         RefreshAll();
@@ -506,7 +539,10 @@ public class BlacksmithUI : MonoBehaviour
                 resultText.color = new Color(0.2f, 0.9f, 0.3f);
                 break;
             case SocketResult.Fail:
-                resultText.text = "SOCKETING FAILED!\nCrystal Stone consumed. Gem returned.";
+                if (currentTab == ActiveTab.Weapon)
+                    resultText.text = "SOCKETING FAILED!\nCrystal Stone and Gem destroyed.";
+                else
+                    resultText.text = "SOCKETING FAILED!\nCrystal Stone consumed. Equipment returned.";
                 resultText.color = new Color(0.9f, 0.3f, 0.2f);
                 break;
             case SocketResult.NoGem:
@@ -645,16 +681,7 @@ public class BlacksmithUI : MonoBehaviour
                 weaponGemSlots[i].SetGem(gem, i == selectedGemSlotIndex);
             }
         }
-        else if (currentTab == ActiveTab.Equipment)
-        {
-            if (equipmentGemSlots == null || selectedEquipmentSlot < 0) return;
-
-            for (int i = 0; i < equipmentGemSlots.Length && i < 4; i++)
-            {
-                Item gem = EquipmentManager.Instance?.GetEquippedGem(selectedEquipmentSlot, i);
-                equipmentGemSlots[i].SetGem(gem, i == selectedGemSlotIndex);
-            }
-        }
+        // Equipment tab: no gem slots (equipment uses equipment items, not gems)
     }
 
     void RefreshViewports()
@@ -696,14 +723,10 @@ public class BlacksmithUI : MonoBehaviour
                     continue;
             }
 
-            // Filter: Equipment tab → Equipment + CrystalStone only (no Gems)
+            // Filter: Equipment tab → Equipment + CrystalStone only
             if (currentTab == ActiveTab.Equipment)
             {
-                // Always hide non-equipment/non-crystal items
                 if (item.itemType != ItemType.Equipment && item.itemType != ItemType.CrystalStone)
-                    continue;
-                // If a slot is selected, further filter equipment by matching slot
-                if (filterSlot.HasValue && item.itemType == ItemType.Equipment && item.equipmentSlot != filterSlot.Value)
                     continue;
             }
 
@@ -785,7 +808,20 @@ public class BlacksmithUI : MonoBehaviour
                     outline.effectDistance = new Vector2(6, 6);
                 }
             }
-            // All other items (equipment, etc.) — display normally, no dimming
+            else if (item.itemType == ItemType.Equipment)
+            {
+                Rarity capturedRarity = rarity;
+                btn.onClick.AddListener(() => SelectEquipmentItem(capturedItem, capturedRarity));
+
+                // Highlight if currently selected
+                if (selectedEquipment != null && selectedEquipment.id == item.id && selectedEquipmentRarity == rarity)
+                {
+                    var outline = go.AddComponent<Outline>();
+                    outline.effectColor = new Color(1f, 0.84f, 0f);
+                    outline.effectDistance = new Vector2(6, 6);
+                }
+            }
+            // All other items — display normally, no dimming
 
             // ── Tooltip hover via EventTrigger ──
             // Pass rolled value for gems
@@ -831,11 +867,26 @@ public class BlacksmithUI : MonoBehaviour
 
     void UpdateGemDropDisplay()
     {
+        // Determine what item to show in the drop zone based on current tab
+        Item displayItem = null;
+        string emptyHint = "";
+
+        if (currentTab == ActiveTab.Weapon)
+        {
+            displayItem = selectedGem;
+            emptyHint = "Select Gem from inventory\nto socket into weapon";
+        }
+        else
+        {
+            displayItem = selectedEquipment;
+            emptyHint = "Select Equipment from inventory\nto equip into slot";
+        }
+
         if (gemDropIcon != null)
         {
-            if (selectedGem != null)
+            if (displayItem != null)
             {
-                gemDropIcon.sprite = selectedGem.icon;
+                gemDropIcon.sprite = displayItem.icon;
                 gemDropIcon.enabled = true;
                 gemDropIcon.color = Color.white;
             }
@@ -848,12 +899,20 @@ public class BlacksmithUI : MonoBehaviour
 
         if (gemDropText != null)
         {
-            gemDropText.text = (selectedGem != null)
-                ? $"<color={Item.GetRarityColorHex(selectedGem.rarity)}>{selectedGem.itemName}</color>"
-                : "";
+            if (displayItem != null)
+            {
+                Rarity r = (currentTab == ActiveTab.Weapon && selectedGem != null) ? selectedGem.rarity
+                         : (currentTab == ActiveTab.Equipment && selectedEquipment != null) ? selectedEquipmentRarity
+                         : Rarity.Common;
+                gemDropText.text = $"<color={Item.GetRarityColorHex(r)}>{displayItem.itemName}</color>";
+            }
+            else
+            {
+                gemDropText.text = "";
+            }
         }
 
-        SetDropSlotTooltip(gemDropIcon, selectedGem, "Select Gem from inventory\nto socket into equipment or weapon");
+        SetDropSlotTooltip(gemDropIcon, displayItem, emptyHint);
     }
 
     void UpdateSuccessRate()
@@ -869,17 +928,16 @@ public class BlacksmithUI : MonoBehaviour
 
             if (currentTab == ActiveTab.Weapon)
             {
-                // Weapon: tỉ lệ dựa trên rarity của gem (gem càng hiếm → cần crystal tốt hơn)
                 targetRarity = (selectedGem != null) ? selectedGem.rarity : Rarity.Common;
                 canSocket = selectedGem != null && selectedGemSlotIndex >= 0;
             }
-            else if (selectedEquipmentSlot >= 0 && EquipmentManager.Instance != null)
+            else
             {
-                var equip = EquipmentManager.Instance.GetEquippedItemByIndex(selectedEquipmentSlot);
-                if (equip != null)
+                // Equipment tab: rate based on equipment rarity vs crystal rarity
+                if (selectedEquipment != null)
                 {
-                    targetRarity = EquipmentManager.Instance.GetEquippedRarity(selectedEquipmentSlot);
-                    canSocket = selectedGem != null && selectedGemSlotIndex >= 0;
+                    targetRarity = selectedEquipmentRarity;
+                    canSocket = true;
                 }
             }
 
@@ -906,7 +964,10 @@ public class BlacksmithUI : MonoBehaviour
 
         if (socketButtonText)
         {
-            socketButtonText.text = canSocket ? "SOCKET GEM" : "Select Gem + Crystal + Slot";
+            if (currentTab == ActiveTab.Weapon)
+                socketButtonText.text = canSocket ? "SOCKET GEM" : "Select Gem + Crystal + Slot";
+            else
+                socketButtonText.text = canSocket ? "EQUIP ITEM" : "Select Equipment + Crystal";
         }
     }
 
@@ -1257,5 +1318,18 @@ public class BlacksmithUI : MonoBehaviour
                 break;
         }
         return sb.ToString().TrimEnd();
+    }
+
+    // ─── Helper: EquipmentSlotType → index ────────────────────────
+    int EquipmentSlotToIndex(EquipmentSlotType slot)
+    {
+        switch (slot)
+        {
+            case EquipmentSlotType.Head: return 0;
+            case EquipmentSlotType.Body: return 1;
+            case EquipmentSlotType.Legs: return 2;
+            case EquipmentSlotType.Accessory: return 3;
+            default: return 0;
+        }
     }
 }

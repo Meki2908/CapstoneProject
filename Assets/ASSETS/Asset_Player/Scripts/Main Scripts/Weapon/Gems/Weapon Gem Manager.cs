@@ -195,11 +195,8 @@ public class WeaponGemManager : MonoBehaviour
         int currentId = weaponSlots[(int)weaponType].slotItemIds[slotIndex];
         if (currentId < 0) return false;
 
-        // PRESERVE rolled value when returning to inventory
-        float rolledValue = weaponSlots[(int)weaponType].slotRolledValues[slotIndex];
-        Item gem = InventoryManager.Instance.GetItemById(currentId);
-        Rarity gemRarity = (gem != null) ? gem.rarity : Rarity.Common;
-        InventoryManager.Instance.AddItemWithRoll(currentId, 1, gemRarity, rolledValue);
+        // Gem is DESTROYED when removed from weapon (not returned to inventory)
+        Debug.Log($"[WeaponGemManager] Gem id={currentId} destroyed on removal from {weaponType} slot {slotIndex}");
 
         weaponSlots[(int)weaponType].slotItemIds[slotIndex] = -1;
         weaponSlots[(int)weaponType].slotRolledValues[slotIndex] = 0f;
