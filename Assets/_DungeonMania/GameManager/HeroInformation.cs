@@ -79,6 +79,16 @@ public class HeroInformation : MonoBehaviour {
                 player.sword = itemDataBase.swords[player.currentSwordIndex];
             player.score = 0;
             alive = true;
+
+            // Áp dụng level reset từ Tutorial (nếu có)
+            if (PlayerPrefs.HasKey("TUTORIAL_RESET_PLAYER_LEVEL"))
+            {
+                int resetLevel = PlayerPrefs.GetInt("TUTORIAL_RESET_PLAYER_LEVEL", 1);
+                player.playerLevel = resetLevel;
+                PlayerPrefs.DeleteKey("TUTORIAL_RESET_PLAYER_LEVEL");
+                PlayerPrefs.Save();
+                Debug.Log($"[HeroInformation] Tutorial reset: playerLevel → {resetLevel}");
+            }
         }
         else if (PlayerPrefs.HasKey("PlayerSave1")) {
             player = (PlayerClass)ObjectSerialization.Load("PlayerSave1");
