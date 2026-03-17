@@ -6,17 +6,19 @@ using UnityEngine.EventSystems;
 
 public class PortalUIController : MonoBehaviour
 {
-    [Header("Portal Destinations (Kéo SpawnPoint của 3 cổng vào đây)")]
+    [Header("Portal Destinations (Kéo SpawnPoint của các cổng vào đây)")]
     // Bạn nên tạo một Empty GameObject đặt nhích ra phía trước mặt của chiếc cổng
     // và dùng GameObject đó làm Transform đích để người chơi không bị teleport đè vào lưới cổng 
     public Transform portal1_Dest;
     public Transform portal2_Dest;
     public Transform portal3_Dest;
+    public Transform portal4_Dest;
 
-    [Header("UI Buttons (Kéo 4 nút vào đây)")]
+    [Header("UI Buttons")]
     public Button btnPortal1;
     public Button btnPortal2;
     public Button btnPortal3;
+    public Button btnPortal4;
     public Button btnClose;
 
     [Header("── Quest Advance (tuỳ chọn) ──")]
@@ -57,6 +59,7 @@ public class PortalUIController : MonoBehaviour
         if (btnPortal1 != null) btnPortal1.onClick.AddListener(() => TeleportTo(portal1_Dest, 1));
         if (btnPortal2 != null) btnPortal2.onClick.AddListener(() => TeleportTo(portal2_Dest, 2));
         if (btnPortal3 != null) btnPortal3.onClick.AddListener(() => TeleportTo(portal3_Dest, 3));
+        if (btnPortal4 != null) btnPortal4.onClick.AddListener(() => TeleportTo(portal4_Dest, 4));
         if (btnClose   != null) btnClose.onClick.AddListener(ClosePortalMenu);
     }
 
