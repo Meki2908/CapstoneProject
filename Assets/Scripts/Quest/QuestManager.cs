@@ -60,6 +60,16 @@ public class QuestManager : MonoBehaviour
     /// <summary>Đọc lại tất cả trạng thái từ PlayerPrefs (gọi khi scene load xong).</summary>
     public void RefreshFromPrefs()
     {
+        // Guard: nếu đã có in-memory state hợp lệ (Quest 1 đã hoàn thành)
+        // thì không cần đọc lại từ PlayerPrefs — tránh bị SetGlobalVar() ghi đè
+        if (_states.Count > 0 &&
+            _states.TryGetValue(1, out var existingQ1) &&
+            existingQ1 == QuestState.Completed)
+        {
+            Debug.Log("[QuestManager] RefreshFromPrefs skipped – valid in-memory state already present.");
+            return;
+        }
+
         _states.Clear();
         _stepIndex.Clear();
 

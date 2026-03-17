@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using TMPro;
 using System.Text;
 
@@ -34,6 +35,29 @@ public class QuestJournalUI : MonoBehaviour
     {
         if (rootPanel) rootPanel.SetActive(false);
         else Debug.LogError("[QuestJournalUI] rootPanel is NOT assigned!");
+
+        // Đăng ký event để force-close journal khi scene mới load
+        // (xử lý trường hợp object là DontDestroyOnLoad, Start() không chạy lại)
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    void OnDestroy()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        // Luôn đóng journal khi scene mới load — tránh bị mở tự động
+        if (rootPanel && rootPanel.activeSelf)
+        {
+            rootPanel.SetActive(false);
+            _isOpen = false;
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+        }
+        // Refresh text nhưng KHÔNG mở panel
+        RefreshUI(0);
     }
 
     void Update()
@@ -68,7 +92,7 @@ public class QuestJournalUI : MonoBehaviour
     public void ToggleJournal()
     {
         if (rootPanel == null) return;
-        _isOpen = !rootPanel.activeSelf;
+        _isOpen = !rootPanel.activeSelf; // luôn đọc từ panel để tránh lệch state
         rootPanel.SetActive(_isOpen);
         Cursor.visible   = _isOpen;
         Cursor.lockState = _isOpen ? CursorLockMode.None : CursorLockMode.Locked;

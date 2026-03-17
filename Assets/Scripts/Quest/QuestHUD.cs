@@ -41,18 +41,14 @@ public class QuestHUD : MonoBehaviour
 
         if (activeQuest != null)
         {
-            if (rootPanel) rootPanel.SetActive(true);
+            // Chỉ update text, không tự toggle panel
+            // Panel được bật/tắt bởi QuestJournalUI (phím J)
             if (titleText) titleText.text = activeQuest.questTitle;
             if (instructionText) 
             {
                 if (activeStep != null) instructionText.text = activeStep.instruction;
                 else instructionText.text = "Goal reached!";
             }
-        }
-        else
-        {
-            // Hide HUD if no active quest
-            if (rootPanel) rootPanel.SetActive(false);
         }
     }
 }
