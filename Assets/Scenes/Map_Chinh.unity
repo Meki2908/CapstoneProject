@@ -956,6 +956,17 @@ Light:
   m_LightUnit: 1
   m_LuxAtDistance: 1
   m_EnableSpotReflector: 1
+--- !u!114 &1086865300 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5442119404096795018, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
+  m_PrefabInstance: {fileID: 1095817072}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9dfa5b682dcd46bda6128250e975f58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachineCamera
 --- !u!114 &1088207897 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 8168478911354284952, guid: 2fe1e0bda42d5504583cd67c68080b0c, type: 3}
@@ -2598,6 +2609,10 @@ PrefabInstance:
       propertyPath: portalUI
       value: 
       objectReference: {fileID: 1807593179}
+    - target: {fileID: 5276883403219167402, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
+      propertyPath: pressFHintCanvas
+      value: 
+      objectReference: {fileID: 116380263}
     - target: {fileID: 5630105597604377843, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
       propertyPath: m_Name
       value: Portal
@@ -2650,10 +2665,18 @@ PrefabInstance:
       propertyPath: portalUI
       value: 
       objectReference: {fileID: 1807593179}
+    - target: {fileID: 7376268900841846284, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
+      propertyPath: pressFHintCanvas
+      value: 
+      objectReference: {fileID: 116380263}
     - target: {fileID: 8890490349524987562, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
       propertyPath: portalUI
       value: 
       objectReference: {fileID: 1807593179}
+    - target: {fileID: 8890490349524987562, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
+      propertyPath: pressFHintCanvas
+      value: 
+      objectReference: {fileID: 116380263}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -3089,6 +3112,10 @@ PrefabInstance:
       propertyPath: playerOverride
       value: 
       objectReference: {fileID: 298530814}
+    - target: {fileID: 8062228597478252791, guid: 2fe1e0bda42d5504583cd67c68080b0c, type: 3}
+      propertyPath: cinemachineCamera
+      value: 
+      objectReference: {fileID: 1086865300}
     - target: {fileID: 8151731365850674084, guid: 2fe1e0bda42d5504583cd67c68080b0c, type: 3}
       propertyPath: portal1_Dest
       value: 
