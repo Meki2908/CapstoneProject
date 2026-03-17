@@ -122,12 +122,21 @@ public class HeroInformation : MonoBehaviour {
     }
 
     void SetGlobalVar() {
-        PlayerPrefs.SetInt("QUEST_COUNT", 0);
-        PlayerPrefs.SetInt("QUEST_1", 0);
-        PlayerPrefs.SetInt("QUEST_2", 0);
-        PlayerPrefs.SetInt("QUEST_3", 0);
-        PlayerPrefs.SetInt("QUEST_4", 0);
-        PlayerPrefs.SetInt("QUEST_5", 0);
+        // Chỉ reset quest nếu chưa có progress nào
+        // Tránh xóa dữ liệu quest đã được QuestManager lưu khi tạo player mới
+        if (PlayerPrefs.GetInt("QUEST_COUNT", -1) <= 0 && !PlayerPrefs.HasKey("QUEST_1"))
+        {
+            PlayerPrefs.SetInt("QUEST_COUNT", 0);
+            PlayerPrefs.SetInt("QUEST_1", 0);
+            PlayerPrefs.SetInt("QUEST_2", 0);
+            PlayerPrefs.SetInt("QUEST_3", 0);
+            PlayerPrefs.SetInt("QUEST_4", 0);
+            PlayerPrefs.SetInt("QUEST_5", 0);
+        }
+        else
+        {
+            Debug.Log("[HeroInformation] SetGlobalVar skipped – quest progress already exists in PlayerPrefs.");
+        }
     }
 
     public void Reset(){
