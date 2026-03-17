@@ -1,0 +1,207 @@
+# GUI_Dungeon Prefab — Extracted Configuration
+
+> Từ file: [Assets/_Prefabs/GUI_Dungeon.prefab](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/_Prefabs/GUI_Dungeon.prefab)
+> Ngày export: 2026-03-16
+
+---
+
+## 1. DungeonWaveManager (Overrides from Prefab)
+
+### EXP per Enemy Type
+
+| Enemy Type | EXP (Prefab Override) | Default in Script |
+|---|---|---|
+| Skeleton/Archer | **1,000** | 100 |
+| Monster | **3,000** | 300 |
+| Lich | **3,500** | 350 |
+| Boss (chung) | **15,000** | 1,500 |
+| Demon | **30,000** | 3,000 |
+| Stoneogre | *(no override)* | 1,500 |
+| Golem | *(no override)* | 1,800 |
+| Minotaur | **20,000** | 2,000 |
+| Ifrit | **25,000** | 2,500 |
+
+### Wave Count per Enemy Type (Defaults in Script)
+
+> Prefab **không override** wave counts → dùng default từ script.
+
+| Enemy Type | Wave 1 | Wave 2 | Wave 3 | Wave 4 | Wave 5 |
+|---|---|---|---|---|---|
+| Skeleton/Archer | 3 | 4 | 5 | 4 | 0 |
+| Monster | 0 | 0 | 0 | 0 | 0 |
+| Lich | 0 | 0 | 0 | 1 | 0 |
+| Stoneogre | 0 | 0 | 0 | 0 | 0 |
+| Golem | 0 | 0 | 0 | 0 | 0 |
+| Minotaur | 0 | 0 | 0 | 0 | 0 |
+| Ifrit | 0 | 0 | 0 | 0 | 0 |
+| Demon | 0 | 0 | 0 | 0 | 1 |
+
+### Dungeon Settings (Defaults)
+
+| Field | Value |
+|---|---|
+| `dungeonName` | `"Dungeon 1"` |
+| `totalWaves` | 5 |
+| `mapType` | 0 (Desert) |
+| `mainMapSceneName` | `"Map_Chinh"` |
+| `returnDelayOnWin` | 5s |
+| `returnDelayOnLose` | 3s |
+| `spawnRadius` | 20 |
+| `minDistanceFromPlayer` | 5 |
+| `spawnAttemptCount` | 10 |
+| `waveCountdownTime` | 5s |
+| `waveDelayTime` | 3s |
+| `dropExpOrb` | true |
+
+### Max Drops per Enemy Type (Defaults)
+
+| Enemy Type | Max Drops |
+|---|---|
+| Skeleton/Archer | 2 |
+| Monster | 3 |
+| Lich | 3 |
+| Boss (chung) | 5 |
+| Demon | 5 |
+| Stoneogre | 5 |
+| Golem | 5 |
+| Minotaur | 5 |
+| Ifrit | 5 |
+
+---
+
+## 2. Drop Tables (Prefab Override — Resolved Item Names)
+
+### Skeleton/Archer Drops (6 items)
+
+| # | Item | Min | Max |
+|---|---|---|---|
+| 0 | Gray gem common | 1 | 1 |
+| 1 | Gray gem uncommon | 1 | 1 |
+| 2 | Gray gem rare | 1 | 1 |
+| 3 | Gray gem epic | 1 | 1 |
+| 4 | Gray gem legendary | 1 | 1 |
+| 5 | Gray gem mythic | 1 | 1 |
+
+### Monster Drops (13 items)
+
+| # | Item | Min | Max |
+|---|---|---|---|
+| 0 | Red gem common | 1 | 1 |
+| 1 | Red gem uncommon | 1 | 1 |
+| 2 | Red gem rare | 1 | 1 |
+| 3 | Red gem epic | 1 | 1 |
+| 4 | Red gem legendary | 1 | 1 |
+| 5 | Red gem mythic | 1 | 1 |
+| 6 | Healh potion | 1 | 1 |
+| 7 | Crystal Stone Common | 1 | 1 |
+| 8 | Crystal Stone Rare | 1 | 1 |
+| 9 | Crystal Stone Epic | 1 | 1 |
+| 10 | Crystal Stone Legendary | 1 | 1 |
+| 11 | Crystal Stone Mythic | 1 | 1 |
+| 12 | Scarf | 1 | 1 |
+
+### Lich Drops (8 items)
+
+| # | Item | Min | Max |
+|---|---|---|---|
+| 0 | Turquoise gem common | 1 | 1 |
+| 1 | Turquoise gem uncommon | 1 | 1 |
+| 2 | Turquoise gem epic | 1 | 1 |
+| 3 | Turquoise gem legendary | 1 | 1 |
+| 4 | Turquoise gem mythic | 1 | 1 |
+| 5 | Scarf | 1 | 1 |
+| 6 | Lantern | 1 | 1 |
+| 7 | Windrunner Vest | 1 | 1 |
+
+### Boss Drops (9 items)
+
+| # | Item | Min | Max |
+|---|---|---|---|
+| 0 | Lantern | 1 | 1 |
+| 1 | Gray gem epic | 1 | 1 |
+| 2 | Red gem epic | 1 | 1 |
+| 3 | Red gem epic | 1 | 1 |
+| 4 | Red gem epic | 1 | 1 |
+| 5 | Iron Helm | 1 | 1 |
+| 6 | Ironclad Greaves | 1 | 1 |
+| 7 | Dragon Chestplate | 1 | 1 |
+| 8 | Crimson Ring | 1 | 1 |
+
+### Demon Drops (6 items)
+
+| # | Item | Min | Max |
+|---|---|---|---|
+| 0 | Scarf | 1 | 1 |
+| 1 | Necklace | 1 | 1 |
+| 2 | Windrunner Vest | 1 | 1 |
+| 3 | Shadow Hood | 1 | 1 |
+| 4 | Mask | 1 | 1 |
+| 5 | Moonstone Bracelet | 1 | 1 |
+
+### Stoneogre / Golem / Minotaur / Ifrit Drops
+
+> Prefab **không override** → dùng list rỗng từ script (fallback sang `bossDrops`).
+
+---
+
+## 3. DungeonRewardUI Config
+
+| Field | Value |
+|---|---|
+| `slotSize` | 105 |
+| `slotSpacing` | 10 |
+| `panelWidth` | 1600 |
+| `panelHeight` | 400 |
+| `itemNameFontSize` | 25 |
+| `quantityFontSize` | 35 |
+| `countFontSize` | 40 |
+| `noItemFontSize` | 35 |
+| `slotExtraWidth` | 110 |
+| `slotExtraHeight` | 150 |
+| `slotBorderInset` | 10 |
+| `contentPadding` | 18 |
+| `scrollbarHeight` | 0 |
+| `spriteImageType` | 1 (Sliced) |
+| `rewardCanvasSortOrder` | 999 |
+| `tooltipSortOrder` | 1000 |
+
+---
+
+## 4. ItemPickupNotification Config
+
+| Field | Value |
+|---|---|
+| `displayDuration` | 3s |
+| `slideInDuration` | 0.35s |
+| `fadeOutDuration` | 0.5s |
+| `maxVisibleEntries` | 5 |
+| `delayBetweenEntries` | 0.12s |
+| `globalScale` | 2 |
+| `entryWidth` | 360 |
+| `entryHeight` | 52 |
+| `iconSize` | 42 |
+| `nameFontSize` | 17 |
+| `quantityFontSize` | 15 |
+| `entrySpacing` | 5 |
+| `marginRight` | 30 |
+| `marginBottom` | 100 |
+
+### Rarity Colors (Text / Background)
+
+| Rarity | Text Color (RGBA) | BG Color (RGBA) |
+|---|---|---|
+| Common | [(0.62, 0.62, 0.64, 1)](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Artsystack%20-%20Fantasy%20RPG%20GUI_MENU/Scripts/PauseMenuManager.cs#50-67) | [(0.35, 0.35, 0.38, 1)](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Artsystack%20-%20Fantasy%20RPG%20GUI_MENU/Scripts/PauseMenuManager.cs#50-67) |
+| Uncommon | [(0.31, 0.78, 0.47, 1)](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Artsystack%20-%20Fantasy%20RPG%20GUI_MENU/Scripts/PauseMenuManager.cs#50-67) | [(0.18, 0.42, 0.27, 1)](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Artsystack%20-%20Fantasy%20RPG%20GUI_MENU/Scripts/PauseMenuManager.cs#50-67) |
+| Rare | [(0.33, 0.64, 0.95, 1)](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Artsystack%20-%20Fantasy%20RPG%20GUI_MENU/Scripts/PauseMenuManager.cs#50-67) | [(0.18, 0.32, 0.55, 1)](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Artsystack%20-%20Fantasy%20RPG%20GUI_MENU/Scripts/PauseMenuManager.cs#50-67) |
+| Epic | [(0.66, 0.41, 0.94, 1)](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Artsystack%20-%20Fantasy%20RPG%20GUI_MENU/Scripts/PauseMenuManager.cs#50-67) | [(0.35, 0.22, 0.52, 1)](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Artsystack%20-%20Fantasy%20RPG%20GUI_MENU/Scripts/PauseMenuManager.cs#50-67) |
+| Legendary | [(0.95, 0.69, 0.17, 1)](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Artsystack%20-%20Fantasy%20RPG%20GUI_MENU/Scripts/PauseMenuManager.cs#50-67) | [(0.52, 0.38, 0.12, 1)](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Artsystack%20-%20Fantasy%20RPG%20GUI_MENU/Scripts/PauseMenuManager.cs#50-67) |
+
+---
+
+## 5. Canvas Settings
+
+| Field | Value |
+|---|---|
+| RenderMode | 0 (Screen Space - Overlay) |
+| SortingOrder | **10000** |
+| ReceivesEvents | true |
