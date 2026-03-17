@@ -74,6 +74,7 @@ public class PlayerBar : MonoBehaviour
     public void CheckExperience(int exp) { }
 }
 
+[System.Serializable]
 public class PlayerClass
 {
     public int gameLevel = 1;
@@ -117,6 +118,7 @@ public class PlayerClass
 
 public class CharactersClass
 {
+    [System.Serializable]
     public enum StatePlayerForDialogue
     {
         FirstMeet,
