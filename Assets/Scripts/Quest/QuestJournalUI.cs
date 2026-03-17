@@ -21,6 +21,7 @@ public class QuestJournalUI : MonoBehaviour
     [Header("── HUD (góc màn hình) ──")]
     public TextMeshProUGUI hudTitleText;
     public TextMeshProUGUI hudStepText;
+    public GameObject      hudPanel; // Container của HUD nhỏ — ẩn khi không có quest
 
     [Header("── Empty State ──")]
     public string emptyQuestTitle       = "No Active Quest";
@@ -113,6 +114,9 @@ public class QuestJournalUI : MonoBehaviour
 
         Debug.Log($"[QuestJournal] Displaying Active Quest: {quest.questTitle} (ID: {quest.questID})");
 
+        // Hiện HUD nhỏ khi có quest
+        if (hudPanel) hudPanel.SetActive(true);
+
         // 1. Quest title
         if (titleText != null)    titleText.text    = quest.questTitle;
         if (hudTitleText != null) hudTitleText.text = quest.questTitle;
@@ -131,6 +135,9 @@ public class QuestJournalUI : MonoBehaviour
 
     void SetEmpty()
     {
+        // Ẩn HUD nhỏ khi không có quest
+        if (hudPanel) hudPanel.SetActive(false);
+
         if (titleText != null)       titleText.text       = emptyQuestTitle;
         if (descriptionText != null) descriptionText.text = emptyQuestDesc;
         if (instructionText != null) instructionText.text = emptyQuestInstruction;
