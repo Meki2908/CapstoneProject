@@ -10,7 +10,9 @@ GameObject:
   m_Component:
   - component: {fileID: 2304286251708459499}
   - component: {fileID: 5958066164223821263}
-  m_Layer: 0
+  - component: {fileID: 1747911144216622884}
+  - component: {fileID: 3710684934958107740}
+  m_Layer: 13
   m_Name: Actual Axe Ultimate FX
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -135,6 +137,85 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &1747911144216622884
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1427781417851245919}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 180ecf9b41d478f468eb3e9083753217, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ImpulseDefinition:
+    ImpulseChannel: 1
+    ImpulseShape: 2
+    CustomImpulseShape:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    ImpulseDuration: 0.2
+    ImpulseType: 1
+    DissipationRate: 0.25
+    RawSignal: {fileID: 0}
+    AmplitudeGain: 1
+    FrequencyGain: 1
+    RepeatMode: 0
+    Randomize: 1
+    TimeEnvelope:
+      AttackShape:
+        serializedVersion: 2
+        m_Curve: []
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      DecayShape:
+        serializedVersion: 2
+        m_Curve: []
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      AttackTime: 0
+      SustainTime: 0.2
+      DecayTime: 0.7
+      ScaleWithImpact: 1
+      HoldForever: 0
+    ImpactRadius: 100
+    DirectionMode: 0
+    DissipationMode: 2
+    DissipationDistance: 100
+    PropagationSpeed: 343
+  DefaultVelocity: {x: 0, y: -1, z: 0}
+--- !u!114 &3710684934958107740
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1427781417851245919}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0dd9d650b14ca984ca8808a84dff4f22, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  impulseSource: {fileID: 1747911144216622884}
+  particleSystems:
+  - {fileID: 7707349144182815904}
+  - {fileID: 3256814013181925762}
+  - {fileID: 3386248695503903956}
+  - {fileID: 4459358787986359072}
+  - {fileID: 4301022718478495120}
+  - {fileID: 6109237280210272420}
+  pulsesPerSecond: 16
+  impulseAmplitude: 0.9
+  impulseDirection: {x: 0.4, y: 1, z: 0.2}
+  useUnscaledTime: 0
+  shakeWhenNoParticleFound: 0
+  playOnEnable: 1
 --- !u!1 &3880818214824149971
 GameObject:
   m_ObjectHideFlags: 0
@@ -146,7 +227,7 @@ GameObject:
   - component: {fileID: 1153698990403815812}
   - component: {fileID: 7707349144182815904}
   - component: {fileID: 2049514760558256115}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Effect_48_CycloneCore
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -5050,7 +5131,7 @@ GameObject:
   - component: {fileID: 3256814013181925762}
   - component: {fileID: 3728441925380514581}
   - component: {fileID: 1313364177363465393}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Effect_48_CycloneCore_2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -8721,7 +8802,7 @@ ParticleSystem:
     type: 1
     collisionMode: 0
     colliderForce: 0
-    multiplyColliderForceByParticleSize: 0
+    multiplyColliderForceByParticleSize: 1
     multiplyColliderForceByParticleSpeed: 0
     multiplyColliderForceByCollisionAngle: 1
     m_Planes:
@@ -8895,7 +8976,7 @@ ParticleSystem:
     radiusScale: 1
     collidesWith:
       serializedVersion: 2
-      m_Bits: 4160
+      m_Bits: 64
     maxCollisionShapes: 256
     quality: 0
     voxelSize: 0.5
@@ -9954,10 +10035,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4102f3090762cea4fa8f1c4a53a9ff23, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  damage: 50
+  damage: 70
   debugMode: 0
   tornadoDuration: 0.5
   tornadoHeight: 2
+  tornadoRotationDegrees: 180
 --- !u!1 &4670915388924624491
 GameObject:
   m_ObjectHideFlags: 0
@@ -9969,7 +10051,7 @@ GameObject:
   - component: {fileID: 8507200224780871381}
   - component: {fileID: 6109237280210272420}
   - component: {fileID: 2605617406454284327}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Effect_48_Wind_3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -14872,7 +14954,7 @@ GameObject:
   - component: {fileID: 1290368076227792725}
   - component: {fileID: 4301022718478495120}
   - component: {fileID: 4181321097589885968}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Effect_48_Wind_2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -19775,7 +19857,7 @@ GameObject:
   - component: {fileID: 4339545005249621610}
   - component: {fileID: 4459358787986359072}
   - component: {fileID: 1654024787443949645}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Effect_48_Wind
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -24678,7 +24760,7 @@ GameObject:
   - component: {fileID: 1065978078254327213}
   - component: {fileID: 3386248695503903956}
   - component: {fileID: 1032937190939736077}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Effect_48_Cyclone
   m_TagString: Untagged
   m_Icon: {fileID: 0}

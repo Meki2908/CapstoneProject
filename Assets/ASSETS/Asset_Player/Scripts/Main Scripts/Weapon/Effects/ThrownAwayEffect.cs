@@ -4,17 +4,17 @@ public class ThrownAwayEffect : BaseEffectScript
 {
     [Header("ThrownAway Settings")]
     [SerializeField] private float thrownAwayForce = 5f;
+    [SerializeField] private float throwDuration = 0.25f;
+    [SerializeField] private float throwLiftHeight = 0.2f;
 
     protected override void ApplyEffect(TakeDamageTest enemy)
     {
-        Rigidbody rb = enemy.GetComponent<Rigidbody>();
-        if (rb != null)
-        {
-            // Push enemy away from source
-            Vector3 direction = (enemy.transform.position - transform.position).normalized;
-            rb.AddForce(direction * thrownAwayForce, ForceMode.Impulse);
+        if (enemy == null) return;
 
-            if (debugMode) Debug.Log($"[ThrownAwayEffect] Applied with force {thrownAwayForce}");
-        }
+        EnemyCrowdControl cc = enemy.GetComponent<EnemyCrowdControl>();
+        if (cc == null) cc = enemy.gameObject.AddComponent<EnemyCrowdControl>();
+        cc.PlayKnockback(transform.position, thrownAwayForce, throwDuration, throwLiftHeight);
+
+        if (debugMode) Debug.Log($"[ThrownAwayEffect] Applied distance={thrownAwayForce}, duration={throwDuration}");
     }
 }

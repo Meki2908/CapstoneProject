@@ -10137,7 +10137,7 @@ GameObject:
   - component: {fileID: 8802491204656356253}
   - component: {fileID: 8538260003161512079}
   - component: {fileID: 2749297539258244778}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Slashes
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -14000,7 +14000,7 @@ ParticleSystem:
     radiusScale: 1
     collidesWith:
       serializedVersion: 2
-      m_Bits: 4160
+      m_Bits: 64
     maxCollisionShapes: 256
     quality: 0
     voxelSize: 0.5
@@ -15064,7 +15064,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   damage: 100
-  debugMode: 1
+  debugMode: 0
+  impactAudioSource: {fileID: 0}
 --- !u!1 &2707344577687916985
 GameObject:
   m_ObjectHideFlags: 0
@@ -34910,7 +34911,7 @@ Light:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3447094108403878629}
-  m_Enabled: 0
+  m_Enabled: 1
   serializedVersion: 11
   m_Type: 2
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -34959,7 +34960,7 @@ Light:
   m_BounceIntensity: 1
   m_ColorTemperature: 6570
   m_UseColorTemperature: 0
-  m_BoundingSphereOverride: {x: 0, y: 1e-45, z: 0, w: 1.314554e-39}
+  m_BoundingSphereOverride: {x: 4.3593e-41, y: 8e-45, z: 0, w: 1.7e-44}
   m_UseBoundingSphereOverride: 0
   m_UseViewFrustumForShadowCasterCull: 1
   m_ForceVisible: 0

@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 6922505406653246488}
   - component: {fileID: 2511084187944384982}
   - component: {fileID: 5914727825280473768}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Axe 2nd Skill1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4929,7 +4929,7 @@ GameObject:
   - component: {fileID: 4520496054112112144}
   - component: {fileID: 3515419744244088791}
   - component: {fileID: 1894623253926271064}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Smoke
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -9832,7 +9832,7 @@ GameObject:
   - component: {fileID: 5528947848297836433}
   - component: {fileID: 4851801607400573627}
   - component: {fileID: 4305905998342576447}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Sparks
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -14735,7 +14735,7 @@ GameObject:
   - component: {fileID: 7400818127710443321}
   - component: {fileID: 5346470140278440109}
   - component: {fileID: 5194108878630740645}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: SparksCore
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -19647,7 +19647,7 @@ GameObject:
   - component: {fileID: 3763415934249383107}
   - component: {fileID: 6830733236934344010}
   - component: {fileID: 5226131372699098036}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Flare
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -24551,7 +24551,7 @@ GameObject:
   - component: {fileID: 4491012703749760808}
   - component: {fileID: 2417810498178921791}
   - component: {fileID: 1934507895185559788}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Slash
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -28396,7 +28396,7 @@ ParticleSystem:
     radiusScale: 5
     collidesWith:
       serializedVersion: 2
-      m_Bits: 4160
+      m_Bits: 64
     maxCollisionShapes: 256
     quality: 0
     voxelSize: 0.5
@@ -29464,9 +29464,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7fcd3abc57028d947b8140aef6262851, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  damage: 50
+  damage: 43
   debugMode: 0
   thrownAwayForce: 3
+  throwDuration: 0.25
+  throwLiftHeight: 0.2
 --- !u!1 &8083440568218396914
 GameObject:
   m_ObjectHideFlags: 0
@@ -29478,7 +29480,7 @@ GameObject:
   - component: {fileID: 6476598037264982715}
   - component: {fileID: 3834321087506740442}
   - component: {fileID: 1544530167298932780}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Distortion(Delete for Mobile)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -34381,7 +34383,7 @@ GameObject:
   - component: {fileID: 544693630938663675}
   - component: {fileID: 671776041044479536}
   - component: {fileID: 8754291554868470671}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: SlashSmoke
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -39293,7 +39295,7 @@ GameObject:
   - component: {fileID: 6164074818290098398}
   - component: {fileID: 7774706319264988293}
   - component: {fileID: 345093643319402176}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Hit
   m_TagString: Untagged
   m_Icon: {fileID: 0}

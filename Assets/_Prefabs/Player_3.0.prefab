@@ -12,7 +12,6 @@ GameObject:
   - component: {fileID: 508885566657798624}
   - component: {fileID: 6354980307215103834}
   - component: {fileID: 3331233369558431263}
-  - component: {fileID: 5471952498827836301}
   m_Layer: 8
   m_Name: OrbitalCamera
   m_TagString: Untagged
@@ -126,23 +125,6 @@ MonoBehaviour:
     Time: 0
     Smoothing: 0
     IgnoreY: 0
---- !u!114 &5471952498827836301
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 323668331340844175}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 68bb026fafb42b14791938953eaace77, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  NoiseProfile: {fileID: 11400000, guid: e9ce97b7a206dc64d90931ea044e0c72, type: 2}
-  PivotOffset: {x: 0, y: 0, z: 0}
-  AmplitudeGain: 0.3
-  FrequencyGain: 1
-  m_NoiseOffsets: {x: -48.65158, y: 973.5065, z: -293.6543}
 --- !u!1 &714378945872350017
 GameObject:
   m_ObjectHideFlags: 0
@@ -302,6 +284,7 @@ GameObject:
   - component: {fileID: 8488192272985251069}
   - component: {fileID: 1215054310798034151}
   - component: {fileID: 6114342454555532227}
+  - component: {fileID: 227543464526520539}
   m_Layer: 8
   m_Name: PlayerCamera
   m_TagString: Untagged
@@ -552,6 +535,30 @@ MonoBehaviour:
         DecelTime: 0.2
   PlayerIndex: -1
   AutoEnableInputs: 1
+--- !u!114 &227543464526520539
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 891238828306482759}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 00b2d199b96b516448144ab30fb26aed, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ApplyAfter: 2
+  ChannelMask: 1
+  Gain: 1
+  Use2DDistance: 0
+  UseCameraSpace: 1
+  SignalCombinationMode: 0
+  ReactionSettings:
+    m_SecondaryNoise: {fileID: 0}
+    AmplitudeGain: 1
+    FrequencyGain: 1
+    Duration: 1
+    m_NoiseOffsets: {x: 0, y: 0, z: 0}
 --- !u!1 &1225991638228780634
 GameObject:
   m_ObjectHideFlags: 0
@@ -1000,6 +1007,8 @@ PlayableDirector:
   m_SceneBindings:
   - key: {fileID: 5879610985660834527, guid: f63e8ee473e6cd445b63689fa80272ed, type: 2}
     value: {fileID: 668520100110215003}
+  - key: {fileID: -2776789639059786926, guid: f63e8ee473e6cd445b63689fa80272ed, type: 2}
+    value: {fileID: 8818341064173951405}
   m_ExposedReferences:
     m_References:
     - bf8be38d5a2334941bfa4bba36e91fd4: {fileID: 5449681173239475565}
@@ -1995,6 +2004,9 @@ MonoBehaviour:
   useInputDirection: 1
   vfxMinInterval: 0.03
   vfxDuration: 3
+  enableUltimateVfxPool: 1
+  ultimatePoolPrewarm: 2
+  ultimatePoolMaxPerPrefab: 8
 --- !u!114 &4293190242617863170
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2057,7 +2069,7 @@ MonoBehaviour:
   detectionRadius: 10
   enemyLayer:
     serializedVersion: 2
-    m_Bits: 64
+    m_Bits: 576
   autoTargetRadius: 6
   detectionUpdateInterval: 0.1
   cnCamera: {fileID: 5442119404096795018}
@@ -2614,7 +2626,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7891149897360037319}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.13114601, y: 0.35885048, z: 0.05100294, w: 0.92272735}
+  m_LocalRotation: {x: -0.1238425, y: 0.35159603, z: 0.04698493, w: 0.9267339}
   m_LocalPosition: {x: -3.3399963, y: 0.21699905, z: -4.09}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -2781,7 +2793,7 @@ Transform:
   m_GameObject: {fileID: 8532176896221735903}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 2.080798, y: 1.417242, z: 2.1330302}
+  m_LocalPosition: {x: 2.080017, y: 1.417, z: -1.3300018}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -4481,9 +4493,13 @@ PrefabInstance:
       propertyPath: m_SizeDelta.y
       value: 50
       objectReference: {fileID: 0}
+    - target: {fileID: 286900128904705985, guid: 211bef7c77bec47449bd74f57b57e44e, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 499086953989858209, guid: 211bef7c77bec47449bd74f57b57e44e, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 558237731046508399, guid: 211bef7c77bec47449bd74f57b57e44e, type: 3}
       propertyPath: m_SizeDelta.x
@@ -4605,6 +4621,30 @@ PrefabInstance:
       propertyPath: m_Viewport
       value: 
       objectReference: {fileID: 0}
+    - target: {fileID: 4364769385614431956, guid: 211bef7c77bec47449bd74f57b57e44e, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4364769385614431956, guid: 211bef7c77bec47449bd74f57b57e44e, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4364769385614431956, guid: 211bef7c77bec47449bd74f57b57e44e, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 130
+      objectReference: {fileID: 0}
+    - target: {fileID: 4364769385614431956, guid: 211bef7c77bec47449bd74f57b57e44e, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 130
+      objectReference: {fileID: 0}
+    - target: {fileID: 4364769385614431956, guid: 211bef7c77bec47449bd74f57b57e44e, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 90
+      objectReference: {fileID: 0}
+    - target: {fileID: 4364769385614431956, guid: 211bef7c77bec47449bd74f57b57e44e, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -75
+      objectReference: {fileID: 0}
     - target: {fileID: 4472426621801522822, guid: 211bef7c77bec47449bd74f57b57e44e, type: 3}
       propertyPath: m_SizeDelta.x
       value: 200
@@ -4700,6 +4740,10 @@ PrefabInstance:
     - target: {fileID: 7538357028723098554, guid: 211bef7c77bec47449bd74f57b57e44e, type: 3}
       propertyPath: m_AnchoredPosition.x
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7736810962546841622, guid: 211bef7c77bec47449bd74f57b57e44e, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 140
       objectReference: {fileID: 0}
     - target: {fileID: 8072704678768434242, guid: 211bef7c77bec47449bd74f57b57e44e, type: 3}
       propertyPath: m_SizeDelta.x

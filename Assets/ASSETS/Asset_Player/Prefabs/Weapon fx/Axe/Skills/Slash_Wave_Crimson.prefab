@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 5195471940666539960}
   - component: {fileID: 5195471940666539958}
   - component: {fileID: 5195471940666539959}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: L_Trail
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4968,7 +4968,7 @@ GameObject:
   - component: {fileID: 5195471940727107960}
   - component: {fileID: 5195471940727107958}
   - component: {fileID: 5195471940727107959}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: L_Trail (1)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -9925,7 +9925,7 @@ GameObject:
   - component: {fileID: 5195471940809051739}
   - component: {fileID: 5195471940809051737}
   - component: {fileID: 5195471940809051738}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Dark_Wave
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -14883,7 +14883,7 @@ GameObject:
   - component: {fileID: 5195471940956184436}
   - component: {fileID: 5195471940956184437}
   - component: {fileID: 219720162655500115}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: L_Trail_Dark (1)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -19844,6 +19844,8 @@ MonoBehaviour:
   damage: 20
   debugMode: 0
   thrownAwayForce: 5
+  throwDuration: 0.25
+  throwLiftHeight: 0.2
 --- !u!1 &5195471940960101520
 GameObject:
   m_ObjectHideFlags: 0
@@ -19855,7 +19857,7 @@ GameObject:
   - component: {fileID: 5195471940960101519}
   - component: {fileID: 5195471940960101517}
   - component: {fileID: 5195471940960101518}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Flecks (1)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -24813,7 +24815,7 @@ GameObject:
   - component: {fileID: 5195471941296385693}
   - component: {fileID: 5195471941296385694}
   - component: {fileID: 1654833965781558740}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Light_Soft
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -28413,7 +28415,7 @@ ParticleSystem:
     collisionMode: 0
     colliderForce: 0
     multiplyColliderForceByParticleSize: 0
-    multiplyColliderForceByParticleSpeed: 0
+    multiplyColliderForceByParticleSpeed: 1
     multiplyColliderForceByCollisionAngle: 1
     m_Planes:
     - {fileID: 0}
@@ -28586,7 +28588,7 @@ ParticleSystem:
     radiusScale: 0.3
     collidesWith:
       serializedVersion: 2
-      m_Bits: 4160
+      m_Bits: 64
     maxCollisionShapes: 256
     quality: 0
     voxelSize: 0.5
@@ -29645,9 +29647,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7fcd3abc57028d947b8140aef6262851, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  damage: 47
+  damage: 67
   debugMode: 0
-  thrownAwayForce: 5
+  thrownAwayForce: 3
+  throwDuration: 0.25
+  throwLiftHeight: 0.2
 --- !u!1 &5195471941354274012
 GameObject:
   m_ObjectHideFlags: 0
@@ -29659,7 +29663,7 @@ GameObject:
   - component: {fileID: 5195471941354274011}
   - component: {fileID: 5195471941354274009}
   - component: {fileID: 5195471941354274010}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Add_wave (1)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -34589,7 +34593,7 @@ GameObject:
   - component: {fileID: 5195471941570713774}
   - component: {fileID: 5195471941570713772}
   - component: {fileID: 5195471941570713773}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Dark_Wave
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -39546,7 +39550,7 @@ GameObject:
   - component: {fileID: 5195471941775128648}
   - component: {fileID: 5195471941775128646}
   - component: {fileID: 5195471941775128647}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: L_Trail_Dark
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -44503,7 +44507,7 @@ GameObject:
   - component: {fileID: 5195471942252674523}
   - component: {fileID: 5195471942252674521}
   - component: {fileID: 5195471942252674522}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Flecks
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -49461,7 +49465,7 @@ GameObject:
   - component: {fileID: 5462722674953752538}
   - component: {fileID: 5462722674953752537}
   - component: {fileID: 4932752376796581841}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Slash_Wave_Crimson
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -54402,7 +54406,7 @@ GameObject:
   - component: {fileID: 5462722676953001381}
   - component: {fileID: 5462722676953001383}
   - component: {fileID: 5462722676953001382}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Add_wave
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -59332,7 +59336,7 @@ GameObject:
   - component: {fileID: 8708557661081309731}
   - component: {fileID: 2591713918298359714}
   - component: {fileID: 6593265451135018478}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Flecks (3)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -64289,7 +64293,7 @@ GameObject:
   - component: {fileID: 3620477339568903043}
   - component: {fileID: 3162695408409840242}
   - component: {fileID: 7014461985604578551}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Flecks (2)
   m_TagString: Untagged
   m_Icon: {fileID: 0}

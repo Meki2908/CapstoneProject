@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 4861968526108906}
   - component: {fileID: 198969772342349716}
   - component: {fileID: 199856763519279462}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Flare
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4915,7 +4915,7 @@ GameObject:
   - component: {fileID: 198635152515146452}
   - component: {fileID: 199241444052214480}
   - component: {fileID: 1492801661823543665}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Slash3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -9924,7 +9924,7 @@ GameObject:
   - component: {fileID: 4302141733201854}
   - component: {fileID: 198301942629917976}
   - component: {fileID: 199412559717471884}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Smoke
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -14827,7 +14827,7 @@ GameObject:
   - component: {fileID: 4775681412446352}
   - component: {fileID: 198412930389571108}
   - component: {fileID: 199199916559843444}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Sword Slash 2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -19746,7 +19746,7 @@ GameObject:
   - component: {fileID: 198299975299356144}
   - component: {fileID: 199124247015232060}
   - component: {fileID: 8467065217455892117}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Fire
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -23588,7 +23588,7 @@ ParticleSystem:
         m_RotationOrder: 4
     minKillSpeed: 0
     maxKillSpeed: 10000
-    radiusScale: 2.5
+    radiusScale: 2.3
     collidesWith:
       serializedVersion: 2
       m_Bits: 64
@@ -24650,9 +24650,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7fcd3abc57028d947b8140aef6262851, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  damage: 125
+  damage: 93
   debugMode: 0
-  thrownAwayForce: 5
+  thrownAwayForce: 3
+  throwDuration: 0.25
+  throwLiftHeight: 0.2
 --- !u!1 &1496879932923430
 GameObject:
   m_ObjectHideFlags: 0
@@ -24664,7 +24666,7 @@ GameObject:
   - component: {fileID: 4754707121539138}
   - component: {fileID: 198644324382158152}
   - component: {fileID: 199768888586237728}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Slash2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -29576,7 +29578,7 @@ GameObject:
   - component: {fileID: 4548917598015312}
   - component: {fileID: 198791976157976270}
   - component: {fileID: 199035993084664616}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: SparksCore
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -34488,7 +34490,7 @@ GameObject:
   - component: {fileID: 4307288376031944}
   - component: {fileID: 198734256323243912}
   - component: {fileID: 199908255353552880}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Hit
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -39393,7 +39395,7 @@ GameObject:
   - component: {fileID: 4965939653273396}
   - component: {fileID: 198251700619577604}
   - component: {fileID: 199234412051452190}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Sparks
   m_TagString: Untagged
   m_Icon: {fileID: 0}
