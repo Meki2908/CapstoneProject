@@ -5047,6 +5047,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_makeObjs:
   - {fileID: 6074189916139549110, guid: 777064a331118e44ebe55cd94b26dd59, type: 3}
+  usePooling: 1
+  prewarmCountPerPrefab: 2
+  maxPoolSizePerPrefab: 50
   m_startDelay: 0
   m_makeCount: 50
   m_makeDelay: 0.05
@@ -5080,7 +5083,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -48.44226, y: -0.0000019073486, z: -27.945349}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.7, y: 0.7, z: 0.7}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 7565519392707409541}
@@ -13675,7 +13678,7 @@ ParticleSystem:
     type: 1
     collisionMode: 0
     colliderForce: 0
-    multiplyColliderForceByParticleSize: 0
+    multiplyColliderForceByParticleSize: 1
     multiplyColliderForceByParticleSpeed: 0
     multiplyColliderForceByCollisionAngle: 1
     m_Planes:
@@ -13849,7 +13852,7 @@ ParticleSystem:
     radiusScale: 1
     collidesWith:
       serializedVersion: 2
-      m_Bits: 4160
+      m_Bits: 64
     maxCollisionShapes: 256
     quality: 0
     voxelSize: 0.5

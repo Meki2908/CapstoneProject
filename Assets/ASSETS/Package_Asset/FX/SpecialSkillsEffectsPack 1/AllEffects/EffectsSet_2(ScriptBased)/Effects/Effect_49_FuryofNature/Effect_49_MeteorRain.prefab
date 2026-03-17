@@ -24,12 +24,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 950431100799754510}
+  serializedVersion: 2
   m_LocalRotation: {x: 0.5, y: -0, z: -0, w: 0.8660254}
   m_LocalPosition: {x: 0, y: 50, z: -15}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 2880140810431346511}
-  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 60, y: 0, z: 0}
 --- !u!114 &950431100799754504
 MonoBehaviour:
@@ -45,9 +46,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_makeObjs:
   - {fileID: 7281159161875971371, guid: 1c7b4ba3f0ee646408fcc9ab68d375f8, type: 3}
+  usePooling: 1
+  prewarmCountPerPrefab: 2
+  maxPoolSizePerPrefab: 50
   m_startDelay: 0
-  m_makeCount: 15
-  m_makeDelay: 0.3
+  m_makeCount: 7
+  m_makeDelay: 0.5
   m_randomPos: {x: 10, y: 10, z: 10}
   m_randomRot: {x: 0, y: 0, z: 0}
   m_randomScale: {x: 0, y: 0, z: 0}
@@ -76,12 +80,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2880140809684959423}
+  serializedVersion: 2
   m_LocalRotation: {x: -0.8660254, y: 0, z: -0, w: -0.50000006}
   m_LocalPosition: {x: 0, y: 50, z: 15}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 2880140810431346511}
-  m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: -240, y: 0, z: 0}
 --- !u!114 &2880140809684959420
 MonoBehaviour:
@@ -97,9 +102,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_makeObjs:
   - {fileID: 7281159161875971371, guid: 1c7b4ba3f0ee646408fcc9ab68d375f8, type: 3}
+  usePooling: 1
+  prewarmCountPerPrefab: 2
+  maxPoolSizePerPrefab: 50
   m_startDelay: 0
-  m_makeCount: 15
-  m_makeDelay: 0.3
+  m_makeCount: 7
+  m_makeDelay: 0.5
   m_randomPos: {x: 10, y: 10, z: 10}
   m_randomRot: {x: 0, y: 0, z: 0}
   m_randomScale: {x: 0, y: 0, z: 0}
@@ -127,12 +135,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2880140810431346510}
+  serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 950431100799754505}
   - {fileID: 2880140809684959421}
   m_Father: {fileID: 0}
-  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}

@@ -25,6 +25,10 @@ public class MageSkills : MonoBehaviour
     [SerializeField] private bool useInputDirection = false;
     [SerializeField] private float vfxMinInterval = 0.03f;
     [SerializeField] private float vfxDuration = 3f;
+    [Header("Ultimate VFX Pool")]
+    [SerializeField] private bool enableUltimateVfxPool = true;
+    [SerializeField] private int ultimatePoolPrewarm = 2;
+    [SerializeField] private int ultimatePoolMaxPerPrefab = 8;
 
     private Character character;
     private SkillLock skillLock;
@@ -32,6 +36,8 @@ public class MageSkills : MonoBehaviour
     private readonly Dictionary<AbilityInput, AbilitySO> abilityMap = new();
     private readonly Dictionary<int, float> lastVfxSpawnTime = new();
     private readonly Dictionary<int, int> lastVfxSpawnFrame = new();
+    private readonly Dictionary<GameObject, Queue<GameObject>> ultimateVfxPools = new();
+    private readonly Dictionary<GameObject, Coroutine> pooledReleaseRoutines = new();
 
     private void Awake()
     {
@@ -62,6 +68,12 @@ public class MageSkills : MonoBehaviour
     {
         var wc = GetComponent<WeaponController>();
         if (wc != null) wc.OnWeaponChanged -= OnWeaponChangedHandler;
+
+        foreach (var kv in pooledReleaseRoutines)
+        {
+            if (kv.Value != null) StopCoroutine(kv.Value);
+        }
+        pooledReleaseRoutines.Clear();
     }
 
     private void OnWeaponChangedHandler(WeaponSO so)
@@ -137,6 +149,7 @@ public class MageSkills : MonoBehaviour
 
         if (input == AbilityInput.Q_Ultimate && ultimateDirector != null)
         {
+            PrewarmUltimateVfxPool(ability);
             // Lock skill immediately and start timeline
             skillLock?.BeginSkillRootMotion(animator, true);
             ultimateDirector.time = 0;
@@ -184,9 +197,10 @@ public class MageSkills : MonoBehaviour
         if (prefab == null) return;
 
         var (pos, rot, scl) = BuildSpawnTransform(ev.spawnRule);
+        bool usePool = ShouldUseUltimatePool(input, ev);
 
         // Spawn VFX
-        var v = Instantiate(prefab as GameObject, pos, rot);
+        var v = usePool ? SpawnFromUltimatePool(prefab as GameObject, pos, rot) : Instantiate(prefab as GameObject, pos, rot);
         if (ev.spawnRule.extraEulerOffset != Vector3.zero)
         {
             v.transform.rotation *= Quaternion.Euler(ev.spawnRule.extraEulerOffset);
@@ -203,7 +217,9 @@ public class MageSkills : MonoBehaviour
             // ShieldActivate trên prefab tự quản lý NavMeshObstacle + chặn damage
 
             // Destroy sau duration (ShieldActivate.OnDestroy sẽ reset IsShieldActive)
-            Destroy(v, ability.vfxDuration > 0 ? ability.vfxDuration : vfxDuration);
+            float life = ability.vfxDuration > 0 ? ability.vfxDuration : vfxDuration;
+            if (usePool) ScheduleReturnToUltimatePool(prefab as GameObject, v, life);
+            else Destroy(v, life);
         }
         else
         {
@@ -216,7 +232,9 @@ public class MageSkills : MonoBehaviour
                 mover.Launch(rot * Vector3.forward, ev.moveSpeed, life, ev.alignToDirection);
             }
 
-            Destroy(v, ability.vfxDuration > 0 ? ability.vfxDuration : vfxDuration);
+            float lifeTime = ability.vfxDuration > 0 ? ability.vfxDuration : vfxDuration;
+            if (usePool) ScheduleReturnToUltimatePool(prefab as GameObject, v, lifeTime);
+            else Destroy(v, lifeTime);
         }
     }
 
@@ -410,5 +428,114 @@ public class MageSkills : MonoBehaviour
             ultimateDirector.Stop();
         }
         skillLock?.EndSkillRootMotion(animator);
+    }
+
+    private bool ShouldUseUltimatePool(AbilityInput input, SkillEvent ev)
+    {
+        return enableUltimateVfxPool && input == AbilityInput.Q_Ultimate && !ev.moveAfterSpawn;
+    }
+
+    private void PrewarmUltimateVfxPool(AbilitySO ability)
+    {
+        if (!enableUltimateVfxPool || ability == null || ability.skillEvents == null) return;
+        int prewarmCount = Mathf.Max(1, ultimatePoolPrewarm);
+
+        for (int i = 0; i < ability.skillEvents.Length; i++)
+        {
+            var prefab = ability.skillEvents[i].vfxPrefab != null ? ability.skillEvents[i].vfxPrefab : ability.hitVfx;
+            if (prefab == null) continue;
+
+            GameObject prefabGo = prefab as GameObject;
+            if (prefabGo == null) continue;
+
+            if (!ultimateVfxPools.TryGetValue(prefabGo, out var pool))
+            {
+                pool = new Queue<GameObject>();
+                ultimateVfxPools[prefabGo] = pool;
+            }
+
+            while (pool.Count < prewarmCount)
+            {
+                var instance = Instantiate(prefabGo, transform.position, Quaternion.identity);
+                instance.SetActive(false);
+                pool.Enqueue(instance);
+            }
+        }
+    }
+
+    private GameObject SpawnFromUltimatePool(GameObject prefab, Vector3 pos, Quaternion rot)
+    {
+        if (!ultimateVfxPools.TryGetValue(prefab, out var pool))
+        {
+            pool = new Queue<GameObject>();
+            ultimateVfxPools[prefab] = pool;
+        }
+
+        GameObject instance = null;
+        while (pool.Count > 0 && instance == null)
+        {
+            instance = pool.Dequeue();
+        }
+
+        if (instance == null)
+        {
+            instance = Instantiate(prefab, pos, rot);
+        }
+        else
+        {
+            instance.transform.SetPositionAndRotation(pos, rot);
+            instance.SetActive(true);
+        }
+
+        if (pooledReleaseRoutines.TryGetValue(instance, out var runningRoutine) && runningRoutine != null)
+        {
+            StopCoroutine(runningRoutine);
+            pooledReleaseRoutines.Remove(instance);
+        }
+
+        var particleSystems = instance.GetComponentsInChildren<ParticleSystem>(true);
+        foreach (var ps in particleSystems)
+        {
+            ps.Clear(true);
+            ps.Play(true);
+        }
+
+        return instance;
+    }
+
+    private void ScheduleReturnToUltimatePool(GameObject prefab, GameObject instance, float lifeTime)
+    {
+        if (instance == null) return;
+
+        if (pooledReleaseRoutines.TryGetValue(instance, out var runningRoutine) && runningRoutine != null)
+        {
+            StopCoroutine(runningRoutine);
+        }
+
+        pooledReleaseRoutines[instance] = StartCoroutine(ReturnToUltimatePoolAfter(prefab, instance, lifeTime));
+    }
+
+    private System.Collections.IEnumerator ReturnToUltimatePoolAfter(GameObject prefab, GameObject instance, float lifeTime)
+    {
+        yield return new WaitForSeconds(Mathf.Max(0f, lifeTime));
+        if (instance == null) yield break;
+
+        if (!ultimateVfxPools.TryGetValue(prefab, out var pool))
+        {
+            pool = new Queue<GameObject>();
+            ultimateVfxPools[prefab] = pool;
+        }
+
+        pooledReleaseRoutines.Remove(instance);
+
+        int maxPoolSize = Mathf.Max(1, ultimatePoolMaxPerPrefab);
+        if (pool.Count >= maxPoolSize)
+        {
+            Destroy(instance);
+            yield break;
+        }
+
+        instance.SetActive(false);
+        pool.Enqueue(instance);
     }
 }
