@@ -34,8 +34,16 @@ public class TutorialTextDisplay : MonoBehaviour
     public GameObject completionCanvas;
     public TMP_Text  completionMessageText;
 
+    [Header("Step Canvases (tùy chọn)")]
+    [Tooltip("Kéo Canvas của từng step vào đây (index = step number). Để trống nếu không dùng canvas riêng.")]
+    public GameObject[] stepCanvases;
+
     [Header("Quest")]
     public TutorialQuestFinisher questFinisher;
+
+    [Header("Player Level Reset")]
+    [Tooltip("Level người chơi sẽ được reset về giá trị này khi hoàn thành tutorial")]
+    public int playerLevelOnReturn = 1;
 
     [Header("Timing")]
     public float textDelay    = 1f;    // 1s between steps
@@ -118,6 +126,7 @@ public class TutorialTextDisplay : MonoBehaviour
     void Start()
     {
         if (completionCanvas != null) completionCanvas.SetActive(false);
+        HideAllStepCanvases();
         SetAllMasteryLevels(1);
 
         // ── Auto-wire WeaponSwapper event ─────────────────────────────────
@@ -286,6 +295,7 @@ public class TutorialTextDisplay : MonoBehaviour
         _waiting = true;
         if (tutorialText != null) tutorialText.text = "";
         yield return new WaitForSeconds(textDelay);
+        ShowCanvas(step);
         if (tutorialText != null && step < _texts.Length)
             tutorialText.text = _texts[step];
         _waiting = false;
@@ -293,8 +303,28 @@ public class TutorialTextDisplay : MonoBehaviour
 
     void ShowNow(int step)
     {
+        ShowCanvas(step);
         if (tutorialText != null && step < _texts.Length)
             tutorialText.text = _texts[step];
+    }
+
+    // Ẩn tất cả step canvases
+    void HideAllStepCanvases()
+    {
+        if (stepCanvases == null) return;
+        foreach (var c in stepCanvases)
+            if (c != null) c.SetActive(false);
+    }
+
+    // Hiện canvas của step hiện tại, ẩn tất cả các cái khác
+    void ShowCanvas(int step)
+    {
+        if (stepCanvases == null || stepCanvases.Length == 0) return;
+        for (int i = 0; i < stepCanvases.Length; i++)
+        {
+            if (stepCanvases[i] != null)
+                stepCanvases[i].SetActive(i == step);
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -392,6 +422,11 @@ public class TutorialTextDisplay : MonoBehaviour
         _completed = true;
         if (tutorialText != null) tutorialText.text = "";
 
+        // Reset level ngay lúc chúc mừng
+        SetAllMasteryLevels(1);
+        if (HeroInformation.player != null)
+            HeroInformation.player.playerLevel = playerLevelOnReturn;
+
         if (completionCanvas != null)
         {
             completionCanvas.SetActive(true);
@@ -407,8 +442,19 @@ public class TutorialTextDisplay : MonoBehaviour
 
     IEnumerator FinishAndReturn()
     {
-        SetAllMasteryLevels(1);  // Reset về level 1 trước khi về map
-        yield return null;       // No delay – teleport immediately
+        SetAllMasteryLevels(1);  // Reset mastery về level 1
+
+        // Ghi PlayerPrefs để Map scene reset player level sau khi load
+        // (HeroInformation.player có thể null trong Tutorial scene)
+        PlayerPrefs.SetInt("TUTORIAL_RESET_PLAYER_LEVEL", playerLevelOnReturn);
+        PlayerPrefs.Save();
+        Debug.Log($"[Tutorial] Stored level reset request: playerLevel → {playerLevelOnReturn}");
+
+        // Nếu player không null thì reset trực tiếp luôn (backup)
+        if (HeroInformation.player != null)
+            HeroInformation.player.playerLevel = playerLevelOnReturn;
+
+        yield return null;
         if (completionMessageText != null) completionMessageText.text = "";
         if (questFinisher != null) questFinisher.FinishTutorial();
     }

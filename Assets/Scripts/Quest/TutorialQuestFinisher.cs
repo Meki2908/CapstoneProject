@@ -55,6 +55,10 @@ public class TutorialQuestFinisher : MonoBehaviour
 
     System.Collections.IEnumerator ReturnToMap()
     {
+        // Reset player level về 1 trước khi save và về map
+        if (HeroInformation.player != null)
+            HeroInformation.player.playerLevel = 1;
+
         try { GameController.PlayerSave(); }
         catch (System.Exception e) { Debug.LogWarning($"[TutorialFinisher] PlayerSave failed: {e.Message}"); }
 
