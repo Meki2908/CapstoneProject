@@ -8,8 +8,10 @@ using TMPro;
 /// UI component cho 1 ô gem trong Blacksmith GUI.
 /// Hiện icon gem đã gắn hoặc trạng thái trống.
 /// Hỗ trợ click chọn + double-click tháo gem.
+/// Uses Button component for reliable click detection.
 /// </summary>
-public class SocketingSlotUI : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler
+[RequireComponent(typeof(Button))]
+public class SocketingSlotUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
     [Header("UI References")]
     [SerializeField] private Image gemIcon;
@@ -33,6 +35,92 @@ public class SocketingSlotUI : MonoBehaviour, IPointerClickHandler, IPointerEnte
     private bool isSelected;
     private float lastClickTime;
     private const float DOUBLE_CLICK_THRESHOLD = 0.3f;
+    private Button slotButton;
+
+    void Awake()
+    {
+        // ── Auto-find references if not assigned in Inspector ──
+        if (gemIcon == null)
+            gemIcon = transform.Find("GemIcon")?.GetComponent<Image>()
+                   ?? transform.Find("Gem Icon")?.GetComponent<Image>()
+                   ?? transform.Find("Icon")?.GetComponent<Image>();
+
+        if (slotBackground == null)
+            slotBackground = GetComponent<Image>(); // Usually on the same GO
+
+        if (slotLabel == null)
+            slotLabel = GetComponentInChildren<TextMeshProUGUI>();
+
+        if (highlightBorder == null)
+        {
+            var border = transform.Find("HighlightBorder")?.GetComponent<Image>()
+                      ?? transform.Find("Highlight")?.GetComponent<Image>()
+                      ?? transform.Find("Border")?.GetComponent<Image>();
+            highlightBorder = border;
+        }
+
+        // If gemIcon STILL not found, search ALL child Images (skip slotBackground)
+        if (gemIcon == null)
+        {
+            foreach (var img in GetComponentsInChildren<Image>(true))
+            {
+                if (img != slotBackground && img != highlightBorder && img.gameObject != this.gameObject)
+                {
+                    gemIcon = img;
+                    Debug.Log($"[SocketingSlotUI] Auto-found gemIcon: {img.gameObject.name}");
+                    break;
+                }
+            }
+        }
+
+        Debug.Log($"[SocketingSlotUI] Awake on {gameObject.name}: gemIcon={gemIcon != null}, slotBg={slotBackground != null}, label={slotLabel != null}, border={highlightBorder != null}");
+
+        // ── Ensure this GO has a Graphic for the Button to use as raycast target ──
+        var graphic = GetComponent<Graphic>();
+        if (graphic == null)
+        {
+            // Add a transparent Image so Button can receive clicks
+            var img2 = gameObject.AddComponent<Image>();
+            img2.color = new Color(0, 0, 0, 0.01f); // Nearly invisible but raycastable
+            img2.raycastTarget = true;
+        }
+        else
+        {
+            graphic.raycastTarget = true;
+        }
+
+        // ── Disable raycastTarget on CHILDREN so clicks go to THIS GO ──
+        if (gemIcon != null) gemIcon.raycastTarget = false;
+        if (highlightBorder != null) highlightBorder.raycastTarget = false;
+        // Keep slotBackground raycast OFF too — we want all clicks on this GO
+        if (slotBackground != null && slotBackground.gameObject != this.gameObject)
+            slotBackground.raycastTarget = false;
+
+        // ── Setup Button component ──
+        slotButton = GetComponent<Button>();
+        if (slotButton == null) slotButton = gameObject.AddComponent<Button>();
+        slotButton.transition = Selectable.Transition.None; // No visual transition
+        slotButton.onClick.AddListener(HandleClick);
+    }
+
+    void HandleClick()
+    {
+        float timeSinceLastClick = Time.unscaledTime - lastClickTime;
+        lastClickTime = Time.unscaledTime;
+
+        if (timeSinceLastClick < DOUBLE_CLICK_THRESHOLD)
+        {
+            // Double click → tháo gem
+            Debug.Log($"[SocketingSlotUI] Double-click on {gameObject.name}");
+            OnSlotDoubleClicked?.Invoke();
+        }
+        else
+        {
+            // Single click → chọn slot
+            Debug.Log($"[SocketingSlotUI] Click on {gameObject.name}");
+            OnSlotClicked?.Invoke();
+        }
+    }
 
     /// <summary>
     /// Cập nhật hiển thị gem slot
@@ -44,12 +132,19 @@ public class SocketingSlotUI : MonoBehaviour, IPointerClickHandler, IPointerEnte
 
         if (gem != null)
         {
-            // Có gem
+            Debug.Log($"[SocketingSlotUI] SetGem({gem.itemName}) on {gameObject.name}: gemIcon={(gemIcon != null ? gemIcon.gameObject.name : "NULL!")}, label={slotLabel != null}");
+
+            // Có gem — ensure icon is visible
             if (gemIcon)
             {
+                gemIcon.gameObject.SetActive(true);
                 gemIcon.sprite = gem.icon;
+                gemIcon.type = Image.Type.Simple;
                 gemIcon.enabled = true;
                 gemIcon.color = Color.white;
+                // Reset sizeDelta so GemIcon follows its anchors (0.1→0.9 = 80% of slot)
+                gemIcon.rectTransform.sizeDelta = Vector2.zero;
+                gemIcon.rectTransform.anchoredPosition = Vector2.zero;
             }
             if (slotBackground)
             {
@@ -71,46 +166,30 @@ public class SocketingSlotUI : MonoBehaviour, IPointerClickHandler, IPointerEnte
                 gemIcon.color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
             }
             if (slotBackground) slotBackground.color = emptyColor;
-            if (slotLabel) slotLabel.text = "Trống";
+            if (slotLabel) slotLabel.text = "Empty";
         }
 
-        // Highlight border
-        if (highlightBorder)
+        // Highlight: use Outline component (always works, no child dependency)
+        var outline = GetComponent<Outline>();
+        if (selected)
         {
-            highlightBorder.enabled = selected;
-            highlightBorder.color = selectedColor;
-        }
-    }
-
-    // ─── Pointer Events ──────────────────────────────────────────
-
-    public void OnPointerClick(PointerEventData eventData)
-    {
-        float timeSinceLastClick = Time.unscaledTime - lastClickTime;
-        lastClickTime = Time.unscaledTime;
-
-        if (timeSinceLastClick < DOUBLE_CLICK_THRESHOLD)
-        {
-            // Double click → tháo gem
-            OnSlotDoubleClicked?.Invoke();
+            if (outline == null) outline = gameObject.AddComponent<Outline>();
+            outline.effectColor = selectedColor;
+            outline.effectDistance = new Vector2(4, 4);
+            outline.enabled = true;
         }
         else
         {
-            // Single click → chọn slot
-            OnSlotClicked?.Invoke();
+            if (outline != null) outline.enabled = false;
         }
     }
+
+    // ─── Pointer Events (hover only) ────────────────────────────────
 
     public void OnPointerEnter(PointerEventData eventData)
     {
         if (slotBackground && !isSelected)
             slotBackground.color = hoverColor;
-
-        // Show tooltip if gem exists
-        if (currentGem != null && ItemTooltipManager.Instance != null)
-        {
-            ItemTooltipManager.Instance.ShowTooltip(currentGem);
-        }
     }
 
     public void OnPointerExit(PointerEventData eventData)
@@ -127,9 +206,6 @@ public class SocketingSlotUI : MonoBehaviour, IPointerClickHandler, IPointerEnte
                 if (slotBackground) slotBackground.color = emptyColor;
             }
         }
-
-        if (ItemTooltipManager.Instance != null)
-            ItemTooltipManager.Instance.HideTooltip();
     }
 
     /// <summary>

@@ -101,6 +101,13 @@ public class EnemyAttack : MonoBehaviour {
                 if (actualDistance <= maxDamageRange) {
                     if (attackEffects != null) attackEffects.PlayBowAttack();
                     
+                    // === ENEMY ATTACK SOUND ===
+                    var eSrc = GetComponent<AudioSource>();
+                    if (enemyScript.isBoss)
+                        SoundManager.PlaySound(SoundType.Boss_Attack, eSrc, 0.8f);
+                    else
+                        SoundManager.PlaySound(SoundType.Enemy_Attack, eSrc, 0.7f);
+                    
                     damageStruct = D();
                     cachedBridge.PlayerDamage(damageStruct, hit);
                     return;
@@ -123,6 +130,14 @@ public class EnemyAttack : MonoBehaviour {
     }
     public void PowerDamage(int hit){
         if(enemyScript == null) return;
+
+        // === BOSS AoE SKILL SOUND ===
+        var bossSkill = GetComponent<BossMultiSkill>();
+        if (bossSkill == null) bossSkill = GetComponentInParent<BossMultiSkill>();
+        if (bossSkill != null)
+            SoundManager.PlaySound(bossSkill.GetBossAoeSound(), GetComponent<AudioSource>(), 0.9f);
+        else
+            SoundManager.PlaySound(SoundType.Boss_Attack, GetComponent<AudioSource>(), 0.8f);
 
         // Spawn Boss Skill VFX nếu có
         SpawnSkillVFX();

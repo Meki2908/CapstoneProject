@@ -94,8 +94,17 @@ public class ItemDropSpawner : MonoBehaviour
         int dropCount = 0;
 
         // 1. Item ScriptableObject drops
-        // Mỗi item roll độc lập theo dropChance, giới hạn bởi maxDropCount
-        foreach (var drop in itemDropTable)
+        // Shuffle list để tất cả item có cơ hội ngang nhau (không ưu tiên đầu list)
+        var shuffledDrops = new List<ItemDropEntry>(itemDropTable);
+        for (int i = shuffledDrops.Count - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            var temp = shuffledDrops[i];
+            shuffledDrops[i] = shuffledDrops[j];
+            shuffledDrops[j] = temp;
+        }
+
+        foreach (var drop in shuffledDrops)
         {
             if (maxDropCount > 0 && dropCount >= maxDropCount) break;
             if (drop.item == null) continue;
@@ -109,8 +118,17 @@ public class ItemDropSpawner : MonoBehaviour
             dropCount++;
         }
 
-        // 2. Custom drops (tên — không kết nối inventory)
-        foreach (var drop in customDropTable)
+        // 2. Custom drops (tên — không kết nối inventory) — cũng shuffle random
+        var shuffledCustom = new List<DropEntry>(customDropTable);
+        for (int i = shuffledCustom.Count - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            var temp = shuffledCustom[i];
+            shuffledCustom[i] = shuffledCustom[j];
+            shuffledCustom[j] = temp;
+        }
+
+        foreach (var drop in shuffledCustom)
         {
             if (Random.value > drop.dropChance) continue;
 

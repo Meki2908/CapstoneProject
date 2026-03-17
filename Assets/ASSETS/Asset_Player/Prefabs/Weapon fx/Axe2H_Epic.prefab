@@ -14610,6 +14610,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: b92ee6ab387bee547b3f4c22e35bdcaf, type: 2}
   - {fileID: 11400000, guid: 1d2e5c31b92cfe84a986ea3948aaccea, type: 2}
   iconManager: {fileID: 0}
+  weaponSO: {fileID: 0}
 --- !u!1 &7054176196005674006
 GameObject:
   m_ObjectHideFlags: 0
@@ -14655,11 +14656,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   weaponLength: 2.5
-  weaponDamage: 10
+  weaponDamage: 20
   hitRadius: 0.3
   targetLayer:
     serializedVersion: 2
     m_Bits: 64
+  hitAudioSource: {fileID: 0}
+  debugDamage: 0
 --- !u!1 &7320254138947866396
 GameObject:
   m_ObjectHideFlags: 0

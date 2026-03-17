@@ -538,6 +538,8 @@ public class TakeDamageTest : MonoBehaviour
         if (currentHealth > 0f)
         {
             PlayHitAnimation(isSkill);
+            // === ENEMY HIT SOUND ===
+            SoundManager.PlaySound(SoundType.Enemy_GetHit, GetComponent<AudioSource>(), 0.7f);
         }
 
         // Check for death
@@ -558,6 +560,9 @@ public class TakeDamageTest : MonoBehaviour
         isAlive = false;
         currentHealth = 0f;
         OnEnemyDied?.Invoke();
+
+        // === ENEMY DIE SOUND ===
+        SoundManager.PlaySound(SoundType.Enemy_Die, GetComponent<AudioSource>(), 0.8f);
 
         if (showDebugInfo)
         {

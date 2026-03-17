@@ -64,6 +64,19 @@ public class BlacksmithUI : MonoBehaviour
     [SerializeField] private Transform inventoryContent; // Grid content parent
     [SerializeField] private GameObject itemUIPrefab; // Same prefab as main inventory
 
+    [Header("── Inventory Grid Config (tweak in Play Mode) ──")]
+    [SerializeField] private Vector2 gridCellSize = new Vector2(180, 200);
+    [SerializeField] private Vector2 gridSpacing = new Vector2(10, 10);
+    [SerializeField] private int gridPaddingLeft = 10, gridPaddingRight = 10, gridPaddingTop = 10, gridPaddingBottom = 10;
+    [SerializeField] private int gridColumns = 6;
+
+    [SerializeField] private Vector2 itemIconSize = new Vector2(130, 130);
+    [SerializeField] private float itemNameFontSize = 33f;
+    [SerializeField] private float itemAmountFontSize = 26f;
+    [SerializeField] private float itemBorderWidth = 6f;
+    [SerializeField] private bool showScrollbar = true;
+
+
     [Header("Blacksmith Tooltip (self-contained)")]
     private GameObject bsTooltipPanel;
     private TextMeshProUGUI bsTooltipText;
@@ -79,6 +92,8 @@ public class BlacksmithUI : MonoBehaviour
     private Item selectedGem = null;
     private int selectedGemSlotIndex = -1;
     private Item selectedCrystal = null;
+    private Item selectedEquipment = null;       // Equipment tab: selected equipment item
+    private Rarity selectedEquipmentRarity;       // Equipment tab: rarity of selected equipment
     private bool _isClosing = false; // Guard against double Close() invocation
 
     // ─── Gem Removal Confirmation State ──────────────────────────
@@ -94,6 +109,14 @@ public class BlacksmithUI : MonoBehaviour
 
     void Start()
     {
+        // ── Ensure SocketingManager exists ──
+        if (SocketingManager.Instance == null)
+        {
+            var smGO = new GameObject("SocketingManager");
+            smGO.AddComponent<SocketingManager>();
+            Debug.Log("[BlacksmithUI] Auto-created SocketingManager (was missing from scene)");
+        }
+
         // Create self-contained tooltip (previously done in SetupReferences)
         CreateBlacksmithTooltip();
 
@@ -125,7 +148,31 @@ public class BlacksmithUI : MonoBehaviour
         InitializeGemSlots(weaponGemSlots, 3);
         InitializeGemSlots(equipmentGemSlots, 1);
 
-        // Wire remove buttons for weapon gem slots
+        // Auto-find & wire remove buttons for weapon gem slots
+        // Structure: WeaponGemSlots → SlotGroup_X → [GemSlot_X, RemoveBtn_X]
+        if (weaponGemRemoveButtons == null && weaponGemSlots != null)
+        {
+            weaponGemRemoveButtons = new Button[weaponGemSlots.Length];
+            for (int i = 0; i < weaponGemSlots.Length; i++)
+            {
+                // RemoveBtn_X is a sibling of GemSlot_X inside SlotGroup_X
+                var slotGroup = weaponGemSlots[i].transform.parent;
+                var btn = slotGroup?.Find($"RemoveBtn_{i}")?.GetComponent<Button>();
+                if (btn == null) // fallback: try any child Button that has "Remove" in name
+                {
+                    foreach (Transform child in slotGroup)
+                    {
+                        if (child.name.StartsWith("RemoveBtn"))
+                        {
+                            btn = child.GetComponent<Button>();
+                            break;
+                        }
+                    }
+                }
+                weaponGemRemoveButtons[i] = btn;
+            }
+            Debug.Log($"[BlacksmithUI] Weapon remove buttons: [{string.Join(", ", System.Array.ConvertAll(weaponGemRemoveButtons, b => (b != null).ToString()))}]");
+        }
         if (weaponGemRemoveButtons != null)
         {
             for (int i = 0; i < weaponGemRemoveButtons.Length; i++)
@@ -135,7 +182,28 @@ public class BlacksmithUI : MonoBehaviour
                     weaponGemRemoveButtons[i].onClick.AddListener(() => OnRemoveGemSlot(slotIdx, true));
             }
         }
-        // Wire remove buttons for equipment gem slots
+        // Auto-find & wire remove buttons for equipment gem slots
+        if (equipmentGemRemoveButtons == null && equipmentGemSlots != null)
+        {
+            equipmentGemRemoveButtons = new Button[equipmentGemSlots.Length];
+            for (int i = 0; i < equipmentGemSlots.Length; i++)
+            {
+                var slotGroup = equipmentGemSlots[i].transform.parent;
+                var btn = slotGroup?.Find($"RemoveBtn_{i}")?.GetComponent<Button>();
+                if (btn == null)
+                {
+                    foreach (Transform child in slotGroup)
+                    {
+                        if (child.name.StartsWith("RemoveBtn"))
+                        {
+                            btn = child.GetComponent<Button>();
+                            break;
+                        }
+                    }
+                }
+                equipmentGemRemoveButtons[i] = btn;
+            }
+        }
         if (equipmentGemRemoveButtons != null)
         {
             for (int i = 0; i < equipmentGemRemoveButtons.Length; i++)
@@ -205,6 +273,10 @@ public class BlacksmithUI : MonoBehaviour
     public void Open()
     {
         if (mainPanel) mainPanel.SetActive(true);
+        ApplyGridConfig(); // Apply grid config from Inspector values
+        // Suppress global tooltip while Blacksmith is open
+        if (ItemTooltipManager.Instance != null)
+            ItemTooltipManager.Instance.SuppressTooltip = true;
         ClearSelection();
         SwitchTab(ActiveTab.Weapon);
         RefreshAll();
@@ -217,6 +289,10 @@ public class BlacksmithUI : MonoBehaviour
 
         if (mainPanel) mainPanel.SetActive(false);
         ClearSelection();
+
+        // Re-enable global tooltip
+        if (ItemTooltipManager.Instance != null)
+            ItemTooltipManager.Instance.SuppressTooltip = false;
 
         // Notify NPC to close
         var npc = FindFirstObjectByType<BlacksmithNPC>();
@@ -256,8 +332,70 @@ public class BlacksmithUI : MonoBehaviour
 
     // ─── Equipment Slot Selection ────────────────────────────────
 
+    private int lastEquipClickIndex = -1;
+    private float lastEquipClickTime = -1f;
+    private int pendingUnequipSlot = -1; // -1 = no pending, >= 0 = waiting for confirm
+
     void SelectEquipmentSlot(int index)
     {
+        float now = Time.unscaledTime;
+
+        // ── If we have a pending unequip on this slot → confirm it ──
+        if (pendingUnequipSlot == index)
+        {
+            var equipped = EquipmentManager.Instance?.GetEquippedItemByIndex(index);
+            if (equipped != null)
+            {
+                pendingUnequipSlot = -1;
+                StopCoroutine(nameof(ResetPendingUnequipCoroutine));
+                EquipmentManager.Instance.RemoveItemByIndex(index);
+                Debug.Log($"[BlacksmithUI] Unequipped {equipped.itemName} from slot {index}");
+
+                if (resultPanel != null && resultText != null)
+                {
+                    resultPanel.SetActive(true);
+                    ConfigureResultText();
+                    resultText.text = $"Unequipped {equipped.itemName}.\nReturned to inventory.";
+                    resultText.color = new Color(0.2f, 0.9f, 0.3f);
+                    StopCoroutine(nameof(HideResultCoroutine));
+                    StartCoroutine(HideResultCoroutine());
+                }
+            }
+            ClearGemAndCrystalSelection();
+            selectedEquipmentSlot = -1;
+            lastEquipClickIndex = -1;
+            RefreshAll();
+            return;
+        }
+
+        // ── Double-click detection: show warning ──
+        if (index == lastEquipClickIndex && (now - lastEquipClickTime) < 1.0f)
+        {
+            if (index >= 0 && index < 4 && EquipmentManager.Instance != null)
+            {
+                var equipped = EquipmentManager.Instance.GetEquippedItemByIndex(index);
+                if (equipped != null)
+                {
+                    pendingUnequipSlot = index;
+                    if (resultPanel != null && resultText != null)
+                    {
+                        resultPanel.SetActive(true);
+                        ConfigureResultText();
+                        resultText.text = $"Unequip {equipped.itemName}?\nClick again to confirm.";
+                        resultText.color = new Color(1f, 0.7f, 0.2f);
+                    }
+                    StopCoroutine(nameof(ResetPendingUnequipCoroutine));
+                    StartCoroutine(ResetPendingUnequipCoroutine());
+                    return;
+                }
+            }
+        }
+
+        // ── Single click: select slot ──
+        lastEquipClickIndex = index;
+        lastEquipClickTime = now;
+        pendingUnequipSlot = -1;
+
         selectedEquipmentSlot = index;
         ClearGemAndCrystalSelection();
         RefreshEquipmentDisplay();
@@ -266,20 +404,30 @@ public class BlacksmithUI : MonoBehaviour
         UpdateSuccessRate();
     }
 
+    IEnumerator ResetPendingUnequipCoroutine()
+    {
+        yield return new WaitForSecondsRealtime(3f);
+        pendingUnequipSlot = -1;
+        if (resultPanel != null) resultPanel.SetActive(false);
+    }
+
     // ─── Gem Slot Interaction ────────────────────────────────────
 
     void OnGemSlotClicked(int slotIndex)
     {
         // If we have a selected gem → place it in this slot (tracked for socketing)
         selectedGemSlotIndex = slotIndex;
+        Debug.Log($"[BlacksmithUI] Gem slot {slotIndex} clicked — selectedGemSlotIndex = {selectedGemSlotIndex}");
+        RefreshGemSlots();      // Visual highlight on selected slot
         UpdateSuccessRate();
     }
 
     void OnGemSlotDoubleClicked(int slotIndex)
     {
-        // Double-click on gem slot → trigger removal with confirmation
-        bool isWeapon = (currentTab == ActiveTab.Weapon);
-        OnRemoveGemSlot(slotIndex, isWeapon);
+        // Double-click on gem slot → select slot only (removal via X button)
+        selectedGemSlotIndex = slotIndex;
+        RefreshGemSlots();
+        UpdateSuccessRate();
     }
 
     void OnRemoveGemSlot(int slotIndex, bool isWeapon)
@@ -345,7 +493,8 @@ public class BlacksmithUI : MonoBehaviour
     {
         if (resultPanel == null || resultText == null) return;
         resultPanel.SetActive(true);
-        resultText.text = $"⚠ Removing <color={Item.GetRarityColorHex(gem.rarity)}>{gem.itemName}</color> will DESTROY it permanently!\nClick again to confirm.";
+        ConfigureResultText();
+        resultText.text = $"Removing {gem.itemName} will DESTROY it!\nClick X again to confirm.";
         resultText.color = new Color(1f, 0.7f, 0.2f); // Warning orange
     }
 
@@ -353,7 +502,8 @@ public class BlacksmithUI : MonoBehaviour
     {
         if (resultPanel == null || resultText == null) return;
         resultPanel.SetActive(true);
-        resultText.text = $"Removed {gem.itemName}. Gem has been destroyed.";
+        ConfigureResultText();
+        resultText.text = $"Removed {gem.itemName}.\nGem has been destroyed.";
         resultText.color = new Color(0.9f, 0.3f, 0.2f); // Red
 
         StopCoroutine(nameof(HideResultCoroutine));
@@ -418,7 +568,8 @@ public class BlacksmithUI : MonoBehaviour
         selectedGem = null;
         selectedCrystal = null;
         selectedGemSlotIndex = -1;
-        ClearPendingRemoval(); // Reset removal confirmation khi đổi context
+        selectedEquipment = null;
+        ClearPendingRemoval();
         UpdateGemDropDisplay();
     }
 
@@ -428,12 +579,51 @@ public class BlacksmithUI : MonoBehaviour
         selectedEquipmentSlot = -1;
     }
 
+    // ─── Equipment Item Selection (Equipment Tab) ────────────────
+
+    /// <summary>
+    /// Select an equipment item from inventory for socketing (Equipment tab).
+    /// Auto-detects the target slot from the item's equipmentSlot.
+    /// </summary>
+    public void SelectEquipmentItem(Item equipItem, Rarity rarity)
+    {
+        if (equipItem == null || equipItem.itemType != ItemType.Equipment) return;
+        selectedEquipment = equipItem;
+        selectedEquipmentRarity = rarity;
+        selectedEquipmentSlot = EquipmentSlotToIndex(equipItem.equipmentSlot);
+        UpdateGemDropDisplay();
+        UpdateSuccessRate();
+        RefreshEquipmentDisplay();
+        RefreshViewports();
+    }
+
     // ─── Socket Button ───────────────────────────────────────────
 
     void OnSocketButtonClicked()
     {
-        if (SocketingManager.Instance == null) return;
-        if (selectedGem == null || selectedCrystal == null || selectedGemSlotIndex < 0) return;
+        Debug.Log($"[BlacksmithUI] OnSocketButtonClicked called! tab={currentTab}, gem={selectedGem?.itemName}, crystal={selectedCrystal?.itemName}, slotIdx={selectedGemSlotIndex}, equipment={selectedEquipment?.itemName}");
+
+        if (SocketingManager.Instance == null) { Debug.LogError("[BlacksmithUI] SocketingManager.Instance is NULL!"); return; }
+
+        // Validate based on tab
+        if (currentTab == ActiveTab.Weapon)
+        {
+            if (selectedGem == null || selectedCrystal == null || selectedGemSlotIndex < 0)
+            {
+                Debug.LogWarning($"[BlacksmithUI] Weapon validation FAILED: gem={selectedGem != null}, crystal={selectedCrystal != null}, slot={selectedGemSlotIndex}");
+                return;
+            }
+        }
+        else
+        {
+            if (selectedEquipment == null || selectedCrystal == null)
+            {
+                Debug.LogWarning($"[BlacksmithUI] Equipment validation FAILED: equip={selectedEquipment != null}, crystal={selectedCrystal != null}");
+                return;
+            }
+        }
+
+        Debug.Log("[BlacksmithUI] Validation PASSED — starting socketing animation!");
 
         // Disable button during animation
         if (socketButton) socketButton.interactable = false;
@@ -478,17 +668,20 @@ public class BlacksmithUI : MonoBehaviour
         }
         else
         {
-            if (selectedEquipmentSlot < 0) { if (socketButton) socketButton.interactable = true; yield break; }
-            result = SocketingManager.Instance.TrySocketEquipment(
-                selectedEquipmentSlot, selectedGemSlotIndex, selectedGem, selectedCrystal);
+            if (selectedEquipment == null || selectedEquipmentSlot < 0)
+            { if (socketButton) socketButton.interactable = true; yield break; }
+            result = SocketingManager.Instance.TrySocketEquipmentItem(
+                selectedEquipmentSlot, selectedEquipment, selectedEquipmentRarity, selectedCrystal);
         }
 
         ShowResult(result);
 
-        // Clear crystal selection (consumed)
+        // Clear consumed items
         if (result == SocketResult.Success || result == SocketResult.Fail)
         {
             selectedCrystal = null;
+            if (currentTab == ActiveTab.Equipment)
+                selectedEquipment = null; // Clear equipment selection after attempt
         }
 
         RefreshAll();
@@ -498,16 +691,22 @@ public class BlacksmithUI : MonoBehaviour
     {
         if (resultPanel == null || resultText == null) return;
         resultPanel.SetActive(true);
+        ConfigureResultText();
 
         switch (result)
         {
             case SocketResult.Success:
                 resultText.text = "SOCKETING SUCCESS!";
                 resultText.color = new Color(0.2f, 0.9f, 0.3f);
+                SoundManager.PlaySound(SoundType.Blacksmith_Socket_Success);
                 break;
             case SocketResult.Fail:
-                resultText.text = "SOCKETING FAILED!\nCrystal Stone consumed. Gem returned.";
+                if (currentTab == ActiveTab.Weapon)
+                    resultText.text = "SOCKETING FAILED!\nCrystal Stone and Gem destroyed.";
+                else
+                    resultText.text = "SOCKETING FAILED!\nCrystal Stone consumed. Equipment returned.";
                 resultText.color = new Color(0.9f, 0.3f, 0.2f);
+                SoundManager.PlaySound(SoundType.Blacksmith_Socket_Fail);
                 break;
             case SocketResult.NoGem:
                 resultText.text = "No Gem selected!";
@@ -527,9 +726,38 @@ public class BlacksmithUI : MonoBehaviour
                 break;
         }
 
+        resultText.ForceMeshUpdate();
+
         // Auto-hide after 2 seconds (unscaled time — works even when timeScale=0)
         StopCoroutine(nameof(HideResultCoroutine));
         StartCoroutine(HideResultCoroutine());
+    }
+
+    /// <summary>
+    /// Shared text config for resultPanel — used by ShowResult, ShowRemovalWarning, ShowRemovalSuccess
+    /// </summary>
+    void ConfigureResultText()
+    {
+        // Text settings
+        resultText.enableWordWrapping = true;
+        resultText.overflowMode = TMPro.TextOverflowModes.Overflow;
+        resultText.alignment = TextAlignmentOptions.TopLeft;
+        resultText.enableAutoSizing = true;
+        resultText.fontSizeMin = 14;
+        resultText.fontSizeMax = 36;
+
+        // Force text RectTransform to fit inside panel
+        float pad = 20f;
+        var textRT = resultText.rectTransform;
+        var panelRT = resultPanel.GetComponent<RectTransform>();
+        textRT.anchorMin = new Vector2(0.5f, 0.5f);
+        textRT.anchorMax = new Vector2(0.5f, 0.5f);
+        textRT.pivot = new Vector2(0.5f, 0.5f);
+        textRT.anchoredPosition = Vector2.zero;
+        textRT.sizeDelta = new Vector2(
+            panelRT.rect.width - pad * 2,
+            panelRT.rect.height - pad * 2
+        );
     }
 
     IEnumerator HideResultCoroutine()
@@ -632,9 +860,11 @@ public class BlacksmithUI : MonoBehaviour
     {
         if (currentTab == ActiveTab.Weapon)
         {
-            if (weaponGemSlots == null) return;
+            if (weaponGemSlots == null) { Debug.LogWarning("[BlacksmithUI] weaponGemSlots is NULL!"); return; }
             var wc = FindFirstObjectByType<WeaponController>();
             WeaponType wt = (wc != null) ? wc.GetCurrentWeapon().weaponType : WeaponType.None;
+
+            Debug.Log($"[BlacksmithUI] RefreshGemSlots: wc={wc != null}, wt={wt}, WeaponGemMgr={WeaponGemManager.Instance != null}, slots={weaponGemSlots.Length}");
 
             for (int i = 0; i < weaponGemSlots.Length && i < 3; i++)
             {
@@ -642,24 +872,83 @@ public class BlacksmithUI : MonoBehaviour
                 if (wt != WeaponType.None && WeaponGemManager.Instance != null)
                     gem = WeaponGemManager.Instance.GetEquippedGem(wt, i);
 
+                Debug.Log($"[BlacksmithUI] Slot {i}: gem={gem?.itemName ?? "null"}, icon={gem?.icon != null}");
                 weaponGemSlots[i].SetGem(gem, i == selectedGemSlotIndex);
             }
         }
-        else if (currentTab == ActiveTab.Equipment)
-        {
-            if (equipmentGemSlots == null || selectedEquipmentSlot < 0) return;
-
-            for (int i = 0; i < equipmentGemSlots.Length && i < 4; i++)
-            {
-                Item gem = EquipmentManager.Instance?.GetEquippedGem(selectedEquipmentSlot, i);
-                equipmentGemSlots[i].SetGem(gem, i == selectedGemSlotIndex);
-            }
-        }
+        // Equipment tab: no gem slots (equipment uses equipment items, not gems)
     }
 
     void RefreshViewports()
     {
         RefreshInventoryPanel();
+    }
+
+    /// <summary>
+    /// Apply grid config from serialized fields — call from RefreshInventoryPanel or live Update
+    /// </summary>
+    void ApplyGridConfig()
+    {
+        if (inventoryContent == null) return;
+
+        // ── Grid Layout ──
+        var grid = inventoryContent.GetComponent<UnityEngine.UI.GridLayoutGroup>();
+        if (grid != null)
+        {
+            grid.cellSize = gridCellSize;
+            grid.spacing = gridSpacing;
+            grid.constraintCount = gridColumns;
+            grid.constraint = UnityEngine.UI.GridLayoutGroup.Constraint.FixedColumnCount;
+            grid.padding.left = gridPaddingLeft;
+            grid.padding.right = gridPaddingRight;
+            grid.padding.top = gridPaddingTop;
+            grid.padding.bottom = gridPaddingBottom;
+            UnityEngine.UI.LayoutRebuilder.MarkLayoutForRebuild(inventoryContent as RectTransform);
+        }
+
+        // ── Scroll settings ──
+        var scrollRect = inventoryContent.GetComponentInParent<UnityEngine.UI.ScrollRect>();
+        if (scrollRect != null)
+        {
+            scrollRect.scrollSensitivity = 30f;
+            scrollRect.movementType = UnityEngine.UI.ScrollRect.MovementType.Elastic;
+
+
+
+            // Scrollbar visibility
+            if (scrollRect.verticalScrollbar != null)
+                scrollRect.verticalScrollbar.gameObject.SetActive(showScrollbar);
+        }
+
+        // ── Item-level sizing ──
+        foreach (Transform child in inventoryContent)
+        {
+            // Icon size
+            var iconTf = child.Find("Item Icon");
+            if (iconTf != null)
+            {
+                var iconRT = iconTf.GetComponent<RectTransform>();
+                if (iconRT != null) iconRT.sizeDelta = itemIconSize;
+            }
+            // Name font
+            var nameTf = child.Find("Item name");
+            if (nameTf != null)
+            {
+                var tmp = nameTf.GetComponent<TMPro.TextMeshProUGUI>();
+                if (tmp != null) tmp.fontSize = itemNameFontSize;
+            }
+            // Amount font
+            var amtTf = child.Find("Item amount");
+            if (amtTf != null)
+            {
+                var tmp = amtTf.GetComponent<TMPro.TextMeshProUGUI>();
+                if (tmp != null) tmp.fontSize = itemAmountFontSize;
+            }
+            // Border width
+            var outline = child.GetComponent<Outline>();
+            if (outline != null)
+                outline.effectDistance = new Vector2(itemBorderWidth, itemBorderWidth);
+        }
     }
 
     void RefreshInventoryPanel()
@@ -696,23 +985,31 @@ public class BlacksmithUI : MonoBehaviour
                     continue;
             }
 
-            // Filter: Equipment tab → Equipment + CrystalStone only (no Gems)
+            // Filter: Equipment tab → Equipment + CrystalStone only
             if (currentTab == ActiveTab.Equipment)
             {
-                // Always hide non-equipment/non-crystal items
-                if (item.itemType != ItemType.Equipment && item.itemType != ItemType.CrystalStone)
-                    continue;
-                // If a slot is selected, further filter equipment by matching slot
-                if (filterSlot.HasValue && item.itemType == ItemType.Equipment && item.equipmentSlot != filterSlot.Value)
-                    continue;
+                if (item.itemType == ItemType.CrystalStone)
+                { /* always show crystals */ }
+                else if (item.itemType == ItemType.Equipment)
+                {
+                    // If a slot is selected, only show matching equipment
+                    if (filterSlot.HasValue && item.equipmentSlot != filterSlot.Value)
+                        continue;
+                }
+                else
+                    continue; // not equipment or crystal
             }
 
             GameObject go = Instantiate(itemUIPrefab, inventoryContent);
+            // Enable drag-scroll through item buttons
+            if (go.GetComponent<ScrollDragPassthrough>() == null)
+                go.AddComponent<ScrollDragPassthrough>();
             var itemUI = go.GetComponent<ItemUI>();
             if (itemUI != null)
             {
                 itemUI.Initialize(item, amount, null, rarity);
                 itemUI.SetRemoveButtonVisible(false);
+                itemUI.SetUseTooltip(false); // Disable global tooltip — Blacksmith has its own BS_Tooltip
             }
 
             // ── Rarity background color + border ──
@@ -723,42 +1020,14 @@ public class BlacksmithUI : MonoBehaviour
             }
             var rarityOutline = go.AddComponent<Outline>();
             rarityOutline.effectColor = GetRarityBorderColor(rarity);
-            rarityOutline.effectDistance = new Vector2(6, 6);
+            rarityOutline.effectDistance = new Vector2(itemBorderWidth, itemBorderWidth);
 
-            // ── Resize to fit Blacksmith grid cells (180×200 for 4K) ──
-            var iconTf = go.transform.Find("Item Icon");
-            if (iconTf != null)
-            {
-                var iconRT = iconTf.GetComponent<RectTransform>();
-                if (iconRT != null) iconRT.sizeDelta = new Vector2(130, 130);
-            }
-            var nameText = go.transform.Find("Item name");
-            if (nameText != null)
-            {
-                var tmp = nameText.GetComponent<TMPro.TextMeshProUGUI>();
-                if (tmp != null)
-                {
-                    tmp.fontSize = 33;
-                    tmp.enableWordWrapping = true;
-                    tmp.overflowMode = TMPro.TextOverflowModes.Ellipsis;
-                    tmp.maxVisibleLines = 2;
-                }
-            }
-            var amountText = go.transform.Find("Item amount");
-            if (amountText != null)
-            {
-                var tmp = amountText.GetComponent<TMPro.TextMeshProUGUI>();
-                if (tmp != null)
-                {
-                    tmp.fontSize = 26;
-                    tmp.enableWordWrapping = false;
-                    tmp.overflowMode = TMPro.TextOverflowModes.Overflow;
-                }
-            }
+            // Item sizing uses prefab defaults — no code override
 
             // ── Click behavior — use existing Button from prefab ──
             var btn = go.GetComponent<Button>();
             if (btn == null) btn = go.AddComponent<Button>();
+            btn.navigation = new Navigation { mode = Navigation.Mode.None }; // Don't block drag
             // Clear any prefab listeners, add Blacksmith-specific ones
             btn.onClick.RemoveAllListeners();
             Item capturedItem = item;
@@ -785,7 +1054,20 @@ public class BlacksmithUI : MonoBehaviour
                     outline.effectDistance = new Vector2(6, 6);
                 }
             }
-            // All other items (equipment, etc.) — display normally, no dimming
+            else if (item.itemType == ItemType.Equipment)
+            {
+                Rarity capturedRarity = rarity;
+                btn.onClick.AddListener(() => SelectEquipmentItem(capturedItem, capturedRarity));
+
+                // Highlight if currently selected
+                if (selectedEquipment != null && selectedEquipment.id == item.id && selectedEquipmentRarity == rarity)
+                {
+                    var outline = go.AddComponent<Outline>();
+                    outline.effectColor = new Color(1f, 0.84f, 0f);
+                    outline.effectDistance = new Vector2(6, 6);
+                }
+            }
+            // All other items — display normally, no dimming
 
             // ── Tooltip hover via EventTrigger ──
             // Pass rolled value for gems
@@ -831,11 +1113,26 @@ public class BlacksmithUI : MonoBehaviour
 
     void UpdateGemDropDisplay()
     {
+        // Determine what item to show in the drop zone based on current tab
+        Item displayItem = null;
+        string emptyHint = "";
+
+        if (currentTab == ActiveTab.Weapon)
+        {
+            displayItem = selectedGem;
+            emptyHint = "Select Gem from inventory\nto socket into weapon";
+        }
+        else
+        {
+            displayItem = selectedEquipment;
+            emptyHint = "Select Equipment from inventory\nto equip into slot";
+        }
+
         if (gemDropIcon != null)
         {
-            if (selectedGem != null)
+            if (displayItem != null)
             {
-                gemDropIcon.sprite = selectedGem.icon;
+                gemDropIcon.sprite = displayItem.icon;
                 gemDropIcon.enabled = true;
                 gemDropIcon.color = Color.white;
             }
@@ -848,12 +1145,20 @@ public class BlacksmithUI : MonoBehaviour
 
         if (gemDropText != null)
         {
-            gemDropText.text = (selectedGem != null)
-                ? $"<color={Item.GetRarityColorHex(selectedGem.rarity)}>{selectedGem.itemName}</color>"
-                : "";
+            if (displayItem != null)
+            {
+                Rarity r = (currentTab == ActiveTab.Weapon && selectedGem != null) ? selectedGem.rarity
+                         : (currentTab == ActiveTab.Equipment && selectedEquipment != null) ? selectedEquipmentRarity
+                         : Rarity.Common;
+                gemDropText.text = $"<color={Item.GetRarityColorHex(r)}>{displayItem.itemName}</color>";
+            }
+            else
+            {
+                gemDropText.text = "";
+            }
         }
 
-        SetDropSlotTooltip(gemDropIcon, selectedGem, "Select Gem from inventory\nto socket into equipment or weapon");
+        SetDropSlotTooltip(gemDropIcon, displayItem, emptyHint);
     }
 
     void UpdateSuccessRate()
@@ -869,22 +1174,23 @@ public class BlacksmithUI : MonoBehaviour
 
             if (currentTab == ActiveTab.Weapon)
             {
-                // Weapon: tỉ lệ dựa trên rarity của gem (gem càng hiếm → cần crystal tốt hơn)
                 targetRarity = (selectedGem != null) ? selectedGem.rarity : Rarity.Common;
                 canSocket = selectedGem != null && selectedGemSlotIndex >= 0;
             }
-            else if (selectedEquipmentSlot >= 0 && EquipmentManager.Instance != null)
+            else
             {
-                var equip = EquipmentManager.Instance.GetEquippedItemByIndex(selectedEquipmentSlot);
-                if (equip != null)
+                // Equipment tab: rate based on equipment rarity vs crystal rarity
+                if (selectedEquipment != null)
                 {
-                    targetRarity = EquipmentManager.Instance.GetEquippedRarity(selectedEquipmentSlot);
-                    canSocket = selectedGem != null && selectedGemSlotIndex >= 0;
+                    targetRarity = selectedEquipmentRarity;
+                    canSocket = true;
                 }
             }
 
             rate = SocketingManager.Instance.CalculateSuccessRate(targetRarity, selectedCrystal.rarity);
         }
+
+        Debug.Log($"[BlacksmithUI] UpdateSuccessRate: tab={currentTab}, gem={selectedGem?.itemName}, crystal={selectedCrystal?.itemName}, slotIdx={selectedGemSlotIndex}, canSocket={canSocket}, rate={rate:P0}, btnInteractable={canSocket && selectedCrystal != null}");
 
         // Update bar
         if (successRateBar)
@@ -906,7 +1212,10 @@ public class BlacksmithUI : MonoBehaviour
 
         if (socketButtonText)
         {
-            socketButtonText.text = canSocket ? "SOCKET GEM" : "Select Gem + Crystal + Slot";
+            if (currentTab == ActiveTab.Weapon)
+                socketButtonText.text = canSocket ? "SOCKET GEM" : "Select Gem + Crystal + Slot";
+            else
+                socketButtonText.text = canSocket ? "EQUIP ITEM" : "Select Equipment + Crystal";
         }
     }
 
@@ -1005,14 +1314,25 @@ public class BlacksmithUI : MonoBehaviour
     {
         if (mainPanel == null) return;
 
-        // Create panel on the Blacksmith Canvas
-        bsTooltipPanel = new GameObject("BS_Tooltip", typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster));
-        bsTooltipPanel.transform.SetParent(mainPanel.transform, false);
+        // Find the ROOT Canvas — parent tooltip here so it renders ON TOP of everything
+        Canvas rootCanvas = mainPanel.GetComponentInParent<Canvas>();
+        // Walk up to the topmost root canvas
+        while (rootCanvas != null && rootCanvas.transform.parent != null)
+        {
+            var parentCanvas = rootCanvas.transform.parent.GetComponentInParent<Canvas>();
+            if (parentCanvas == null) break;
+            rootCanvas = parentCanvas;
+        }
+        Transform tooltipParent = (rootCanvas != null) ? rootCanvas.transform : mainPanel.transform;
 
-        // Override sorting → always on top
+        // Create panel on the ROOT Canvas (not mainPanel) so it's always on top
+        bsTooltipPanel = new GameObject("BS_Tooltip", typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster));
+        bsTooltipPanel.transform.SetParent(tooltipParent, false);
+
+        // Override sorting → HIGHEST possible order
         var tooltipCanvas = bsTooltipPanel.GetComponent<Canvas>();
         tooltipCanvas.overrideSorting = true;
-        tooltipCanvas.sortingOrder = 10000;
+        tooltipCanvas.sortingOrder = 32767;
 
         bsTooltipRect = bsTooltipPanel.GetComponent<RectTransform>();
         bsTooltipRect.pivot = new Vector2(0f, 1f);
@@ -1147,6 +1467,9 @@ public class BlacksmithUI : MonoBehaviour
 
     void Update()
     {
+        // Always apply grid config when UI is open (live tweaking in play mode)
+        if (mainPanel != null && mainPanel.activeSelf)
+            ApplyGridConfig();
         // Follow mouse when tooltip is showing, flip upward near screen bottom
         if (bsTooltipPanel != null && bsTooltipPanel.activeSelf && bsTooltipRect != null)
         {
@@ -1198,12 +1521,18 @@ public class BlacksmithUI : MonoBehaviour
                     sb.AppendLine($"<color=#FF8800>⚡ Stat Roll: {rolledValue*100f:F0}%</color>");
                 }
                 float mult = (rolledValue >= 0f) ? rolledValue : 1f;
-                if (item.ScaledHPBonus(rarity) > 0f) sb.AppendLine($"<color=#00FF00>HP: +{item.ScaledHPBonus(rarity)*mult:F0}</color>");
-                if (item.ScaledDefenseBonus(rarity) > 0f) sb.AppendLine($"<color=#00AAFF>Defense: +{item.ScaledDefenseBonus(rarity)*mult:F0}</color>");
-                if (item.ScaledCritRateBonus(rarity) > 0f) sb.AppendLine($"<color=#FF00FF>Crit Rate: +{item.ScaledCritRateBonus(rarity)*mult*100:F1}%</color>");
-                if (item.ScaledCritDamageMultiplier(rarity) > 1f) sb.AppendLine($"<color=#FF00FF>Crit Dmg: +{(item.ScaledCritDamageMultiplier(rarity)-1)*mult*100:F1}%</color>");
-                if (item.ScaledMovementSpeedBonus(rarity) > 0f) sb.AppendLine($"<color=#00FFFF>Move Speed: +{item.ScaledMovementSpeedBonus(rarity)*mult*100:F1}%</color>");
-                if (item.ScaledAttackSpeedBonus(rarity) > 0f) sb.AppendLine($"<color=#FFAA00>Atk Speed: +{item.ScaledAttackSpeedBonus(rarity)*mult*100:F1}%</color>");
+                if (item.ScaledHPBonus(rarity) > 0f)
+                    sb.AppendLine($"<color=#00FF00>HP: +{item.ScaledHPBonus(rarity)*mult:F0}</color> <color=#888888>(max {item.ScaledHPBonus(rarity):F0})</color>");
+                if (item.ScaledDefenseBonus(rarity) > 0f)
+                    sb.AppendLine($"<color=#00AAFF>Defense: +{item.ScaledDefenseBonus(rarity)*mult:F0}</color> <color=#888888>(max {item.ScaledDefenseBonus(rarity):F0})</color>");
+                if (item.ScaledCritRateBonus(rarity) > 0f)
+                    sb.AppendLine($"<color=#FF00FF>Crit Rate: +{item.ScaledCritRateBonus(rarity)*mult*100:F1}%</color> <color=#888888>(max {item.ScaledCritRateBonus(rarity)*100:F1}%)</color>");
+                if (item.ScaledCritDamageMultiplier(rarity) > 1f)
+                    sb.AppendLine($"<color=#FF00FF>Crit Dmg: +{(item.ScaledCritDamageMultiplier(rarity)-1)*mult*100:F1}%</color> <color=#888888>(max {(item.ScaledCritDamageMultiplier(rarity)-1)*100:F1}%)</color>");
+                if (item.ScaledMovementSpeedBonus(rarity) > 0f)
+                    sb.AppendLine($"<color=#00FFFF>Move Speed: +{item.ScaledMovementSpeedBonus(rarity)*mult*100:F1}%</color> <color=#888888>(max {item.ScaledMovementSpeedBonus(rarity)*100:F1}%)</color>");
+                if (item.ScaledAttackSpeedBonus(rarity) > 0f)
+                    sb.AppendLine($"<color=#FFAA00>Atk Speed: +{item.ScaledAttackSpeedBonus(rarity)*mult*100:F1}%</color> <color=#888888>(max {item.ScaledAttackSpeedBonus(rarity)*100:F1}%)</color>");
                 if (!string.IsNullOrEmpty(item.passiveDescription))
                 {
                     sb.AppendLine();
@@ -1257,5 +1586,18 @@ public class BlacksmithUI : MonoBehaviour
                 break;
         }
         return sb.ToString().TrimEnd();
+    }
+
+    // ─── Helper: EquipmentSlotType → index ────────────────────────
+    int EquipmentSlotToIndex(EquipmentSlotType slot)
+    {
+        switch (slot)
+        {
+            case EquipmentSlotType.Head: return 0;
+            case EquipmentSlotType.Body: return 1;
+            case EquipmentSlotType.Legs: return 2;
+            case EquipmentSlotType.Accessory: return 3;
+            default: return 0;
+        }
     }
 }

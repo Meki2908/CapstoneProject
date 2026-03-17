@@ -216,6 +216,11 @@ public class BossMultiSkill : MonoBehaviour
         {
             auraInstance = Instantiate(auraVfxPrefab, transform.position, Quaternion.identity, transform);
             if (showDebug) Debug.Log("[BossMultiSkill] Aura VFX spawned!");
+            
+            // === BOSS ROAR + AURA SOUND ===
+            var eSrc = GetComponent<AudioSource>();
+            SoundManager.PlaySound(SoundType.Boss_Roar, eSrc, 1f);
+            SoundManager.PlaySound(GetAuraSound(), eSrc, 0.7f);
         }
         
         yield return new WaitForSeconds(phase2InvulDuration);
@@ -265,6 +270,9 @@ public class BossMultiSkill : MonoBehaviour
         // Spawn Shield VFX
         shieldInstance = Instantiate(shieldVfxPrefab, transform.position, Quaternion.identity, transform);
         
+        // === SHIELD SOUND ===
+        SoundManager.PlaySound(GetShieldSound(), GetComponent<AudioSource>(), 0.8f);
+        
         if (showDebug) Debug.Log($"[BossMultiSkill] Shield ON! Duration: {shieldDuration}s");
         
         yield return new WaitForSeconds(shieldDuration);
@@ -288,6 +296,10 @@ public class BossMultiSkill : MonoBehaviour
         if (enemyScript.attack) return; // Đang đánh thường → đợi
         
         lastProjectileTime = Time.time;
+        
+        // === PROJECTILE SOUND ===
+        SoundManager.PlaySound(GetProjectileSound(), GetComponent<AudioSource>(), 0.8f);
+        
         SpawnProjectile();
     }
     
@@ -365,6 +377,10 @@ public class BossMultiSkill : MonoBehaviour
         if (enemyNewPrefab == null) return;
         
         lastSummonTime = Time.time;
+        
+        // === BOSS ROAR khi summon ===
+        SoundManager.PlaySound(SoundType.Boss_Roar, GetComponent<AudioSource>(), 0.9f);
+        
         StartCoroutine(SummonSequence());
     }
     
@@ -481,6 +497,92 @@ public class BossMultiSkill : MonoBehaviour
         return isShielded;
     }
     
+    #endregion
+    
+    #region SOUND HELPERS
+    
+    /// <summary>
+    /// Trả về SoundType cho Aura skill dựa trên loại boss
+    /// </summary>
+    SoundType GetAuraSound()
+    {
+        if (enemyScript == null) return SoundType.Boss_Ifrit_FireAura;
+        switch (enemyScript.specificEnemyType)
+        {
+            case EnemyScript.SpecificEnemyType.Lich:
+                return SoundType.Boss_Lich_WindAura;
+            case EnemyScript.SpecificEnemyType.Ifrit:
+            case EnemyScript.SpecificEnemyType.Demon: // Demon dùng chung fire
+                return SoundType.Boss_Ifrit_FireAura;
+            default:
+                return SoundType.Boss_Ifrit_FireAura;
+        }
+    }
+    
+    /// <summary>
+    /// Trả về SoundType cho Shield skill dựa trên loại boss
+    /// </summary>
+    SoundType GetShieldSound()
+    {
+        if (enemyScript == null) return SoundType.Boss_Ifrit_FireShield;
+        switch (enemyScript.specificEnemyType)
+        {
+            case EnemyScript.SpecificEnemyType.Lich:
+                return SoundType.Boss_Lich_WindShield;
+            case EnemyScript.SpecificEnemyType.Ifrit:
+            case EnemyScript.SpecificEnemyType.Demon:
+                return SoundType.Boss_Ifrit_FireShield;
+            default:
+                return SoundType.Boss_Ifrit_FireShield;
+        }
+    }
+    
+    /// <summary>
+    /// Trả về SoundType cho Projectile skill dựa trên loại boss
+    /// </summary>
+    SoundType GetProjectileSound()
+    {
+        if (enemyScript == null) return SoundType.Boss_Ifrit_Fireball;
+        switch (enemyScript.specificEnemyType)
+        {
+            case EnemyScript.SpecificEnemyType.Lich:
+                return SoundType.Boss_Lich_WindBullet;
+            case EnemyScript.SpecificEnemyType.Ifrit:
+            case EnemyScript.SpecificEnemyType.Demon:
+                return SoundType.Boss_Ifrit_Fireball;
+            default:
+                return SoundType.Boss_Ifrit_Fireball;
+        }
+    }
+    
+    /// <summary>
+    /// Trả về SoundType cho Boss AoE/Power Damage skill dựa trên loại boss
+    /// Gọi từ bên ngoài (EnemyAttack.PowerDamage)
+    /// </summary>
+    public SoundType GetBossAoeSound()
+    {
+        if (enemyScript == null) return SoundType.Boss_Attack;
+        switch (enemyScript.specificEnemyType)
+        {
+            case EnemyScript.SpecificEnemyType.Stoneogre:
+                return SoundType.Boss_Stoneogre_EarthSlam;
+            case EnemyScript.SpecificEnemyType.Golem:
+                return SoundType.Boss_Golem_WaterBlast;
+            case EnemyScript.SpecificEnemyType.Minotaur:
+                return SoundType.Boss_Minotaur_EarthBlast;
+            case EnemyScript.SpecificEnemyType.Lich:
+                return SoundType.Boss_Lich_WindAoe;
+            case EnemyScript.SpecificEnemyType.Ifrit:
+                return SoundType.Boss_Ifrit_FireAoe;
+            case EnemyScript.SpecificEnemyType.Demon:
+                return SoundType.Boss_Demon_FireBlast;
+            default:
+                return SoundType.Boss_Attack;
+        }
+    }
+    
+    #endregion
+    
     /// <summary>
     /// Cleanup khi boss chết
     /// </summary>
@@ -489,6 +591,4 @@ public class BossMultiSkill : MonoBehaviour
         if (auraInstance != null) Destroy(auraInstance);
         if (shieldInstance != null) Destroy(shieldInstance);
     }
-    
-    #endregion
 }
