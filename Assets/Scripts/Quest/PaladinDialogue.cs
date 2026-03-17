@@ -44,21 +44,20 @@ public class PaladinDialogue : MonoBehaviour
     [Header("── Dialogue Lines (Step 0) ──")]
     [TextArea(2, 4)]
     public string[] openingLines = {
-        "Ah, you're back. I wish it were under better circumstances.",
-        "Maria — the warrior you met at the City Gate — she's gone ahead.",
-        "After we secured this position, new reports came in. Another gate. Another breach.",
-        "Maria didn't wait for orders. She grabbed her unit and marched straight toward it.",
-        "That's Maria for you. Never waits. Never hesitates.",
-        "I was told to hold this post, so here I am. But she needs backup out there.",
-        "There is a teleport point nearby — use it to reach the new battlefield.",
-        "Leona is there too. She pushed forward with Maria.",
-        "Find them, and do what you did here. We're counting on you."
+        "Thank you for your help pushing back those monsters at the gate.",
+        "You're asking about Maria? She's moved on to a more dangerous area.",
+        "After we secured this position, new reports came in — another gate appeared. Larger. Darker.",
+        "Maria didn't wait for orders. She took her unit and marched straight toward it.",
+        "That's Maria for you. She never waits.",
+        "Do you want to help her? Good. I knew you would.",
+        "Use the teleport portal nearby and select the Battlefield destination.",
+        "She's out there. She needs backup. Go now."
     };
 
     [Header("── Reminder (if player returns) ──")]
     [TextArea(2, 4)]
     public string[] reminderLines = {
-        "The teleport to the east is nearby. Leona is waiting — don't keep her!"
+        "The teleport portal is nearby. Select Battlefield — Maria is waiting for you!"
     };
 
     [Header("── Settings ──")]
@@ -124,6 +123,9 @@ public class PaladinDialogue : MonoBehaviour
         if (promptPanel)   promptPanel.SetActive(false);
         if (dialogueCanvas) dialogueCanvas.gameObject.SetActive(true);
         if (dialoguePanel)  dialoguePanel.SetActive(true);
+
+        // Re-set tên NPC khi mở, tránh bị script khác ghi đè
+        SetText(npcNameTMP, npcNameLegacy, "Paladin");
 
         Cursor.visible   = true;
         Cursor.lockState = CursorLockMode.None;

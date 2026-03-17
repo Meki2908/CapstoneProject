@@ -59,14 +59,12 @@ public class MariaDialogue : MonoBehaviour
     [Header("── Dialogue: Quest 3 – Battlefield ──")]
     [TextArea(2, 4)]
     public string[] quest3Lines = {
-        "You made it! I wasn't sure the teleport was still working properly.",
-        "I'm glad you're here. This situation is... worse than I reported.",
-        "We pushed forward after the City Gate was secured, but this new gate appeared overnight.",
-        "It's larger. Whatever came through the last one, this one is hiding something bigger.",
-        "I've got soldiers holding the perimeter, but no one willing to go inside. Can't blame them.",
-        "But you and I both know someone has to.",
-        "Go in. Do what you did at the last gate. End it.",
-        "I'll be right here when you come back."
+        "You made it out here! I'm relieved.",
+        "I was pushing toward the Demon Gate — our real objective — but something is blocking the path.",
+        "Another gate appeared overnight. Smaller than the Demon Gate, but crawling with creatures.",
+        "We can't advance until it's dealt with.",
+        "I'd go in myself, but I need to hold this perimeter.",
+        "Please — go through that gate and close it from the inside. Then we push forward together."
     };
 
     [Header("── Reminder Dialogue (if player returns) ──")]
@@ -164,6 +162,9 @@ public class MariaDialogue : MonoBehaviour
         if (promptPanel) promptPanel.SetActive(false);
         if (dialogueCanvas != null) dialogueCanvas.gameObject.SetActive(true);
         if (dialoguePanel)  dialoguePanel.SetActive(true);
+
+        // Re-set tên NPC khi mở, tránh bị script khác ghi đè
+        SetText(npcNameTMP, npcNameLegacy, "Maria");
 
         Cursor.visible   = true;
         Cursor.lockState = CursorLockMode.None;
