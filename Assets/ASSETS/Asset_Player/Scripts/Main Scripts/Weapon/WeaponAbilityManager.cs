@@ -35,23 +35,17 @@ public class WeaponAbilityManager : MonoBehaviour
 
         if (iconManager != null && weaponAbilities != null)
         {
-            iconManager.AE_SetAbilityIcons(weaponAbilities);
-
-            // Set weapon type for mastery checking
+            // Set weapon type first so AE_SetAbilityIcons can store cooldown durations per weapon
             if (weaponSO != null)
-            {
                 iconManager.SetCurrentWeaponType(weaponSO.weaponType);
-            }
             else
             {
-                // Try to get weapon from parent WeaponController
                 var weaponController = GetComponentInParent<WeaponController>();
                 if (weaponController != null && weaponController.GetCurrentWeapon() != null)
-                {
                     iconManager.SetCurrentWeaponType(weaponController.GetCurrentWeapon().weaponType);
-                }
             }
 
+            iconManager.AE_SetAbilityIcons(weaponAbilities);
             Debug.Log("[WeaponAbilityManager] Successfully called iconManager.AE_SetAbilityIcons");
         }
         else

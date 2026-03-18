@@ -17,30 +17,39 @@ public class AbilityIconManager : MonoBehaviour
     [SerializeField] private Image tCDOverlay;
     [SerializeField] private Image ultimateCDOverlay;
 
-    [Header("CD Remain Text")]
-    [SerializeField] private TextMeshProUGUI eCDRemain;
-    [SerializeField] private TextMeshProUGUI rCDRemain;
-    [SerializeField] private TextMeshProUGUI tCDRemain;
-    [SerializeField] private TextMeshProUGUI ultimateCDRemain;
+    [Header("CD Remain Text - Sword (E, R, T, Q)")]
+    [SerializeField] private TextMeshProUGUI swordECDRemain;
+    [SerializeField] private TextMeshProUGUI swordRCDRemain;
+    [SerializeField] private TextMeshProUGUI swordTCDRemain;
+    [SerializeField] private TextMeshProUGUI swordUltimateCDRemain;
+
+    [Header("CD Remain Text - Axe (E, R, T, Q)")]
+    [SerializeField] private TextMeshProUGUI axeECDRemain;
+    [SerializeField] private TextMeshProUGUI axeRCDRemain;
+    [SerializeField] private TextMeshProUGUI axeTCDRemain;
+    [SerializeField] private TextMeshProUGUI axeUltimateCDRemain;
+
+    [Header("CD Remain Text - Staff (E, R, T, Q)")]
+    [SerializeField] private TextMeshProUGUI staffECDRemain;
+    [SerializeField] private TextMeshProUGUI staffRCDRemain;
+    [SerializeField] private TextMeshProUGUI staffTCDRemain;
+    [SerializeField] private TextMeshProUGUI staffUltimateCDRemain;
 
     [Header("Default Icons")]
     [SerializeField] private Sprite defaultIcon;
 
-    [Header("Ultimate Icon Shader")]
-    [SerializeField] private UltimateIconShaderController ultimateShaderController;
-
-    [Header("Skill Lock Overlays")]
-    [Tooltip("Overlay images that appear when skills are locked (user can customize these)")]
-    [SerializeField] private Image eLockOverlay;
-    [SerializeField] private Image rLockOverlay;
+    [Header("Skill Lock Overlays (gameplay only locks T and Q)")]
     [SerializeField] private Image tLockOverlay;
     [SerializeField] private Image ultimateLockOverlay;
 
-    // Cooldown tracking
-    private Dictionary<AbilityInput, float> cooldownEndTimes = new Dictionary<AbilityInput, float>();
-    private Dictionary<AbilityInput, float> cooldownDurations = new Dictionary<AbilityInput, float>();
+    [Header("Weapon reference (for per-weapon cooldown flag)")]
+    [SerializeField] private WeaponController weaponController;
 
-    // Current weapon type for mastery checking
+    // Cooldown per (WeaponType, AbilityInput) so each weapon has its own CD
+    private Dictionary<(WeaponType, AbilityInput), float> cooldownEndTimes = new Dictionary<(WeaponType, AbilityInput), float>();
+    private Dictionary<(WeaponType, AbilityInput), float> cooldownDurations = new Dictionary<(WeaponType, AbilityInput), float>();
+
+    // Current weapon type for UI and mastery
     private WeaponType currentWeaponType = WeaponType.None;
 
     // Store current abilities to refresh cooldown when gems change
@@ -48,15 +57,12 @@ public class AbilityIconManager : MonoBehaviour
 
     private void Awake()
     {
+        if (weaponController == null)
+            weaponController = FindFirstObjectByType<WeaponController>();
+
         // Initialize with default icons
         SetDefaultIcons();
         InitializeCooldownUI();
-
-        // Auto-find ultimate shader controller
-        if (ultimateShaderController == null && ultimateIcon != null)
-        {
-            ultimateShaderController = ultimateIcon.GetComponent<UltimateIconShaderController>();
-        }
 
         // Subscribe to gem changes to refresh cooldown durations
         if (WeaponGemManager.Instance != null)
@@ -106,11 +112,19 @@ public class AbilityIconManager : MonoBehaviour
         if (tCDOverlay != null) tCDOverlay.fillAmount = 0f;
         if (ultimateCDOverlay != null) ultimateCDOverlay.fillAmount = 0f;
 
-        // Initialize CD remain texts to be invisible
-        if (eCDRemain != null) eCDRemain.gameObject.SetActive(false);
-        if (rCDRemain != null) rCDRemain.gameObject.SetActive(false);
-        if (tCDRemain != null) tCDRemain.gameObject.SetActive(false);
-        if (ultimateCDRemain != null) ultimateCDRemain.gameObject.SetActive(false);
+        // Initialize all CD remain texts (Sword / Axe / Staff) to invisible
+        if (swordECDRemain != null) swordECDRemain.gameObject.SetActive(false);
+        if (swordRCDRemain != null) swordRCDRemain.gameObject.SetActive(false);
+        if (swordTCDRemain != null) swordTCDRemain.gameObject.SetActive(false);
+        if (swordUltimateCDRemain != null) swordUltimateCDRemain.gameObject.SetActive(false);
+        if (axeECDRemain != null) axeECDRemain.gameObject.SetActive(false);
+        if (axeRCDRemain != null) axeRCDRemain.gameObject.SetActive(false);
+        if (axeTCDRemain != null) axeTCDRemain.gameObject.SetActive(false);
+        if (axeUltimateCDRemain != null) axeUltimateCDRemain.gameObject.SetActive(false);
+        if (staffECDRemain != null) staffECDRemain.gameObject.SetActive(false);
+        if (staffRCDRemain != null) staffRCDRemain.gameObject.SetActive(false);
+        if (staffTCDRemain != null) staffTCDRemain.gameObject.SetActive(false);
+        if (staffUltimateCDRemain != null) staffUltimateCDRemain.gameObject.SetActive(false);
 
         // Initialize lock overlays
         UpdateSkillLockOverlays();
@@ -118,47 +132,67 @@ public class AbilityIconManager : MonoBehaviour
 
     private void UpdateCooldownUI()
     {
-        UpdateCooldownForAbility(AbilityInput.E, eCDOverlay, eCDRemain);
-        UpdateCooldownForAbility(AbilityInput.R, rCDOverlay, rCDRemain);
-        UpdateCooldownForAbility(AbilityInput.T, tCDOverlay, tCDRemain);
-        UpdateCooldownForAbility(AbilityInput.Q_Ultimate, ultimateCDOverlay, ultimateCDRemain);
+        UpdateCooldownForAbility(AbilityInput.E, eCDOverlay, swordECDRemain, axeECDRemain, staffECDRemain);
+        UpdateCooldownForAbility(AbilityInput.R, rCDOverlay, swordRCDRemain, axeRCDRemain, staffRCDRemain);
+        UpdateCooldownForAbility(AbilityInput.T, tCDOverlay, swordTCDRemain, axeTCDRemain, staffTCDRemain);
+        UpdateCooldownForAbility(AbilityInput.Q_Ultimate, ultimateCDOverlay, swordUltimateCDRemain, axeUltimateCDRemain, staffUltimateCDRemain);
     }
 
-    private void UpdateCooldownForAbility(AbilityInput input, Image cdOverlay, TextMeshProUGUI cdRemain)
+    private void UpdateCooldownForAbility(AbilityInput input, Image cdOverlay,
+        TextMeshProUGUI swordText, TextMeshProUGUI axeText, TextMeshProUGUI staffText)
     {
-        if (!cooldownEndTimes.ContainsKey(input) || cdOverlay == null) return;
+        if (cdOverlay == null) return;
+
+        TextMeshProUGUI activeText = null;
+        switch (currentWeaponType)
+        {
+            case WeaponType.Sword: activeText = swordText; break;
+            case WeaponType.Axe:   activeText = axeText;   break;
+            case WeaponType.Mage:  activeText = staffText; break;
+            default:
+                cdOverlay.fillAmount = 0f;
+                if (swordText != null) swordText.gameObject.SetActive(false);
+                if (axeText != null)   axeText.gameObject.SetActive(false);
+                if (staffText != null) staffText.gameObject.SetActive(false);
+                return;
+        }
+
+        var key = (currentWeaponType, input);
+        if (!cooldownEndTimes.TryGetValue(key, out float endTime) || !cooldownDurations.TryGetValue(key, out float duration))
+        {
+            cdOverlay.fillAmount = 0f;
+            if (activeText != null) activeText.gameObject.SetActive(false);
+            if (swordText != null && swordText != activeText) swordText.gameObject.SetActive(false);
+            if (axeText != null && axeText != activeText) axeText.gameObject.SetActive(false);
+            if (staffText != null && staffText != activeText) staffText.gameObject.SetActive(false);
+            return;
+        }
 
         float currentTime = Time.time;
-        float endTime = cooldownEndTimes[input];
-        float duration = cooldownDurations[input];
 
         if (currentTime < endTime)
         {
-            // Still on cooldown
             float remainingTime = endTime - currentTime;
             float progress = 1f - (remainingTime / duration);
-
-            // Update CD overlay (fillAmount goes from 1 to 0)
             cdOverlay.fillAmount = 1f - progress;
 
-            // Update CD remain text
-            if (cdRemain != null)
+            if (activeText != null)
             {
-                cdRemain.gameObject.SetActive(true);
-                cdRemain.text = Mathf.Ceil(remainingTime).ToString();
+                activeText.gameObject.SetActive(true);
+                activeText.text = Mathf.Ceil(remainingTime).ToString();
             }
+            if (swordText != null && swordText != activeText) swordText.gameObject.SetActive(false);
+            if (axeText != null && axeText != activeText) axeText.gameObject.SetActive(false);
+            if (staffText != null && staffText != activeText) staffText.gameObject.SetActive(false);
         }
         else
         {
-            // Cooldown finished
             cdOverlay.fillAmount = 0f;
-            if (cdRemain != null)
-            {
-                cdRemain.gameObject.SetActive(false);
-            }
-
-            // Only remove end time, keep duration for future use
-            cooldownEndTimes.Remove(input);
+            if (activeText != null) activeText.gameObject.SetActive(false);
+            if (swordText != null && swordText != activeText) swordText.gameObject.SetActive(false);
+            if (axeText != null && axeText != activeText) axeText.gameObject.SetActive(false);
+            if (staffText != null && staffText != activeText) staffText.gameObject.SetActive(false);
+            cooldownEndTimes.Remove(key);
         }
     }
 
@@ -249,42 +283,29 @@ public class AbilityIconManager : MonoBehaviour
     {
         if (WeaponMasteryManager.Instance == null || currentWeaponType == WeaponType.None)
         {
-            // Hide all lock overlays if no mastery manager or weapon
-            if (eLockOverlay != null) eLockOverlay.gameObject.SetActive(false);
-            if (rLockOverlay != null) rLockOverlay.gameObject.SetActive(false);
             if (tLockOverlay != null) tLockOverlay.gameObject.SetActive(false);
             if (ultimateLockOverlay != null) ultimateLockOverlay.gameObject.SetActive(false);
             return;
         }
 
-        // Show/hide lock overlays based on mastery level
-        bool eUnlocked = WeaponMasteryManager.Instance.IsSkillUnlocked(currentWeaponType, AbilityInput.E);
-        bool rUnlocked = WeaponMasteryManager.Instance.IsSkillUnlocked(currentWeaponType, AbilityInput.R);
         bool tUnlocked = WeaponMasteryManager.Instance.IsSkillUnlocked(currentWeaponType, AbilityInput.T);
         bool qUnlocked = WeaponMasteryManager.Instance.IsSkillUnlocked(currentWeaponType, AbilityInput.Q_Ultimate);
 
-        if (eLockOverlay != null) eLockOverlay.gameObject.SetActive(!eUnlocked);
-        if (rLockOverlay != null) rLockOverlay.gameObject.SetActive(!rUnlocked);
         if (tLockOverlay != null) tLockOverlay.gameObject.SetActive(!tUnlocked);
         if (ultimateLockOverlay != null) ultimateLockOverlay.gameObject.SetActive(!qUnlocked);
     }
 
     private void StoreCooldownDurations(AbilitySO[] abilities)
     {
-        cooldownDurations.Clear();
+        if (currentWeaponType == WeaponType.None) return;
         foreach (var ability in abilities)
         {
             if (ability != null)
             {
-                // Use modified cooldown from AbilitySO if weapon type is available
-                float cooldownValue = ability.cooldown;
-                if (currentWeaponType != WeaponType.None)
-                {
-                    cooldownValue = ability.GetModifiedCooldown(currentWeaponType);
-                }
-
-                cooldownDurations[ability.input] = cooldownValue;
-                Debug.Log($"[AbilityIconManager] Stored cooldown for {ability.input}: {cooldownValue}s (base: {ability.cooldown}s)");
+                float cooldownValue = ability.GetModifiedCooldown(currentWeaponType);
+                var key = (currentWeaponType, ability.input);
+                cooldownDurations[key] = cooldownValue;
+                Debug.Log($"[AbilityIconManager] Stored cooldown for {currentWeaponType} {ability.input}: {cooldownValue}s (base: {ability.cooldown}s)");
             }
         }
     }
@@ -307,46 +328,51 @@ public class AbilityIconManager : MonoBehaviour
         TriggerCooldown(input);
     }
 
-    // Method to trigger cooldown when ability is used
+    // Method to trigger cooldown when ability is used (flags CD to current weapon from WeaponController)
     public void TriggerCooldown(AbilityInput input)
     {
-        if (!cooldownDurations.ContainsKey(input))
+        WeaponType weaponType = WeaponType.None;
+        if (weaponController != null && weaponController.GetCurrentWeapon() != null)
+            weaponType = weaponController.GetCurrentWeapon().weaponType;
+        if (weaponType == WeaponType.None)
+            weaponType = currentWeaponType;
+
+        var key = (weaponType, input);
+        if (!cooldownDurations.TryGetValue(key, out float duration))
         {
-            Debug.LogWarning($"[AbilityIconManager] No cooldown duration found for {input}. Available durations: {string.Join(", ", cooldownDurations.Keys)}");
+            Debug.LogWarning($"[AbilityIconManager] No cooldown duration for {weaponType} {input}. Trigger ignored.");
             return;
         }
 
-        // Duration already includes gem multipliers from StoreCooldownDurations()
-        float duration = cooldownDurations[input];
         float endTime = Time.time + duration;
-
-        cooldownEndTimes[input] = endTime;
-
-        Debug.Log($"[AbilityIconManager] Triggered cooldown for {input}: {duration}s (ends at {endTime:F2})");
+        cooldownEndTimes[key] = endTime;
+        Debug.Log($"[AbilityIconManager] Triggered cooldown for {weaponType} {input}: {duration}s (ends at {endTime:F2})");
     }
 
-    // Check if ability is on cooldown
+    // Check if ability is on cooldown for current weapon
     public bool IsOnCooldown(AbilityInput input)
     {
-        if (!cooldownEndTimes.ContainsKey(input)) return false;
-        return Time.time < cooldownEndTimes[input];
+        if (currentWeaponType == WeaponType.None) return false;
+        var key = (currentWeaponType, input);
+        if (!cooldownEndTimes.TryGetValue(key, out float endTime)) return false;
+        return Time.time < endTime;
     }
 
-    // Get remaining cooldown time
+    // Get remaining cooldown time for current weapon
     public float GetRemainingCooldown(AbilityInput input)
     {
-        if (!cooldownEndTimes.ContainsKey(input)) return 0f;
-        return Mathf.Max(0f, cooldownEndTimes[input] - Time.time);
+        if (currentWeaponType == WeaponType.None) return 0f;
+        var key = (currentWeaponType, input);
+        if (!cooldownEndTimes.TryGetValue(key, out float endTime)) return 0f;
+        return Mathf.Max(0f, endTime - Time.time);
     }
 
-    // Get cooldown duration for an ability
+    // Get cooldown duration for current weapon
     public float GetCooldownDuration(AbilityInput input)
     {
-        if (cooldownDurations.ContainsKey(input))
-        {
-            return cooldownDurations[input];
-        }
-        return 0f;
+        if (currentWeaponType == WeaponType.None) return 0f;
+        var key = (currentWeaponType, input);
+        return cooldownDurations.TryGetValue(key, out float d) ? d : 0f;
     }
 
     // Debug method to check cooldown system status
@@ -355,15 +381,13 @@ public class AbilityIconManager : MonoBehaviour
         Debug.Log("=== Cooldown System Debug ===");
         Debug.Log($"Cooldown Durations: {cooldownDurations.Count} entries");
         foreach (var kvp in cooldownDurations)
-        {
-            Debug.Log($"  {kvp.Key}: {kvp.Value}s");
-        }
+            Debug.Log($"  {kvp.Key.Item1} {kvp.Key.Item2}: {kvp.Value}s");
 
         Debug.Log($"Active Cooldowns: {cooldownEndTimes.Count} entries");
         foreach (var kvp in cooldownEndTimes)
         {
-            float remaining = GetRemainingCooldown(kvp.Key);
-            Debug.Log($"  {kvp.Key}: {remaining:F1}s remaining");
+            float remaining = Mathf.Max(0f, kvp.Value - Time.time);
+            Debug.Log($"  {kvp.Key.Item1} {kvp.Key.Item2}: {remaining:F1}s remaining");
         }
         Debug.Log("=== End Debug ===");
     }
@@ -388,26 +412,4 @@ public class AbilityIconManager : MonoBehaviour
         }
     }
 
-    // Ultimate Icon Shader Effects
-    public void TriggerUltimateReadyEffect()
-    {
-        if (ultimateShaderController != null)
-        {
-            ultimateShaderController.TriggerReadyEffect();
-        }
-    }
-
-    public void SetUltimateReadyState(bool ready)
-    {
-        if (ultimateShaderController != null)
-        {
-            ultimateShaderController.SetReadyState(ready);
-        }
-    }
-
-    // Animation Event for ultimate ready effect
-    public void AE_TriggerUltimateReady()
-    {
-        TriggerUltimateReadyEffect();
-    }
 }
