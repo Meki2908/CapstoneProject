@@ -69,6 +69,9 @@ public class MageSkills : MonoBehaviour
         var wc = GetComponent<WeaponController>();
         if (wc != null) wc.OnWeaponChanged -= OnWeaponChangedHandler;
 
+        // Cancel ultimate timeline if playing (e.g. scene transition)
+        CancelSkill();
+
         foreach (var kv in pooledReleaseRoutines)
         {
             if (kv.Value != null) StopCoroutine(kv.Value);

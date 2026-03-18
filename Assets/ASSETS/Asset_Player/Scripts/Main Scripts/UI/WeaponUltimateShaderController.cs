@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Controller cho Ultimate Icon Shader theo từng weapon type
@@ -37,6 +38,10 @@ public class WeaponUltimateShaderController : MonoBehaviour
     private float currentGlowIntensity;
     private bool isReady = false;
     private float pulseTime = 0f;
+
+    // Scene transition grace period — skip shader updates for a few frames after scene load
+    private int sceneLoadGraceFrames = 0;
+    private const int GRACE_FRAME_COUNT = 3;
     private WeaponType currentWeaponType = WeaponType.Sword;
 
     private void Awake()
@@ -46,17 +51,42 @@ public class WeaponUltimateShaderController : MonoBehaviour
 
     private void Start()
     {
+        RefreshReferences();
+    }
+
+    private void OnEnable()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        // Re-find references in case we were re-enabled after scene load
+        RefreshReferences();
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        // Scene mới load xong → force tìm lại references + grace period
+        sceneLoadGraceFrames = GRACE_FRAME_COUNT;
+        RefreshReferences();
+    }
+
+    private void RefreshReferences()
+    {
+        // Unsubscribe from old weaponController (nếu có) trước khi tìm cái mới
+        if (weaponController != null)
+        {
+            weaponController.OnWeaponChanged -= OnWeaponChanged;
+        }
+
         abilityIconManager = FindFirstObjectByType<AbilityIconManager>();
         weaponController = FindFirstObjectByType<WeaponController>();
 
         if (abilityIconManager == null)
         {
-            Debug.LogError("[WeaponUltimateShaderController] AbilityIconManager not found!");
+            Debug.LogWarning("[WeaponUltimateShaderController] AbilityIconManager not found — will retry.");
         }
 
         if (weaponController == null)
         {
-            Debug.LogError("[WeaponUltimateShaderController] WeaponController not found!");
+            Debug.LogWarning("[WeaponUltimateShaderController] WeaponController not found — will retry.");
         }
         else
         {
@@ -133,6 +163,25 @@ public class WeaponUltimateShaderController : MonoBehaviour
     private void Update()
     {
         if (!isInitialized || materialInstance == null) return;
+
+        // Grace period sau scene load — skip update để tránh flicker
+        if (sceneLoadGraceFrames > 0)
+        {
+            sceneLoadGraceFrames--;
+            if (sceneLoadGraceFrames == 0)
+            {
+                // Grace xong → refresh references lần cuối
+                RefreshReferences();
+            }
+            return;
+        }
+
+        // Nếu references null → retry, KHÔNG update shader
+        if (abilityIconManager == null || weaponController == null)
+        {
+            if (Time.frameCount % 30 == 0) RefreshReferences();
+            return;
+        }
 
         UpdateCooldownState();
         UpdateGlowAnimation();
@@ -306,8 +355,14 @@ public class WeaponUltimateShaderController : MonoBehaviour
         }
     }
 
+    private void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
     private void OnDestroy()
     {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
         // Clean up material instance
         if (materialInstance != null)
         {

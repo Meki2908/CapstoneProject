@@ -72,6 +72,9 @@ public class AxeSkill : MonoBehaviour
     {
         var wc = GetComponent<WeaponController>();
         if (wc != null) wc.OnWeaponChanged -= OnWeaponChangedHandler;
+
+        // Cancel ultimate timeline if playing (e.g. scene transition)
+        CancelSkill();
     }
 
     public void RebuildAbilityMap()
