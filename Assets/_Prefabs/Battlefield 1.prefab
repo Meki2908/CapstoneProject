@@ -45,8 +45,68 @@ Transform:
   - {fileID: 8766645676077466142}
   - {fileID: 6790358631134051686}
   - {fileID: 3053605176094737339}
+  - {fileID: 7373054163747308945}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &7518170870907267422
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7373054163747308945}
+  - component: {fileID: 7244594158559079126}
+  m_Layer: 0
+  m_Name: RedLightningEffect
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7373054163747308945
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7518170870907267422}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 167.5, y: 96.1, z: 226.1}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 9096841456950273679}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7244594158559079126
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7518170870907267422}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bd66994be3706354ea8e96fb6e19e7b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  followCamera: 0
+  skyHeight: 150
+  minTime: 0.4
+  maxTime: 2
+  flashDuration: 0.09
+  boltCount: 4
+  boltSegments: 10
+  boltJitter: 5
+  boltLength: 50
+  spawnRadius: 35
+  intensity: 1
+  coreWidth: 0.4
+  glowWidth: 3
+  coreColor: {r: 1, g: 0.85, b: 0.85, a: 1}
+  glowColor: {r: 1, g: 0.08, b: 0.04, a: 0.65}
 --- !u!1001 &582146373175440471
 PrefabInstance:
   m_ObjectHideFlags: 0

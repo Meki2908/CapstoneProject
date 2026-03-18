@@ -286,6 +286,10 @@ MonoBehaviour:
   questPortalButton: 2
   playerOverride: {fileID: 0}
   rootPanel: {fileID: 0}
+  teleportEffectPrefab: {fileID: 0}
+  effectDuration: 2
+  cinemachineCamera: {fileID: 0}
+  cameraPanDuration: 1.2
 --- !u!1 &527381488138685032
 GameObject:
   m_ObjectHideFlags: 0
@@ -7346,7 +7350,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7533612027606634853}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 07affa1b4bda77e49899d47e9087ac83, type: 3}
   m_Name: 
@@ -8121,7 +8125,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Telephote
+  m_text: Telepp
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: e3f54f2386eacfb498711344712aeeef, type: 2}
   m_sharedMaterial: {fileID: 4908264701057610302, guid: e3f54f2386eacfb498711344712aeeef, type: 2}
@@ -8448,6 +8452,10 @@ MonoBehaviour:
   questPortalButton: 2
   playerOverride: {fileID: 0}
   rootPanel: {fileID: 407498576676944590}
+  teleportEffectPrefab: {fileID: 7761031033666763820, guid: 1eb833340b41fb444b576c4dced8d4dc, type: 3}
+  effectDuration: 2
+  cinemachineCamera: {fileID: 0}
+  cameraPanDuration: 1.2
 --- !u!1 &8559593653736730287
 GameObject:
   m_ObjectHideFlags: 0

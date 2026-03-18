@@ -225,6 +225,9 @@ public class LeonaDialogue : MonoBehaviour
             return;
         }
 
+        // Re-set tên NPC khi mở, tránh bị script khác ghi đè trước đó
+        SetText(npcNameTMP, npcNameLegacy, "Leona");
+
         Cursor.visible   = true;
         Cursor.lockState = CursorLockMode.None;
 

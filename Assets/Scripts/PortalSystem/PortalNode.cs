@@ -5,34 +5,58 @@ public class PortalNode : MonoBehaviour
     [Tooltip("Kéo Canvas Menu chọn cổng vào đây")]
     public PortalUIController portalUI;
 
-    [Tooltip("Vị trí sẽ dịch chuyển người chơi tới khi chọn cổng này. Hãy tạo một Empty GameObject đặt hơi nhích ra trước cổng một chút để người chơi không bị kẹt trong trigger.")]
+    [Tooltip("Vị trí sẽ dịch chuyển người chơi tới khi chọn cổng này.")]
     public Transform spawnPoint;
+
+    [Header("Press F Hint")]
+    [Tooltip("Kéo GameObject/Canvas 'Press F' vào đây (sẽ bật/tắt tự động)")]
+    public GameObject pressFHintCanvas;
+
+    private bool _playerInRange = false;
+    private Transform _playerTransform;
+
+    private void Update()
+    {
+        if (!_playerInRange) return;
+
+        if (Input.GetKeyDown(KeyCode.F))
+        {
+            // Ẩn hint và mở Portal UI
+            ShowHint(false);
+            if (portalUI != null)
+                portalUI.OpenPortalMenu(_playerTransform);
+        }
+    }
 
     private void OnTriggerEnter(Collider other)
     {
-        // Kiểm tra xem có phải người chơi chạm vào portal không
         if (other.CompareTag("Player"))
         {
-            if (portalUI != null)
-            {
-                portalUI.OpenPortalMenu(other.transform);
-            }
-            else
-            {
+            _playerInRange  = true;
+            _playerTransform = other.transform;
+            ShowHint(true);
+
+            if (portalUI == null)
                 Debug.LogWarning("[PortalNode] Chưa gán UI Canvas vào PortalNode!");
-            }
         }
     }
 
     private void OnTriggerExit(Collider other)
     {
-        // Khi người chơi rời khỏi phạm vi cổng, tự đóng UI
         if (other.CompareTag("Player"))
         {
+            _playerInRange   = false;
+            _playerTransform = null;
+            ShowHint(false);
+
             if (portalUI != null)
-            {
                 portalUI.ClosePortalMenu();
-            }
         }
+    }
+
+    private void ShowHint(bool show)
+    {
+        if (pressFHintCanvas != null)
+            pressFHintCanvas.SetActive(show);
     }
 }
