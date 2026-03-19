@@ -124,6 +124,10 @@ namespace Unity.FantasyKingdom
         private ZoomLevelData _zoomLevelData;
         private ZoomLevelData _prevZoomLevelData;
         private InventoryController _cachedInventory; // Cache for inventory check
+
+        // === GameSettings multipliers (slider 0-1 → multiplier 0.2x-2.0x) ===
+        private float _moveSpeedMultiplier = 1f;
+        private float _zoomSpeedMultiplier = 1f;
         public enum CameraType
         {
             GameplayCamera = 0,
@@ -163,6 +167,35 @@ namespace Unity.FantasyKingdom
             });
 
             Debug.Assert(_inputProvider != null, "No Input Provider found! Please ensure there's one attached to this gameObject", gameObject);
+
+            // === Kết nối GameSettings UI ===
+            ApplyGameSettings();
+            GameSettings.OnSettingsChanged += OnGameSettingsChanged;
+        }
+
+        private void OnDestroy()
+        {
+            GameSettings.OnSettingsChanged -= OnGameSettingsChanged;
+        }
+
+        private void OnGameSettingsChanged()
+        {
+            ApplyGameSettings();
+        }
+
+        /// <summary>
+        /// Đọc GameSettings slider và chuyển thành multiplier cho camera speed.
+        /// Slider 0–1 → multiplier 0.2x–2.0x (giữ nguyên tại 0.5 = 1.0x)
+        /// </summary>
+        private void ApplyGameSettings()
+        {
+            if (GameSettings.Instance == null) return;
+
+            // Slider 0-1 → multiplier: 0→0.2x, 0.5→1.0x, 1→2.0x
+            _moveSpeedMultiplier = Mathf.Lerp(0.2f, 2.0f, GameSettings.Instance.cameraMouseSpeed);
+            _zoomSpeedMultiplier = Mathf.Lerp(0.2f, 2.0f, GameSettings.Instance.cameraZoomSpeed);
+
+            Debug.Log($"[Camera] Settings applied: MoveMultiplier={_moveSpeedMultiplier:F2}, ZoomMultiplier={_zoomSpeedMultiplier:F2}");
         }
 
         void Update()
@@ -246,7 +279,7 @@ namespace Unity.FantasyKingdom
             if (!_isRotating && _inputProvider.DragButton)
             {
                 Vector3 vectorChange = new Vector3(_inputProvider.DragDelta.x, 0, _inputProvider.DragDelta.y) * -1;
-                MoveTargetRelativeToCamera(vectorChange, currentSettings.CameraDragSpeed / 10);
+                MoveTargetRelativeToCamera(vectorChange, currentSettings.CameraDragSpeed / 10 * _moveSpeedMultiplier);
             }
         }
         private void HandleScreenSideMove(Vector3 mousePos)
@@ -255,7 +288,7 @@ namespace Unity.FantasyKingdom
             Vector3 moveVector = new Vector3(widthPos, 0, heightPos);
             if (moveVector != Vector3.zero && !_isRotating)
             {
-                MoveTargetRelativeToCamera(moveVector, currentSettings.CameraScreenSideSpeed);
+                MoveTargetRelativeToCamera(moveVector, currentSettings.CameraScreenSideSpeed * _moveSpeedMultiplier);
             }
         }
 
@@ -265,7 +298,7 @@ namespace Unity.FantasyKingdom
             if (moveInput.sqrMagnitude > 0f && (!_isRotating || _inputProvider.CanAlwaysRotate))
             {
                 Vector3 moveVector = new Vector3(moveInput.x, 0, moveInput.y);
-                MoveTargetRelativeToCamera(moveVector, currentSettings.CameraScreenSideSpeed);
+                MoveTargetRelativeToCamera(moveVector, currentSettings.CameraScreenSideSpeed * _moveSpeedMultiplier);
             }
         }
 
@@ -366,7 +399,7 @@ namespace Unity.FantasyKingdom
                     _startingZoomLevel = _framingTransposer.CameraDistance;
                     _zoomDone = false;
                 }
-                _currentCameraZoom -= zoomInput * currentSettings.CameraZoomSpeed;
+                _currentCameraZoom -= zoomInput * currentSettings.CameraZoomSpeed * _zoomSpeedMultiplier;
                 _currentCameraZoom = Mathf.Clamp(_currentCameraZoom, currentSettings.CameraZoomMin, currentSettings.CameraZoomMax);
             }
             

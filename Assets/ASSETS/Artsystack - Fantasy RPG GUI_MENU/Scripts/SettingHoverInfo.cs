@@ -140,10 +140,6 @@ namespace Artsystack.ArtsystackGui
                 "Camera Move Speed",
                 "Tốc độ di chuyển camera bằng chuột. Tăng để camera phản hồi nhanh hơn, giảm nếu cảm thấy quá nhạy."
             )},
-            { "Tab_CameraRotateSpeed", (
-                "Camera Rotate Speed",
-                "Tốc độ xoay camera. Điều chỉnh để phù hợp với phong cách chơi, tăng để nhìn xung quanh nhanh hơn."
-            )},
             { "Tab_CameraZoomSpeedGameplay", (
                 "Camera Zoom Speed",
                 "Tốc độ zoom camera khi cuộn chuột. Tăng để zoom nhanh hơn, giảm để zoom mượt mà và chính xác hơn."

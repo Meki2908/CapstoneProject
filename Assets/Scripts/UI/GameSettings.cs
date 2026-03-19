@@ -35,9 +35,8 @@ public class GameSettings : MonoBehaviour
 
     // ==================== GAMEPLAY ====================
     [Header("Gameplay")]
-    public float cameraMouseSpeed = 0.8f;
-    public float cameraRotateSpeed = 0.7f;
-    public float cameraZoomSpeed = 0.6f;
+    public float cameraMouseSpeed = 0.5f;
+    public float cameraZoomSpeed = 0.5f;
     public bool miniMapEnabled = true;
 
     // ==================== CONTROLS ====================
@@ -61,7 +60,6 @@ public class GameSettings : MonoBehaviour
     private const string KEY_SHARPENING = "Settings_Sharpening";
 
     private const string KEY_CAMERA_MOUSE_SPEED = "Settings_CameraMouseSpeed";
-    private const string KEY_CAMERA_ROTATE_SPEED = "Settings_CameraRotateSpeed";
     private const string KEY_CAMERA_ZOOM_SPEED = "Settings_CameraZoomSpeedGameplay";
     private const string KEY_MINI_MAP = "Settings_MiniMap";
 
@@ -123,9 +121,8 @@ public class GameSettings : MonoBehaviour
         sharpeningEnabled = PlayerPrefs.GetInt(KEY_SHARPENING, 0) == 1;
 
         // Gameplay
-        cameraMouseSpeed = PlayerPrefs.GetFloat(KEY_CAMERA_MOUSE_SPEED, 0.8f);
-        cameraRotateSpeed = PlayerPrefs.GetFloat(KEY_CAMERA_ROTATE_SPEED, 0.7f);
-        cameraZoomSpeed = PlayerPrefs.GetFloat(KEY_CAMERA_ZOOM_SPEED, 0.6f);
+        cameraMouseSpeed = PlayerPrefs.GetFloat(KEY_CAMERA_MOUSE_SPEED, 0.5f);
+        cameraZoomSpeed = PlayerPrefs.GetFloat(KEY_CAMERA_ZOOM_SPEED, 0.5f);
         miniMapEnabled = PlayerPrefs.GetInt(KEY_MINI_MAP, 1) == 1;
 
         // Clamp resolution index
@@ -160,7 +157,6 @@ public class GameSettings : MonoBehaviour
 
         // Gameplay
         PlayerPrefs.SetFloat(KEY_CAMERA_MOUSE_SPEED, cameraMouseSpeed);
-        PlayerPrefs.SetFloat(KEY_CAMERA_ROTATE_SPEED, cameraRotateSpeed);
         PlayerPrefs.SetFloat(KEY_CAMERA_ZOOM_SPEED, cameraZoomSpeed);
         PlayerPrefs.SetInt(KEY_MINI_MAP, miniMapEnabled ? 1 : 0);
 
@@ -257,9 +253,8 @@ public class GameSettings : MonoBehaviour
         chromaticAberrationEnabled = false;
         sharpeningEnabled = false;
 
-        cameraMouseSpeed = 0.8f;
-        cameraRotateSpeed = 0.7f;
-        cameraZoomSpeed = 0.6f;
+        cameraMouseSpeed = 0.5f;
+        cameraZoomSpeed = 0.5f;
         miniMapEnabled = true;
 
         ApplyAndSave();
