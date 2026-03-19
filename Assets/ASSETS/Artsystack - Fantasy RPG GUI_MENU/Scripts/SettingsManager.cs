@@ -108,7 +108,6 @@ namespace Artsystack.ArtsystackGui
         [Header("Gameplay Settings")]
         // Camera Settings
         [SerializeField] private Slider tab_CameraMouseSpeed;
-        [SerializeField] private Slider tab_CameraRotateSpeed;
         [SerializeField] private Slider tab_CameraZoomSpeedGameplay;
         
         
@@ -142,7 +141,6 @@ namespace Artsystack.ArtsystackGui
         private const string KEY_MINI_MAP = "Settings_MiniMap";
         
         private const string KEY_CAMERA_MOUSE_SPEED = "Settings_CameraMouseSpeed";
-        private const string KEY_CAMERA_ROTATE_SPEED = "Settings_CameraRotateSpeed";
         private const string KEY_CAMERA_ZOOM_SPEED_GAMEPLAY = "Settings_CameraZoomSpeedGameplay";
 
         // Default values
@@ -164,9 +162,8 @@ namespace Artsystack.ArtsystackGui
         private bool defaultSharpening = false;
 
         // Camera default values
-        private float defaultCameraMouseSpeed = 0.8f;
-        private float defaultCameraRotateSpeed = 0.7f;
-        private float defaultCameraZoomSpeedGameplay = 0.6f;
+        private float defaultCameraMouseSpeed = 0.5f;
+        private float defaultCameraZoomSpeedGameplay = 0.5f;
 
         // Key Binding system
         private const string KEY_BIND_PREFIX = "KeyBind_";
@@ -830,8 +827,6 @@ namespace Artsystack.ArtsystackGui
             // Gameplay sliders (Camera Settings)
             if (tab_CameraMouseSpeed != null)
                 tab_CameraMouseSpeed.onValueChanged.AddListener(OnSettingChanged);
-            if (tab_CameraRotateSpeed != null)
-                tab_CameraRotateSpeed.onValueChanged.AddListener(OnSettingChanged);
             if (tab_CameraZoomSpeedGameplay != null)
                 tab_CameraZoomSpeedGameplay.onValueChanged.AddListener(OnSettingChanged);
 
@@ -976,7 +971,6 @@ namespace Artsystack.ArtsystackGui
         {
             // Camera Settings
             if (tab_CameraMouseSpeed != null) tab_CameraMouseSpeed.value = defaultCameraMouseSpeed;
-            if (tab_CameraRotateSpeed != null) tab_CameraRotateSpeed.value = defaultCameraRotateSpeed;
             if (tab_CameraZoomSpeedGameplay != null) tab_CameraZoomSpeedGameplay.value = defaultCameraZoomSpeedGameplay;
             
 
@@ -1018,7 +1012,6 @@ namespace Artsystack.ArtsystackGui
 
             // Gameplay (Camera Settings)
             if (tab_CameraMouseSpeed != null) gs.cameraMouseSpeed = tab_CameraMouseSpeed.value;
-            if (tab_CameraRotateSpeed != null) gs.cameraRotateSpeed = tab_CameraRotateSpeed.value;
             if (tab_CameraZoomSpeedGameplay != null) gs.cameraZoomSpeed = tab_CameraZoomSpeedGameplay.value;
             gs.miniMapEnabled = miniMapEnabled;
 
@@ -1119,7 +1112,6 @@ namespace Artsystack.ArtsystackGui
 
             // Gameplay — đọc từ GameSettings
             if (tab_CameraMouseSpeed != null) tab_CameraMouseSpeed.value = gs.cameraMouseSpeed;
-            if (tab_CameraRotateSpeed != null) tab_CameraRotateSpeed.value = gs.cameraRotateSpeed;
             if (tab_CameraZoomSpeedGameplay != null) tab_CameraZoomSpeedGameplay.value = gs.cameraZoomSpeed;
 
             UpdateGraphicsButtonTexts();
@@ -1231,7 +1223,6 @@ namespace Artsystack.ArtsystackGui
 
         
         public float CameraMouseSpeed => PlayerPrefs.GetFloat(KEY_CAMERA_MOUSE_SPEED, defaultCameraMouseSpeed);
-        public float CameraRotateSpeed => PlayerPrefs.GetFloat(KEY_CAMERA_ROTATE_SPEED, defaultCameraRotateSpeed);
         
         public bool HasUnsavedChanges => hasUnsavedChanges;
 
