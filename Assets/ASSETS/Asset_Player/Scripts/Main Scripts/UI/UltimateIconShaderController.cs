@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Controller cho Ultimate Icon Shader với hiệu ứng glow khi hồi chiêu
@@ -36,6 +37,10 @@ public class UltimateIconShaderController : MonoBehaviour
     private bool isReady = false;
     private float pulseTime = 0f;
 
+    // Scene transition grace period
+    private int sceneLoadGraceFrames = 0;
+    private const int GRACE_FRAME_COUNT = 3;
+
     private void Awake()
     {
         InitializeMaterial();
@@ -43,16 +48,25 @@ public class UltimateIconShaderController : MonoBehaviour
 
     private void Start()
     {
+        RefreshReferences();
+    }
+
+    private void OnEnable()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        RefreshReferences();
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        sceneLoadGraceFrames = GRACE_FRAME_COUNT;
+        RefreshReferences();
+    }
+
+    private void RefreshReferences()
+    {
         abilityIconManager = FindFirstObjectByType<AbilityIconManager>();
         weaponController = FindFirstObjectByType<WeaponController>();
-        if (abilityIconManager == null)
-        {
-            Debug.LogError("[UltimateIconShaderController] AbilityIconManager not found!");
-        }
-        if (weaponController == null)
-        {
-            Debug.LogError("[UltimateIconShaderController] WeaponController not found!");
-        }
     }
 
     private void InitializeMaterial()
@@ -79,6 +93,20 @@ public class UltimateIconShaderController : MonoBehaviour
     private void Update()
     {
         if (!isInitialized || materialInstance == null) return;
+
+        // Grace period sau scene load
+        if (sceneLoadGraceFrames > 0)
+        {
+            sceneLoadGraceFrames--;
+            if (sceneLoadGraceFrames == 0) RefreshReferences();
+            return;
+        }
+
+        if (abilityIconManager == null || weaponController == null)
+        {
+            if (Time.frameCount % 30 == 0) RefreshReferences();
+            return;
+        }
 
         UpdateCooldownState();
         UpdateGlowAnimation();
@@ -197,9 +225,14 @@ public class UltimateIconShaderController : MonoBehaviour
         TriggerReadyEffect();
     }
 
+    private void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
     private void OnDestroy()
     {
-        // Clean up material instance
+        SceneManager.sceneLoaded -= OnSceneLoaded;
         if (materialInstance != null)
         {
             DestroyImmediate(materialInstance);

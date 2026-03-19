@@ -84,6 +84,14 @@ public class SwordSkills : MonoBehaviour
         {
             wc.OnWeaponChanged -= OnWeaponChangedHandler;
         }
+
+        // Cancel ultimate timeline if playing (e.g. scene transition)
+        if (ultimateDirector != null && ultimateDirector.state == UnityEngine.Playables.PlayState.Playing)
+        {
+            ultimateDirector.Stop();
+        }
+        if (skillLock != null) skillLock.EndSkillRootMotion(animator);
+
         Debug.Log("[SwordSkills] OnDisable - Script disabled");
     }
     private void OnWeaponChangedHandler(WeaponSO so)
