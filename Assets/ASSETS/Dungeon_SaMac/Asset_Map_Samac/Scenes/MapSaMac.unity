@@ -3421,6 +3421,7 @@ Transform:
   - {fileID: 283943375}
   - {fileID: 883329297}
   - {fileID: 1895641730}
+  - {fileID: 738768036}
   - {fileID: 2119517536}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -5874,6 +5875,81 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 3844594265863451707, guid: 49718cd2319dcf847b1e6112cb4c93e3, type: 3}
   m_PrefabInstance: {fileID: 691966155}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &738768034
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 738768036}
+  - component: {fileID: 738768035}
+  m_Layer: 0
+  m_Name: Last camera
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &738768035
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 738768034}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9dfa5b682dcd46bda6128250e975f58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Priority:
+    Enabled: 0
+    m_Value: 0
+  OutputChannel: 1
+  StandbyUpdate: 2
+  m_StreamingVersion: 20241001
+  m_LegacyPriority: 0
+  Target:
+    TrackingTarget: {fileID: 0}
+    LookAtTarget: {fileID: 0}
+    CustomLookAtTarget: 0
+  Lens:
+    FieldOfView: 60.000004
+    OrthographicSize: 5
+    NearClipPlane: 0.3
+    FarClipPlane: 1000
+    Dutch: 0
+    ModeOverride: 0
+    PhysicalProperties:
+      GateFit: 2
+      SensorSize: {x: 21.946, y: 16.002}
+      LensShift: {x: 0, y: 0}
+      FocusDistance: 10
+      Iso: 200
+      ShutterSpeed: 0.005
+      Aperture: 16
+      BladeCount: 5
+      Curvature: {x: 2, y: 11}
+      BarrelClipping: 0.25
+      Anamorphism: 0
+  BlendHint: 0
+--- !u!4 &738768036
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 738768034}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0.013335151, y: -0.0026878698, z: -0.00006335183, w: 0.9999075}
+  m_LocalPosition: {x: -7.513489, y: -18.36131, z: -104.89458}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 436584818}
+  m_LocalEulerAnglesHint: {x: -1.528, y: -0.308, z: -0.003}
 --- !u!1001 &740476509
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -13910,6 +13986,17 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 7846319127443680880, guid: ba9760b3d0a85de4fb99eacb66bdbab7, type: 3}
   m_PrefabInstance: {fileID: 1720114663}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1724355151 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5442119404096795018, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
+  m_PrefabInstance: {fileID: 539598354}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9dfa5b682dcd46bda6128250e975f58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachineCamera
 --- !u!1001 &1728037110
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -17922,7 +18009,9 @@ PlayableDirector:
   m_ExposedReferences:
     m_References:
     - a8c10317db18d4b43b1ff0c50059f761: {fileID: 1145531304}
+    - 01201877e0cedd84aac365fb52ee42d6: {fileID: 738768035}
     - bd63568cbb45a524a96096f6fc3e000e: {fileID: 883329294}
+    - d33b8e32b25e97947b3d5887db08076f: {fileID: 1724355151}
 --- !u!1001 &2127386338
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -18196,6 +18285,10 @@ PrefabInstance:
     - target: {fileID: 4250913773273599965, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
       propertyPath: m_Name
       value: GUI_Dungeon
+      objectReference: {fileID: 0}
+    - target: {fileID: 4250913773273599965, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
