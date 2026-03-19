@@ -25,8 +25,6 @@ public class ConsumableItemDisplay : MonoBehaviour
     [Header("Input Settings")]
     [Tooltip("Input action for using consumable (Z key). Leave null to use direct key input.")]
     [SerializeField] private InputActionReference useConsumableAction;
-    [Tooltip("If useConsumableAction is null, use this key directly")]
-    [SerializeField] private Key useKey = Key.Z;
 
     [Header("Auto-Find References")]
     [Tooltip("Auto-find PlayerHealth if not assigned")]
@@ -79,8 +77,47 @@ public class ConsumableItemDisplay : MonoBehaviour
         // Setup direct key input if not using InputActionReference
         if (useConsumableAction == null)
         {
-            directKeyInput = new InputAction(binding: $"<Keyboard>/{useKey}");
-            directKeyInput.Enable();
+            CreateHealKeyBinding();
+            GameSettings.OnSettingsChanged += OnSettingsChanged;
+        }
+    }
+
+    /// <summary>
+    /// Tạo/cập nhật InputAction cho Heal key từ SettingsManager
+    /// </summary>
+    private void CreateHealKeyBinding()
+    {
+        // Cleanup old binding
+        if (directKeyInput != null)
+        {
+            directKeyInput.Disable();
+            directKeyInput.Dispose();
+        }
+
+        // Đọc heal key từ SettingsManager, fallback về Z nếu không tìm thấy
+        string bindingPath = "<Keyboard>/z"; // default
+        var settingsManager = FindFirstObjectByType<Artsystack.ArtsystackGui.SettingsManager>();
+        if (settingsManager != null)
+        {
+            KeyCode healKey = settingsManager.GetKeyBinding("Heal");
+            if (healKey != KeyCode.None)
+            {
+                string path = InputRebindHelper.KeyCodeToBindingPath(healKey);
+                if (!string.IsNullOrEmpty(path))
+                    bindingPath = path;
+            }
+        }
+
+        directKeyInput = new InputAction(binding: bindingPath);
+        directKeyInput.Enable();
+        Debug.Log($"[ConsumableItemDisplay] Heal key set to: {bindingPath}");
+    }
+
+    private void OnSettingsChanged()
+    {
+        if (useConsumableAction == null)
+        {
+            CreateHealKeyBinding();
         }
     }
 
@@ -279,6 +316,8 @@ public class ConsumableItemDisplay : MonoBehaviour
         {
             InventoryManager.Instance.OnInventoryChanged -= UpdateQuantity;
         }
+
+        GameSettings.OnSettingsChanged -= OnSettingsChanged;
 
         // Disable direct key input
         if (directKeyInput != null)

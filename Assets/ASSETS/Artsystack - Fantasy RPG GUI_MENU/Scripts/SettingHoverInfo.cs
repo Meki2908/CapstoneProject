@@ -69,8 +69,8 @@ namespace Artsystack.ArtsystackGui
                 "Âm lượng hiệu ứng âm thanh: tiếng bước chân, tiếng kiếm, va chạm, và các âm thanh hành động trong game."
             )},
             { "Tab_VoiceLanguage", (
-                "Voice Language",
-                "Ngôn ngữ lồng tiếng cho nhân vật trong game. Có thể chọn: English, Vietnamese, Japanese, Korean, Chinese."
+                "Language",
+                "Ngôn ngữ hiển thị trong game. Có thể chọn: English, Vietnamese, Japanese, Korean, Chinese."
             )},
             { "Tab_BackgroundSound", (
                 "Background Sound",

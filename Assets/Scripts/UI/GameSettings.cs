@@ -193,8 +193,9 @@ public class GameSettings : MonoBehaviour
         // Master Volume → AudioListener (ảnh hưởng tất cả audio)
         AudioListener.volume = masterVolume;
 
-        // Music/SFX Volume → sẽ được đọc bởi SoundManager/AudioSource qua properties
-        // Các AudioSource tự check GameSettings.Instance.musicVolume / sfxVolume
+        // Music/SFX/Background Sound → AudioManager quản lý
+        AudioManager.EnsureInstance();
+
         Debug.Log($"[GameSettings] Audio: Master={masterVolume:F2}, Music={musicVolume:F2}, SFX={sfxVolume:F2}");
     }
 
@@ -219,15 +220,16 @@ public class GameSettings : MonoBehaviour
             Debug.Log($"[GameSettings] Resolution: {res.width}x{res.height}, Mode={mode}");
         }
 
-        // Brightness, Contrast, Saturation, ChromaticAberration, Sharpening
-        // → Sẽ được đọc bởi post-processing scripts qua properties
+        // Post-processing: Brightness, Contrast, Saturation, ChromaticAberration, Sharpening
+        // → PostProcessingSettings tự đọc qua OnSettingsChanged event
+        PostProcessingSettings.EnsureInstance();
         Debug.Log($"[GameSettings] Graphics: Brightness={brightness:F2}, FPS={frameRate}");
     }
 
     private void ApplyGameplay()
     {
-        // Camera speeds → sẽ được đọc bởi CameraController qua properties
-        // MiniMap → sẽ được đọc bởi MiniMap script qua properties
+        // Camera speeds → RTSCameraController đọc qua OnSettingsChanged
+        // MiniMap → MinimapCameraFollow đọc qua OnSettingsChanged
         Debug.Log($"[GameSettings] Gameplay: CamMouse={cameraMouseSpeed:F2}, MiniMap={miniMapEnabled}");
     }
 
