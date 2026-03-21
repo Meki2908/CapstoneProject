@@ -103,6 +103,21 @@ public class BossMultiSkill : MonoBehaviour
         // Initial delay — lần triệu hồi đầu tiên sẽ đợi summonInitialDelay giây
         lastSummonTime = Time.time + summonInitialDelay - summonCooldown;
     }
+
+    private void OnEnable()
+    {
+        // Hook để đảm bảo boss xuất hiện là bật nhạc boss ngay,
+        // kể cả khi wave logic/timeline nhận diện boss có trễ hoặc không khớp.
+        if (DungeonOSTManager.Instance != null)
+        {
+            DungeonOSTManager.Instance.OnBossEnteredPhase1();
+            if (showDebug) Debug.Log("[BossMultiSkill] Boss appeared -> request boss music phase 1.");
+        }
+        else if (showDebug)
+        {
+            Debug.LogWarning("[BossMultiSkill] Boss appeared -> DungeonOSTManager.Instance is null.");
+        }
+    }
     
     void Update()
     {
@@ -200,6 +215,9 @@ public class BossMultiSkill : MonoBehaviour
     IEnumerator Phase2Sequence()
     {
         isPhase2 = true;
+
+        if (DungeonOSTManager.Instance != null)
+            DungeonOSTManager.Instance.OnBossEnteredPhase2();
         
         if (showDebug) Debug.Log("[BossMultiSkill] === PHASE 2 ACTIVATED ===");
         

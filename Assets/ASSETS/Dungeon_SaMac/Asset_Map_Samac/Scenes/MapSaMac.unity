@@ -4403,6 +4403,10 @@ PrefabInstance:
       propertyPath: m_LocalRotation.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 9110908757095428338, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -8338,6 +8342,11 @@ MonoBehaviour:
   m_MinRegionArea: 2
   m_NavMeshData: {fileID: 23800000, guid: 06e209012da61934dba509a13aede3d1, type: 2}
   m_BuildHeightMesh: 0
+--- !u!1 &992102259 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 9110908757095428338, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
+  m_PrefabInstance: {fileID: 539598354}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &997663179
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -11808,6 +11817,158 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 5247039143976583149, guid: 16d4369985562b04b8e6c87695a73d64, type: 3}
   m_PrefabInstance: {fileID: 1482221487}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1516659429
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1516659431}
+  - component: {fileID: 1516659430}
+  - component: {fileID: 1516659432}
+  m_Layer: 0
+  m_Name: Music to my ears
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!82 &1516659430
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1516659429}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 0}
+  m_PlayOnAwake: 0
+  m_Volume: 1
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+--- !u!4 &1516659431
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1516659429}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.17407799, y: 1.5725372, z: -3.7919574}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1516659432
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1516659429}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9dd86dca734d28a4eae61c5e870e28bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  musicSource: {fileID: 1516659430}
+  preBossThemes:
+  - {fileID: 8300000, guid: 715f651a561f4d84eb1da5e865233272, type: 3}
+  - {fileID: 8300000, guid: c6bc2a1a79fcc9949a5880b592b48874, type: 3}
+  bossThemePhase1: {fileID: 8300000, guid: 2961229190d4fd441b6d99181eb9af05, type: 3}
+  bossThemePhase2: {fileID: 8300000, guid: 4e093f831d242c046a75ff84cd51e46d, type: 3}
+  crossfadeSeconds: 0.75
+  stopMusicOnDungeonEnd: 1
+  fadeOutOnEndSeconds: 1.25
+  showDebugLog: 1
 --- !u!1001 &1526861761
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -18282,6 +18443,18 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3549649341855738058, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
+      propertyPath: preEnterDungeonTimeline
+      value: 
+      objectReference: {fileID: 2119517537}
+    - target: {fileID: 3549649341855738058, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
+      propertyPath: playPreEnterTimelineFromCode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3549649341855738058, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
+      propertyPath: playerHudRootOverrideForPreEnter
+      value: 
+      objectReference: {fileID: 992102259}
     - target: {fileID: 4250913773273599965, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
       propertyPath: m_Name
       value: GUI_Dungeon
@@ -18312,3 +18485,4 @@ SceneRoots:
   - {fileID: 6094649380123361954}
   - {fileID: 539598354}
   - {fileID: 436584818}
+  - {fileID: 1516659431}

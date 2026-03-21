@@ -36,6 +36,12 @@ public class HealthBarUI : MonoBehaviour
     private float lastKnownHealth = -1f;
     private float lastKnownMaxHealth = -1f;
 
+    /// <summary>
+    /// Scene đã load nhưng object HP bar có thể đang inactive (vd. cutscene boss) — không được StartCoroutine lúc đó.
+    /// Chờ tới khi active (OnEnable) mới chạy reconnect.
+    /// </summary>
+    private bool _pendingReconnectAfterSceneLoad;
+
     private void Awake()
     {
         // Subscribe vào scene loaded event
@@ -45,6 +51,14 @@ public class HealthBarUI : MonoBehaviour
     private void Start()
     {
         InitializeHealthBar();
+    }
+
+    private void OnEnable()
+    {
+        // Khi HUD được bật lại: hoàn tất reconnect đang chờ hoặc tìm PlayerHealth nếu chưa có
+        TryStartReconnectAfterSceneLoadCoroutine();
+        if (playerHealth == null && autoFindPlayerHealth)
+            FindPlayerHealth();
     }
 
     /// <summary>
@@ -73,12 +87,25 @@ public class HealthBarUI : MonoBehaviour
     }
 
     /// <summary>
-    /// Callback khi scene mới được load — luôn tìm lại PlayerHealth
+    /// Callback khi scene mới được load — luôn tìm lại PlayerHealth.
+    /// Nếu HP bar đang inactive thì chỉ đánh dấu pending; coroutine chạy khi object active (OnEnable).
     /// </summary>
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         Debug.Log($"[HealthBarUI] Scene loaded: {scene.name}. Re-finding PlayerHealth...");
-        // Chờ vài frame để mọi thứ khởi tạo xong
+        _pendingReconnectAfterSceneLoad = true;
+        TryStartReconnectAfterSceneLoadCoroutine();
+    }
+
+    /// <summary>
+    /// Chỉ StartCoroutine khi GameObject đang active trong hierarchy (MonoBehaviour không cho coroutine khi inactive).
+    /// </summary>
+    private void TryStartReconnectAfterSceneLoadCoroutine()
+    {
+        if (!_pendingReconnectAfterSceneLoad) return;
+        if (!isActiveAndEnabled || !gameObject.activeInHierarchy) return;
+
+        _pendingReconnectAfterSceneLoad = false;
         StartCoroutine(ReconnectAfterSceneLoad());
     }
 
