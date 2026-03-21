@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEditor;
 
 namespace SuperPivot
@@ -36,13 +36,31 @@ namespace SuperPivot
 
         void OnEnable()
         {
-            positionProperty = serializedObject.FindProperty("m_LocalPosition");
-            rotationProperty = serializedObject.FindProperty("m_LocalRotation");
-            scaleProperty = serializedObject.FindProperty("m_LocalScale");
+            // Tránh SerializedObjectNotCreatableException khi selection/prefab inspector mất target (Unity 6 / variant prefab).
+            if (target == null)
+                return;
+            try
+            {
+                positionProperty = serializedObject.FindProperty("m_LocalPosition");
+                rotationProperty = serializedObject.FindProperty("m_LocalRotation");
+                scaleProperty = serializedObject.FindProperty("m_LocalScale");
+            }
+            catch
+            {
+                positionProperty = rotationProperty = scaleProperty = null;
+            }
         }
 
         public override void OnInspectorGUI()
         {
+            if (target == null)
+                return;
+            if (positionProperty == null)
+            {
+                try { DrawDefaultInspector(); } catch { }
+                return;
+            }
+
             EditorAPI.Instance.OnWindowUpdate();
 
             EditorGUIUtility.wideMode = WIDE_MODE;

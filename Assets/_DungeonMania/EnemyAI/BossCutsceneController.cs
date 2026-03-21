@@ -27,6 +27,12 @@ public class BossCutsceneController : MonoBehaviour
     [SerializeField] private bool disableHitColliderDuringCutscene = true;
     [SerializeField] private bool unsubscribeOnDestroy = true;
 
+    [Header("Portal clip (URP PortalPlaneClipLit)")]
+    [Tooltip("Khi timeline intro boss kết thúc: tắt clip trên mesh + tắt PortalPlaneClipBinder (không còn MPB mỗi frame).")]
+    [SerializeField] private bool shutdownPortalClipWhenCutsceneEnds = true;
+    [Tooltip("Để trống = tự tìm PortalPlaneClipBinder trong children (vd. Portal red).")]
+    [SerializeField] private PortalPlaneClipBinder[] portalClipBinders;
+
     private readonly List<Behaviour> _behavioursToRestore = new List<Behaviour>();
     private readonly List<bool> _behaviourWasEnabled = new List<bool>();
     private readonly List<Collider> _collidersToRestore = new List<Collider>();
@@ -102,6 +108,24 @@ public class BossCutsceneController : MonoBehaviour
 
         ShowHud();
         UnlockGameplay();
+
+        if (shutdownPortalClipWhenCutsceneEnds)
+            ShutdownPortalClipBinders();
+    }
+
+    private void ShutdownPortalClipBinders()
+    {
+        PortalPlaneClipBinder[] binders = portalClipBinders;
+        if (binders == null || binders.Length == 0)
+            binders = GetComponentsInChildren<PortalPlaneClipBinder>(true);
+
+        if (binders == null) return;
+
+        foreach (var b in binders)
+        {
+            if (b != null)
+                b.ShutdownPortalEffect(disableComponent: true);
+        }
     }
 
     private void ResolveHudReference()
