@@ -11,9 +11,11 @@ GameObject:
   - component: {fileID: 3096276342714183741}
   - component: {fileID: 6239645091427665295}
   - component: {fileID: 1847362910573826492}
+  - component: {fileID: 4120424694413853872}
+  - component: {fileID: 4762266920349989829}
   m_Layer: 0
   m_Name: Demon
-  m_TagString: Untagged
+  m_TagString: Boss
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -158,6 +160,30 @@ MonoBehaviour:
   shutdownPortalClipWhenCutsceneEnds: 1
   portalClipBinders:
   - {fileID: 3537095425108625757}
+--- !u!114 &4120424694413853872
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 409497873877021662}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5ea9f9b2fa5287044819012694231eb7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &4762266920349989829
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 409497873877021662}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0dade58c82b1c694cbf91062cebbec8c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &3446125516086027954
 GameObject:
   m_ObjectHideFlags: 0

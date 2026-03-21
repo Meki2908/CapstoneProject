@@ -581,10 +581,6 @@ public class DungeonWaveManager : MonoBehaviour
         // === CHỜ TIMELINE INTRO (Pre-enter desert) — chỉ wave 1, trước thông báo + countdown ===
         yield return WaitForPreEnterDungeonTimelineIfNeeded();
 
-        // === NHẠC NỀN: pre-boss (random 1/2) hoặc boss phase 1 ===
-        if (DungeonOSTManager.Instance != null)
-            DungeonOSTManager.Instance.OnWaveSegmentChanged(currentWave, CurrentWaveHasBossEnemy(currentWave));
-
         // === HIỂN THỊ THÔNG BÁO WAVE ===
         ShowWaveNotification(currentWave);
         
@@ -772,6 +768,9 @@ public class DungeonWaveManager : MonoBehaviour
         OnWaveCompleted?.Invoke(currentWave);
 
         Debug.Log($"[DungeonWave] Wave {currentWave} hoàn thành! (enemiesAlive={enemiesAlive})");
+
+        if (DungeonOSTManager.Instance != null && CurrentWaveHasBossEnemy(currentWave))
+            DungeonOSTManager.Instance.OnBossDefeated();
 
         // Kiểm tra nếu là wave cuối cùng
         if (currentWave >= totalWaves)
@@ -1190,6 +1189,9 @@ public class DungeonWaveManager : MonoBehaviour
 
         // === Set player target + Start Chase trực tiếp cho enemy ===
         SetPlayerTargetAndChaseForActiveEnemy(enemy);
+
+        if (DungeonOSTManager.Instance != null)
+            DungeonOSTManager.Instance.ScheduleBossPresenceCheckForSpawnedRoot(enemy);
 
         Debug.Log($"[DungeonWave] Spawned EnemyNew at {spawnPos} - AI activated (direct call)");
         return true;

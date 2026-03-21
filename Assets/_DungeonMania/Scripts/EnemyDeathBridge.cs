@@ -112,6 +112,10 @@ public class EnemyDeathBridge : MonoBehaviour
             int exp = GetExpByType(enemyTypeValue);
             DungeonWaveManager.Instance.OnEnemyKilled(enemyTypeValue, exp);
         }
+
+        if (DungeonOSTManager.Instance != null && enemyScript != null &&
+            DungeonOSTManager.IsOstBossCategory(enemyScript.enemyType))
+            DungeonOSTManager.Instance.BossPresenceLeave();
         
         // Hủy enemy sau khi chết (với delay nhỏ để hoàn thành animation nếu có)
         // === SPAWN ITEM DROPS (Genshin-style) ===

@@ -104,21 +104,6 @@ public class BossMultiSkill : MonoBehaviour
         lastSummonTime = Time.time + summonInitialDelay - summonCooldown;
     }
 
-    private void OnEnable()
-    {
-        // Hook để đảm bảo boss xuất hiện là bật nhạc boss ngay,
-        // kể cả khi wave logic/timeline nhận diện boss có trễ hoặc không khớp.
-        if (DungeonOSTManager.Instance != null)
-        {
-            DungeonOSTManager.Instance.OnBossEnteredPhase1();
-            if (showDebug) Debug.Log("[BossMultiSkill] Boss appeared -> request boss music phase 1.");
-        }
-        else if (showDebug)
-        {
-            Debug.LogWarning("[BossMultiSkill] Boss appeared -> DungeonOSTManager.Instance is null.");
-        }
-    }
-    
     void Update()
     {
         if (enemyScript == null) return;
@@ -487,6 +472,9 @@ public class BossMultiSkill : MonoBehaviour
             es.target = playerTarget;
             if (showDebug) Debug.Log($"[BossMultiSkill] Summoned index={enemyTypeIndex} at {spawnPos}");
         }
+
+        if (DungeonOSTManager.Instance != null)
+            DungeonOSTManager.Instance.ScheduleBossPresenceCheckForSpawnedRoot(enemy);
     }
     
     /// <summary>
