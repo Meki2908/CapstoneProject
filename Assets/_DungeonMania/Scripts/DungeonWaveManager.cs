@@ -1200,6 +1200,9 @@ public class DungeonWaveManager : MonoBehaviour
         // === APPLY DIFFICULTY STATS cho enemy vừa spawn ===
         ApplyDifficultyStats(enemy);
 
+        // === BOSS HEALTH BAR — hiện thanh máu boss ===
+        ShowBossHealthBarIfNeeded(enemy);
+
         if (DungeonOSTManager.Instance != null)
             DungeonOSTManager.Instance.ScheduleBossPresenceCheckForSpawnedRoot(enemy);
 
@@ -2138,6 +2141,29 @@ public class DungeonWaveManager : MonoBehaviour
         }
 
         Debug.Log($"[DungeonWave] Stats applied: {es.specificEnemyType} → HP={entry.hp} ATK={entry.atk} Armor={entry.armor} Acc={entry.accuracy}");
+    }
+
+    /// <summary>
+    /// Kiểm tra enemy vừa spawn có phải boss không → hiện BossHealthBarUI
+    /// </summary>
+    private void ShowBossHealthBarIfNeeded(GameObject enemyRoot)
+    {
+        // Tìm EnemyScript active bên trong
+        EnemyScript es = enemyRoot.GetComponentInChildren<EnemyScript>(false);
+        if (es == null || !es.isBoss) return;
+        
+        // Tìm TakeDamageTest trên boss
+        TakeDamageTest hpScript = es.GetComponent<TakeDamageTest>();
+        if (hpScript == null) hpScript = es.GetComponentInChildren<TakeDamageTest>();
+        if (hpScript == null) return;
+        
+        // Hiện health bar
+        BossHealthBarUI.EnsureInstance();
+        if (BossHealthBarUI.Instance != null)
+        {
+            BossHealthBarUI.Instance.ShowBossHealth(hpScript);
+            Debug.Log($"[DungeonWave] Boss health bar shown for: {es.enemyName}");
+        }
     }
 }
 
