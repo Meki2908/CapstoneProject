@@ -125,6 +125,20 @@ public class GameSettings : MonoBehaviour
         cameraZoomSpeed = PlayerPrefs.GetFloat(KEY_CAMERA_ZOOM_SPEED, 0.5f);
         miniMapEnabled = PlayerPrefs.GetInt(KEY_MINI_MAP, 1) == 1;
 
+        // === VALIDATE VALUES — tránh giá trị bị hỏng từ PlayerPrefs ===
+        // Contrast phải trong range 0-100 (default 50 → URP contrast = 0)
+        if (contrast < 0f || contrast > 100f)
+        {
+            Debug.LogWarning($"[GameSettings] Contrast PlayerPrefs bị sai ({contrast}), reset về 50");
+            contrast = 50f;
+        }
+        // Brightness phải trong range 0-2 (default 1.0)
+        if (brightness < 0f || brightness > 2f)
+        {
+            Debug.LogWarning($"[GameSettings] Brightness PlayerPrefs bị sai ({brightness}), reset về 1.0");
+            brightness = 1.0f;
+        }
+
         // Clamp resolution index
         int resCount = Screen.resolutions.Length;
         if (resCount > 0)

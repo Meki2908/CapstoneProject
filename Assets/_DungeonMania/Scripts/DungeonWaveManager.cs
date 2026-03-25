@@ -18,6 +18,10 @@ public class DungeonWaveManager : MonoBehaviour
     [Tooltip("Map type: 0=Desert, 1=Swamp, 2=Hell")]
     public int mapType = 0;
     
+    [Header("=== BALANCE DATA ===")]
+    [Tooltip("Kéo EnemyBalanceData.asset vào đây (tạo bằng menu Dungeon → Tạo EnemyBalanceData Asset)")]
+    public EnemyStatTable balanceData;
+    
     [Header("=== SCENE TRANSITION ===")]
     [Tooltip("Tên scene map chính để quay về")]
     public string mainMapSceneName = "Map_Chinh";
@@ -293,6 +297,9 @@ public class DungeonWaveManager : MonoBehaviour
             $"  countdownText: {(countdownText != null ? "OK" : "NULL")}\n" +
             $"  statusText: {(statusText != null ? "OK" : "NULL")}");
 
+        // === APPLY BALANCE DATA TỪ DungeonConfig ===
+        ApplyBalanceConfig();
+        
         // Tính tổng số enemy mỗi wave
         CalculateTotalEnemiesPerWave();
 
@@ -1190,6 +1197,9 @@ public class DungeonWaveManager : MonoBehaviour
         // === Set player target + Start Chase trực tiếp cho enemy ===
         SetPlayerTargetAndChaseForActiveEnemy(enemy);
 
+        // === APPLY DIFFICULTY STATS cho enemy vừa spawn ===
+        ApplyDifficultyStats(enemy);
+
         if (DungeonOSTManager.Instance != null)
             DungeonOSTManager.Instance.ScheduleBossPresenceCheckForSpawnedRoot(enemy);
 
@@ -2034,6 +2044,100 @@ public class DungeonWaveManager : MonoBehaviour
         golemOut = Mathf.Max(0, currentGolemCount - GamePlayManager.golem);
         minotaurOut = Mathf.Max(0, currentMinotaurCount - GamePlayManager.minotaur);
         ifritOut = Mathf.Max(0, currentIfritCount - GamePlayManager.ifrit);
+    }
+
+    // ===== BALANCE / DIFFICULTY SYSTEM =====
+
+    /// <summary>
+    /// Đọc DungeonConfig.SelectedDifficulty + mapType (từ Inspector) → override wave counts từ EnemyStatTable.
+    /// Gọi trong Start() TRƯỚC CalculateTotalEnemiesPerWave().
+    /// mapType trên Inspector là nguồn chính (đã set đúng cho từng scene).
+    /// Đồng đội chỉ cần set DungeonConfig.SelectedDifficulty trước LoadScene.
+    /// </summary>
+    private void ApplyBalanceConfig()
+    {
+        if (balanceData == null)
+        {
+            Debug.LogWarning("[DungeonWave] balanceData chưa gán! Dùng wave counts mặc định từ Inspector.");
+            return;
+        }
+
+        // Dùng mapType từ Inspector (đã set đúng cho từng scene dungeon)
+        // Sync ngược lại DungeonConfig để ApplyDifficultyStats() dùng đúng
+        DungeonConfig.SelectedMapType = mapType;
+        
+        DungeonDifficulty diff = DungeonConfig.SelectedDifficulty;
+
+        MapDifficultyConfig config = balanceData.GetConfig(mapType, diff);
+        if (config == null)
+        {
+            Debug.LogWarning($"[DungeonWave] Không tìm thấy config map={mapType} diff={diff} trong balanceData!");
+            return;
+        }
+
+        // Override wave counts
+        WaveConfig wc = config.waveConfig;
+        if (wc != null)
+        {
+            skeletCount    = wc.skeletCount ?? skeletCount;
+            monsterCount   = wc.monsterCount ?? monsterCount;
+            stoneogreCount = wc.stoneogreCount ?? stoneogreCount;
+            golemCount     = wc.golemCount ?? golemCount;
+            minotaurCount  = wc.minotaurCount ?? minotaurCount;
+            ifritCount     = wc.ifritCount ?? ifritCount;
+            lichCount      = wc.lichCount ?? lichCount;
+            demonCount     = wc.demonCount ?? demonCount;
+            Debug.Log($"[DungeonWave] Wave counts overridden từ balanceData (map={mapType}, diff={diff})");
+        }
+
+        Debug.Log($"[DungeonWave] === BALANCE CONFIG APPLIED === map={mapType} ({(mapType == 0 ? "Desert" : mapType == 1 ? "Swamp" : "Hell")}), " +
+                  $"difficulty={diff}, enemyStats={config.enemyStats?.Length ?? 0} entries");
+    }
+
+    /// <summary>
+    /// Override HP/ATK/Armor/Accuracy cho enemy vừa spawn dựa trên EnemyStatTable + DungeonConfig.
+    /// Gọi SAU KHI enemy bên trong đã được kích hoạt (có EnemyScript active).
+    /// </summary>
+    private void ApplyDifficultyStats(GameObject enemyRoot)
+    {
+        if (balanceData == null) return;
+
+        int map = DungeonConfig.SelectedMapType;
+        DungeonDifficulty diff = DungeonConfig.SelectedDifficulty;
+
+        // Tìm EnemyScript active bên trong prefab EnemyNew
+        EnemyScript es = enemyRoot.GetComponentInChildren<EnemyScript>(false);
+        if (es == null) return;
+
+        // Tìm stat entry cho loại enemy cụ thể
+        EnemyStatEntry entry = balanceData.GetStats(map, diff, es.specificEnemyType);
+        if (entry == null)
+        {
+            Debug.Log($"[DungeonWave] Không tìm thấy stat cho {es.specificEnemyType} (map={map}, diff={diff}) — dùng stats mặc định");
+            return;
+        }
+
+        // Override EnemyScript stats
+        es.attackDamage = entry.atk;
+        es.armorValue = entry.armor;
+        es.accuracy = entry.accuracy;
+
+        // Override TakeDamageTest HP
+        TakeDamageTest hpScript = es.GetComponent<TakeDamageTest>();
+        if (hpScript == null) hpScript = es.GetComponentInChildren<TakeDamageTest>();
+        if (hpScript != null)
+        {
+            hpScript.MaxHealth = entry.hp;
+            hpScript.CurrentHealth = entry.hp;
+        }
+
+        // Override EnemyClass.enemyHealth nếu có (legacy system)
+        if (es.enemy != null)
+        {
+            es.enemy.helth.value = (int)entry.hp;
+        }
+
+        Debug.Log($"[DungeonWave] Stats applied: {es.specificEnemyType} → HP={entry.hp} ATK={entry.atk} Armor={entry.armor} Acc={entry.accuracy}");
     }
 }
 

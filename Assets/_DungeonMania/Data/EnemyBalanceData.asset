@@ -1,0 +1,393 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 86d0b9d331895e94988f7576829073c1, type: 3}
+  m_Name: EnemyBalanceData
+  m_EditorClassIdentifier: 
+  configs:
+  - mapType: 0
+    difficulty: 0
+    enemyStats:
+    - enemyType: 0
+      hp: 50
+      atk: 5
+      armor: 2
+      accuracy: 40
+    - enemyType: 1
+      hp: 40
+      atk: 8
+      armor: 2
+      accuracy: 45
+    - enemyType: 2
+      hp: 80
+      atk: 12
+      armor: 5
+      accuracy: 50
+    - enemyType: 3
+      hp: 80
+      atk: 12
+      armor: 5
+      accuracy: 50
+    - enemyType: 4
+      hp: 80
+      atk: 12
+      armor: 5
+      accuracy: 50
+    waveConfig:
+      skeletCount: 0300000004000000050000000400000005000000
+      monsterCount: 0000000001000000020000000200000003000000
+      stoneogreCount: 0000000000000000000000000000000000000000
+      golemCount: 0000000000000000000000000000000000000000
+      minotaurCount: 0000000000000000000000000000000000000000
+      ifritCount: 0000000000000000000000000000000000000000
+      lichCount: 0000000000000000000000000000000000000000
+      demonCount: 0000000000000000000000000000000000000000
+  - mapType: 0
+    difficulty: 1
+    enemyStats:
+    - enemyType: 0
+      hp: 80
+      atk: 8
+      armor: 4
+      accuracy: 45
+    - enemyType: 1
+      hp: 60
+      atk: 12
+      armor: 3
+      accuracy: 50
+    - enemyType: 2
+      hp: 120
+      atk: 18
+      armor: 8
+      accuracy: 55
+    - enemyType: 3
+      hp: 120
+      atk: 18
+      armor: 8
+      accuracy: 55
+    - enemyType: 4
+      hp: 120
+      atk: 18
+      armor: 8
+      accuracy: 55
+    - enemyType: 6
+      hp: 600
+      atk: 30
+      armor: 12
+      accuracy: 65
+    waveConfig:
+      skeletCount: 0300000004000000050000000400000000000000
+      monsterCount: 0000000001000000020000000200000000000000
+      stoneogreCount: 0000000000000000000000000000000001000000
+      golemCount: 0000000000000000000000000000000000000000
+      minotaurCount: 0000000000000000000000000000000000000000
+      ifritCount: 0000000000000000000000000000000000000000
+      lichCount: 0000000000000000000000000000000000000000
+      demonCount: 0000000000000000000000000000000000000000
+  - mapType: 0
+    difficulty: 2
+    enemyStats:
+    - enemyType: 0
+      hp: 120
+      atk: 12
+      armor: 6
+      accuracy: 50
+    - enemyType: 1
+      hp: 90
+      atk: 18
+      armor: 5
+      accuracy: 55
+    - enemyType: 2
+      hp: 180
+      atk: 25
+      armor: 12
+      accuracy: 60
+    - enemyType: 3
+      hp: 180
+      atk: 25
+      armor: 12
+      accuracy: 60
+    - enemyType: 4
+      hp: 180
+      atk: 25
+      armor: 12
+      accuracy: 60
+    - enemyType: 6
+      hp: 900
+      atk: 45
+      armor: 18
+      accuracy: 70
+    - enemyType: 9
+      hp: 2000
+      atk: 70
+      armor: 25
+      accuracy: 75
+    waveConfig:
+      skeletCount: 0300000004000000050000000300000000000000
+      monsterCount: 0000000001000000020000000000000000000000
+      stoneogreCount: 0000000000000000000000000100000000000000
+      golemCount: 0000000000000000000000000000000000000000
+      minotaurCount: 0000000000000000000000000000000000000000
+      ifritCount: 0000000000000000000000000000000001000000
+      lichCount: 0000000000000000000000000000000000000000
+      demonCount: 0000000000000000000000000000000000000000
+  - mapType: 1
+    difficulty: 0
+    enemyStats:
+    - enemyType: 0
+      hp: 80
+      atk: 10
+      armor: 4
+      accuracy: 45
+    - enemyType: 1
+      hp: 60
+      atk: 15
+      armor: 3
+      accuracy: 50
+    - enemyType: 2
+      hp: 130
+      atk: 20
+      armor: 8
+      accuracy: 55
+    - enemyType: 3
+      hp: 130
+      atk: 20
+      armor: 8
+      accuracy: 55
+    - enemyType: 4
+      hp: 130
+      atk: 20
+      armor: 8
+      accuracy: 55
+    waveConfig:
+      skeletCount: 0300000004000000050000000400000005000000
+      monsterCount: 0000000001000000020000000200000003000000
+      stoneogreCount: 0000000000000000000000000000000000000000
+      golemCount: 0000000000000000000000000000000000000000
+      minotaurCount: 0000000000000000000000000000000000000000
+      ifritCount: 0000000000000000000000000000000000000000
+      lichCount: 0000000000000000000000000000000000000000
+      demonCount: 0000000000000000000000000000000000000000
+  - mapType: 1
+    difficulty: 1
+    enemyStats:
+    - enemyType: 0
+      hp: 120
+      atk: 15
+      armor: 6
+      accuracy: 50
+    - enemyType: 1
+      hp: 90
+      atk: 20
+      armor: 5
+      accuracy: 55
+    - enemyType: 2
+      hp: 200
+      atk: 28
+      armor: 12
+      accuracy: 60
+    - enemyType: 3
+      hp: 200
+      atk: 28
+      armor: 12
+      accuracy: 60
+    - enemyType: 4
+      hp: 200
+      atk: 28
+      armor: 12
+      accuracy: 60
+    - enemyType: 7
+      hp: 1000
+      atk: 50
+      armor: 20
+      accuracy: 70
+    waveConfig:
+      skeletCount: 0300000004000000050000000400000000000000
+      monsterCount: 0000000001000000020000000200000000000000
+      stoneogreCount: 0000000000000000000000000000000000000000
+      golemCount: 0000000000000000000000000000000001000000
+      minotaurCount: 0000000000000000000000000000000000000000
+      ifritCount: 0000000000000000000000000000000000000000
+      lichCount: 0000000000000000000000000000000000000000
+      demonCount: 0000000000000000000000000000000000000000
+  - mapType: 1
+    difficulty: 2
+    enemyStats:
+    - enemyType: 0
+      hp: 180
+      atk: 22
+      armor: 8
+      accuracy: 55
+    - enemyType: 1
+      hp: 130
+      atk: 28
+      armor: 7
+      accuracy: 60
+    - enemyType: 2
+      hp: 300
+      atk: 38
+      armor: 18
+      accuracy: 65
+    - enemyType: 3
+      hp: 300
+      atk: 38
+      armor: 18
+      accuracy: 65
+    - enemyType: 4
+      hp: 300
+      atk: 38
+      armor: 18
+      accuracy: 65
+    - enemyType: 7
+      hp: 1500
+      atk: 70
+      armor: 28
+      accuracy: 75
+    - enemyType: 5
+      hp: 2500
+      atk: 85
+      armor: 30
+      accuracy: 78
+    waveConfig:
+      skeletCount: 0300000004000000050000000300000000000000
+      monsterCount: 0000000001000000020000000000000000000000
+      stoneogreCount: 0000000000000000000000000000000000000000
+      golemCount: 0000000000000000000000000100000000000000
+      minotaurCount: 0000000000000000000000000000000000000000
+      ifritCount: 0000000000000000000000000000000000000000
+      lichCount: 0000000000000000000000000000000001000000
+      demonCount: 0000000000000000000000000000000000000000
+  - mapType: 2
+    difficulty: 0
+    enemyStats:
+    - enemyType: 0
+      hp: 150
+      atk: 18
+      armor: 6
+      accuracy: 50
+    - enemyType: 1
+      hp: 110
+      atk: 22
+      armor: 5
+      accuracy: 55
+    - enemyType: 2
+      hp: 250
+      atk: 30
+      armor: 12
+      accuracy: 60
+    - enemyType: 3
+      hp: 250
+      atk: 30
+      armor: 12
+      accuracy: 60
+    - enemyType: 4
+      hp: 250
+      atk: 30
+      armor: 12
+      accuracy: 60
+    waveConfig:
+      skeletCount: 0300000004000000050000000400000005000000
+      monsterCount: 0000000001000000020000000200000003000000
+      stoneogreCount: 0000000000000000000000000000000000000000
+      golemCount: 0000000000000000000000000000000000000000
+      minotaurCount: 0000000000000000000000000000000000000000
+      ifritCount: 0000000000000000000000000000000000000000
+      lichCount: 0000000000000000000000000000000000000000
+      demonCount: 0000000000000000000000000000000000000000
+  - mapType: 2
+    difficulty: 1
+    enemyStats:
+    - enemyType: 0
+      hp: 220
+      atk: 25
+      armor: 8
+      accuracy: 55
+    - enemyType: 1
+      hp: 160
+      atk: 30
+      armor: 7
+      accuracy: 60
+    - enemyType: 2
+      hp: 380
+      atk: 42
+      armor: 18
+      accuracy: 65
+    - enemyType: 3
+      hp: 380
+      atk: 42
+      armor: 18
+      accuracy: 65
+    - enemyType: 4
+      hp: 380
+      atk: 42
+      armor: 18
+      accuracy: 65
+    - enemyType: 8
+      hp: 1800
+      atk: 75
+      armor: 30
+      accuracy: 75
+    waveConfig:
+      skeletCount: 0300000004000000050000000400000000000000
+      monsterCount: 0000000001000000020000000200000000000000
+      stoneogreCount: 0000000000000000000000000000000000000000
+      golemCount: 0000000000000000000000000000000000000000
+      minotaurCount: 0000000000000000000000000000000001000000
+      ifritCount: 0000000000000000000000000000000000000000
+      lichCount: 0000000000000000000000000000000000000000
+      demonCount: 0000000000000000000000000000000000000000
+  - mapType: 2
+    difficulty: 2
+    enemyStats:
+    - enemyType: 0
+      hp: 320
+      atk: 35
+      armor: 12
+      accuracy: 60
+    - enemyType: 1
+      hp: 240
+      atk: 42
+      armor: 10
+      accuracy: 65
+    - enemyType: 2
+      hp: 550
+      atk: 58
+      armor: 25
+      accuracy: 70
+    - enemyType: 3
+      hp: 550
+      atk: 58
+      armor: 25
+      accuracy: 70
+    - enemyType: 4
+      hp: 550
+      atk: 58
+      armor: 25
+      accuracy: 70
+    - enemyType: 8
+      hp: 2500
+      atk: 100
+      armor: 40
+      accuracy: 80
+    - enemyType: 10
+      hp: 5000
+      atk: 130
+      armor: 50
+      accuracy: 85
+    waveConfig:
+      skeletCount: 0300000004000000050000000300000000000000
+      monsterCount: 0000000001000000020000000000000000000000
+      stoneogreCount: 0000000000000000000000000000000000000000
+      golemCount: 0000000000000000000000000000000000000000
+      minotaurCount: 0000000000000000000000000100000000000000
+      ifritCount: 0000000000000000000000000000000000000000
+      lichCount: 0000000000000000000000000000000000000000
+      demonCount: 0000000000000000000000000000000001000000
