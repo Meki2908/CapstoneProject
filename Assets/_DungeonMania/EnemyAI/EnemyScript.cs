@@ -539,6 +539,25 @@ public class EnemyScript : MonoBehaviour {
         // Áp dụng boss flag
         enemy.isBoss = isBoss;
         
+        // === ELEMENTAL cho 3 boss chính ===
+        // Ifrit = fire(1), Lich = dead(4), Demon = sẽ random trong EnemyAttack.D()
+        // Set enemyMagic + đảm bảo magicValue > 0 để elemental damage hoạt động
+        switch (specificEnemyType)
+        {
+            case SpecificEnemyType.Ifrit:
+                enemy.enemyMagic = 1; // fire
+                if (enemy.magicValue <= 0) enemy.magicValue = magicValue > 0 ? magicValue : enemy.attack.value / 3;
+                break;
+            case SpecificEnemyType.Lich:
+                enemy.enemyMagic = 4; // dead
+                if (enemy.magicValue <= 0) enemy.magicValue = magicValue > 0 ? magicValue : enemy.attack.value / 3;
+                break;
+            case SpecificEnemyType.Demon:
+                enemy.enemyMagic = 0; // Demon dùng random trong EnemyAttack.D()
+                if (enemy.magicValue <= 0) enemy.magicValue = magicValue > 0 ? magicValue : enemy.attack.value / 3;
+                break;
+        }
+        
         // Áp dụng move speed và stoppingDistance cho NavMeshAgent
         var navAgent = GetComponent<UnityEngine.AI.NavMeshAgent>();
         if (navAgent != null)
