@@ -85,5 +85,8 @@ public enum SoundType
     Boss_Ifrit_Fireball,        // Cầu lửa bắn player — Demon dùng chung
 
     // === DEMON ===
-    Boss_Demon_FireBlast        // Xoay chém kiếm, sóng lửa về phía trước
+    Boss_Demon_FireBlast,       // Xoay chém kiếm, sóng lửa về phía trước
+
+    // === BOSS DEATH ===
+    Boss_Die                    // Boss chết — âm riêng khác Enemy_Die
 }

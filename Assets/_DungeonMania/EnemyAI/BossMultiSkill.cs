@@ -85,6 +85,7 @@ public class BossMultiSkill : MonoBehaviour
         if (takeDamageTest == null)
             takeDamageTest = GetComponentInParent<TakeDamageTest>();
         
+
         if (enemyScript != null)
         {
             enemyScript.bossMultiSkill = this;
@@ -221,9 +222,8 @@ public class BossMultiSkill : MonoBehaviour
             if (showDebug) Debug.Log("[BossMultiSkill] Aura VFX spawned!");
             
             // === BOSS ROAR + AURA SOUND ===
-            var eSrc = GetComponent<AudioSource>();
-            SoundManager.PlaySound(SoundType.Boss_Roar, eSrc, 1f);
-            SoundManager.PlaySound(GetAuraSound(), eSrc, 0.7f);
+            SoundManager.PlaySound(SoundType.Boss_Roar, null, 1f);
+            SoundManager.PlaySound(GetAuraSound(), null, 0.7f);
         }
         
         yield return new WaitForSeconds(phase2InvulDuration);
@@ -274,7 +274,7 @@ public class BossMultiSkill : MonoBehaviour
         shieldInstance = Instantiate(shieldVfxPrefab, transform.position, Quaternion.identity, transform);
         
         // === SHIELD SOUND ===
-        SoundManager.PlaySound(GetShieldSound(), GetComponent<AudioSource>(), 0.8f);
+        SoundManager.PlaySound(GetShieldSound(), null, 0.8f);
         
         if (showDebug) Debug.Log($"[BossMultiSkill] Shield ON! Duration: {shieldDuration}s");
         
@@ -301,7 +301,7 @@ public class BossMultiSkill : MonoBehaviour
         lastProjectileTime = Time.time;
         
         // === PROJECTILE SOUND ===
-        SoundManager.PlaySound(GetProjectileSound(), GetComponent<AudioSource>(), 0.8f);
+        SoundManager.PlaySound(GetProjectileSound(), null, 0.8f);
         
         SpawnProjectile();
     }
@@ -382,7 +382,7 @@ public class BossMultiSkill : MonoBehaviour
         lastSummonTime = Time.time;
         
         // === BOSS ROAR khi summon ===
-        SoundManager.PlaySound(SoundType.Boss_Roar, GetComponent<AudioSource>(), 0.9f);
+        SoundManager.PlaySound(SoundType.Boss_Roar, null, 0.9f);
         
         StartCoroutine(SummonSequence());
     }

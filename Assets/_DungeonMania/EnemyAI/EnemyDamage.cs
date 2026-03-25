@@ -148,6 +148,12 @@ public class EnemyDamage : MonoBehaviour{
             enemyScript.animator.SetTrigger("dead");
         }
         
+        // === DEATH SOUND ===
+        if (enemyScript.isBoss)
+            SoundManager.PlaySound(SoundType.Boss_Die, null, 1f);
+        else
+            SoundManager.PlaySound(SoundType.Enemy_Die, null, 0.8f);
+        
         switch((int)enemyScript.enemyType){
             case 0: // Skelet
                 Gold();

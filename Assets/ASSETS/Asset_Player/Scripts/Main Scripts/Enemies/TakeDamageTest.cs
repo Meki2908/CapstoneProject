@@ -562,7 +562,12 @@ public class TakeDamageTest : MonoBehaviour
         OnEnemyDied?.Invoke();
 
         // === ENEMY DIE SOUND ===
-        SoundManager.PlaySound(SoundType.Enemy_Die, GetComponent<AudioSource>(), 0.8f);
+        var esRef = GetComponent<EnemyScript>();
+        if (esRef == null) esRef = GetComponentInParent<EnemyScript>();
+        if (esRef != null && esRef.isBoss)
+            SoundManager.PlaySound(SoundType.Boss_Die, null, 1f);
+        else
+            SoundManager.PlaySound(SoundType.Enemy_Die, null, 0.8f);
 
         if (showDebugInfo)
         {

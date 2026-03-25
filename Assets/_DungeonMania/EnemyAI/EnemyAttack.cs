@@ -135,9 +135,24 @@ public class EnemyAttack : MonoBehaviour {
         var bossSkill = GetComponent<BossMultiSkill>();
         if (bossSkill == null) bossSkill = GetComponentInParent<BossMultiSkill>();
         if (bossSkill != null)
-            SoundManager.PlaySound(bossSkill.GetBossAoeSound(), GetComponent<AudioSource>(), 0.9f);
+        {
+            SoundManager.PlaySound(bossSkill.GetBossAoeSound(), null, 0.9f);
+        }
         else
-            SoundManager.PlaySound(SoundType.Boss_Attack, GetComponent<AudioSource>(), 0.8f);
+        {
+            // Sub-boss không có BossMultiSkill → dùng specificEnemyType xác định âm skill
+            SoundType skillSound = enemyScript.specificEnemyType switch
+            {
+                EnemyScript.SpecificEnemyType.Stoneogre => SoundType.Boss_Stoneogre_EarthSlam,
+                EnemyScript.SpecificEnemyType.Golem     => SoundType.Boss_Golem_WaterBlast,
+                EnemyScript.SpecificEnemyType.Minotaur  => SoundType.Boss_Minotaur_EarthBlast,
+                EnemyScript.SpecificEnemyType.Lich      => SoundType.Boss_Lich_WindAoe,
+                EnemyScript.SpecificEnemyType.Ifrit     => SoundType.Boss_Ifrit_FireAoe,
+                EnemyScript.SpecificEnemyType.Demon     => SoundType.Boss_Demon_FireBlast,
+                _ => SoundType.Boss_Attack
+            };
+            SoundManager.PlaySound(skillSound, null, 0.9f);
+        }
 
         // Spawn Boss Skill VFX nếu có
         SpawnSkillVFX();
@@ -222,6 +237,29 @@ public class EnemyAttack : MonoBehaviour {
     }
     public void Skill(int hit){
         if(enemyScript == null) return;
+
+        // === BOSS SKILL 1 SOUND ===
+        var bossSkill = GetComponent<BossMultiSkill>();
+        if (bossSkill == null) bossSkill = GetComponentInParent<BossMultiSkill>();
+        if (bossSkill != null)
+        {
+            SoundManager.PlaySound(bossSkill.GetBossAoeSound(), null, 0.9f);
+        }
+        else if (enemyScript.isBoss)
+        {
+            // Sub-boss không có BossMultiSkill → dùng specificEnemyType xác định âm skill
+            SoundType skillSound = enemyScript.specificEnemyType switch
+            {
+                EnemyScript.SpecificEnemyType.Stoneogre => SoundType.Boss_Stoneogre_EarthSlam,
+                EnemyScript.SpecificEnemyType.Golem     => SoundType.Boss_Golem_WaterBlast,
+                EnemyScript.SpecificEnemyType.Minotaur  => SoundType.Boss_Minotaur_EarthBlast,
+                EnemyScript.SpecificEnemyType.Lich      => SoundType.Boss_Lich_WindAoe,
+                EnemyScript.SpecificEnemyType.Ifrit     => SoundType.Boss_Ifrit_FireAoe,
+                EnemyScript.SpecificEnemyType.Demon     => SoundType.Boss_Demon_FireBlast,
+                _ => SoundType.Boss_Attack
+            };
+            SoundManager.PlaySound(skillSound, null, 0.9f);
+        }
 
         // Gọi skill particle effects
         if (attackEffects != null) attackEffects.PlaySkillAttack();

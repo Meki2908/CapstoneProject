@@ -75,9 +75,7 @@ public class SoundManager : MonoBehaviour
         targetSource.outputAudioMixerGroup = soundList.mixer;
         if (source != null)
         {
-            targetSource.clip = randomClip;
-            targetSource.volume = finalVolume;
-            targetSource.Play();
+            targetSource.PlayOneShot(randomClip, finalVolume);
             if (soundList.changePitch)
             {
                 targetSource.pitch = originalPitch;
