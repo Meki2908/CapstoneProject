@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.AI;
@@ -108,6 +108,20 @@ public class EnemyClass{
                     experiance = 3000;
                     sword = new EnemySword(10);       
                     distance = 3f;
+                    isBoss = true;
+                break;
+                // === Sub-boss types (match EnemyType enum 6-9) ===
+                // Base stats giống case 4 (boss), ApplyInspectorValues() sẽ override sau
+                case 6://stoneogre
+                case 7://golem
+                case 8://minotaur
+                case 9://ifrit
+                    IniStat(25, 500, 10, 10, 20, 65);
+                    gold = Random.Range(10, 15);
+                    score = 350;   
+                    experiance = 1500;
+                    sword = new EnemySword(7);     
+                    distance = 2.5f;
                     isBoss = true;
                 break;
             }
