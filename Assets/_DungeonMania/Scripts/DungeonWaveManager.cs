@@ -1616,7 +1616,7 @@ public class DungeonWaveManager : MonoBehaviour
             EnsureParentActive(waveNotificationUI);
             waveNotificationUI.SetActive(true);
             
-            // FIX #7: Dựa vào config thực tế thay vì hardcode wave position
+            // Kiểm tra wave này có boss/demon thực tế không (dựa trên config đã apply)
             string waveName = "";
             int waveIdx = wave - 1;
             bool hasBoss = (waveIdx < stoneogreCount.Length && stoneogreCount[waveIdx] > 0)
@@ -1625,9 +1625,9 @@ public class DungeonWaveManager : MonoBehaviour
                         || (waveIdx < ifritCount.Length && ifritCount[waveIdx] > 0);
             bool hasDemon = waveIdx < demonCount.Length && demonCount[waveIdx] > 0;
             
-            if (wave == totalWaves && (hasBoss || hasDemon))
+            if (hasDemon)
                 waveName = "FINAL BOSS";
-            else if (hasBoss || hasDemon)
+            else if (hasBoss)
                 waveName = "BOSS WAVE";
             else
                 waveName = $"WAVE {wave}";
@@ -2120,10 +2120,18 @@ public class DungeonWaveManager : MonoBehaviour
             return;
         }
 
-        // Override EnemyScript stats
+        // Override EnemyScript Inspector fields
         es.attackDamage = entry.atk;
         es.armorValue = entry.armor;
         es.accuracy = entry.accuracy;
+
+        // === FIX: SYNC runtime EnemyClass values (D() dùng enemy.attack.value để tính damage) ===
+        if (es.enemy != null)
+        {
+            es.enemy.attack.value = entry.atk;
+            es.enemy.armor.value = entry.armor;
+            es.enemy.accuracy.value = entry.accuracy;
+        }
 
         // Override TakeDamageTest HP
         TakeDamageTest hpScript = es.GetComponent<TakeDamageTest>();
