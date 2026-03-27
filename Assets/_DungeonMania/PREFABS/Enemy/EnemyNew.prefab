@@ -34096,7 +34096,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1105744175950014511, guid: b7e0655ac6ffc92418e550a06001dd34, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1105744175950014519, guid: b7e0655ac6ffc92418e550a06001dd34, type: 3}
       propertyPath: magicValue
@@ -34307,7 +34307,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 100084, guid: 5499d56fcf9d4b54d84b29ec634fe78c, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 100084, guid: 5499d56fcf9d4b54d84b29ec634fe78c, type: 3}
       propertyPath: m_TagString
@@ -35213,7 +35213,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 100082, guid: 054ea6a5c40f27744b3740285b2fc3f8, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 100082, guid: 054ea6a5c40f27744b3740285b2fc3f8, type: 3}
       propertyPath: m_TagString
@@ -35383,7 +35383,7 @@ MonoBehaviour:
   delay: 0
   wait: 0
   alive: 0
-  enemyName: Enemy
+  enemyName: Varkoth
   attackDamage: 10
   armorValue: 5
   magicValue: 0
@@ -36378,7 +36378,7 @@ MonoBehaviour:
   delay: 0
   wait: 0
   alive: 0
-  enemyName: Enemy
+  enemyName: Grondar
   attackDamage: 10
   armorValue: 5
   magicValue: 0
@@ -36472,8 +36472,8 @@ MonoBehaviour:
   projectileCooldown: 10
   projectileBaseDamage: 20
   projectileMagicDamage: 5
-  canSummon: 1
-  summonAvailablePhase1: 1
+  canSummon: 0
+  summonAvailablePhase1: 0
   summonSkeletCount: 0
   summonMonsterCount: 4
   summonCooldown: 20
@@ -36735,7 +36735,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 100086, guid: 50ce470e58f1841438e3bf654166776e, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 100086, guid: 50ce470e58f1841438e3bf654166776e, type: 3}
       propertyPath: m_TagString
@@ -36938,7 +36938,7 @@ MonoBehaviour:
   delay: 0
   wait: 0
   alive: 0
-  enemyName: Enemy
+  enemyName: Ignazar
   attackDamage: 10
   armorValue: 5
   magicValue: 0
@@ -38653,7 +38653,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 100074, guid: 23f342eca69097a4c8a6aa2768f3dba2, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 100074, guid: 23f342eca69097a4c8a6aa2768f3dba2, type: 3}
       propertyPath: m_TagString
@@ -39573,7 +39573,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 100084, guid: 6c6cc16502072914294f2e6eb306fb6d, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 100084, guid: 6c6cc16502072914294f2e6eb306fb6d, type: 3}
       propertyPath: m_TagString
@@ -39743,7 +39743,7 @@ MonoBehaviour:
   delay: 0
   wait: 0
   alive: 0
-  enemyName: Enemy
+  enemyName: Thalgor
   attackDamage: 10
   armorValue: 5
   magicValue: 0
@@ -40053,7 +40053,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 100076, guid: 7ed88ba6cc3135a4890ffd42006802e0, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 100076, guid: 7ed88ba6cc3135a4890ffd42006802e0, type: 3}
       propertyPath: m_TagString
@@ -42617,7 +42617,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 100076, guid: e2abc4effa6e87642ae3f4d560ac8191, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 100076, guid: e2abc4effa6e87642ae3f4d560ac8191, type: 3}
       propertyPath: m_TagString
@@ -44336,13 +44336,17 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1976825276289276082}
     m_Modifications:
+    - target: {fileID: 337231325157497022, guid: f1873437b2d97fe41aa955087047982f, type: 3}
+      propertyPath: enemyName
+      value: Azrathul
+      objectReference: {fileID: 0}
     - target: {fileID: 409497873877021662, guid: f1873437b2d97fe41aa955087047982f, type: 3}
       propertyPath: m_Name
       value: Demon
       objectReference: {fileID: 0}
     - target: {fileID: 409497873877021662, guid: f1873437b2d97fe41aa955087047982f, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 760452571230495396, guid: f1873437b2d97fe41aa955087047982f, type: 3}
       propertyPath: m_LocalRotation.w
@@ -44564,7 +44568,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 135780119244973861, guid: 29e3d8521a2be704ca92cfc9151717f5, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 135780119244973861, guid: 29e3d8521a2be704ca92cfc9151717f5, type: 3}
+      propertyPath: m_TagString
+      value: Boss
       objectReference: {fileID: 0}
     - target: {fileID: 1154441978264960392, guid: 29e3d8521a2be704ca92cfc9151717f5, type: 3}
       propertyPath: enemyNewPrefab
