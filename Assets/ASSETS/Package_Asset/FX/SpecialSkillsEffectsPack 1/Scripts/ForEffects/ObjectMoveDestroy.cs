@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -26,19 +26,8 @@ public class ObjectMoveDestroy : MonoBehaviour
 
     private void Start()
     {
-        ResetRuntimeState();
-    }
-
-    private void OnEnable()
-    {
-        ResetRuntimeState();
-    }
-
-    private void ResetRuntimeState()
-    {
         m_scalefactor = VariousEffectsScene.m_gaph_scenesizefactor;//transform.parent.localScale.x;
         time = Time.time;
-        ishit = false;
     }
 
     void LateUpdate()
@@ -56,7 +45,7 @@ public class ObjectMoveDestroy : MonoBehaviour
             if (Time.time > time + ObjectDestroyTime)
             {
                 MakeHitObject(transform);
-                RecycleOrDestroy(gameObject);
+                Destroy(gameObject);
             }
         }
     }
@@ -96,25 +85,8 @@ public class ObjectMoveDestroy : MonoBehaviour
                 m_sc.AddHitObject(hit.point);
         }
 
-        bool returnedToPool = RecycleOrDestroy(this.gameObject);
-        if (!returnedToPool || m_gameObjectTail == null || !m_gameObjectTail.transform.IsChildOf(transform))
-        {
-            Destroy(m_gameObjectTail, TailDestroyTime);
-        }
+        Destroy(this.gameObject);
+        Destroy(m_gameObjectTail, TailDestroyTime);
         Destroy(m_makedObject, HitObjectDestroyTime);
-    }
-
-    private bool RecycleOrDestroy(GameObject obj)
-    {
-        if (MultipleObjectsMake.TryReturnToPool(obj))
-        {
-            return true;
-        }
-
-        if (obj != null)
-        {
-            Destroy(obj);
-        }
-        return false;
     }
 }

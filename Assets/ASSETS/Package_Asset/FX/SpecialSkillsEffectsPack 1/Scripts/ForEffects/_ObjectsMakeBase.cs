@@ -1,29 +1,36 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
 
 public class _ObjectsMakeBase : MonoBehaviour
 {
-    [Header("Objects To Spawn")]
-    public GameObject[] m_makeObjs = new GameObject[0];
+    public GameObject[] m_makeObjs;
 
-    protected Vector3 GetRandomVector(Vector3 range)
+    public float GetRandomValue(float value)
     {
-        // random in [-range.x .. range.x]
-        return new Vector3(
-            Random.Range(-Mathf.Abs(range.x), Mathf.Abs(range.x)),
-            Random.Range(-Mathf.Abs(range.y), Mathf.Abs(range.y)),
-            Random.Range(-Mathf.Abs(range.z), Mathf.Abs(range.z))
-        );
+        return Random.Range(-value, value);
     }
 
-    protected Vector3 GetRandomVector2(Vector3 range)
+    public float GetRandomValue2(float value)
     {
-        // random in [-range.x .. range.x] (used for scale offset)
-        return new Vector3(
-            Random.Range(-Mathf.Abs(range.x), Mathf.Abs(range.x)),
-            Random.Range(-Mathf.Abs(range.y), Mathf.Abs(range.y)),
-            Random.Range(-Mathf.Abs(range.z), Mathf.Abs(range.z))
-        );
+        return Random.Range(0, value);
+    }
+
+    public Vector3 GetRandomVector(Vector3 value)
+    {
+        Vector3 result;
+        result.x = GetRandomValue(value.x);
+        result.y = GetRandomValue(value.y);
+        result.z = GetRandomValue(value.z);
+        return result;
+    }
+
+    public Vector3 GetRandomVector2(Vector3 value)
+    {
+        Vector3 result;
+        result.x = GetRandomValue2(value.x);
+        result.y = GetRandomValue2(value.y);
+        result.z = GetRandomValue2(value.z);
+        return result;
     }
 }
-
-
