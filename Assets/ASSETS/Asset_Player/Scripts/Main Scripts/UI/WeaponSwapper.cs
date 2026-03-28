@@ -218,7 +218,7 @@ public class WeaponSwapper : MonoBehaviour
             warningDialog.SetActive(true);
     }
 
-    private WeaponSO GetWeaponSO(WeaponType weaponType)
+    public WeaponSO GetWeaponSO(WeaponType weaponType)
     {
         switch (weaponType)
         {
