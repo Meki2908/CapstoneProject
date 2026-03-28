@@ -58,25 +58,42 @@ public class WeaponController : MonoBehaviour
 
     private void Start()
     {
+        var loadedFromDisk = false;
+        if (WeaponSelectionPersistence.TryLoad(out var savedType) && savedType != WeaponType.None)
+        {
+            var so = WeaponSelectionPersistence.ResolveWeaponSO(savedType);
+            if (so != null)
+            {
+                EquipWeapon(so);
+                loadedFromDisk = true;
+            }
+        }
+
+        if (!loadedFromDisk)
+            ApplyDefaultStartWeaponVisuals();
+    }
+
+    void ApplyDefaultStartWeaponVisuals()
+    {
         ApplyWeaponLayersAndParams();
-        // Áp đúng trạng thái ban đầu: Wand không dùng sheathHolder
         if (IsCurrentWand())
         {
             EnsureWandInstance();
-            SetWandActive(false); // sheath = ẩn
+            SetWandActive(false);
         }
         else
         {
-            ShowWeaponInSheath(); // Áp đúng sheathSocket của SO tại thời điểm khởi động
+            ShowWeaponInSheath();
         }
 
-        // Bật/tắt script theo weapon type hiện tại
-        //RefreshWeaponScripts();
-
-        // BẮN sự kiện 1 lần khi start nếu currentWeapon có sẵn
         OnWeaponChanged?.Invoke(currentWeapon);
         SyncWithEquipmentSystem();
-        // WeaponHitRunner removed - effects handled by separate scripts
+    }
+
+    void OnApplicationQuit()
+    {
+        if (currentWeapon != null)
+            WeaponSelectionPersistence.Save(currentWeapon.weaponType);
     }
 
     // THÊM: API set weapon từ pickup (có thể dùng chung)
@@ -112,6 +129,9 @@ public class WeaponController : MonoBehaviour
 
         // BẮN sự kiện cho tất cả consumer (Skills/HitRunner/UIs...)
         OnWeaponChanged?.Invoke(currentWeapon);
+
+        if (weapon != null)
+            WeaponSelectionPersistence.Save(weapon.weaponType);
     }
 
     public WeaponSO GetCurrentWeapon() => currentWeapon;
