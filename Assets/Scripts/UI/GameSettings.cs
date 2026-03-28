@@ -347,39 +347,39 @@ public class GameSettings : MonoBehaviour
     /// </summary>
     private void ApplyGraphicsQuality()
     {
+        // KHÔNG gọi SetQualityLevel() — nó sẽ đổi URP Render Pipeline Asset
+        // → gây mất texture, vật thể tàng hình nếu project chưa cấu hình đủ Quality Level
+        // Chỉ chỉnh từng thông số riêng lẻ, giữ nguyên URP Asset gốc
+
         switch (graphicsQualityIndex)
         {
             case 0: // Low — tối ưu cho máy yếu
-                QualitySettings.SetQualityLevel(0, false);
                 QualitySettings.lodBias = 0.5f;
-                QualitySettings.maximumLODLevel = 2;
                 QualitySettings.pixelLightCount = 1;
                 QualitySettings.anisotropicFiltering = AnisotropicFiltering.Disable;
                 QualitySettings.antiAliasing = 0;
+                QualitySettings.globalTextureMipmapLimit = 2; // texture thấp
                 break;
             case 1: // Medium — cân bằng
-                QualitySettings.SetQualityLevel(1, false);
                 QualitySettings.lodBias = 1.0f;
-                QualitySettings.maximumLODLevel = 1;
                 QualitySettings.pixelLightCount = 2;
                 QualitySettings.anisotropicFiltering = AnisotropicFiltering.Enable;
                 QualitySettings.antiAliasing = 2;
+                QualitySettings.globalTextureMipmapLimit = 1; // texture trung bình
                 break;
             case 2: // High — đẹp, đòi hỏi máy khá
-                QualitySettings.SetQualityLevel(2, false);
                 QualitySettings.lodBias = 1.5f;
-                QualitySettings.maximumLODLevel = 0;
                 QualitySettings.pixelLightCount = 4;
                 QualitySettings.anisotropicFiltering = AnisotropicFiltering.ForceEnable;
                 QualitySettings.antiAliasing = 4;
+                QualitySettings.globalTextureMipmapLimit = 0; // texture full
                 break;
             case 3: // Ultra — max đồ họa
-                QualitySettings.SetQualityLevel(3, false);
                 QualitySettings.lodBias = 2.0f;
-                QualitySettings.maximumLODLevel = 0;
                 QualitySettings.pixelLightCount = 8;
                 QualitySettings.anisotropicFiltering = AnisotropicFiltering.ForceEnable;
                 QualitySettings.antiAliasing = 8;
+                QualitySettings.globalTextureMipmapLimit = 0; // texture full
                 break;
         }
         Debug.Log($"[GameSettings] Graphics Quality: {graphicsQualityOptions[graphicsQualityIndex]}, LOD={QualitySettings.lodBias}, AA={QualitySettings.antiAliasing}");

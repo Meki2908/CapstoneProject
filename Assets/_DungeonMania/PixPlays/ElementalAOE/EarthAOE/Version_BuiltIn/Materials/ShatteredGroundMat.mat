@@ -33,7 +33,7 @@ Material:
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: 2450
   stringTagMap:
-    RenderType: Opaque
+    RenderType: TransparentCutout
   disabledShaderPasses:
   - SHADOWCASTER
   - MOTIONVECTORS
@@ -158,7 +158,7 @@ Material:
     - _ColorMode: 0
     - _Color_Rotate: 0
     - _Color_Smooth: 0.1
-    - _Cull: 2
+    - _Cull: 0
     - _Cutoff: 0.5
     - _Depth_Distance: 0.5
     - _DetailAlbedoMapScale: 1
