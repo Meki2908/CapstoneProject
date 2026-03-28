@@ -54,6 +54,10 @@ namespace Artsystack.ArtsystackGui
                 "Saturation",
                 "Bật/tắt độ bão hòa màu sắc. Bật để màu sắc rực rỡ sinh động, tắt để hình ảnh tự nhiên hơn."
             )},
+            { "Tab_RenderDistance", (
+                "Render Distance",
+                "Giới hạn tầm nhìn trong game. Giảm để tăng hiệu suất (FPS) đáng kể, tăng để nhìn xa hơn nhưng tốn tài nguyên hơn. Tương tự tính năng trong Genshin Impact."
+            )},
 
             // ===== AUDIO =====
             { "Tab_MasterVolume", (

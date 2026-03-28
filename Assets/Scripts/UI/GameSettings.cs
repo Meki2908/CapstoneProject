@@ -1,4 +1,6 @@
 using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Singleton DontDestroyOnLoad — lưu trữ và đồng bộ tất cả settings game qua mọi scene.
@@ -24,14 +26,31 @@ public class GameSettings : MonoBehaviour
 
     // ==================== GRAPHICS ====================
     [Header("Graphics")]
-    public float brightness = 1.0f;
+    public float brightness = 0.5f;
     public bool saturationEnabled = true;
-    public float contrast = 50f;
+    public float contrast = 0.5f;
     public int screenResolutionIndex = 0;
     public int displayModeIndex = 0; // 0=Fullscreen, 1=Windowed, 2=Borderless
     public int frameRate = 60;
     public bool chromaticAberrationEnabled = false;
     public bool sharpeningEnabled = false;
+    public int renderDistanceIndex = 3; // default 16x (index 3 in renderDistanceOptions)
+    public int shadowQualityIndex = 2;   // 0=Off, 1=Low, 2=Medium, 3=High
+    public int graphicsQualityIndex = 2; // 0=Low, 1=Medium, 2=High, 3=Ultra
+
+    // Shadow Quality options
+    public static readonly string[] shadowQualityOptions = { "Off", "Low", "Medium", "High" };
+    // Graphics Quality options
+    public static readonly string[] graphicsQualityOptions = { "Low", "Medium", "High", "Ultra" };
+
+    // Render Distance options: 4x, 8x, 12x, 16x, 20x, 24x
+    public static readonly int[] renderDistanceOptions = { 4, 8, 12, 16, 20, 24 };
+
+    /// <summary>
+    /// Multiplier áp dụng lên Camera.farClipPlane & ShadowDistance.
+    /// 16x = 1.0 (default), 4x = 0.25, 24x = 1.5
+    /// </summary>
+    public float RenderDistanceMultiplier => renderDistanceOptions[renderDistanceIndex] / 16f;
 
     // ==================== GAMEPLAY ====================
     [Header("Gameplay")]
@@ -58,6 +77,9 @@ public class GameSettings : MonoBehaviour
     private const string KEY_FRAME_RATE = "Settings_FrameRate";
     private const string KEY_CHROMATIC_ABERRATION = "Settings_ChromaticAberration";
     private const string KEY_SHARPENING = "Settings_Sharpening";
+    private const string KEY_RENDER_DISTANCE = "Settings_RenderDistance";
+    private const string KEY_SHADOW_QUALITY = "Settings_ShadowQuality";
+    private const string KEY_GRAPHICS_QUALITY = "Settings_GraphicsQuality";
 
     private const string KEY_CAMERA_MOUSE_SPEED = "Settings_CameraMouseSpeed";
     private const string KEY_CAMERA_ZOOM_SPEED = "Settings_CameraZoomSpeedGameplay";
@@ -74,13 +96,31 @@ public class GameSettings : MonoBehaviour
             DontDestroyOnLoad(gameObject);
             LoadFromPlayerPrefs();
             ApplyAll();
+
+            // Mỗi khi chuyển Scene → ép toàn bộ Canvas cập nhật lại
+            SceneManager.sceneLoaded += OnSceneLoaded;
+
             Debug.Log("[GameSettings] Initialized — DontDestroyOnLoad");
         }
         else if (Instance != this)
         {
-            // CHỈ xóa component — gameObject có thể là child của Canvas player
             Destroy(this);
         }
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    /// <summary>
+    /// Khi Scene mới load → ép tất cả Canvas tính toán lại layout ngay lập tức
+    /// </summary>
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        Canvas.ForceUpdateCanvases();
+        Debug.Log($"[GameSettings] Scene '{scene.name}' loaded → Canvas layout updated");
     }
 
     /// <summary>
@@ -111,14 +151,26 @@ public class GameSettings : MonoBehaviour
         backgroundSoundEnabled = PlayerPrefs.GetInt(KEY_BACKGROUND_SOUND, 1) == 1;
 
         // Graphics
-        brightness = PlayerPrefs.GetFloat(KEY_BRIGHTNESS, 1.0f);
+        brightness = PlayerPrefs.GetFloat(KEY_BRIGHTNESS, 0.5f);
         saturationEnabled = PlayerPrefs.GetInt(KEY_SATURATION, 1) == 1;
-        contrast = PlayerPrefs.GetFloat(KEY_CONTRAST, 50f);
+        contrast = PlayerPrefs.GetFloat(KEY_CONTRAST, 0.5f);
         screenResolutionIndex = PlayerPrefs.GetInt(KEY_SCREEN_RESOLUTION, 0);
         displayModeIndex = PlayerPrefs.GetInt(KEY_DISPLAY_MODE, 0);
         frameRate = PlayerPrefs.GetInt(KEY_FRAME_RATE, 60);
         chromaticAberrationEnabled = PlayerPrefs.GetInt(KEY_CHROMATIC_ABERRATION, 0) == 1;
         sharpeningEnabled = PlayerPrefs.GetInt(KEY_SHARPENING, 0) == 1;
+        renderDistanceIndex = Mathf.Clamp(
+            PlayerPrefs.GetInt(KEY_RENDER_DISTANCE, 3),
+            0, renderDistanceOptions.Length - 1
+        );
+        shadowQualityIndex = Mathf.Clamp(
+            PlayerPrefs.GetInt(KEY_SHADOW_QUALITY, 2),
+            0, shadowQualityOptions.Length - 1
+        );
+        graphicsQualityIndex = Mathf.Clamp(
+            PlayerPrefs.GetInt(KEY_GRAPHICS_QUALITY, 2),
+            0, graphicsQualityOptions.Length - 1
+        );
 
         // Gameplay
         cameraMouseSpeed = PlayerPrefs.GetFloat(KEY_CAMERA_MOUSE_SPEED, 0.5f);
@@ -126,17 +178,17 @@ public class GameSettings : MonoBehaviour
         miniMapEnabled = PlayerPrefs.GetInt(KEY_MINI_MAP, 1) == 1;
 
         // === VALIDATE VALUES — tránh giá trị bị hỏng từ PlayerPrefs ===
-        // Contrast phải trong range 0-100 (default 50 → URP contrast = 0)
-        if (contrast < 0f || contrast > 100f)
+        // Contrast phải trong range 0-1 (default 0.5)
+        if (contrast < 0f || contrast > 1f)
         {
-            Debug.LogWarning($"[GameSettings] Contrast PlayerPrefs bị sai ({contrast}), reset về 50");
-            contrast = 50f;
+            Debug.LogWarning($"[GameSettings] Contrast PlayerPrefs bị sai ({contrast}), reset về 0.5");
+            contrast = 0.5f;
         }
-        // Brightness phải trong range 0-2 (default 1.0)
-        if (brightness < 0f || brightness > 2f)
+        // Brightness phải trong range 0-1 (default 0.5)
+        if (brightness < 0f || brightness > 1f)
         {
-            Debug.LogWarning($"[GameSettings] Brightness PlayerPrefs bị sai ({brightness}), reset về 1.0");
-            brightness = 1.0f;
+            Debug.LogWarning($"[GameSettings] Brightness PlayerPrefs bị sai ({brightness}), reset về 0.5");
+            brightness = 0.5f;
         }
 
         // Clamp resolution index
@@ -168,6 +220,9 @@ public class GameSettings : MonoBehaviour
         PlayerPrefs.SetInt(KEY_FRAME_RATE, frameRate);
         PlayerPrefs.SetInt(KEY_CHROMATIC_ABERRATION, chromaticAberrationEnabled ? 1 : 0);
         PlayerPrefs.SetInt(KEY_SHARPENING, sharpeningEnabled ? 1 : 0);
+        PlayerPrefs.SetInt(KEY_RENDER_DISTANCE, renderDistanceIndex);
+        PlayerPrefs.SetInt(KEY_SHADOW_QUALITY, shadowQualityIndex);
+        PlayerPrefs.SetInt(KEY_GRAPHICS_QUALITY, graphicsQualityIndex);
 
         // Gameplay
         PlayerPrefs.SetFloat(KEY_CAMERA_MOUSE_SPEED, cameraMouseSpeed);
@@ -231,13 +286,103 @@ public class GameSettings : MonoBehaviour
                 _ => FullScreenMode.FullScreenWindow
             };
             Screen.SetResolution(res.width, res.height, mode);
+
+            // Ép toàn bộ Canvas cập nhật lại layout ngay lập tức
+            // Tránh UI bị lệch/bể trong 1-2 frame sau khi đổi Resolution
+            Canvas.ForceUpdateCanvases();
+
             Debug.Log($"[GameSettings] Resolution: {res.width}x{res.height}, Mode={mode}");
         }
+
+        // === GRAPHICS QUALITY ===
+        // 0=Low, 1=Medium, 2=High, 3=Ultra
+        ApplyGraphicsQuality();
+
+        // === SHADOW QUALITY ===
+        // 0=Off, 1=Low, 2=Medium, 3=High
+        ApplyShadowQuality();
 
         // Post-processing: Brightness, Contrast, Saturation, ChromaticAberration, Sharpening
         // → PostProcessingSettings tự đọc qua OnSettingsChanged event
         PostProcessingSettings.EnsureInstance();
-        Debug.Log($"[GameSettings] Graphics: Brightness={brightness:F2}, FPS={frameRate}");
+        // Render Distance → FogController đọc qua OnSettingsChanged
+        Debug.Log($"[GameSettings] Graphics: Brightness={brightness:F2}, FPS={frameRate}, RenderDist={renderDistanceOptions[renderDistanceIndex]}x, Shadow={shadowQualityOptions[shadowQualityIndex]}, Quality={graphicsQualityOptions[graphicsQualityIndex]}");
+    }
+
+    /// <summary>
+    /// Áp dụng Shadow Quality vào URP pipeline
+    /// </summary>
+    private void ApplyShadowQuality()
+    {
+        switch (shadowQualityIndex)
+        {
+            case 0: // Off — tắt hoàn toàn bóng đổ
+                QualitySettings.shadows = ShadowQuality.Disable;
+                QualitySettings.shadowDistance = 0f;
+                break;
+            case 1: // Low — bóng đổ thô, gần
+                QualitySettings.shadows = ShadowQuality.HardOnly;
+                QualitySettings.shadowResolution = ShadowResolution.Low;
+                QualitySettings.shadowDistance = 30f;
+                QualitySettings.shadowCascades = 1;
+                break;
+            case 2: // Medium — bóng đổ mềm, trung bình
+                QualitySettings.shadows = ShadowQuality.All;
+                QualitySettings.shadowResolution = ShadowResolution.Medium;
+                QualitySettings.shadowDistance = 80f;
+                QualitySettings.shadowCascades = 2;
+                break;
+            case 3: // High — bóng đổ mềm, xa, chi tiết
+                QualitySettings.shadows = ShadowQuality.All;
+                QualitySettings.shadowResolution = ShadowResolution.High;
+                QualitySettings.shadowDistance = 150f;
+                QualitySettings.shadowCascades = 4;
+                break;
+        }
+        Debug.Log($"[GameSettings] Shadow Quality: {shadowQualityOptions[shadowQualityIndex]}, Distance={QualitySettings.shadowDistance}");
+    }
+
+    /// <summary>
+    /// Áp dụng Graphics Quality tổng thể
+    /// </summary>
+    private void ApplyGraphicsQuality()
+    {
+        switch (graphicsQualityIndex)
+        {
+            case 0: // Low — tối ưu cho máy yếu
+                QualitySettings.SetQualityLevel(0, false);
+                QualitySettings.lodBias = 0.5f;
+                QualitySettings.maximumLODLevel = 2;
+                QualitySettings.pixelLightCount = 1;
+                QualitySettings.anisotropicFiltering = AnisotropicFiltering.Disable;
+                QualitySettings.antiAliasing = 0;
+                break;
+            case 1: // Medium — cân bằng
+                QualitySettings.SetQualityLevel(1, false);
+                QualitySettings.lodBias = 1.0f;
+                QualitySettings.maximumLODLevel = 1;
+                QualitySettings.pixelLightCount = 2;
+                QualitySettings.anisotropicFiltering = AnisotropicFiltering.Enable;
+                QualitySettings.antiAliasing = 2;
+                break;
+            case 2: // High — đẹp, đòi hỏi máy khá
+                QualitySettings.SetQualityLevel(2, false);
+                QualitySettings.lodBias = 1.5f;
+                QualitySettings.maximumLODLevel = 0;
+                QualitySettings.pixelLightCount = 4;
+                QualitySettings.anisotropicFiltering = AnisotropicFiltering.ForceEnable;
+                QualitySettings.antiAliasing = 4;
+                break;
+            case 3: // Ultra — max đồ họa
+                QualitySettings.SetQualityLevel(3, false);
+                QualitySettings.lodBias = 2.0f;
+                QualitySettings.maximumLODLevel = 0;
+                QualitySettings.pixelLightCount = 8;
+                QualitySettings.anisotropicFiltering = AnisotropicFiltering.ForceEnable;
+                QualitySettings.antiAliasing = 8;
+                break;
+        }
+        Debug.Log($"[GameSettings] Graphics Quality: {graphicsQualityOptions[graphicsQualityIndex]}, LOD={QualitySettings.lodBias}, AA={QualitySettings.antiAliasing}");
     }
 
     private void ApplyGameplay()
@@ -260,14 +405,17 @@ public class GameSettings : MonoBehaviour
         voiceLanguageIndex = 0;
         backgroundSoundEnabled = true;
 
-        brightness = 1.0f;
+        brightness = 0.5f;
         saturationEnabled = true;
-        contrast = 50f;
+        contrast = 0.5f;
         screenResolutionIndex = 0;
         displayModeIndex = 0;
         frameRate = 60;
         chromaticAberrationEnabled = false;
         sharpeningEnabled = false;
+        renderDistanceIndex = 3; // 16x default
+        shadowQualityIndex = 2;   // Medium
+        graphicsQualityIndex = 2; // High
 
         cameraMouseSpeed = 0.5f;
         cameraZoomSpeed = 0.5f;

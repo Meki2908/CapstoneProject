@@ -14,35 +14,35 @@ public class DungeonRewardUI : MonoBehaviour
 
     [Header("=== Settings ===")]
     [Tooltip("Kích thước mỗi ô item")]
-    [SerializeField] private float slotSize = 400f;
+    [SerializeField] private float slotSize = 200f;
     [Tooltip("Khoảng cách giữa các ô")]
-    [SerializeField] private float slotSpacing = 40f;
+    [SerializeField] private float slotSpacing = 20f;
     [Tooltip("Chiều rộng panel")]
-    [SerializeField] private float panelWidth = 3840f;
+    [SerializeField] private float panelWidth = 1920f;
     [Tooltip("Chiều cao panel")]
-    [SerializeField] private float panelHeight = 2160f;
+    [SerializeField] private float panelHeight = 1080f;
 
     [Header("=== Font Size ===")]
     [Tooltip("Font tên item")]
-    [SerializeField] private float itemNameFontSize = 48f;
+    [SerializeField] private float itemNameFontSize = 24f;
     [Tooltip("Font số lượng (x3)")]
-    [SerializeField] private float quantityFontSize = 64f;
+    [SerializeField] private float quantityFontSize = 32f;
     [Tooltip("Font dòng tổng phía dưới")]
-    [SerializeField] private float countFontSize = 72f;
+    [SerializeField] private float countFontSize = 36f;
     [Tooltip("Font khi không có vật phẩm")]
-    [SerializeField] private float noItemFontSize = 96f;
+    [SerializeField] private float noItemFontSize = 48f;
 
     [Header("=== Slot Chi Tiết ===")]
     [Tooltip("Chiều rộng thêm cho slot")]
     [SerializeField] private float slotExtraWidth = 0f;
     [Tooltip("Chiều cao thêm cho phần tên item dưới slot")]
-    [SerializeField] private float slotExtraHeight = 140f;
+    [SerializeField] private float slotExtraHeight = 70f;
     [Tooltip("Viền trong slot (px)")]
-    [SerializeField] private float slotBorderInset = 16f;
+    [SerializeField] private float slotBorderInset = 8f;
     [Tooltip("Padding nội dung (trái/phải/trên/dưới)")]
-    [SerializeField] private float contentPadding = 80f;
+    [SerializeField] private float contentPadding = 40f;
     [Tooltip("Chiều cao scrollbar")]
-    [SerializeField] private float scrollbarHeight = 48f;
+    [SerializeField] private float scrollbarHeight = 24f;
 
     [Header("=== Custom Assets (kéo vào Inspector) ===")]
     [Tooltip("Sprite nền panel chính (null = dùng màu mặc định)")]
@@ -219,7 +219,8 @@ public class DungeonRewardUI : MonoBehaviour
         rewardCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
         rewardCanvas.sortingOrder = rewardCanvasSortOrder;
         canvasGO.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        canvasGO.GetComponent<CanvasScaler>().referenceResolution = new Vector2(3840, 2160);
+        canvasGO.GetComponent<CanvasScaler>().referenceResolution = new Vector2(1920, 1080);
+        canvasGO.GetComponent<CanvasScaler>().screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
         canvasGO.GetComponent<CanvasScaler>().matchWidthOrHeight = 0.5f;
         canvasGO.AddComponent<GraphicRaycaster>();
 
@@ -250,7 +251,7 @@ public class DungeonRewardUI : MonoBehaviour
         RectTransform scrollRT = scrollGO.GetComponent<RectTransform>();
         scrollRT.anchorMin = new Vector2(0, 0.1f);
         scrollRT.anchorMax = new Vector2(1, 0.95f);
-        scrollRT.sizeDelta = new Vector2(-80, 0);
+        scrollRT.sizeDelta = new Vector2(-40, 0);
         scrollRT.anchoredPosition = Vector2.zero;
 
         ScrollRect scrollRect = scrollGO.AddComponent<ScrollRect>();
@@ -338,7 +339,7 @@ public class DungeonRewardUI : MonoBehaviour
             noItemText.fontSize = noItemFontSize;
             noItemText.alignment = TextAlignmentOptions.Center;
             noItemText.color = Color.gray;
-            noItemGO.GetComponent<RectTransform>().sizeDelta = new Vector2(1200, slotSize);
+            noItemGO.GetComponent<RectTransform>().sizeDelta = new Vector2(600, slotSize);
         }
         else
         {
@@ -363,6 +364,9 @@ public class DungeonRewardUI : MonoBehaviour
         countText.fontSize = countFontSize;
         countText.alignment = TextAlignmentOptions.Center;
         countText.color = new Color(0.7f, 0.7f, 0.7f);
+
+        // Ép toàn bộ Canvas + UI elements tính toán lại layout ngay lập tức
+        Canvas.ForceUpdateCanvases();
     }
 
     /// <summary>

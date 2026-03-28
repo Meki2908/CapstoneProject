@@ -77,6 +77,18 @@ namespace Artsystack.ArtsystackGui
         [SerializeField] private Button btn_Sharpening_Next;
         [SerializeField] private TextMeshProUGUI text_Sharpening;
 
+        [SerializeField] private Button btn_RenderDistance_Prev;
+        [SerializeField] private Button btn_RenderDistance_Next;
+        [SerializeField] private TextMeshProUGUI text_RenderDistance;
+
+        [SerializeField] private Button btn_ShadowQuality_Prev;
+        [SerializeField] private Button btn_ShadowQuality_Next;
+        [SerializeField] private TextMeshProUGUI text_ShadowQuality;
+
+        [SerializeField] private Button btn_GraphicsQuality_Prev;
+        [SerializeField] private Button btn_GraphicsQuality_Next;
+        [SerializeField] private TextMeshProUGUI text_GraphicsQuality;
+
         [Header("Controls Settings - Key Bindings")]
         [SerializeField] private Button btn_KeyBind_Dodge;
         [SerializeField] private TMP_InputField input_KeyBind_Dodge;
@@ -134,6 +146,7 @@ namespace Artsystack.ArtsystackGui
 
         private const string KEY_CHROMATIC_ABERRATION = "Settings_ChromaticAberration";
         private const string KEY_SHARPENING = "Settings_Sharpening";
+        private const string KEY_RENDER_DISTANCE = "Settings_RenderDistance";
 
 
 
@@ -148,9 +161,9 @@ namespace Artsystack.ArtsystackGui
         private float defaultMusicVolume = 0.7f;
         private float defaultSfxVolume = 0.8f;
         
-        private float defaultBrightness = 1.0f;
+        private float defaultBrightness = 0.5f;
         private bool defaultSaturation = true;
-        private int defaultContrast = 50;
+        private float defaultContrast = 0.5f;
         private bool defaultMiniMap = true;
 
         // New Graphics Defaults
@@ -160,6 +173,9 @@ namespace Artsystack.ArtsystackGui
 
         private bool defaultChromaticAberration = false;
         private bool defaultSharpening = false;
+        private int defaultRenderDistanceIndex = 3; // 16x
+        private int defaultShadowQualityIndex = 2;   // Medium
+        private int defaultGraphicsQualityIndex = 2;  // High
 
         // Camera default values
         private float defaultCameraMouseSpeed = 0.5f;
@@ -546,6 +562,24 @@ namespace Artsystack.ArtsystackGui
             if (btn_Sharpening_Next != null)
                 btn_Sharpening_Next.onClick.AddListener(OnSharpeningClicked);
 
+            // Render Distance - Prev/Next
+            if (btn_RenderDistance_Prev != null)
+                btn_RenderDistance_Prev.onClick.AddListener(OnRenderDistancePrevClicked);
+            if (btn_RenderDistance_Next != null)
+                btn_RenderDistance_Next.onClick.AddListener(OnRenderDistanceNextClicked);
+
+            // Shadow Quality - Prev/Next
+            if (btn_ShadowQuality_Prev != null)
+                btn_ShadowQuality_Prev.onClick.AddListener(OnShadowQualityPrevClicked);
+            if (btn_ShadowQuality_Next != null)
+                btn_ShadowQuality_Next.onClick.AddListener(OnShadowQualityNextClicked);
+
+            // Graphics Quality - Prev/Next
+            if (btn_GraphicsQuality_Prev != null)
+                btn_GraphicsQuality_Prev.onClick.AddListener(OnGraphicsQualityPrevClicked);
+            if (btn_GraphicsQuality_Next != null)
+                btn_GraphicsQuality_Next.onClick.AddListener(OnGraphicsQualityNextClicked);
+
             // Initialize button texts
             UpdateGraphicsButtonTexts();
         }
@@ -607,6 +641,18 @@ namespace Artsystack.ArtsystackGui
             // Sharpening
             if (text_Sharpening != null)
                 text_Sharpening.text = sharpeningEnabled ? "ON" : "OFF";
+
+            // Render Distance
+            if (text_RenderDistance != null && renderDistanceIndex >= 0 && renderDistanceIndex < GameSettings.renderDistanceOptions.Length)
+                text_RenderDistance.text = GameSettings.renderDistanceOptions[renderDistanceIndex] + "x";
+
+            // Shadow Quality
+            if (text_ShadowQuality != null && shadowQualityIndex >= 0 && shadowQualityIndex < GameSettings.shadowQualityOptions.Length)
+                text_ShadowQuality.text = GameSettings.shadowQualityOptions[shadowQualityIndex];
+
+            // Graphics Quality
+            if (text_GraphicsQuality != null && graphicsQualityIndex >= 0 && graphicsQualityIndex < GameSettings.graphicsQualityOptions.Length)
+                text_GraphicsQuality.text = GameSettings.graphicsQualityOptions[graphicsQualityIndex];
         }
 
         // ==================== Button Click Handlers ====================
@@ -686,6 +732,54 @@ namespace Artsystack.ArtsystackGui
             MarkAsChanged();
         }
 
+        // Render Distance - Prev/Next
+        private void OnRenderDistancePrevClicked()
+        {
+            renderDistanceIndex--;
+            if (renderDistanceIndex < 0) renderDistanceIndex = GameSettings.renderDistanceOptions.Length - 1;
+            UpdateGraphicsButtonTexts();
+            MarkAsChanged();
+        }
+
+        private void OnRenderDistanceNextClicked()
+        {
+            renderDistanceIndex = (renderDistanceIndex + 1) % GameSettings.renderDistanceOptions.Length;
+            UpdateGraphicsButtonTexts();
+            MarkAsChanged();
+        }
+
+        // Shadow Quality - Prev/Next
+        private void OnShadowQualityPrevClicked()
+        {
+            shadowQualityIndex--;
+            if (shadowQualityIndex < 0) shadowQualityIndex = GameSettings.shadowQualityOptions.Length - 1;
+            UpdateGraphicsButtonTexts();
+            MarkAsChanged();
+        }
+
+        private void OnShadowQualityNextClicked()
+        {
+            shadowQualityIndex = (shadowQualityIndex + 1) % GameSettings.shadowQualityOptions.Length;
+            UpdateGraphicsButtonTexts();
+            MarkAsChanged();
+        }
+
+        // Graphics Quality - Prev/Next
+        private void OnGraphicsQualityPrevClicked()
+        {
+            graphicsQualityIndex--;
+            if (graphicsQualityIndex < 0) graphicsQualityIndex = GameSettings.graphicsQualityOptions.Length - 1;
+            UpdateGraphicsButtonTexts();
+            MarkAsChanged();
+        }
+
+        private void OnGraphicsQualityNextClicked()
+        {
+            graphicsQualityIndex = (graphicsQualityIndex + 1) % GameSettings.graphicsQualityOptions.Length;
+            UpdateGraphicsButtonTexts();
+            MarkAsChanged();
+        }
+
         // Mini Map - Toggle ON/OFF
         private void OnMiniMapClicked()
         {
@@ -730,6 +824,9 @@ namespace Artsystack.ArtsystackGui
         private int currentFrameRate = 60;
         private int voiceLanguageIndex = 0;
         private bool backgroundSoundEnabled = true;
+        private int renderDistanceIndex = 3; // 16x default
+        private int shadowQualityIndex = 2;   // Medium default
+        private int graphicsQualityIndex = 2; // High default
 
         // Available options
         private List<string> screenResolutions = new List<string> { "1920 x 1080", "1280 x 720", "2560 x 1440", "3840 x 2160" };
@@ -957,6 +1054,9 @@ namespace Artsystack.ArtsystackGui
 
             chromaticAberrationEnabled = defaultChromaticAberration;
             sharpeningEnabled = defaultSharpening;
+            renderDistanceIndex = defaultRenderDistanceIndex;
+            shadowQualityIndex = defaultShadowQualityIndex;
+            graphicsQualityIndex = defaultGraphicsQualityIndex;
 
             UpdateGraphicsButtonTexts();
         }
@@ -1009,6 +1109,9 @@ namespace Artsystack.ArtsystackGui
             gs.frameRate = currentFrameRate;
             gs.chromaticAberrationEnabled = chromaticAberrationEnabled;
             gs.sharpeningEnabled = sharpeningEnabled;
+            gs.renderDistanceIndex = renderDistanceIndex;
+            gs.shadowQualityIndex = shadowQualityIndex;
+            gs.graphicsQualityIndex = graphicsQualityIndex;
 
             // Gameplay (Camera Settings)
             if (tab_CameraMouseSpeed != null) gs.cameraMouseSpeed = tab_CameraMouseSpeed.value;
@@ -1098,6 +1201,9 @@ namespace Artsystack.ArtsystackGui
 
             chromaticAberrationEnabled = gs.chromaticAberrationEnabled;
             sharpeningEnabled = gs.sharpeningEnabled;
+            renderDistanceIndex = Mathf.Clamp(gs.renderDistanceIndex, 0, GameSettings.renderDistanceOptions.Length - 1);
+            shadowQualityIndex = Mathf.Clamp(gs.shadowQualityIndex, 0, GameSettings.shadowQualityOptions.Length - 1);
+            graphicsQualityIndex = Mathf.Clamp(gs.graphicsQualityIndex, 0, GameSettings.graphicsQualityOptions.Length - 1);
             miniMapEnabled = gs.miniMapEnabled;
 
             // Update frame rate index

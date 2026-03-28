@@ -1,0 +1,61 @@
+# Render Distance — Walkthrough
+
+## Tóm tắt
+
+Đã implement đầy đủ logic cho tính năng **Render Distance** trong Settings → Graphics, cho phép player giới hạn tầm nhìn camera để tối ưu FPS (giống Genshin Impact).
+
+## Files Changed
+
+| File | Change |
+|------|--------|
+| [GameSettings.cs](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/Scripts/UI/GameSettings.cs) | `renderDistanceIndex`, `renderDistanceOptions[]`, `RenderDistanceMultiplier`, PlayerPrefs load/save/reset |
+| [SettingsManager.cs](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Artsystack%20-%20Fantasy%20RPG%20GUI_MENU/Scripts/SettingsManager.cs) | UI buttons (Prev/Next), text display, Render Distance → GameSettings sync |
+| [SettingHoverInfo.cs](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/ASSETS/Artsystack%20-%20Fantasy%20RPG%20GUI_MENU/Scripts/SettingHoverInfo.cs) | Tooltip entry cho `Tab_RenderDistance` |
+| [RenderDistanceController.cs](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/Scripts/Camera/RenderDistanceController.cs) | **[NEW]** Runtime controller — apply multiplier lên `Camera.farClipPlane` & `shadowDistance` |
+
+## Render Distance Options
+
+| UI Label | Multiplier | FarClip (base 1500) | Shadow Dist (base 150) |
+|----------|-----------|---------------------|----------------------|
+| 4x | 0.25 | 375 | 37.5 |
+| 8x | 0.50 | 750 | 75 |
+| 12x | 0.75 | 1125 | 112.5 |
+| **16x** | **1.00** | **1500** | **150** |
+| 20x | 1.25 | 1875 | 187.5 |
+| 24x | 1.50 | 2250 | 225 |
+
+## Setup trong Unity Inspector
+
+### 1. SettingsManager — Gán UI references
+Trong **SettingsManager** component trên `Game_Menu` → Inspector → **Graphics Settings**:
+
+- `btn_RenderDistance_Prev` → kéo nút mũi tên **trái** của `Tab_RenderDistance`
+- `btn_RenderDistance_Next` → kéo nút mũi tên **phải** của `Tab_RenderDistance`
+- `text_RenderDistance` → kéo **TextMeshPro** text ở giữa (đang hiển thị "16x")
+
+### 2. RenderDistanceController — Gắn vào Camera
+- Chọn **Main Camera** (hoặc bất kỳ GameObject nào tồn tại trong gameplay scene)
+- **Add Component** → [RenderDistanceController](file:///c:/GAME%203D%20UNITY%20ENGINE/capstoneproject/Assets/Scripts/Camera/RenderDistanceController.cs#12-119)
+- Field `targetCamera` sẽ tự tìm `Camera.main` nếu để trống
+
+## Data Flow
+
+```mermaid
+sequenceDiagram
+    participant UI as Tab_RenderDistance (UI)
+    participant SM as SettingsManager
+    participant GS as GameSettings (Singleton)
+    participant RDC as RenderDistanceController
+    participant CAM as Camera.main
+
+    UI->>SM: Click Prev/Next
+    SM->>SM: renderDistanceIndex ±1
+    SM->>SM: UpdateGraphicsButtonTexts()
+    Note over UI: Text cập nhật "4x"→"8x"→...
+    SM->>GS: ApplySettings() → gs.renderDistanceIndex = ...
+    GS->>GS: ApplyAndSave() → OnSettingsChanged?.Invoke()
+    GS-->>RDC: OnSettingsChanged event
+    RDC->>GS: RenderDistanceMultiplier
+    RDC->>CAM: farClipPlane = base × multiplier
+    RDC->>RDC: QualitySettings.shadowDistance = base × multiplier
+```

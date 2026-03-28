@@ -181,6 +181,17 @@ namespace Unity.FantasyKingdom
         private void OnGameSettingsChanged()
         {
             ApplyGameSettings();
+
+            // Cập nhật lại far clip và shadow distance ngay khi settings thay đổi
+            if (currentSettings != null && currentSettings.ZoomLevelData != null && currentSettings.ZoomLevelData.Count > _zoomLevelIndex)
+            {
+                OnZoomDone?.Invoke(this, new OnZoomDoneEventArgs
+                {
+                    zoomLevel = _zoomLevelIndex,
+                    shadowDist = currentSettings.ZoomLevelData[_zoomLevelIndex].MaxShadowDistance,
+                    data = currentSettings.ZoomLevelData[_zoomLevelIndex]
+                });
+            }
         }
 
         /// <summary>

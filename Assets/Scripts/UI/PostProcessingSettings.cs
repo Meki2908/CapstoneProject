@@ -119,18 +119,18 @@ public class PostProcessingSettings : MonoBehaviour
         if (_colorAdjustments == null) return;
 
         // === BRIGHTNESS ===
-        // Slider range: 0.0 → 2.0 (default 1.0)
-        // postExposure range: -2 → +2 (default 0)
-        // Mapping: slider 0→-2, 1→0, 2→+2
+        // Slider range: 0.0 → 1.0 (default 0.5)
+        // postExposure range safe limit: -1.5 → +1.5 (vừa phải, không làm màn hình cháy sáng/tối thui)
+        // Mapping: slider 0→-1.5, 0.5→0, 1.0→+1.5
         _colorAdjustments.postExposure.overrideState = true;
-        _colorAdjustments.postExposure.value = (gs.brightness - 1f) * 2f;
+        _colorAdjustments.postExposure.value = (gs.brightness - 0.5f) * 3f;
 
         // === CONTRAST ===
-        // Slider range: 0 → 100 (default 50)
-        // URP contrast range: -100 → +100 (default 0)
-        // Mapping: slider 0→-100, 50→0, 100→+100
+        // Slider range: 0.0 → 1.0 (default 0.5)
+        // URP contrast safe limit: -30 → +30 (để -100 màn hình sẽ thành sương xám xịt)
+        // Mapping: slider 0→-30, 0.5→0, 1.0→+30
         _colorAdjustments.contrast.overrideState = true;
-        _colorAdjustments.contrast.value = (gs.contrast - 50f) * 2f;
+        _colorAdjustments.contrast.value = (gs.contrast - 0.5f) * 60f;
 
         // === SATURATION ===
         // Toggle ON/OFF

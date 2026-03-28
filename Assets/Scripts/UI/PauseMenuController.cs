@@ -159,6 +159,7 @@ public class PauseMenuController : MonoBehaviour
             }
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920, 1080);
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
             scaler.matchWidthOrHeight = 0.5f;
             
             // Thêm GraphicRaycaster
@@ -166,6 +167,9 @@ public class PauseMenuController : MonoBehaviour
             {
                 menuCanvas.AddComponent<GraphicRaycaster>();
             }
+
+            // Ép Canvas tính toán lại layout ngay lập tức
+            Canvas.ForceUpdateCanvases();
             
             // === TÌM VÀ GÁN CLOSE BUTTON ===
             if (closeButton == null)

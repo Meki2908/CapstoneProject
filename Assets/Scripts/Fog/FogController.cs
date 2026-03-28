@@ -121,32 +121,56 @@ namespace Unity.FantasyKingdom
         private void HandleZoomLerp(object sender,OnZoomHandledEventArgs args)
         {
             float t = args.zoomDelta;
+            float multiplier = GameSettings.Instance != null ? GameSettings.Instance.RenderDistanceMultiplier : 1f;
+
             if (HeightPass?.passMaterial != null) HeightPass.passMaterial.Lerp(args.prevHeight, args.height, t);
             if (CubePass?.passMaterial   != null) CubePass.passMaterial.Lerp(args.prevCube, args.cube, t);
             
             // The assumption is that volume for level 0 has priority 0 configured in the scene, level 1 has pri 1, etc.
             // This way when going up we need to only fade in the target volume. When going down we need to only fade out the current volume.
+            urp.shadowDistance = Mathf.Lerp(args.prevShadowDist, args.shadowDist, t) * multiplier;
+            QualitySettings.shadowDistance = urp.shadowDistance;
+            QualitySettings.lodBias = Mathf.Clamp(multiplier, 0.2f, 3.0f);
+            
+            var lens = VirtualCamera.Lens;
+            lens.NearClipPlane = Mathf.Lerp(args.prevData.CameraNearPlane, args.data.CameraNearPlane, t);
+            lens.FarClipPlane = Mathf.Max(Mathf.Lerp(args.prevData.CameraFarPlane, args.data.CameraFarPlane, t) * multiplier, 50f);
+            VirtualCamera.Lens = lens;
+
+            if (volumes == null || volumes.Length == 0) return;
+
             // Volume for level 0 always keeps its starting weight of 1, to prevent the default volume from kicking in.
             int targetZoomLevel = args.zoomLevel;
             if (targetZoomLevel > currentZoomLevel)
                 volumes[targetZoomLevel].weight = Mathf.Lerp(0, 1, t);
             else if (targetZoomLevel < currentZoomLevel)
                 volumes[currentZoomLevel].weight = Mathf.Lerp(1, 0, t);
-            urp.shadowDistance = Mathf.Lerp(args.prevShadowDist, args.shadowDist, t);
-            VirtualCamera.Lens.NearClipPlane = Mathf.Lerp(args.prevData.CameraNearPlane, args.data.CameraNearPlane, t);
-            VirtualCamera.Lens.FarClipPlane = Mathf.Lerp(args.prevData.CameraFarPlane, args.data.CameraFarPlane, t);
         }
         private void ZoomDone(object sender, OnZoomDoneEventArgs args)
         {
+            float multiplier = GameSettings.Instance != null ? GameSettings.Instance.RenderDistanceMultiplier : 1f;
+
+            urp.shadowDistance = Mathf.Max(args.shadowDist * multiplier, 10f);
+            QualitySettings.shadowDistance = urp.shadowDistance;
+            QualitySettings.lodBias = Mathf.Clamp(multiplier, 0.2f, 3.0f);
+
+            var lens = VirtualCamera.Lens;
+            lens.NearClipPlane = args.data.CameraNearPlane;
+            lens.FarClipPlane = Mathf.Max(args.data.CameraFarPlane * multiplier, 50f);
+            VirtualCamera.Lens = lens;
+
             int targetZoomLevel = args.zoomLevel;
-            if (targetZoomLevel > currentZoomLevel)
-                volumes[targetZoomLevel].weight = 1;
-            else if (targetZoomLevel < currentZoomLevel)
-                volumes[currentZoomLevel].weight = 0;
+
+            if (volumes == null || volumes.Length <= currentZoomLevel || volumes.Length <= targetZoomLevel) 
+            {
+                currentZoomLevel = args.zoomLevel;
+                return;
+            }
+
+            volumes[currentZoomLevel].weight = 0;
+            volumes[targetZoomLevel].weight = 1;
+
             currentZoomLevel = args.zoomLevel;
-            urp.shadowDistance = args.shadowDist;
-            VirtualCamera.Lens.NearClipPlane = args.data.CameraNearPlane;
-            VirtualCamera.Lens.FarClipPlane = args.data.CameraFarPlane;
         }
         
         private void StartLerpFog(object sender, OnCameraSettingsChangedEventArgs args)
@@ -166,12 +190,14 @@ namespace Unity.FantasyKingdom
         IEnumerator LerpFogMaterialsForFreeCam(Material fromHeight, Material fromCube, Material toHeight,
             Material toCube, int settingsIndex, float near, float far, float shadowDist, int zoomLevel)
         {
+            float multiplier = GameSettings.Instance != null ? GameSettings.Instance.RenderDistanceMultiplier : 1f;
+
             currentSettings = settingsIndex;
             time = 0;
             if (settingsIndex == (int)CameraType.FreeCamera)
             {
                 urp.shadowCascadeCount = originalCascadeCount;
-                urp.shadowDistance = originalMaxShadowDist;
+                urp.shadowDistance = originalMaxShadowDist * multiplier;
                 urp.cascade2Split = originalCascade2Split;
                 urp.cascade3Split = originalcascade3Split;
                 urp.cascade4Split = originalcascade4Split;
@@ -183,7 +209,7 @@ namespace Unity.FantasyKingdom
             }
             else
             {
-                urp.shadowDistance = shadowDist;
+                urp.shadowDistance = shadowDist * multiplier;
                 urp.shadowCascadeCount = 1;
                 urp.cascadeBorder = 0;
                 
@@ -204,12 +230,17 @@ namespace Unity.FantasyKingdom
                 // freeCamVolume has higher priority than all the other volumes, so we just fade it in or out
                 freeCamVolume.weight = settingsIndex == 1 ? Mathf.Lerp(0, 1, t) : Mathf.Lerp(1, 0, t);
                 time += Time.deltaTime;
-                VirtualCamera.Lens.NearClipPlane = Mathf.Lerp(nearClip, near, t);
-                VirtualCamera.Lens.FarClipPlane = Mathf.Lerp(farClip,far, t);
+                
+                var lens = VirtualCamera.Lens;
+                lens.NearClipPlane = Mathf.Lerp(nearClip, near, t);
+                lens.FarClipPlane = Mathf.Max(Mathf.Lerp(farClip, far * multiplier, t), 50f);
+                VirtualCamera.Lens = lens;
                 yield return null;
             }
-            VirtualCamera.Lens.NearClipPlane = near;
-            VirtualCamera.Lens.FarClipPlane = far;
+            var finalLens = VirtualCamera.Lens;
+            finalLens.NearClipPlane = near;
+            finalLens.FarClipPlane = Mathf.Max(far * multiplier, 50f);
+            VirtualCamera.Lens = finalLens;
             freeCamVolume.weight = settingsIndex == 1 ? 1 : 0;
 
         }

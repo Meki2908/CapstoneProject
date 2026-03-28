@@ -23,6 +23,10 @@ namespace Artsystack.ArtsystackGui
         [SerializeField] private UnityEngine.UI.Button btn_Settings;
         [SerializeField] private UnityEngine.UI.Button btn_Exit;
 
+        [Header("Scene Recognition")]
+        [Tooltip("Danh sách các scene được xem là Main Menu (Lobby). Nếu không ở các scene này, GameMenuManager sẽ bị vô hiệu hóa.")]
+        [SerializeField] private List<string> mainMenuSceneNames = new List<string> { "DemoSceneSettings", "Menu_Game", "UI_Game" };
+
         [Header("Scene Settings")]
         [SerializeField] private string gameSceneName = "Map_Chinh";
         [SerializeField] private bool showCursorOnPlay = false;
@@ -31,13 +35,16 @@ namespace Artsystack.ArtsystackGui
 
         private void Start()
         {
-            // Nếu đang trong gameplay (có Character/Player) → tắt script này
-            if (FindFirstObjectByType<Character>() != null)
+            // Kiểm tra tên scene hiện tại có nằm trong list Main Menu không
+            string currentSceneName = SceneManager.GetActiveScene().name;
+            if (!mainMenuSceneNames.Contains(currentSceneName))
             {
+                Debug.Log($"[GameMenuManager] Current scene '{currentSceneName}' is NOT a Main Menu scene. Disabling GameMenuManager.");
                 this.enabled = false;
                 return;
             }
 
+            Debug.Log($"[GameMenuManager] Active in Main Menu scene '{currentSceneName}'.");
             InitializeMenu();
         }
 

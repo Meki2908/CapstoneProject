@@ -28,11 +28,13 @@ namespace Artsystack.ArtsystackGui
         [Header("Settings Panel")]
         [SerializeField] private GameObject panel_GUISettings;
 
+        [Header("Scene Recognition")]
+        [Tooltip("Danh sách các scene được xem là Main Menu. Ở những scene này, PauseMenuManager sẽ KHÔNG bắt phím ESC.")]
+        [SerializeField] private List<string> mainMenuSceneNames = new List<string> { "DemoSceneSettings", "Menu_Game", "UI_Game" };
+
         [Header("Settings")]
         [SerializeField] private string mainMenuSceneName = "MainMenu";
         [SerializeField] private bool cursorVisibleOnPause = true;
-
-
 
         private static PauseMenuManager instance;
         private bool isPaused = false;
@@ -82,17 +84,13 @@ namespace Artsystack.ArtsystackGui
             }
         }
 
-        // Cache reference, kiểm tra .enabled mỗi frame (tránh race condition Start() ordering)
-        private GameMenuManager cachedGMM;
-
         private void Update()
         {
-            // Tìm GameMenuManager 1 lần nếu chưa cache
-            if (cachedGMM == null)
-                cachedGMM = FindFirstObjectByType<GameMenuManager>();
-
-            // Trong lobby (GameMenuManager enabled), nó xử lý ESC — skip ở đây
-            if (cachedGMM != null && cachedGMM.enabled)
+            // Kiểm tra tên scene hiện tại
+            string currentSceneName = SceneManager.GetActiveScene().name;
+            
+            // Trong lobby (Main Menu scenes), ESC thuộc về GameMenuManager — skip ở đây
+            if (mainMenuSceneNames.Contains(currentSceneName))
                 return;
 
             bool escPressed = false;
