@@ -10,7 +10,6 @@ GameObject:
   m_Component:
   - component: {fileID: 5566772379433597238}
   - component: {fileID: 1973985350356289740}
-  - component: {fileID: 7738721330863465375}
   m_Layer: 0
   m_Name: QuestManager
   m_TagString: Untagged
@@ -48,26 +47,3 @@ MonoBehaviour:
   quests:
   - {fileID: 11400000, guid: 5131590ba501d1e44baedadb50b5536d, type: 2}
   - {fileID: 11400000, guid: 1baea652fa1456e4c90bcb19be415561, type: 2}
---- !u!114 &7738721330863465375
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5692293214279097555}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 080fabcb88a258946833d4e46ae8ca61, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  rootPanel: {fileID: 0}
-  toggleKey: 106
-  titleText: {fileID: 0}
-  instructionText: {fileID: 0}
-  descriptionText: {fileID: 0}
-  hudTitleText: {fileID: 0}
-  hudStepText: {fileID: 0}
-  hudPanel: {fileID: 0}
-  emptyQuestTitle: No Active Quest
-  emptyQuestDesc: Visit NPC Leona or check the Tavern to find new adventures.
-  emptyQuestInstruction: Explore the city and talk to NPCs.
