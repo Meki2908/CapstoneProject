@@ -276,14 +276,13 @@ MonoBehaviour:
   portal1_Dest: {fileID: 0}
   portal2_Dest: {fileID: 0}
   portal3_Dest: {fileID: 0}
+  portal4_Dest: {fileID: 0}
   btnPortal1: {fileID: 5383521628473340158}
   btnPortal2: {fileID: 2799007500614319423}
   btnPortal3: {fileID: 6760681369525764795}
+  btnPortal4: {fileID: 0}
   btnClose: {fileID: 0}
-  questID: 2
-  triggerAtStep: 1
-  advanceSteps: 2
-  questPortalButton: 2
+  questAdvances: []
   playerOverride: {fileID: 0}
   rootPanel: {fileID: 0}
   teleportEffectPrefab: {fileID: 0}
@@ -1051,7 +1050,7 @@ Canvas:
   m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
-  m_SortingOrder: 5
+  m_SortingOrder: 0
   m_TargetDisplay: 0
 --- !u!114 &5130183605413343313
 MonoBehaviour:
@@ -3161,7 +3160,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 835ffa5c6f4b62d468d56860c4dac0a6, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 57fffea4c7ec90a478fb61cc969988a7, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -3200,8 +3199,8 @@ MonoBehaviour:
     m_ColorMultiplier: 1
     m_FadeDuration: 0.1
   m_SpriteState:
-    m_HighlightedSprite: {fileID: 21300000, guid: 571ec476f6c47284295e1afa5860a2e7, type: 3}
-    m_PressedSprite: {fileID: 21300000, guid: 095eb4880b43652478aa3cfdec52f6bf, type: 3}
+    m_HighlightedSprite: {fileID: 21300000, guid: 5012d01fa58a61448a0ade94fa45e81c, type: 3}
+    m_PressedSprite: {fileID: 21300000, guid: 3b16582e41090a741bf69d2dcda97d29, type: 3}
     m_SelectedSprite: {fileID: 0}
     m_DisabledSprite: {fileID: 21300000, guid: 4ead78a6cdf6f7b48a2990de15729e02, type: 3}
   m_AnimationTriggers:
@@ -3230,7 +3229,7 @@ MonoBehaviour:
   activeText: Available
   disabledText: Locked
   hideTextWhenDisabled: 1
-  disableOnStart: 1
+  disableOnStart: 0
 --- !u!1 &3145365593882764395
 GameObject:
   m_ObjectHideFlags: 0
@@ -6224,7 +6223,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -0.7999878, y: -5}
+  m_AnchoredPosition: {x: -0.7999878, y: -0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4224498965665971335
@@ -6255,7 +6254,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: '?'
+  m_text: ???
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: e3f54f2386eacfb498711344712aeeef, type: 2}
   m_sharedMaterial: {fileID: 4908264701057610302, guid: e3f54f2386eacfb498711344712aeeef, type: 2}
@@ -6264,8 +6263,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4292789049
-  m_fontColor: {r: 0.22203623, g: 0.76325953, b: 0.87169814, a: 1}
+    rgba: 4284576243
+  m_fontColor: {r: 0.9547169, g: 0.44415036, b: 0.38008535, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -7358,7 +7357,7 @@ MonoBehaviour:
   activeText: Available
   disabledText: Locked
   hideTextWhenDisabled: 1
-  disableOnStart: 1
+  disableOnStart: 0
 --- !u!1 &7565079961389528257
 GameObject:
   m_ObjectHideFlags: 0
@@ -8094,8 +8093,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 139, y: 99}
-  m_SizeDelta: {x: 200, y: 50}
+  m_AnchoredPosition: {x: 137, y: 90}
+  m_SizeDelta: {x: 254.7965, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7082954199618223875
 CanvasRenderer:
@@ -8125,7 +8124,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Telepp
+  m_text: Teleportation
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: e3f54f2386eacfb498711344712aeeef, type: 2}
   m_sharedMaterial: {fileID: 4908264701057610302, guid: e3f54f2386eacfb498711344712aeeef, type: 2}
@@ -8159,8 +8158,8 @@ MonoBehaviour:
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 0
-  m_HorizontalAlignment: 1
-  m_VerticalAlignment: 256
+  m_HorizontalAlignment: 2
+  m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
   m_characterHorizontalScale: 1
@@ -8442,14 +8441,13 @@ MonoBehaviour:
   portal1_Dest: {fileID: 0}
   portal2_Dest: {fileID: 0}
   portal3_Dest: {fileID: 0}
+  portal4_Dest: {fileID: 0}
   btnPortal1: {fileID: 5383521628473340158}
   btnPortal2: {fileID: 2799007500614319423}
   btnPortal3: {fileID: 6760681369525764795}
-  btnClose: {fileID: 4902278705627072267}
-  questID: 2
-  triggerAtStep: 1
-  advanceSteps: 2
-  questPortalButton: 2
+  btnPortal4: {fileID: 4902278705627072267}
+  btnClose: {fileID: 1702504782066445514}
+  questAdvances: []
   playerOverride: {fileID: 0}
   rootPanel: {fileID: 407498576676944590}
   teleportEffectPrefab: {fileID: 7761031033666763820, guid: 1eb833340b41fb444b576c4dced8d4dc, type: 3}
