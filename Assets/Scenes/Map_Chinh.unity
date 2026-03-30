@@ -133,6 +133,7 @@ GameObject:
   - component: {fileID: 14099799}
   - component: {fileID: 14099798}
   - component: {fileID: 14099797}
+  - component: {fileID: 14099802}
   m_Layer: 5
   m_Name: Normal
   m_TagString: Untagged
@@ -280,6 +281,24 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 14099795}
   m_CullTransparentMesh: 1
+--- !u!114 &14099802
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 14099795}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c0b1f621902a3e468351860c8a613f3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  targetSceneName: MapDemon
+  delay: 0.2
+  dungeonDifficulty: 1
+  mapType: 2
+  questID: 0
+  triggerAtStep: 4
 --- !u!114 &16334154
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -832,6 +851,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   targetSceneName: MapDamLay
   delay: 0.2
+  dungeonDifficulty: 0
+  mapType: 1
   questID: 3
   triggerAtStep: 4
 --- !u!95 &247243016
@@ -1892,6 +1913,7 @@ GameObject:
   - component: {fileID: 470500246}
   - component: {fileID: 470500245}
   - component: {fileID: 470500244}
+  - component: {fileID: 470500249}
   m_Layer: 5
   m_Name: Hard
   m_TagString: Untagged
@@ -2039,6 +2061,24 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 470500242}
   m_CullTransparentMesh: 1
+--- !u!114 &470500249
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 470500242}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c0b1f621902a3e468351860c8a613f3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  targetSceneName: MapDemon
+  delay: 0.2
+  dungeonDifficulty: 2
+  mapType: 0
+  questID: 0
+  triggerAtStep: 4
 --- !u!1 &491319549
 GameObject:
   m_ObjectHideFlags: 0
@@ -3503,6 +3543,7 @@ GameObject:
   - component: {fileID: 1074560074}
   - component: {fileID: 1074560073}
   - component: {fileID: 1074560072}
+  - component: {fileID: 1074560077}
   m_Layer: 5
   m_Name: Normal
   m_TagString: Untagged
@@ -3650,6 +3691,24 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1074560070}
   m_CullTransparentMesh: 1
+--- !u!114 &1074560077
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1074560070}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c0b1f621902a3e468351860c8a613f3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  targetSceneName: MapDamLay
+  delay: 0.2
+  dungeonDifficulty: 1
+  mapType: 1
+  questID: 0
+  triggerAtStep: 4
 --- !u!114 &1086865300 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 5442119404096795018, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
@@ -3723,6 +3782,34 @@ PrefabInstance:
     - target: {fileID: 3698074488449676619, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_Name
       value: Player_2.0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6039037309642713428, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.85365045
+      objectReference: {fileID: 0}
+    - target: {fileID: 6039037309642713428, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0.2182071
+      objectReference: {fileID: 0}
+    - target: {fileID: 6039037309642713428, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.45820147
+      objectReference: {fileID: 0}
+    - target: {fileID: 6039037309642713428, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0.11712384
+      objectReference: {fileID: 0}
+    - target: {fileID: 7069795437127634594, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -0.0009447858
+      objectReference: {fileID: 0}
+    - target: {fileID: 7069795437127634594, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.4172384
+      objectReference: {fileID: 0}
+    - target: {fileID: 7069795437127634594, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -5.1029067
       objectReference: {fileID: 0}
     - target: {fileID: 7542521313094387615, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_LocalRotation.w
@@ -3866,6 +3953,29 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1131523294}
   m_CullTransparentMesh: 1
+--- !u!1 &1160798250 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4392547513809755956, guid: 2fe1e0bda42d5504583cd67c68080b0c, type: 3}
+  m_PrefabInstance: {fileID: 9113862226382640978}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1160798257
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1160798250}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c0b1f621902a3e468351860c8a613f3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  targetSceneName: MapSaMac
+  delay: 0.2
+  dungeonDifficulty: 1
+  mapType: 0
+  questID: 0
+  triggerAtStep: 4
 --- !u!1 &1171884496
 GameObject:
   m_ObjectHideFlags: 0
@@ -4890,8 +5000,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7c0b1f621902a3e468351860c8a613f3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  targetSceneName: 
+  targetSceneName: MapDemon
   delay: 0.2
+  dungeonDifficulty: 0
+  mapType: 2
   questID: 3
   triggerAtStep: 4
 --- !u!95 &1723925441
@@ -29214,6 +29326,7 @@ GameObject:
   - component: {fileID: 1938562409}
   - component: {fileID: 1938562408}
   - component: {fileID: 1938562407}
+  - component: {fileID: 1938562412}
   m_Layer: 5
   m_Name: Hard
   m_TagString: Untagged
@@ -29361,6 +29474,24 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1938562405}
   m_CullTransparentMesh: 1
+--- !u!114 &1938562412
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1938562405}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c0b1f621902a3e468351860c8a613f3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  targetSceneName: MapDamLay
+  delay: 0.2
+  dungeonDifficulty: 2
+  mapType: 1
+  questID: 0
+  triggerAtStep: 4
 --- !u!1001 &1952067875
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -30111,6 +30242,29 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1981385654}
   m_CullTransparentMesh: 1
+--- !u!1 &2025136384 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3006375435251416319, guid: 2fe1e0bda42d5504583cd67c68080b0c, type: 3}
+  m_PrefabInstance: {fileID: 9113862226382640978}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2025136391
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2025136384}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c0b1f621902a3e468351860c8a613f3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  targetSceneName: MapSaMac
+  delay: 0.2
+  dungeonDifficulty: 2
+  mapType: 0
+  questID: 0
+  triggerAtStep: 4
 --- !u!114 &2048507535 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 6166055576088057972, guid: 2fe1e0bda42d5504583cd67c68080b0c, type: 3}
@@ -31587,6 +31741,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1960775867243891233, guid: 2fe1e0bda42d5504583cd67c68080b0c, type: 3}
+      propertyPath: dungeonDifficulty
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 1999821769198432474, guid: 2fe1e0bda42d5504583cd67c68080b0c, type: 3}
       propertyPath: m_Texture
       value: 
@@ -31840,6 +31998,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 871504898179610018, guid: 2fe1e0bda42d5504583cd67c68080b0c, type: 3}
       insertIndex: -1
       addedObject: {fileID: 741641546}
+    - targetCorrespondingSourceObject: {fileID: 4392547513809755956, guid: 2fe1e0bda42d5504583cd67c68080b0c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1160798257}
+    - targetCorrespondingSourceObject: {fileID: 3006375435251416319, guid: 2fe1e0bda42d5504583cd67c68080b0c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2025136391}
   m_SourcePrefab: {fileID: 100100000, guid: 2fe1e0bda42d5504583cd67c68080b0c, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:

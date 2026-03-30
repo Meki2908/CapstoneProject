@@ -3,8 +3,13 @@ using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Script đơn giản gắn trực tiếp vào Button để chuyển Scene.
-/// Có thể tự động advance/complete quest khi button được ấn.
+/// Gắn vào Button để chuyển Scene + set độ khó dungeon.
+/// 
+/// === HƯỚNG DẪN SETUP ===
+/// 1. Gắn script này vào mỗi Button (Easy / Normal / Hard)
+/// 2. Điền "Target Scene Name" (VD: "MapDamLay", "MapSaMac", "MapHell")
+/// 3. Chọn "Dungeon Difficulty" từ dropdown (Easy / Normal / Hard)
+/// 4. Chọn "Map Type" (0=Sa Mạc, 1=Đầm Lầy, 2=Địa Ngục)
 /// </summary>
 [RequireComponent(typeof(Button))]
 public class SceneTeleportButton : MonoBehaviour
@@ -15,6 +20,14 @@ public class SceneTeleportButton : MonoBehaviour
 
     [Tooltip("Delay trước khi chuyển (để kịp nghe tiếng click hoặc chạy hiệu ứng)")]
     public float delay = 0.2f;
+
+    [Header("── Dungeon Difficulty ──")]
+    [Tooltip("Độ khó dungeon: Easy (không boss), Normal (1 boss), Hard (2 boss + boss chính)")]
+    public DungeonDifficulty dungeonDifficulty = DungeonDifficulty.Normal;
+
+    [Tooltip("Map type: 0=Sa Mạc (Desert), 1=Đầm Lầy (Swamp), 2=Địa Ngục (Hell)")]
+    [Range(0, 2)]
+    public int mapType = 0;
 
     [Header("── Quest Advance (tuỳ chọn) ──")]
     [Tooltip("Set questID > 0 để advance quest khi ấn button này.")]
@@ -32,13 +45,18 @@ public class SceneTeleportButton : MonoBehaviour
 
     private void OnBtnClick()
     {
-        TryAdvanceQuest();   // advance/complete quest trước khi đổi scene
+        TryAdvanceQuest();
 
         if (string.IsNullOrEmpty(targetSceneName))
         {
             Debug.LogWarning($"[SceneTeleportButton] Nút {gameObject.name} chưa nhập tên Scene!");
             return;
         }
+
+        // === SET DUNGEON CONFIG TRƯỚC KHI CHUYỂN SCENE ===
+        DungeonConfig.SelectedDifficulty = dungeonDifficulty;
+        DungeonConfig.SelectedMapType = mapType;
+        Debug.Log($"[SceneTeleportButton] DungeonConfig set: Difficulty={dungeonDifficulty}, MapType={mapType}");
 
         Debug.Log($"[SceneTeleportButton] Chuẩn bị chuyển đến: {targetSceneName}");
         Invoke(nameof(ExecuteTeleport), delay);
@@ -52,7 +70,7 @@ public class SceneTeleportButton : MonoBehaviour
         if (state == QuestManager.QuestState.Active && step == triggerAtStep)
         {
             QuestManager.Instance.AdvanceStep(questID);
-            Debug.Log($"[SceneTeleportButton] Quest {questID} step {triggerAtStep} advanced → quest may complete.");
+            Debug.Log($"[SceneTeleportButton] Quest {questID} step {triggerAtStep} advanced.");
         }
     }
 
@@ -75,4 +93,5 @@ public class SceneTeleportButton : MonoBehaviour
         }
     }
 }
+
 
