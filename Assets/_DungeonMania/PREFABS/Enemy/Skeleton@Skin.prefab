@@ -902,6 +902,7 @@ GameObject:
   - component: {fileID: 1105744175950014515}
   - component: {fileID: 1105744175950014512}
   - component: {fileID: 2951644644755427913}
+  - component: {fileID: 279319102203594972}
   m_Layer: 6
   m_Name: Skeleton@Skin
   m_TagString: Enemy
@@ -967,10 +968,10 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.3
-  m_Height: 2
+  m_Radius: 0.24
+  m_Height: 1.76
   m_Direction: 1
-  m_Center: {x: 0, y: 0.98, z: 0}
+  m_Center: {x: 0, y: 0.85, z: 0}
 --- !u!195 &1105744175950014518
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -1130,6 +1131,33 @@ MonoBehaviour:
   useHealthBar: 0
   bossName: 
   healthBarColor: {r: 1, g: 0, b: 0, a: 1}
+--- !u!54 &279319102203594972
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1105744175950014511}
+  serializedVersion: 4
+  m_Mass: 1
+  m_Drag: 0
+  m_AngularDrag: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 0
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 16
+  m_CollisionDetection: 0
 --- !u!1 &1105744175950014561
 GameObject:
   m_ObjectHideFlags: 0

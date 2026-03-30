@@ -27,6 +27,16 @@ public class BossCutsceneController : MonoBehaviour
     [SerializeField] private bool disableHitColliderDuringCutscene = true;
     [SerializeField] private bool unsubscribeOnDestroy = true;
 
+    [Header("Cutscene (mở rộng)")]
+    [Tooltip("Ẩn toàn bộ UI Player (ví dụ: Canvas_Menu / AbilityIcons / SkillBar / UI_Skills...).")]
+    [SerializeField] private bool hideAllPlayerUI = true;
+
+    [Tooltip("Khóa toàn bộ Enemy trong scene (trừ boss hiện tại) để không đánh/chạy trong cutscene.")]
+    [SerializeField] private bool lockAllEnemiesInScene = true;
+
+    [Tooltip("Khi lockAllEnemiesInScene bật: không khóa EnemyScript thuộc boss hiện tại.")]
+    [SerializeField] private bool excludeBossEnemyFromGlobalLock = true;
+
     [Header("Portal clip (URP PortalPlaneClipLit)")]
     [Tooltip("Khi timeline intro boss kết thúc: tắt clip trên mesh + tắt PortalPlaneClipBinder (không còn MPB mỗi frame).")]
     [SerializeField] private bool shutdownPortalClipWhenCutsceneEnds = true;
@@ -37,6 +47,8 @@ public class BossCutsceneController : MonoBehaviour
     private readonly List<bool> _behaviourWasEnabled = new List<bool>();
     private readonly List<Collider> _collidersToRestore = new List<Collider>();
     private readonly List<bool> _colliderWasEnabled = new List<bool>();
+    private readonly List<GameObject> _playerUiToRestore = new List<GameObject>();
+    private readonly List<bool> _playerUiWasActive = new List<bool>();
 
     private EnemyScript _enemyScript;
     private NavMeshAgent _navMeshAgent;
@@ -96,7 +108,10 @@ public class BossCutsceneController : MonoBehaviour
         _cutsceneActive = true;
 
         ResolveHudReference();
-        HideHud();
+        if (hideAllPlayerUI)
+            HideAllPlayerUI();
+        else
+            HideHud();
 
         LockGameplay();
     }
@@ -106,7 +121,11 @@ public class BossCutsceneController : MonoBehaviour
         if (!_cutsceneActive) return;
         _cutsceneActive = false;
 
-        ShowHud();
+        if (hideAllPlayerUI)
+            RestoreAllPlayerUI();
+        else
+            ShowHud();
+
         UnlockGameplay();
 
         if (shutdownPortalClipWhenCutsceneEnds)
@@ -180,6 +199,81 @@ public class BossCutsceneController : MonoBehaviour
         playerHudRoot.SetActive(_hudWasActive);
     }
 
+    private Transform ResolvePlayerRoot()
+    {
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        if (player == null) player = GameObject.Find("Player");
+        if (player == null) player = GameObject.Find("player");
+        return player != null ? player.transform : null;
+    }
+
+    private Transform FindInChildren(Transform parent, string name)
+    {
+        if (parent == null) return null;
+        if (parent.name == name) return parent;
+
+        foreach (Transform child in parent)
+        {
+            Transform found = FindInChildren(child, name);
+            if (found != null) return found;
+        }
+        return null;
+    }
+
+    private void RememberAndSetActive(GameObject go, bool active)
+    {
+        if (go == null) return;
+        if (_playerUiToRestore.Contains(go)) return; // avoid duplicates
+
+        _playerUiToRestore.Add(go);
+        _playerUiWasActive.Add(go.activeSelf);
+        go.SetActive(active);
+    }
+
+    private void HideAllPlayerUI()
+    {
+        _playerUiToRestore.Clear();
+        _playerUiWasActive.Clear();
+
+        // Hide toàn cục theo tag HUD
+        var hudTagged = GameObject.FindGameObjectsWithTag("HUD");
+        if (hudTagged != null && hudTagged.Length > 0)
+        {
+            foreach (var go in hudTagged)
+            {
+                if (go == null) continue;
+                RememberAndSetActive(go, false);
+            }
+            return;
+        }
+
+        // Fallback: nếu project chưa gắn tag HUD đầy đủ, dùng tên để ẩn
+        string[] sceneFallbackUiNames = {
+            "AbilityIcons", "SkillBar", "UI_Skills",
+            "Canvas_Menu",
+            "UI_HP+Invetory_1.0", "UI_HP+Invetory_1", "UI_HP+Invetory",
+            "UI_HP+Inventory_1.0", "UI_HP+Inventory"
+        };
+        foreach (string n in sceneFallbackUiNames)
+        {
+            GameObject go = GameObject.Find(n);
+            if (go != null) RememberAndSetActive(go, false);
+        }
+    }
+
+    private void RestoreAllPlayerUI()
+    {
+        for (int i = 0; i < _playerUiToRestore.Count; i++)
+        {
+            var go = _playerUiToRestore[i];
+            if (go != null && i < _playerUiWasActive.Count)
+                go.SetActive(_playerUiWasActive[i]);
+        }
+
+        _playerUiToRestore.Clear();
+        _playerUiWasActive.Clear();
+    }
+
     private void LockGameplay()
     {
         _behavioursToRestore.Clear();
@@ -187,7 +281,24 @@ public class BossCutsceneController : MonoBehaviour
         _collidersToRestore.Clear();
         _colliderWasEnabled.Clear();
 
-        Transform scope = _enemyScript != null ? _enemyScript.transform : transform;
+        Transform bossScope = _enemyScript != null ? _enemyScript.transform : transform;
+        DisableEnemyScope(bossScope);
+
+        if (!lockAllEnemiesInScene)
+            return;
+
+        var allEnemies = Object.FindObjectsOfType<EnemyScript>(true);
+        foreach (var e in allEnemies)
+        {
+            if (e == null) continue;
+            if (excludeBossEnemyFromGlobalLock && e == _enemyScript) continue;
+            DisableEnemyScope(e.transform);
+        }
+    }
+
+    private void DisableEnemyScope(Transform scope)
+    {
+        if (scope == null) return;
 
         TryDisable<EnemyScript>(scope);
         TryDisable<EnemyAttack>(scope);
@@ -196,23 +307,16 @@ public class BossCutsceneController : MonoBehaviour
         TryDisable<TakeDamageTest>(scope);
         TryDisable<BossMultiSkill>(scope);
         TryDisable<EnemyStuckDetection>(scope);
+        TryDisable<NavMeshAgent>(scope);
 
-        if (_navMeshAgent == null)
-            _navMeshAgent = scope.GetComponent<NavMeshAgent>();
-        if (_navMeshAgent != null && _navMeshAgent.enabled)
-        {
-            _navMeshAgent.enabled = false;
-        }
+        if (!disableHitColliderDuringCutscene) return;
 
-        if (disableHitColliderDuringCutscene)
+        foreach (var c in scope.GetComponentsInChildren<Collider>(true))
         {
-            foreach (var c in scope.GetComponentsInChildren<Collider>(true))
-            {
-                if (c == null || !c.enabled || c.isTrigger) continue;
-                _collidersToRestore.Add(c);
-                _colliderWasEnabled.Add(true);
-                c.enabled = false;
-            }
+            if (c == null || !c.enabled || c.isTrigger) continue;
+            _collidersToRestore.Add(c);
+            _colliderWasEnabled.Add(true);
+            c.enabled = false;
         }
     }
 
@@ -221,9 +325,9 @@ public class BossCutsceneController : MonoBehaviour
         var comps = scope.GetComponentsInChildren<T>(true);
         foreach (var b in comps)
         {
-            if (b == null || !b.enabled) continue;
+            if (b == null) continue;
             _behavioursToRestore.Add(b);
-            _behaviourWasEnabled.Add(true);
+            _behaviourWasEnabled.Add(b.enabled);
             b.enabled = false;
         }
     }
@@ -235,23 +339,28 @@ public class BossCutsceneController : MonoBehaviour
             var b = _behavioursToRestore[i];
             if (b == null) continue;
 
+            bool wasEnabled = _behaviourWasEnabled.Count > i && _behaviourWasEnabled[i];
             if (b is EnemyScript es)
             {
-                EnemyScript.suppressSpawnVfx = true;
-                es.enabled = true;
-                EnemyScript.suppressSpawnVfx = false;
+                if (wasEnabled)
+                {
+                    EnemyScript.suppressSpawnVfx = true;
+                    es.enabled = true;
+                    EnemyScript.suppressSpawnVfx = false;
+                }
+                else
+                {
+                    es.enabled = false;
+                }
             }
             else
             {
-                b.enabled = true;
+                b.enabled = wasEnabled;
             }
         }
 
         _behavioursToRestore.Clear();
         _behaviourWasEnabled.Clear();
-
-        if (_navMeshAgent != null)
-            _navMeshAgent.enabled = true;
 
         for (int i = 0; i < _collidersToRestore.Count; i++)
         {
