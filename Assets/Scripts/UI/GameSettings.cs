@@ -1,6 +1,8 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 
 /// <summary>
 /// Singleton DontDestroyOnLoad — lưu trữ và đồng bộ tất cả settings game qua mọi scene.
@@ -305,89 +307,125 @@ public class GameSettings : MonoBehaviour
         // Post-processing: Brightness, Contrast, Saturation, ChromaticAberration, Sharpening
         // → PostProcessingSettings tự đọc qua OnSettingsChanged event
         PostProcessingSettings.EnsureInstance();
-        // Render Distance → FogController đọc qua OnSettingsChanged
+
+        // Render Distance → RenderDistanceController apply vào Camera.farClipPlane + ShadowDistance
+        RenderDistanceController.EnsureInstance();
+
         Debug.Log($"[GameSettings] Graphics: Brightness={brightness:F2}, FPS={frameRate}, RenderDist={renderDistanceOptions[renderDistanceIndex]}x, Shadow={shadowQualityOptions[shadowQualityIndex]}, Quality={graphicsQualityOptions[graphicsQualityIndex]}");
     }
 
     /// <summary>
-    /// Áp dụng Shadow Quality vào URP pipeline
+    /// Áp dụng Shadow Quality trực tiếp vào URP Pipeline Asset
+    /// supportsMainLightShadows là read-only trong Unity 6 →
+    /// dùng shadowDistance=0 để tắt shadow hiệu quả thay vì toggle property.
     /// </summary>
     private void ApplyShadowQuality()
     {
+        var urpAsset = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
+
         switch (shadowQualityIndex)
         {
-            case 0: // Off — tắt hoàn toàn bóng đổ
-                QualitySettings.shadows = ShadowQuality.Disable;
+            case 0: // Off — shadowDistance=0 khiến shadow không render
+                if (urpAsset != null)
+                {
+                    urpAsset.shadowDistance = 0f;
+                    urpAsset.mainLightShadowmapResolution = 256;
+                    urpAsset.shadowCascadeCount = 1;
+                }
                 QualitySettings.shadowDistance = 0f;
                 break;
-            case 1: // Low — bóng đổ thô, gần
-                QualitySettings.shadows = ShadowQuality.HardOnly;
-                QualitySettings.shadowResolution = ShadowResolution.Low;
+            case 1: // Low — shadow thô, gần
+                if (urpAsset != null)
+                {
+                    urpAsset.mainLightShadowmapResolution = 512;
+                    urpAsset.shadowCascadeCount = 1;
+                    urpAsset.shadowDistance = 30f;
+                }
                 QualitySettings.shadowDistance = 30f;
-                QualitySettings.shadowCascades = 1;
                 break;
-            case 2: // Medium — bóng đổ mềm, trung bình
-                QualitySettings.shadows = ShadowQuality.All;
-                QualitySettings.shadowResolution = ShadowResolution.Medium;
+            case 2: // Medium — shadow mềm, trung bình
+                if (urpAsset != null)
+                {
+                    urpAsset.mainLightShadowmapResolution = 1024;
+                    urpAsset.shadowCascadeCount = 2;
+                    urpAsset.shadowDistance = 80f;
+                }
                 QualitySettings.shadowDistance = 80f;
-                QualitySettings.shadowCascades = 2;
                 break;
-            case 3: // High — bóng đổ mềm, xa, chi tiết
-                QualitySettings.shadows = ShadowQuality.All;
-                QualitySettings.shadowResolution = ShadowResolution.High;
+            case 3: // High — shadow mềm, xa, chi tiết
+                if (urpAsset != null)
+                {
+                    urpAsset.mainLightShadowmapResolution = 2048;
+                    urpAsset.shadowCascadeCount = 4;
+                    urpAsset.shadowDistance = 150f;
+                }
                 QualitySettings.shadowDistance = 150f;
-                QualitySettings.shadowCascades = 4;
                 break;
         }
-        Debug.Log($"[GameSettings] Shadow Quality: {shadowQualityOptions[shadowQualityIndex]}, Distance={QualitySettings.shadowDistance}");
+        Debug.Log($"[GameSettings] Shadow Quality: {shadowQualityOptions[shadowQualityIndex]}, " +
+                  $"Distance={urpAsset?.shadowDistance ?? 0}, Resolution={urpAsset?.mainLightShadowmapResolution ?? 0}");
     }
 
     /// <summary>
-    /// Áp dụng Graphics Quality tổng thể
+    /// Áp dụng Graphics Quality tổng thể — dùng cả QualitySettings (LOD, texture)
+    /// và URP Pipeline Asset (MSAA, light count) để thật sự có tác dụng.
+    /// KHÔNG gọi SetQualityLevel() — sẽ đổi URP Asset gốc → gây lỗi render.
     /// </summary>
     private void ApplyGraphicsQuality()
     {
-        // KHÔNG gọi SetQualityLevel() — nó sẽ đổi URP Render Pipeline Asset
-        // → gây mất texture, vật thể tàng hình nếu project chưa cấu hình đủ Quality Level
-        // Chỉ chỉnh từng thông số riêng lẻ, giữ nguyên URP Asset gốc
+        var urpAsset = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
 
         switch (graphicsQualityIndex)
         {
             case 0: // Low — tối ưu cho máy yếu
                 QualitySettings.lodBias = 0.5f;
-                QualitySettings.pixelLightCount = 1;
                 QualitySettings.anisotropicFiltering = AnisotropicFiltering.Disable;
-                QualitySettings.antiAliasing = 0;
-                QualitySettings.globalTextureMipmapLimit = 2; // texture thấp
+                QualitySettings.globalTextureMipmapLimit = 2;
+                if (urpAsset != null)
+                {
+                    urpAsset.msaaSampleCount = 1; // MSAA off
+                    urpAsset.maxAdditionalLightsCount = 1;
+                }
                 break;
             case 1: // Medium — cân bằng
                 QualitySettings.lodBias = 1.0f;
-                QualitySettings.pixelLightCount = 2;
                 QualitySettings.anisotropicFiltering = AnisotropicFiltering.Enable;
-                QualitySettings.antiAliasing = 2;
-                QualitySettings.globalTextureMipmapLimit = 1; // texture trung bình
+                QualitySettings.globalTextureMipmapLimit = 1;
+                if (urpAsset != null)
+                {
+                    urpAsset.msaaSampleCount = 2; // MSAA 2x
+                    urpAsset.maxAdditionalLightsCount = 2;
+                }
                 break;
             case 2: // High — đẹp, đòi hỏi máy khá
                 QualitySettings.lodBias = 1.5f;
-                QualitySettings.pixelLightCount = 4;
                 QualitySettings.anisotropicFiltering = AnisotropicFiltering.ForceEnable;
-                QualitySettings.antiAliasing = 4;
-                QualitySettings.globalTextureMipmapLimit = 0; // texture full
+                QualitySettings.globalTextureMipmapLimit = 0;
+                if (urpAsset != null)
+                {
+                    urpAsset.msaaSampleCount = 4; // MSAA 4x
+                    urpAsset.maxAdditionalLightsCount = 4;
+                }
                 break;
             case 3: // Ultra — max đồ họa
                 QualitySettings.lodBias = 2.0f;
-                QualitySettings.pixelLightCount = 8;
                 QualitySettings.anisotropicFiltering = AnisotropicFiltering.ForceEnable;
-                QualitySettings.antiAliasing = 8;
-                QualitySettings.globalTextureMipmapLimit = 0; // texture full
+                QualitySettings.globalTextureMipmapLimit = 0;
+                if (urpAsset != null)
+                {
+                    urpAsset.msaaSampleCount = 8; // MSAA 8x
+                    urpAsset.maxAdditionalLightsCount = 8;
+                }
                 break;
         }
-        Debug.Log($"[GameSettings] Graphics Quality: {graphicsQualityOptions[graphicsQualityIndex]}, LOD={QualitySettings.lodBias}, AA={QualitySettings.antiAliasing}");
+        Debug.Log($"[GameSettings] Graphics Quality: {graphicsQualityOptions[graphicsQualityIndex]}, " +
+                  $"LOD={QualitySettings.lodBias}, MSAA={urpAsset?.msaaSampleCount ?? 0}, " +
+                  $"Lights={urpAsset?.maxAdditionalLightsCount ?? 0}");
     }
 
     private void ApplyGameplay()
     {
-        // Camera speeds → RTSCameraController đọc qua OnSettingsChanged
+        // Camera speeds → CameraCursor + CameraZoom đọc qua OnSettingsChanged
         // MiniMap → MinimapCameraFollow đọc qua OnSettingsChanged
         Debug.Log($"[GameSettings] Gameplay: CamMouse={cameraMouseSpeed:F2}, MiniMap={miniMapEnabled}");
     }

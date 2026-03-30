@@ -9,3 +9,4 @@ public class CloseCanvasButton : MonoBehaviour
         if (canvasToClose) canvasToClose.SetActive(false);
     }
 }
+

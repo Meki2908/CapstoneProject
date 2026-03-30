@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEditor;
-using Unity.FantasyKingdom; // For QualitySettingsController
+
 using UnityEngine.UI;
 
 public class PlayerSetupTool : EditorWindow
@@ -131,28 +131,7 @@ public class PlayerSetupTool : EditorWindow
                  }
             }
         }
-        
-        // 3. Setup QualitySettingsController
-        QualitySettingsController qualityCtrl = playerRoot.GetComponentInChildren<QualitySettingsController>(true);
-        if (qualityCtrl != null)
-        {
-            SerializedObject so = new SerializedObject(qualityCtrl);
-            SerializedProperty sp = so.FindProperty("QualitySettingsButton");
-            if (sp != null && sp.objectReferenceValue == null)
-            {
-                // Find a GameObject named "QualitySettingsButton" or similar
-                Transform btn = FindChildRecursively(playerRoot.transform, "QualitySettingsButton");
-                if (btn == null) btn = FindChildRecursively(playerRoot.transform, "Btn_Quality");
 
-                if (btn != null)
-                {
-                     sp.objectReferenceValue = btn.gameObject;
-                     so.ApplyModifiedProperties();
-                     fixCount++;
-                     Debug.Log("Assigned QualitySettingsButton");
-                }
-            }
-        }
 
         Debug.Log($"Setup completed! Fixed {fixCount} references.");
         EditorUtility.DisplayDialog("Setup Complete", $"Fixed {fixCount} references.\n\nDon't forget to check Input System settings if you haven't.", "OK");
