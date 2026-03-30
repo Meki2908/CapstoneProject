@@ -150,13 +150,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7f3a2b9c4d8e1f4a6b2c5d8e9f0a1b2c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  playerHudRoot: {fileID: 0}
+  playerHudRoot: {fileID: 2016107385648365335, guid: 211bef7c77bec47449bd74f57b57e44e, type: 3}
   useCanvasGroupInsteadOfSetActive: 0
   hudCanvasGroup: {fileID: 0}
   director: {fileID: 4919386037383127151}
   lockOnAwake: 1
   disableHitColliderDuringCutscene: 1
   unsubscribeOnDestroy: 1
+  hideAllPlayerUI: 1
+  lockAllEnemiesInScene: 1
+  excludeBossEnemyFromGlobalLock: 1
   shutdownPortalClipWhenCutsceneEnds: 1
   portalClipBinders:
   - {fileID: 3537095425108625757}

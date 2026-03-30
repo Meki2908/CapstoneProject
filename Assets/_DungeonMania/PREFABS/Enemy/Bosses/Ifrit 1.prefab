@@ -481,6 +481,7 @@ GameObject:
   - component: {fileID: 4469523544793556960}
   - component: {fileID: 1553577796009794708}
   - component: {fileID: 6234567890123045670}
+  - component: {fileID: 1847362910573826492}
   m_Layer: 0
   m_Name: Ifrit 1
   m_TagString: Untagged
@@ -621,6 +622,30 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 824e5f8f9d3c42c8b94f6a2d3e9c0f1b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &1847362910573826492
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7236032731702054578}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f3a2b9c4d8e1f4a6b2c5d8e9f0a1b2c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  playerHudRoot: {fileID: 2016107385648365335, guid: 211bef7c77bec47449bd74f57b57e44e, type: 3}
+  useCanvasGroupInsteadOfSetActive: 0
+  hudCanvasGroup: {fileID: 0}
+  director: {fileID: 4823822736868541903}
+  lockOnAwake: 1
+  disableHitColliderDuringCutscene: 1
+  unsubscribeOnDestroy: 1
+  hideAllPlayerUI: 1
+  lockAllEnemiesInScene: 1
+  excludeBossEnemyFromGlobalLock: 1
+  shutdownPortalClipWhenCutsceneEnds: 1
+  portalClipBinders: []
 --- !u!1 &7624128153095808132
 GameObject:
   m_ObjectHideFlags: 0

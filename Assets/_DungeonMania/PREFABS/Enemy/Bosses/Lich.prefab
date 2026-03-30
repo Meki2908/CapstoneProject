@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6089846374273038610}
   - component: {fileID: 2340634980751190764}
+  - component: {fileID: 1847362910573826492}
   m_Layer: 0
   m_Name: Lich
   m_TagString: Boss
@@ -137,6 +138,30 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &1847362910573826492
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 135780119244973861}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f3a2b9c4d8e1f4a6b2c5d8e9f0a1b2c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  playerHudRoot: {fileID: 2016107385648365335, guid: 211bef7c77bec47449bd74f57b57e44e, type: 3}
+  useCanvasGroupInsteadOfSetActive: 0
+  hudCanvasGroup: {fileID: 0}
+  director: {fileID: 2377336411741847633}
+  lockOnAwake: 1
+  disableHitColliderDuringCutscene: 1
+  unsubscribeOnDestroy: 1
+  hideAllPlayerUI: 1
+  lockAllEnemiesInScene: 1
+  excludeBossEnemyFromGlobalLock: 1
+  shutdownPortalClipWhenCutsceneEnds: 1
+  portalClipBinders: []
 --- !u!1 &1775404536997310882
 GameObject:
   m_ObjectHideFlags: 0
@@ -164,7 +189,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1775404536997310882}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.19873683, y: 0.7226888, z: 0.62015134, w: -0.23159648}
+  m_LocalRotation: {x: -0.16540928, y: 0.8002824, z: -0.5161539, w: -0.25646254}
   m_LocalPosition: {x: 0.05, y: 2.77, z: 0.07}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
