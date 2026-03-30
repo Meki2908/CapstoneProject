@@ -21,7 +21,6 @@ public class PortalNode : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.F))
         {
-            // Ẩn hint và mở Portal UI
             ShowHint(false);
             if (portalUI != null)
                 portalUI.OpenPortalMenu(_playerTransform);
@@ -32,7 +31,7 @@ public class PortalNode : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
-            _playerInRange  = true;
+            _playerInRange   = true;
             _playerTransform = other.transform;
             ShowHint(true);
 
@@ -45,13 +44,23 @@ public class PortalNode : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
-            _playerInRange   = false;
-            _playerTransform = null;
-            ShowHint(false);
-
-            if (portalUI != null)
-                portalUI.ClosePortalMenu();
+            ForceExit();
         }
+    }
+
+    /// <summary>
+    /// Reset state ngay lập tức.
+    /// Gọi từ OnTriggerExit (thoát bình thường)
+    /// hoặc từ PortalUIController sau khi teleport (vì warp làm mất OnTriggerExit).
+    /// </summary>
+    public void ForceExit()
+    {
+        _playerInRange   = false;
+        _playerTransform = null;
+        ShowHint(false);
+
+        if (portalUI != null)
+            portalUI.ClosePortalMenu();
     }
 
     private void ShowHint(bool show)

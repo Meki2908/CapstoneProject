@@ -204,7 +204,14 @@ public class PortalUIController : MonoBehaviour
         // ── Bước 4: Spawn VFX tại điểm đích ──
         SpawnEffect(destination.position, destination.rotation);
 
-        // ── Bước 5: Advance quest ──
+        // ── Bước 5: Reset tất cả PortalNode ──────────────────────────────
+        // CharacterController.enabled = false/true + warp làm Unity không gửi
+        // OnTriggerExit cho portal cũ → _playerInRange bị giữ true → nhấn F
+        // vẫn mở portal UI. ForceExit() trên tất cả nodes giải quyết triệt để.
+        foreach (var node in FindObjectsByType<PortalNode>(FindObjectsSortMode.None))
+            node.ForceExit();
+
+        // ── Bước 6: Advance quest ──
         TryAdvanceQuest();
         Debug.Log($"[Portal] Dịch chuyển hoàn tất. Vị trí: {currentPlayer.position}");
     }
