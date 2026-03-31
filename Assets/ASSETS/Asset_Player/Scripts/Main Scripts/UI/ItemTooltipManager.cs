@@ -18,7 +18,9 @@ public class ItemTooltipManager : MonoBehaviour
 
     [Header("Tooltip References")]
     [SerializeField] private GameObject tooltipPanel; // The Image GameObject containing the tooltip
-    [SerializeField] private TextMeshProUGUI tooltipText; // The TMP text component
+    [SerializeField] private TextMeshProUGUI tooltipText; // Legacy single TMP (backward compatibility)
+    [SerializeField] private TextMeshProUGUI itemNameText; // Optional dedicated TMP for item name
+    [SerializeField] private TextMeshProUGUI itemDescriptionText; // Optional dedicated TMP for description + stats
     [SerializeField] private Image tooltipBackground; // The Image component (for resizing)
     
     [Header("Settings")]
@@ -65,6 +67,18 @@ public class ItemTooltipManager : MonoBehaviour
             tooltipText = GetComponentInChildren<TextMeshProUGUI>();
         }
 
+        // Auto-find named text fields inside tooltip panel if available
+        if (itemNameText == null && tooltipPanel != null)
+        {
+            Transform nameTf = tooltipPanel.transform.Find("Item name");
+            if (nameTf != null) itemNameText = nameTf.GetComponent<TextMeshProUGUI>();
+        }
+        if (itemDescriptionText == null && tooltipPanel != null)
+        {
+            Transform descTf = tooltipPanel.transform.Find("Item description");
+            if (descTf != null) itemDescriptionText = descTf.GetComponent<TextMeshProUGUI>();
+        }
+
         // === FIX FLICKER: Tooltip KHÔNG BAO GIỜ chặn raycast ===
         // Nếu tooltip chặn pointer → OnPointerExit trên item → hide → OnPointerEnter → show → chớp
         CanvasGroup cg = tooltipPanel.GetComponent<CanvasGroup>();
@@ -75,8 +89,9 @@ public class ItemTooltipManager : MonoBehaviour
         // Tắt raycastTarget trên từng component
         if (tooltipBackground != null)
             tooltipBackground.raycastTarget = false;
-        if (tooltipText != null)
-            tooltipText.raycastTarget = false;
+        if (tooltipText != null) tooltipText.raycastTarget = false;
+        if (itemNameText != null) itemNameText.raycastTarget = false;
+        if (itemDescriptionText != null) itemDescriptionText.raycastTarget = false;
 
         // Find canvas
         canvas = GetComponentInParent<Canvas>();
@@ -124,19 +139,38 @@ public class ItemTooltipManager : MonoBehaviour
     public void ShowTooltip(Item item, Rarity rarity)
     {
         if (SuppressTooltip) { HideTooltip(); return; }
-        if (item == null || tooltipText == null || tooltipPanel == null) return;
+        if (item == null || tooltipPanel == null) return;
 
         currentItem = item;
         currentRarity = rarity;
-        string tooltipContent = GetTooltipText(item, rarity);
-        
-        if (string.IsNullOrEmpty(tooltipContent))
+
+        string nameContent = GetTooltipNameText(item, rarity);
+        string bodyContent = GetTooltipBodyText(item, rarity);
+
+        // New mode: separate name/description fields
+        if (itemNameText != null && itemDescriptionText != null)
         {
-            HideTooltip();
-            return;
+            itemNameText.text = nameContent;
+            itemDescriptionText.text = bodyContent;
+        }
+        else
+        {
+            // Backward compatibility: single TMP
+            if (tooltipText == null)
+            {
+                HideTooltip();
+                return;
+            }
+
+            string tooltipContent = GetTooltipText(item, rarity);
+            if (string.IsNullOrEmpty(tooltipContent))
+            {
+                HideTooltip();
+                return;
+            }
+            tooltipText.text = tooltipContent;
         }
 
-        tooltipText.text = tooltipContent;
         ResizeTooltipToContent();
         
         tooltipPanel.SetActive(true);
@@ -220,34 +254,65 @@ public class ItemTooltipManager : MonoBehaviour
     /// </summary>
     private void ResizeTooltipToContent()
     {
-        if (tooltipText == null || tooltipBackground == null || tooltipRectTransform == null) return;
+        if (tooltipBackground == null || tooltipRectTransform == null) return;
 
-        // Force text to update its preferred size
-        tooltipText.ForceMeshUpdate();
-        
-        // Get preferred size from text (unconstrained)
-        Vector2 preferredSize = tooltipText.GetPreferredValues();
-        
-        // Clamp width to min/max
-        float clampedWidth = Mathf.Clamp(preferredSize.x, minWidth, maxWidth);
-        
-        // If width was clamped, recalculate height with the clamped width
-        if (Mathf.Abs(clampedWidth - preferredSize.x) > 0.01f)
+        bool hasSplitFields = itemNameText != null && itemDescriptionText != null;
+
+        if (!hasSplitFields)
         {
-            // Set text width constraint and recalculate
-            tooltipText.rectTransform.sizeDelta = new Vector2(clampedWidth, 0f);
+            if (tooltipText == null) return;
+
             tooltipText.ForceMeshUpdate();
-            preferredSize = tooltipText.GetPreferredValues();
+            Vector2 preferredSize = tooltipText.GetPreferredValues();
+            float clampedWidth = Mathf.Clamp(preferredSize.x, minWidth, maxWidth);
+
+            if (Mathf.Abs(clampedWidth - preferredSize.x) > 0.01f)
+            {
+                tooltipText.rectTransform.sizeDelta = new Vector2(clampedWidth, 0f);
+                tooltipText.ForceMeshUpdate();
+                preferredSize = tooltipText.GetPreferredValues();
+            }
+
+            preferredSize.x = clampedWidth;
+            Vector2 newSize = preferredSize + new Vector2(padding * 2f, padding * 2f);
+            tooltipRectTransform.sizeDelta = newSize;
+            return;
         }
-        
-        // Use clamped width
-        preferredSize.x = clampedWidth;
-        
-        // Add padding
-        Vector2 newSize = preferredSize + new Vector2(padding * 2f, padding * 2f);
-        
-        // Set tooltip size
-        tooltipRectTransform.sizeDelta = newSize;
+
+        // Split mode layout: itemNameText on top, itemDescriptionText below
+        const float sectionGap = 10f;
+
+        itemNameText.ForceMeshUpdate();
+        itemDescriptionText.ForceMeshUpdate();
+
+        Vector2 prefName = itemNameText.GetPreferredValues();
+        Vector2 prefDesc = itemDescriptionText.GetPreferredValues();
+        float targetWidth = Mathf.Clamp(Mathf.Max(prefName.x, prefDesc.x), minWidth, maxWidth);
+
+        itemNameText.rectTransform.sizeDelta = new Vector2(targetWidth, 0f);
+        itemDescriptionText.rectTransform.sizeDelta = new Vector2(targetWidth, 0f);
+
+        itemNameText.ForceMeshUpdate();
+        itemDescriptionText.ForceMeshUpdate();
+
+        float nameHeight = itemNameText.GetPreferredValues(targetWidth, 0f).y;
+        float descHeight = itemDescriptionText.GetPreferredValues(targetWidth, 0f).y;
+
+        // Ensure both rects can contain their text comfortably
+        itemNameText.rectTransform.sizeDelta = new Vector2(targetWidth, Mathf.Max(40f, nameHeight));
+        itemDescriptionText.rectTransform.sizeDelta = new Vector2(targetWidth, Mathf.Max(50f, descHeight));
+
+        float contentHeight = Mathf.Max(40f, nameHeight) + sectionGap + Mathf.Max(50f, descHeight);
+        Vector2 panelSize = new Vector2(targetWidth + padding * 2f, contentHeight + padding * 2f);
+        tooltipRectTransform.sizeDelta = panelSize;
+
+        // Reposition to keep text fully inside tooltip panel
+        float halfH = panelSize.y * 0.5f;
+        float nameY = halfH - padding - Mathf.Max(40f, nameHeight) * 0.5f;
+        float descY = nameY - Mathf.Max(40f, nameHeight) * 0.5f - sectionGap - Mathf.Max(50f, descHeight) * 0.5f;
+
+        itemNameText.rectTransform.anchoredPosition = new Vector2(0f, nameY);
+        itemDescriptionText.rectTransform.anchoredPosition = new Vector2(0f, descY);
     }
 
     /// <summary>
@@ -273,6 +338,49 @@ public class ItemTooltipManager : MonoBehaviour
         }
 
         // Item type specific stats
+        switch (item.itemType)
+        {
+            case ItemType.Equipment:
+                sb.AppendLine(GetEquipmentStats(item, rarity));
+                break;
+            case ItemType.Gems:
+                sb.AppendLine(GetGemStats(item));
+                break;
+            case ItemType.CrystalStone:
+                sb.AppendLine(GetCrystalStoneStats(item));
+                break;
+            case ItemType.Consumable:
+                sb.AppendLine(GetConsumableStats(item));
+                break;
+            case ItemType.Material:
+                sb.AppendLine(GetMaterialStats(item));
+                break;
+        }
+
+        return sb.ToString().TrimEnd();
+    }
+
+    private string GetTooltipNameText(Item item, Rarity rarity)
+    {
+        if (item == null) return string.Empty;
+        string rarityColor = GetRarityColor(rarity);
+        return $"<color={rarityColor}><b>{item.itemName}</b></color>";
+    }
+
+    private string GetTooltipBodyText(Item item, Rarity rarity)
+    {
+        if (item == null) return string.Empty;
+
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        sb.AppendLine($"<color=#888888>{rarity}</color>");
+        sb.AppendLine();
+
+        if (!string.IsNullOrEmpty(item.description))
+        {
+            sb.AppendLine(item.description);
+            sb.AppendLine();
+        }
+
         switch (item.itemType)
         {
             case ItemType.Equipment:
