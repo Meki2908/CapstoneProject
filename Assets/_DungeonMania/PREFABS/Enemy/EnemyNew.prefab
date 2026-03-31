@@ -9606,7 +9606,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1981453737500180962}
-  m_Layer: 6
+  m_Layer: 16
   m_Name: Bow
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -34052,7 +34052,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 279319102203594972, guid: b7e0655ac6ffc92418e550a06001dd34, type: 3}
       propertyPath: m_ExcludeLayers.m_Bits
-      value: 8192
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1105744175949853711, guid: b7e0655ac6ffc92418e550a06001dd34, type: 3}
       propertyPath: m_LocalPosition.x
@@ -34650,7 +34650,7 @@ Rigidbody:
     m_Bits: 0
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 8192
+    m_Bits: 0
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
   m_UseGravity: 0
@@ -34800,7 +34800,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1790603423183058, guid: 346ba3a1eaf376a4ca0795fa2bf70d7f, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 16
       objectReference: {fileID: 0}
     - target: {fileID: 4737389328110992, guid: 346ba3a1eaf376a4ca0795fa2bf70d7f, type: 3}
       propertyPath: m_RootOrder
@@ -34873,6 +34873,10 @@ PrefabInstance:
     - target: {fileID: 198222295729407914, guid: 346ba3a1eaf376a4ca0795fa2bf70d7f, type: 3}
       propertyPath: CollisionModule.collidesWith.m_Bits
       value: 2304
+      objectReference: {fileID: 0}
+    - target: {fileID: 198222295729407914, guid: 346ba3a1eaf376a4ca0795fa2bf70d7f, type: 3}
+      propertyPath: CollisionModule.multiplyColliderForceByParticleSpeed
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 114405904782201784, guid: 346ba3a1eaf376a4ca0795fa2bf70d7f, type: 3}
@@ -35578,7 +35582,7 @@ Rigidbody:
     m_Bits: 0
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 8192
+    m_Bits: 0
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
   m_UseGravity: 0
@@ -35781,7 +35785,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 100086, guid: 50ce470e58f1841438e3bf654166776e, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 100086, guid: 50ce470e58f1841438e3bf654166776e, type: 3}
       propertyPath: m_TagString
@@ -35912,16 +35916,16 @@ CapsuleCollider:
     m_Bits: 128
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 1
-  m_IsTrigger: 0
+    m_Bits: 8192
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.3
-  m_Height: 2
+  m_Radius: 0.17475449
+  m_Height: 1.570418
   m_Direction: 1
-  m_Center: {x: 0, y: 0.98, z: 0}
+  m_Center: {x: 0.050728567, y: 0.76520926, z: 0.03551066}
 --- !u!114 &1981453737392230753
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -36124,12 +36128,12 @@ Rigidbody:
     m_Bits: 0
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 8192
+    m_Bits: 0
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
-  m_UseGravity: 1
+  m_UseGravity: 0
   m_IsKinematic: 0
-  m_Interpolate: 0
+  m_Interpolate: 1
   m_Constraints: 16
   m_CollisionDetection: 0
 --- !u!4 &1981453737633623545 stripped
@@ -36483,11 +36487,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1458270801794820, guid: 1301d7e969ef5404f925a74e1d1093b8, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 16
       objectReference: {fileID: 0}
     - target: {fileID: 1569979552691112, guid: 1301d7e969ef5404f925a74e1d1093b8, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 16
       objectReference: {fileID: 0}
     - target: {fileID: 1976014488594992, guid: 1301d7e969ef5404f925a74e1d1093b8, type: 3}
       propertyPath: m_Name
@@ -36495,7 +36499,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1976014488594992, guid: 1301d7e969ef5404f925a74e1d1093b8, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 16
       objectReference: {fileID: 0}
     - target: {fileID: 4318939935124346, guid: 1301d7e969ef5404f925a74e1d1093b8, type: 3}
       propertyPath: m_RootOrder
@@ -36636,7 +36640,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1057565053779504, guid: f6851774d5c4f874a8898919daf26f9f, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 16
       objectReference: {fileID: 0}
     - target: {fileID: 1099989291834194, guid: f6851774d5c4f874a8898919daf26f9f, type: 3}
       propertyPath: m_Name
@@ -36644,15 +36648,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1099989291834194, guid: f6851774d5c4f874a8898919daf26f9f, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 16
       objectReference: {fileID: 0}
     - target: {fileID: 1416822684716164, guid: f6851774d5c4f874a8898919daf26f9f, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 16
       objectReference: {fileID: 0}
     - target: {fileID: 1476808952616632, guid: f6851774d5c4f874a8898919daf26f9f, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 16
       objectReference: {fileID: 0}
     - target: {fileID: 4562464733809718, guid: f6851774d5c4f874a8898919daf26f9f, type: 3}
       propertyPath: m_RootOrder
@@ -36791,11 +36795,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1249710063744722, guid: 5c860473f6aec0742861a2be958fbc70, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 16
       objectReference: {fileID: 0}
     - target: {fileID: 1655099193879956, guid: 5c860473f6aec0742861a2be958fbc70, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 16
       objectReference: {fileID: 0}
     - target: {fileID: 4010747606481394, guid: 5c860473f6aec0742861a2be958fbc70, type: 3}
       propertyPath: m_RootOrder
@@ -36929,7 +36933,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1481244868773408, guid: 199ba2ead65221d4286d5b715b8aef0f, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 16
       objectReference: {fileID: 0}
     - target: {fileID: 4738368735309472, guid: 199ba2ead65221d4286d5b715b8aef0f, type: 3}
       propertyPath: m_RootOrder
@@ -37242,15 +37246,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1046945035460126, guid: 90b685dd555e0c848806f1fb6209e1e9, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 16
       objectReference: {fileID: 0}
     - target: {fileID: 1251926137611724, guid: 90b685dd555e0c848806f1fb6209e1e9, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 16
       objectReference: {fileID: 0}
     - target: {fileID: 1556295860634760, guid: 90b685dd555e0c848806f1fb6209e1e9, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 16
       objectReference: {fileID: 0}
     - target: {fileID: 1878987882032996, guid: 90b685dd555e0c848806f1fb6209e1e9, type: 3}
       propertyPath: m_Name
@@ -37258,7 +37262,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1878987882032996, guid: 90b685dd555e0c848806f1fb6209e1e9, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 16
       objectReference: {fileID: 0}
     - target: {fileID: 4712672407335628, guid: 90b685dd555e0c848806f1fb6209e1e9, type: 3}
       propertyPath: m_RootOrder
@@ -38485,7 +38489,7 @@ Rigidbody:
     m_Bits: 0
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 8192
+    m_Bits: 0
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
   m_UseGravity: 0
@@ -39006,7 +39010,7 @@ Rigidbody:
     m_Bits: 0
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 8192
+    m_Bits: 0
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
   m_UseGravity: 0
@@ -39189,7 +39193,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 100076, guid: 7ed88ba6cc3135a4890ffd42006802e0, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 100076, guid: 7ed88ba6cc3135a4890ffd42006802e0, type: 3}
       propertyPath: m_TagString
@@ -40840,7 +40844,7 @@ Rigidbody:
     m_Bits: 0
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 8192
+    m_Bits: 0
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
   m_UseGravity: 0
@@ -41276,11 +41280,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1445071269435380, guid: cfc911e7da8eb62499dff1c810e59571, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 16
       objectReference: {fileID: 0}
     - target: {fileID: 1529466960235312, guid: cfc911e7da8eb62499dff1c810e59571, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 16
       objectReference: {fileID: 0}
     - target: {fileID: 1580133494715678, guid: cfc911e7da8eb62499dff1c810e59571, type: 3}
       propertyPath: m_Name
@@ -41288,15 +41292,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1580133494715678, guid: cfc911e7da8eb62499dff1c810e59571, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 16
       objectReference: {fileID: 0}
     - target: {fileID: 1608430684871792, guid: cfc911e7da8eb62499dff1c810e59571, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 16
       objectReference: {fileID: 0}
     - target: {fileID: 1923222987863918, guid: cfc911e7da8eb62499dff1c810e59571, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 16
       objectReference: {fileID: 0}
     - target: {fileID: 4118756434896196, guid: cfc911e7da8eb62499dff1c810e59571, type: 3}
       propertyPath: m_RootOrder
@@ -43430,7 +43434,7 @@ Rigidbody:
     m_Bits: 0
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 8192
+    m_Bits: 0
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
   m_UseGravity: 0
@@ -43765,7 +43769,7 @@ Rigidbody:
     m_Bits: 0
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 8192
+    m_Bits: 0
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
   m_UseGravity: 0
@@ -43894,7 +43898,7 @@ Rigidbody:
     m_Bits: 0
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 8192
+    m_Bits: 0
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
   m_UseGravity: 0
@@ -45574,7 +45578,7 @@ Rigidbody:
     m_Bits: 0
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 8192
+    m_Bits: 0
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
   m_UseGravity: 0
