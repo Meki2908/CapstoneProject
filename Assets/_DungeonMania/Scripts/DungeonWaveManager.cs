@@ -766,6 +766,10 @@ public class DungeonWaveManager : MonoBehaviour
     /// <summary>
     /// Khi wave hoàn thành (kill hết enemy)
     /// </summary>
+    [Header("=== LOOT DELAY (WAVE CUỐI) ===")]
+    [Tooltip("Thời gian chờ sau khi giết hết enemy wave cuối để nhặt đồ (giây)")]
+    public float lastWaveLootDelay = 6f;
+
     private void OnWaveComplete()
     {
         // Guard: tránh gọi 2 lần nếu nhiều enemy chết cùng frame
@@ -782,14 +786,36 @@ public class DungeonWaveManager : MonoBehaviour
         // Kiểm tra nếu là wave cuối cùng
         if (currentWave >= totalWaves)
         {
-            // Dungeon hoàn thành!
-            CompleteDungeon();
+            // Dungeon hoàn thành! Nhưng chờ để player nhặt đồ trước
+            StartCoroutine(DelayedCompleteDungeon());
         }
         else
         {
             // Nghỉ giữa các wave rồi bắt đầu wave mới
             StartCoroutine(DelayBeforeNextWave());
         }
+    }
+
+    /// <summary>
+    /// Chờ lastWaveLootDelay giây sau khi giết hết enemy wave cuối
+    /// để player kịp nhặt đồ rơi trước khi hiện UI thắng
+    /// </summary>
+    private IEnumerator DelayedCompleteDungeon()
+    {
+        Debug.Log($"[DungeonWave] Wave cuối hoàn thành! Chờ {lastWaveLootDelay}s để nhặt đồ...");
+
+        if (statusText != null)
+        {
+            statusText.text = "Wave cuối hoàn thành! Nhặt đồ...";
+            statusText.gameObject.SetActive(true);
+        }
+
+        yield return new WaitForSeconds(lastWaveLootDelay);
+
+        if (statusText != null)
+            statusText.gameObject.SetActive(false);
+
+        CompleteDungeon();
     }
 
     /// <summary>
@@ -810,8 +836,8 @@ public class DungeonWaveManager : MonoBehaviour
             yield return new WaitForSeconds(waveDelayTime);
         }
 
-        // Hồi đầy máu cho player khi sang wave mới
-        HealPlayerFull();
+        // REMOVED: Không hồi đầy máu giữa các wave nữa
+        // HealPlayerFull();
 
         // Bắt đầu wave tiếp theo
         StartCoroutine(StartWaveSequence());

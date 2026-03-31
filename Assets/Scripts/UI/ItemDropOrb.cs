@@ -131,6 +131,7 @@ public class ItemDropOrb : MonoBehaviour
 
     // === GIAI ĐOẠN 2: Lơ lửng tại chỗ ===
     [SerializeField] private float hoverDelay = 1.5f; // Đợi 1.5s trước khi hút
+    [SerializeField] private float autoCollectDelay = 3f; // Sau 3s tự bay vào player
 
     private void UpdateHover()
     {
@@ -141,7 +142,16 @@ public class ItemDropOrb : MonoBehaviour
         // Đợi hoverDelay giây rồi mới kiểm tra magnet
         if (stateTimer < hoverDelay) return;
 
-        // Kiểm tra player gần → chuyển sang magnet
+        // Sau autoCollectDelay giây → TỰ ĐỘNG bay vào player (không cần gần)
+        if (stateTimer >= autoCollectDelay && playerTransform != null)
+        {
+            Debug.Log($"[ItemDropOrb] Auto-collect: {itemName} tự bay vào player sau {autoCollectDelay}s");
+            state = OrbState.Magnet;
+            stateTimer = 0f;
+            return;
+        }
+
+        // Kiểm tra player gần → chuyển sang magnet (trước khi auto-collect)
         if (playerTransform != null)
         {
             float dist = Vector3.Distance(transform.position, playerTransform.position);
