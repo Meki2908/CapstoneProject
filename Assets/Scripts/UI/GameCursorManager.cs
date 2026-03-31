@@ -71,6 +71,11 @@ public class GameCursorManager : MonoBehaviour
     {
         if (!ShouldApplyCursorOverrides()) return;
 
+        // Ensure cursor remains visible while UI is interactive
+        // (prevents timing conflicts with CameraCursor/other systems)
+        if (!Cursor.visible)
+            Cursor.visible = true;
+
         CursorState targetState = _forcedState ?? DetectHoverState();
         bool shouldApply = keepRefreshingCursor || targetState != _currentState;
         if (shouldApply)

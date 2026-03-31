@@ -21,6 +21,10 @@ public class DungeonRewardUI : MonoBehaviour
     [SerializeField] private float panelWidth = 1920f;
     [Tooltip("Chiều cao panel")]
     [SerializeField] private float panelHeight = 1080f;
+    [Tooltip("Dịch ngang panel (+ sang phải, - sang trái)")]
+    [SerializeField] private float panelOffsetX = 0f;
+    [Tooltip("Dịch dọc panel (+ lên trên, - xuống dưới)")]
+    [SerializeField] private float panelOffsetY = 0f;
 
     [Header("=== Font Size ===")]
     [Tooltip("Font tên item")]
@@ -232,7 +236,7 @@ public class DungeonRewardUI : MonoBehaviour
         panelRT.anchorMin = new Vector2(0.5f, 0.5f);
         panelRT.anchorMax = new Vector2(0.5f, 0.5f);
         panelRT.sizeDelta = new Vector2(panelWidth, panelHeight);
-        panelRT.anchoredPosition = Vector2.zero;
+        panelRT.anchoredPosition = new Vector2(panelOffsetX, panelOffsetY);
 
         Image panelBG = panelRoot.AddComponent<Image>();
         if (panelBackgroundSprite != null)
@@ -339,6 +343,7 @@ public class DungeonRewardUI : MonoBehaviour
             noItemText.fontSize = noItemFontSize;
             noItemText.alignment = TextAlignmentOptions.Center;
             noItemText.color = Color.gray;
+
             noItemGO.GetComponent<RectTransform>().sizeDelta = new Vector2(600, slotSize);
         }
         else
@@ -364,6 +369,7 @@ public class DungeonRewardUI : MonoBehaviour
         countText.fontSize = countFontSize;
         countText.alignment = TextAlignmentOptions.Center;
         countText.color = new Color(0.7f, 0.7f, 0.7f);
+
 
         // Ép toàn bộ Canvas + UI elements tính toán lại layout ngay lập tức
         Canvas.ForceUpdateCanvases();
@@ -449,6 +455,7 @@ public class DungeonRewardUI : MonoBehaviour
             qtyText.fontSize = quantityFontSize;
             qtyText.alignment = TextAlignmentOptions.Right;
             qtyText.color = Color.white;
+
         }
 
         // === NAME TEXT ===
@@ -467,6 +474,7 @@ public class DungeonRewardUI : MonoBehaviour
         nameText.enableWordWrapping = true;
         nameText.overflowMode = TextOverflowModes.Ellipsis;
         nameText.raycastTarget = false; // Không chặn hover
+
 
         // === TOOLTIP ON HOVER ===
         RewardSlotHover hover = slotGO.AddComponent<RewardSlotHover>();
