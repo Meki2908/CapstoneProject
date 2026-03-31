@@ -35,11 +35,11 @@ public class ItemTooltipManager : MonoBehaviour
     [Tooltip("Cỡ chữ mô tả/stats (0 = giữ nguyên từ prefab)")]
     [SerializeField] private float bodyFontSize = 0f;
 
-    [Header("Layout")]
-    [Tooltip("Khoảng cách text ↔ viền trái/phải")]
-    [SerializeField] private float paddingHorizontal = 20f;
-    [Tooltip("Khoảng cách text ↔ viền trên/dưới")]
-    [SerializeField] private float paddingVertical = 20f;
+    [Header("Layout — Padding (viền trang trí)")]
+    [SerializeField] private float paddingTop = 25f;
+    [SerializeField] private float paddingBottom = 40f;
+    [SerializeField] private float paddingLeft = 30f;
+    [SerializeField] private float paddingRight = 30f;
     [SerializeField] private float minWidth = 350f;
     [SerializeField] private float maxWidth = 700f;
     [Tooltip("Chiều cao tối đa (0 = không giới hạn)")]
@@ -345,7 +345,7 @@ public class ItemTooltipManager : MonoBehaviour
             preferredSize = new Vector2(clampedWidth, wrappedHeight);
 
             preferredSize.x = clampedWidth;
-            Vector2 newSize = preferredSize + new Vector2(paddingHorizontal * 2f, paddingVertical * 2f);
+            Vector2 newSize = preferredSize + new Vector2(paddingLeft + paddingRight, paddingTop + paddingBottom);
             tooltipRectTransform.sizeDelta = newSize;
             return;
         }
@@ -380,19 +380,21 @@ public class ItemTooltipManager : MonoBehaviour
         itemDescriptionText.rectTransform.sizeDelta = new Vector2(targetWidth, Mathf.Max(minDescHeight, descHeight));
 
         float contentHeight = Mathf.Max(minNameHeight, nameHeight) + sectionGap + Mathf.Max(minDescHeight, descHeight);
-        float panelW = targetWidth + paddingHorizontal * 2f;
-        float panelH = contentHeight + paddingVertical * 2f;
+        float panelW = targetWidth + paddingLeft + paddingRight;
+        float panelH = contentHeight + paddingTop + paddingBottom;
         if (maxHeight > 0f) panelH = Mathf.Min(panelH, maxHeight);
         Vector2 panelSize = new Vector2(panelW, panelH);
         tooltipRectTransform.sizeDelta = panelSize;
 
         // Reposition to keep text fully inside tooltip panel
         float halfH = panelSize.y * 0.5f;
-        float nameY = halfH - paddingVertical - Mathf.Max(minNameHeight, nameHeight) * 0.5f;
+        // Offset X to account for left/right padding difference
+        float offsetX = (paddingLeft - paddingRight) * 0.5f;
+        float nameY = halfH - paddingTop - Mathf.Max(minNameHeight, nameHeight) * 0.5f;
         float descY = nameY - Mathf.Max(minNameHeight, nameHeight) * 0.5f - sectionGap - Mathf.Max(minDescHeight, descHeight) * 0.5f;
 
-        itemNameText.rectTransform.anchoredPosition = new Vector2(0f, nameY);
-        itemDescriptionText.rectTransform.anchoredPosition = new Vector2(0f, descY);
+        itemNameText.rectTransform.anchoredPosition = new Vector2(offsetX, nameY);
+        itemDescriptionText.rectTransform.anchoredPosition = new Vector2(offsetX, descY);
     }
 
     /// <summary>
