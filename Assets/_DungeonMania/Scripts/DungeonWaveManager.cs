@@ -918,6 +918,10 @@ public class DungeonWaveManager : MonoBehaviour
         // Dừng tất cả enemy
         StopAllEnemies();
 
+        // FIX: Ẩn UI player (Canvas_Menu, UI_HP...) trước khi hiện panel thua
+        // Nếu không ẩn, Canvas_Menu (sort order 1000) sẽ chặn click lên buttons
+        HidePlayerUIOnComplete();
+
         // Hiển thị UI thua
         ShowDungeonFailed();
         
@@ -971,7 +975,7 @@ public class DungeonWaveManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Ẩn UI_HP và UI_Inventory khi dungeon hoàn thành
+    /// Ẩn UI_HP và UI_Inventory khi dungeon hoàn thành hoặc thua
     /// </summary>
     private void HidePlayerUIOnComplete()
     {
@@ -993,14 +997,17 @@ public class DungeonWaveManager : MonoBehaviour
         }
 
         // Fallback: tìm từng panel riêng nếu Canvas_Menu không tìm thấy
+        // FIX: Thêm tên có version number ("_1.0", "_1") và variations khác
         string[] uiNames = { 
             "UI_HP+Inventory", "UI_HP+Invetory",
+            "UI_HP+Invetory_1.0", "UI_HP+Inventory_1.0",
+            "UI_HP+Invetory_1", "UI_HP+Inventory_1",
             "UI_HP_Invetory", "UI_HP_Inventory", "UI_HP-Invetory", "UI_HP-Inventory",
             "UI_HP", "UI_Invetory", "UI_Inventory",
             "AbilityIcons", "SkillBar", "UI_Skills"
         };
 
-        // Cách 1: Tìm trong player hierarchy (recursive)
+        // Cách 1: Tìm trong player hierarchy (recursive) — dùng StartsWith matching
         Transform searchRoot = player;
         if (searchRoot == null)
         {
@@ -1010,6 +1017,7 @@ public class DungeonWaveManager : MonoBehaviour
 
         if (searchRoot != null)
         {
+            // Tìm chính xác theo tên
             foreach (string n in uiNames)
             {
                 Transform t = FindInChildren(searchRoot, n);
@@ -1017,6 +1025,21 @@ public class DungeonWaveManager : MonoBehaviour
                 { 
                     t.gameObject.SetActive(false); 
                     Debug.Log($"[DungeonWave] Hidden {n} (in player)"); 
+                }
+            }
+
+            // FIX: Tìm bằng StartsWith cho các UI có version number không dự đoán được
+            foreach (Transform child in searchRoot.GetComponentsInChildren<Transform>(true))
+            {
+                string childName = child.name;
+                if ((childName.StartsWith("UI_HP") && (childName.Contains("Invetory") || childName.Contains("Inventory"))) ||
+                    childName == "AbilityIcons" || childName == "SkillBar" || childName == "UI_Skills")
+                {
+                    if (child.gameObject.activeSelf)
+                    {
+                        child.gameObject.SetActive(false);
+                        Debug.Log($"[DungeonWave] Hidden '{childName}' (fuzzy match in player)");
+                    }
                 }
             }
         }
@@ -1059,13 +1082,20 @@ public class DungeonWaveManager : MonoBehaviour
             if (c.gameObject.name == "Canvas_Menu" && !c.gameObject.activeSelf)
             {
                 c.gameObject.SetActive(true);
+                // FIX: Bật lại GraphicRaycaster đã bị tắt bởi EnsurePanelOnTop
+                var raycaster = c.GetComponent<UnityEngine.UI.GraphicRaycaster>();
+                if (raycaster != null) raycaster.enabled = true;
                 Debug.Log("[DungeonWave] Restored Canvas_Menu");
                 break;
             }
         }
 
         // Fallback: bật lại các panel riêng
+        // FIX: Thêm tên có version number
         string[] uiNames = { 
+            "UI_HP+Invetory_1.0", "UI_HP+Inventory_1.0",
+            "UI_HP+Invetory_1", "UI_HP+Inventory_1",
+            "UI_HP+Invetory", "UI_HP+Inventory",
             "UI_HP_Invetory", "UI_HP_Inventory", "UI_HP-Invetory", "UI_HP-Inventory",
             "UI_HP", "UI_Invetory", "UI_Inventory" 
         };
@@ -1082,7 +1112,29 @@ public class DungeonWaveManager : MonoBehaviour
             foreach (string n in uiNames)
             {
                 Transform t = FindInChildren(searchRoot, n);
-                if (t != null) { t.gameObject.SetActive(true); Debug.Log($"[DungeonWave] Restored {n}"); return; }
+                if (t != null) 
+                { 
+                    t.gameObject.SetActive(true); 
+                    // FIX: Bật lại GraphicRaycaster
+                    var raycaster = t.GetComponent<UnityEngine.UI.GraphicRaycaster>();
+                    if (raycaster != null) raycaster.enabled = true;
+                    Debug.Log($"[DungeonWave] Restored {n}"); 
+                    return; 
+                }
+            }
+
+            // FIX: Fuzzy match cho version-numbered UI
+            foreach (Transform child in searchRoot.GetComponentsInChildren<Transform>(true))
+            {
+                string childName = child.name;
+                if (childName.StartsWith("UI_HP") && (childName.Contains("Invetory") || childName.Contains("Inventory")))
+                {
+                    child.gameObject.SetActive(true);
+                    var raycaster = child.GetComponent<UnityEngine.UI.GraphicRaycaster>();
+                    if (raycaster != null) raycaster.enabled = true;
+                    Debug.Log($"[DungeonWave] Restored '{childName}' (fuzzy match)");
+                    return;
+                }
             }
         }
 
@@ -1707,7 +1759,47 @@ public class DungeonWaveManager : MonoBehaviour
         }
     }
 
-    // EnsureCanvasOnTop đã được loại bỏ — sortingOrder quản lý từ scene/Inspector
+    /// <summary>
+    /// FIX: Đảm bảo panel Win/Lose luôn hiển thị trên cùng
+    /// Scene có thể override Canvas_Menu lên sortOrder=1000, nên panel phải cao hơn
+    /// Cũng tắt GraphicRaycaster trên các canvas player UI còn sót để không chặn click
+    /// </summary>
+    private void EnsurePanelOnTop(GameObject panelObj)
+    {
+        if (panelObj == null) return;
+
+        // Tìm Canvas chứa panel và set sortingOrder rất cao
+        Canvas panelCanvas = panelObj.GetComponent<Canvas>();
+        if (panelCanvas == null)
+            panelCanvas = panelObj.GetComponentInParent<Canvas>();
+
+        if (panelCanvas != null)
+        {
+            panelCanvas.overrideSorting = true;
+            panelCanvas.sortingOrder = 10000;
+            Debug.Log($"[DungeonWave] FIX: Set '{panelCanvas.gameObject.name}' sortingOrder=10000 (override=true)");
+        }
+
+        // Tắt GraphicRaycaster trên các canvas player UI còn sót (nếu object vẫn active)
+        // để không chặn click lên buttons của panel Win/Lose
+        Canvas[] allCanvases = FindObjectsByType<Canvas>(FindObjectsSortMode.None);
+        foreach (Canvas c in allCanvases)
+        {
+            if (c == null || c == panelCanvas) continue;
+            string cName = c.gameObject.name;
+            // Chỉ tắt raycast trên Canvas_Menu và UI_HP canvases
+            if (cName == "Canvas_Menu" || 
+                (cName.StartsWith("UI_HP") && (cName.Contains("Invetory") || cName.Contains("Inventory"))))
+            {
+                var raycaster = c.GetComponent<UnityEngine.UI.GraphicRaycaster>();
+                if (raycaster != null)
+                {
+                    raycaster.enabled = false;
+                    Debug.Log($"[DungeonWave] FIX: Disabled GraphicRaycaster on '{cName}' to unblock panel clicks");
+                }
+            }
+        }
+    }
 
     /// <summary>
     /// Đảm bảo Canvas có GraphicRaycaster để button click được
@@ -1744,6 +1836,9 @@ public class DungeonWaveManager : MonoBehaviour
             
             // Đảm bảo Canvas có GraphicRaycaster để button click được
             EnsureGraphicRaycaster(dungeonCompleteUI);
+
+            // FIX: Đảm bảo panel Win luôn hiển thị trên cùng (trên Canvas_Menu, UI_HP...)
+            EnsurePanelOnTop(dungeonCompleteUI);
             
             if (expRewardText)
                 expRewardText.text = $"EXP: +{totalExpGained}";
@@ -1773,6 +1868,9 @@ public class DungeonWaveManager : MonoBehaviour
 
             // Đảm bảo Canvas có GraphicRaycaster để button click được
             EnsureGraphicRaycaster(dungeonFailedUI);
+
+            // FIX: Đảm bảo panel Failed luôn hiển thị trên cùng (trên Canvas_Menu, UI_HP...)
+            EnsurePanelOnTop(dungeonFailedUI);
 
             Debug.Log($"[DungeonWave] UI: Showing dungeon failed (activeInHierarchy={dungeonFailedUI.activeInHierarchy})");
         }
