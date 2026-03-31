@@ -10,6 +10,7 @@ public class ItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
     [Header("Item References")]
     [SerializeField] private Image itemIcon;
+    [SerializeField] private Image qualityView; // Colored overlay/badge showing item rarity quality
     [SerializeField] private TextMeshProUGUI itemNameText;
     [SerializeField] private TextMeshProUGUI itemAmountText;
     [SerializeField] private Button removeButton; // The X button
@@ -44,6 +45,9 @@ public class ItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 
         if (itemNameText == null)
             itemNameText = transform.Find("Item name")?.GetComponent<TextMeshProUGUI>();
+
+        if (qualityView == null)
+            qualityView = transform.Find("Quality view")?.GetComponent<Image>();
 
         if (itemAmountText == null)
             itemAmountText = transform.Find("Item amount")?.GetComponent<TextMeshProUGUI>();
@@ -106,6 +110,13 @@ public class ItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         {
             string color = Item.GetRarityColorHex(runtimeRarity);
             itemNameText.text = $"<color={color}>{itemData.itemName}</color>";
+        }
+
+        // Update quality view color by runtime rarity
+        if (qualityView != null)
+        {
+            qualityView.color = GetQualityViewColor(runtimeRarity);
+            qualityView.gameObject.SetActive(true);
         }
 
         // Update amount (only show if stackable and amount > 1)
@@ -210,6 +221,20 @@ public class ItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         {
             ItemTooltipManager.Instance.HideTooltip();
         }
+    }
+
+    private Color GetQualityViewColor(Rarity rarity)
+    {
+        string colorHex = Item.GetRarityColorHex(rarity);
+        Color parsed;
+        if (!ColorUtility.TryParseHtmlString(colorHex, out parsed))
+        {
+            parsed = Color.white;
+        }
+
+        // Keep a little transparency so icon details are still visible.
+        parsed.a = 0.55f;
+        return parsed;
     }
 }
 
