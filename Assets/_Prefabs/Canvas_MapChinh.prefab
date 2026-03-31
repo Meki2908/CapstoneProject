@@ -163,7 +163,6 @@ GameObject:
   - component: {fileID: 2866986075023676056}
   - component: {fileID: 5708743938106826025}
   - component: {fileID: 8863751609580572938}
-  - component: {fileID: 8151731365850674084}
   m_Layer: 0
   m_Name: ProtalRoundCanvas
   m_TagString: Untagged
@@ -261,34 +260,6 @@ MonoBehaviour:
   m_BlockingMask:
     serializedVersion: 2
     m_Bits: 4294967295
---- !u!114 &8151731365850674084
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 407498576676944590}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bd20cfdcba16e5d4d9faa22c85aacba8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  portal1_Dest: {fileID: 0}
-  portal2_Dest: {fileID: 0}
-  portal3_Dest: {fileID: 0}
-  portal4_Dest: {fileID: 0}
-  btnPortal1: {fileID: 5383521628473340158}
-  btnPortal2: {fileID: 2799007500614319423}
-  btnPortal3: {fileID: 6760681369525764795}
-  btnPortal4: {fileID: 0}
-  btnClose: {fileID: 0}
-  questAdvances: []
-  playerOverride: {fileID: 0}
-  rootPanel: {fileID: 0}
-  teleportEffectPrefab: {fileID: 0}
-  effectDuration: 2
-  cinemachineCamera: {fileID: 0}
-  cameraPanDuration: 1.2
 --- !u!1 &527381488138685032
 GameObject:
   m_ObjectHideFlags: 0
@@ -715,6 +686,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   targetSceneName: MapSaMac
   delay: 0.2
+  dungeonDifficulty: 1
+  mapType: 0
   questID: 2
   triggerAtStep: 4
 --- !u!1 &960312340390901391

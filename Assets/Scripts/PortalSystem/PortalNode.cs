@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class PortalNode : MonoBehaviour
 {
@@ -18,8 +19,9 @@ public class PortalNode : MonoBehaviour
     private void Update()
     {
         if (!_playerInRange) return;
+        if (Keyboard.current == null) return;
 
-        if (Input.GetKeyDown(KeyCode.F))
+        if (Keyboard.current.fKey.wasPressedThisFrame)
         {
             ShowHint(false);
             if (portalUI != null)

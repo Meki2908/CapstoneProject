@@ -374,7 +374,7 @@ MonoBehaviour:
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96
   m_DynamicPixelsPerUnit: 1
-  m_PresetInfoIsWorld: 0
+  m_PresetInfoIsWorld: 1
 --- !u!223 &73335130
 Canvas:
   m_ObjectHideFlags: 0
@@ -4717,11 +4717,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2537955b17099a74fafa97dedb5ecca1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  qualityController: {fileID: 1673899991}
-  VolumeHolder: {fileID: 1538656755}
-  VirtualCamera: {fileID: 0}
-  camController: {fileID: 0}
-  LerpTime: 1
 --- !u!1 &1587189379
 GameObject:
   m_ObjectHideFlags: 0
@@ -4878,10 +4873,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e08047531bac3574aa4a24de977d5c74, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  QualitySettingsButton: {fileID: 0}
-  QualitySettingsText: {fileID: 0}
-  currentQualityLevelName: 
-  InputProviderholder: {fileID: 0}
 --- !u!1 &1713750943
 GameObject:
   m_ObjectHideFlags: 0
@@ -5004,7 +4995,7 @@ MonoBehaviour:
   delay: 0.2
   dungeonDifficulty: 0
   mapType: 2
-  questID: 3
+  questID: 4
   triggerAtStep: 4
 --- !u!95 &1723925441
 Animator:
@@ -31032,7 +31023,7 @@ PrefabInstance:
     - target: {fileID: 9142131904248293038, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
       propertyPath: portalUI
       value: 
-      objectReference: {fileID: 0}
+      objectReference: {fileID: 1807593179}
     - target: {fileID: 9142131904248293038, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
       propertyPath: pressFHintCanvas
       value: 
@@ -31709,6 +31700,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 407498576676944590, guid: 2fe1e0bda42d5504583cd67c68080b0c, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 727630951010718049, guid: 2fe1e0bda42d5504583cd67c68080b0c, type: 3}
       propertyPath: m_AnchoredPosition.x
       value: 0
@@ -31973,12 +31968,15 @@ PrefabInstance:
       propertyPath: m_Name
       value: Canvas_MapChinh
       objectReference: {fileID: 0}
+    - target: {fileID: 8325912161616475087, guid: 2fe1e0bda42d5504583cd67c68080b0c, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 8980269243277263010, guid: 2fe1e0bda42d5504583cd67c68080b0c, type: 3}
       propertyPath: m_PresetInfoIsWorld
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
-    m_RemovedComponents:
-    - {fileID: 8151731365850674084, guid: 2fe1e0bda42d5504583cd67c68080b0c, type: 3}
+    m_RemovedComponents: []
     m_RemovedGameObjects:
     - {fileID: 2262153119128165994, guid: 2fe1e0bda42d5504583cd67c68080b0c, type: 3}
     m_AddedGameObjects:
