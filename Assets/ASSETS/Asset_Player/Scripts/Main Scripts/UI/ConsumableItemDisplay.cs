@@ -65,20 +65,35 @@ public class ConsumableItemDisplay : MonoBehaviour
         }
 
         // Auto-find PlayerHealth
-        if (autoFindPlayerHealth && playerHealth == null)
-        {
-            playerHealth = FindFirstObjectByType<PlayerHealth>();
-            if (playerHealth == null)
-            {
-                Debug.LogWarning("[ConsumableItemDisplay] PlayerHealth not found! Auto-find failed.");
-            }
-        }
+        TryFindPlayerHealth();
 
         // Setup direct key input if not using InputActionReference
         if (useConsumableAction == null)
         {
             CreateHealKeyBinding();
             GameSettings.OnSettingsChanged += OnSettingsChanged;
+        }
+    }
+
+    private void OnEnable()
+    {
+        // Re-find PlayerHealth khi enable lại (scene transition)
+        TryFindPlayerHealth();
+    }
+
+    /// <summary>
+    /// Tìm PlayerHealth — gọi được nhiều lần, chỉ tìm khi cần
+    /// </summary>
+    private void TryFindPlayerHealth()
+    {
+        // Nếu đã có reference hợp lệ → không cần tìm lại
+        if (playerHealth != null) return;
+        if (!autoFindPlayerHealth) return;
+
+        playerHealth = FindFirstObjectByType<PlayerHealth>();
+        if (playerHealth != null)
+        {
+            Debug.Log($"[ConsumableItemDisplay] Found PlayerHealth on '{playerHealth.gameObject.name}'");
         }
     }
 
@@ -206,6 +221,12 @@ public class ConsumableItemDisplay : MonoBehaviour
         {
             Debug.Log($"[ConsumableItemDisplay] Health potion is on cooldown! {currentCooldown:F1}s remaining");
             return;
+        }
+
+        // Lazy re-find PlayerHealth (có thể bị null sau scene transition)
+        if (playerHealth == null)
+        {
+            TryFindPlayerHealth();
         }
 
         // Check if player is alive

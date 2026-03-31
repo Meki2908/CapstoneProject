@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.Playables;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -451,6 +452,13 @@ public class BossMultiSkill : MonoBehaviour
         EnemyScript.suppressSpawnVfx = true;
         GameObject enemy = Instantiate(enemyNewPrefab, spawnPos, Quaternion.identity);
         
+        // === FIX QUAN TRỌNG ===
+        // Clone bao gồm Lich/Demon child có BossCutsceneController (lockOnAwake=true).
+        // Trong Awake(), nó gọi LockGameplay() → FindObjectsOfType<EnemyScript>(true)
+        // → DISABLE TẤT CẢ enemies trong TOÀN BỘ scene (kể cả boss đang chiến đấu!).
+        // Phải gọi CutsceneEnded() ngay để UNDO hiệu ứng, rồi hủy component.
+        NeutralizeCutsceneControllers(enemy);
+        
         // Tắt TẤT CẢ enemy con trước
         foreach (Transform child in enemy.transform)
         {
@@ -472,9 +480,94 @@ public class BossMultiSkill : MonoBehaviour
             es.target = playerTarget;
             if (showDebug) Debug.Log($"[BossMultiSkill] Summoned index={enemyTypeIndex} at {spawnPos}");
         }
+        
+        // Safety: Force-enable components (phòng trường hợp prefab source bị disable)
+        if (es != null)
+        {
+            ForceEnableEnemyComponents(es.gameObject);
+        }
 
         if (DungeonOSTManager.Instance != null)
             DungeonOSTManager.Instance.ScheduleBossPresenceCheckForSpawnedRoot(enemy);
+    }
+    
+    /// <summary>
+    /// Vô hiệu hóa BossCutsceneController trên clone ngay sau Instantiate.
+    /// BossCutsceneController.Awake() chạy trong Instantiate → gọi LockGameplay()
+    /// → disable TẤT CẢ enemies trong scene. Phải gọi CutsceneEnded() để UNDO.
+    /// </summary>
+    void NeutralizeCutsceneControllers(GameObject clonedEnemy)
+    {
+        // 1. Tìm và vô hiệu hóa BossCutsceneController
+        var cutsceneControllers = clonedEnemy.GetComponentsInChildren<BossCutsceneController>(true);
+        foreach (var ctrl in cutsceneControllers)
+        {
+            // Gọi CutsceneEnded() để UNDO LockGameplay() (re-enable TẤT CẢ enemies bị disable)
+            ctrl.CutsceneEnded();
+            // Hủy để không gây thêm vấn đề
+            Destroy(ctrl);
+            if (showDebug) Debug.Log($"[BossMultiSkill] Neutralized BossCutsceneController on: {ctrl.gameObject.name}");
+        }
+        
+        // 2. Dừng và hủy PlayableDirector (tránh chạy Timeline cinematic)
+        var directors = clonedEnemy.GetComponentsInChildren<PlayableDirector>(true);
+        foreach (var dir in directors)
+        {
+            dir.Stop();
+            Destroy(dir);
+            if (showDebug) Debug.Log($"[BossMultiSkill] Destroyed PlayableDirector on: {dir.gameObject.name}");
+        }
+        
+        // 3. Hủy BossMultiSkill trên clone (tránh đệ quy spawn)
+        var bossSkills = clonedEnemy.GetComponentsInChildren<BossMultiSkill>(true);
+        foreach (var skill in bossSkills)
+        {
+            if (skill != this) // Không hủy chính mình
+            {
+                Destroy(skill);
+                if (showDebug) Debug.Log($"[BossMultiSkill] Destroyed cloned BossMultiSkill on: {skill.gameObject.name}");
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Force-enable tất cả components quan trọng trên enemy vừa spawn.
+    /// Cần thiết vì BossCutsceneController có thể đã disable components
+    /// trên enemyNewPrefab (scene instance) trong lúc cinematic.
+    /// </summary>
+    void ForceEnableEnemyComponents(GameObject enemyObj)
+    {
+        // Enable EnemyScript
+        var enemyScriptComp = enemyObj.GetComponent<EnemyScript>();
+        if (enemyScriptComp != null) enemyScriptComp.enabled = true;
+        
+        // Enable EnemyState
+        var enemyState = enemyObj.GetComponent<EnemyState>();
+        if (enemyState != null) enemyState.enabled = true;
+        
+        // Enable EnemyDamage
+        var enemyDamage = enemyObj.GetComponent<EnemyDamage>();
+        if (enemyDamage != null) enemyDamage.enabled = true;
+        
+        // Enable EnemyAttack
+        var enemyAttack = enemyObj.GetComponent<EnemyAttack>();
+        if (enemyAttack != null) enemyAttack.enabled = true;
+        
+        // Enable NavMeshAgent
+        var navAgent = enemyObj.GetComponent<NavMeshAgent>();
+        if (navAgent != null) navAgent.enabled = true;
+        
+        // Enable TakeDamageTest
+        var takeDmg = enemyObj.GetComponent<TakeDamageTest>();
+        if (takeDmg != null) takeDmg.enabled = true;
+        
+        // Enable Colliders (CapsuleCollider, etc.)
+        foreach (var col in enemyObj.GetComponents<Collider>())
+        {
+            col.enabled = true;
+        }
+        
+        if (showDebug) Debug.Log($"[BossMultiSkill] Force-enabled all components on: {enemyObj.name}");
     }
     
     /// <summary>
