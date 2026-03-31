@@ -22,14 +22,49 @@ public class ItemTooltipManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI itemNameText; // Optional dedicated TMP for item name
     [SerializeField] private TextMeshProUGUI itemDescriptionText; // Optional dedicated TMP for description + stats
     [SerializeField] private Image tooltipBackground; // The Image component (for resizing)
+
+    [Header("Font")]
+    [Tooltip("Font cho tên item. Nếu null = dùng font từ prefab.")]
+    [SerializeField] private TMP_FontAsset nameFont;
+    [Tooltip("Font cho phần mô tả/stats. Nếu null = dùng font từ prefab.")]
+    [SerializeField] private TMP_FontAsset bodyFont;
     
-    [Header("Settings")]
-    [SerializeField] private float padding = 20f; // Padding around text (canvas units)
-    [SerializeField] private float minWidth = 350f; // Minimum tooltip width (canvas units)
-    [SerializeField] private float maxWidth = 700f; // Maximum tooltip width (canvas units)
-    [Header("Cursor Offset (Screen Pixels)")]
-    [Tooltip("Khoảng cách tooltip từ chuột tính bằng screen pixels.\nChỉ dùng X (sang trái). Y không dùng vì tooltip luôn ở giữa màn hình.")]
+    [Header("Font Size")]
+    [Tooltip("Cỡ chữ tên item (0 = giữ nguyên từ prefab)")]
+    [SerializeField] private float nameFontSize = 0f;
+    [Tooltip("Cỡ chữ mô tả/stats (0 = giữ nguyên từ prefab)")]
+    [SerializeField] private float bodyFontSize = 0f;
+
+    [Header("Layout")]
+    [Tooltip("Khoảng cách text ↔ viền trái/phải")]
+    [SerializeField] private float paddingHorizontal = 20f;
+    [Tooltip("Khoảng cách text ↔ viền trên/dưới")]
+    [SerializeField] private float paddingVertical = 20f;
+    [SerializeField] private float minWidth = 350f;
+    [SerializeField] private float maxWidth = 700f;
+    [Tooltip("Chiều cao tối đa (0 = không giới hạn)")]
+    [SerializeField] private float maxHeight = 0f;
+    [Tooltip("Khoảng cách giữa tên item và phần mô tả")]
+    [SerializeField] private float sectionGap = 10f;
+    [Tooltip("Chiều cao tối thiểu của tên item")]
+    [SerializeField] private float minNameHeight = 40f;
+    [Tooltip("Chiều cao tối thiểu của phần mô tả")]
+    [SerializeField] private float minDescHeight = 50f;
+
+    [Header("Cursor")]
+    [Tooltip("Khoảng cách tooltip từ chuột (screen pixels)")]
     [SerializeField] private float cursorOffsetPixels = 30f;
+
+    [Header("Stat Colors")]
+    [SerializeField] private Color colorHP = new Color(0.118f, 0.549f, 0.118f, 1f);           // #1E8C1E
+    [SerializeField] private Color colorDefense = new Color(0.157f, 0.471f, 0.722f, 1f);      // #2878B8
+    [SerializeField] private Color colorCrit = new Color(0.722f, 0.145f, 0.431f, 1f);         // #B8256E
+    [SerializeField] private Color colorMoveSpeed = new Color(0.055f, 0.557f, 0.518f, 1f);    // #0E8E84
+    [SerializeField] private Color colorAtkSpeed = new Color(0.8f, 0.447f, 0f, 1f);           // #CC7200
+    [SerializeField] private Color colorSlotPassive = new Color(0.8f, 0.533f, 0f, 1f);        // #CC8800
+    [SerializeField] private Color colorPassiveDesc = new Color(0.69f, 0.49f, 0.063f, 1f);    // #B07D10
+    [SerializeField] private Color colorRarity = new Color(0.176f, 0.125f, 0.082f, 1f);       // #2D2015
+    [SerializeField] private Color colorDescription = new Color(0.176f, 0.125f, 0.082f, 1f);  // #2D2015
 
     private Canvas canvas;
     private RectTransform canvasRectTransform;
@@ -121,6 +156,19 @@ public class ItemTooltipManager : MonoBehaviour
     {
         if (isShowing && tooltipPanel != null && tooltipPanel.activeSelf)
         {
+            // Live update: re-apply settings + resize every frame
+            // so Inspector changes take effect immediately in Play Mode
+            if (currentItem != null && itemNameText != null && itemDescriptionText != null)
+            {
+                // Re-apply fonts and sizes
+                if (nameFont != null) itemNameText.font = nameFont;
+                if (bodyFont != null) itemDescriptionText.font = bodyFont;
+                if (nameFontSize > 0f) itemNameText.fontSize = nameFontSize;
+                if (bodyFontSize > 0f) itemDescriptionText.fontSize = bodyFontSize;
+                itemNameText.enableWordWrapping = true;
+                itemDescriptionText.enableWordWrapping = true;
+            }
+            ResizeTooltipToContent();
             UpdateTooltipPosition();
         }
     }
@@ -152,9 +200,31 @@ public class ItemTooltipManager : MonoBehaviour
         {
             itemNameText.text = nameContent;
             itemDescriptionText.text = bodyContent;
+            // Apply separate fonts
+            if (nameFont != null) itemNameText.font = nameFont;
+            if (bodyFont != null) itemDescriptionText.font = bodyFont;
+            // Apply font sizes if configured
+            if (nameFontSize > 0f) itemNameText.fontSize = nameFontSize;
+            if (bodyFontSize > 0f) itemDescriptionText.fontSize = bodyFontSize;
+            // Force word wrapping so text stays inside panel
+            itemNameText.enableWordWrapping = true;
+            itemDescriptionText.enableWordWrapping = true;
+            itemNameText.overflowMode = TMPro.TextOverflowModes.Overflow;
+            itemDescriptionText.overflowMode = TMPro.TextOverflowModes.Overflow;
+            // Force anchors to center so positioning math is correct
+            itemNameText.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+            itemNameText.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            itemNameText.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            itemDescriptionText.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+            itemDescriptionText.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            itemDescriptionText.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            // Alignment
+            itemNameText.horizontalAlignment = HorizontalAlignmentOptions.Center;
+            itemDescriptionText.horizontalAlignment = HorizontalAlignmentOptions.Center;
         }
         else
         {
+
             // Backward compatibility: single TMP
             if (tooltipText == null)
             {
@@ -169,6 +239,7 @@ public class ItemTooltipManager : MonoBehaviour
                 return;
             }
             tooltipText.text = tooltipContent;
+            if (bodyFont != null) tooltipText.font = bodyFont;
         }
 
         ResizeTooltipToContent();
@@ -262,26 +333,32 @@ public class ItemTooltipManager : MonoBehaviour
         {
             if (tooltipText == null) return;
 
+            tooltipText.enableWordWrapping = true;
             tooltipText.ForceMeshUpdate();
             Vector2 preferredSize = tooltipText.GetPreferredValues();
             float clampedWidth = Mathf.Clamp(preferredSize.x, minWidth, maxWidth);
 
-            if (Mathf.Abs(clampedWidth - preferredSize.x) > 0.01f)
-            {
-                tooltipText.rectTransform.sizeDelta = new Vector2(clampedWidth, 0f);
-                tooltipText.ForceMeshUpdate();
-                preferredSize = tooltipText.GetPreferredValues();
-            }
+            // Set width constraint first, then re-measure with wrapping
+            tooltipText.rectTransform.sizeDelta = new Vector2(clampedWidth, 0f);
+            tooltipText.ForceMeshUpdate();
+            float wrappedHeight = tooltipText.GetPreferredValues(clampedWidth, 0f).y;
+            preferredSize = new Vector2(clampedWidth, wrappedHeight);
 
             preferredSize.x = clampedWidth;
-            Vector2 newSize = preferredSize + new Vector2(padding * 2f, padding * 2f);
+            Vector2 newSize = preferredSize + new Vector2(paddingHorizontal * 2f, paddingVertical * 2f);
             tooltipRectTransform.sizeDelta = newSize;
             return;
         }
 
         // Split mode layout: itemNameText on top, itemDescriptionText below
-        const float sectionGap = 10f;
 
+        // Ensure tooltip panel anchor is center so sizeDelta = absolute size
+        tooltipRectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+        tooltipRectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+
+        // Step 1: Get unconstrained preferred widths to determine target width
+        itemNameText.enableWordWrapping = true;
+        itemDescriptionText.enableWordWrapping = true;
         itemNameText.ForceMeshUpdate();
         itemDescriptionText.ForceMeshUpdate();
 
@@ -289,6 +366,7 @@ public class ItemTooltipManager : MonoBehaviour
         Vector2 prefDesc = itemDescriptionText.GetPreferredValues();
         float targetWidth = Mathf.Clamp(Mathf.Max(prefName.x, prefDesc.x), minWidth, maxWidth);
 
+        // Step 2: Set width FIRST so text wraps correctly, then re-measure height
         itemNameText.rectTransform.sizeDelta = new Vector2(targetWidth, 0f);
         itemDescriptionText.rectTransform.sizeDelta = new Vector2(targetWidth, 0f);
 
@@ -298,18 +376,20 @@ public class ItemTooltipManager : MonoBehaviour
         float nameHeight = itemNameText.GetPreferredValues(targetWidth, 0f).y;
         float descHeight = itemDescriptionText.GetPreferredValues(targetWidth, 0f).y;
 
-        // Ensure both rects can contain their text comfortably
-        itemNameText.rectTransform.sizeDelta = new Vector2(targetWidth, Mathf.Max(40f, nameHeight));
-        itemDescriptionText.rectTransform.sizeDelta = new Vector2(targetWidth, Mathf.Max(50f, descHeight));
+        itemNameText.rectTransform.sizeDelta = new Vector2(targetWidth, Mathf.Max(minNameHeight, nameHeight));
+        itemDescriptionText.rectTransform.sizeDelta = new Vector2(targetWidth, Mathf.Max(minDescHeight, descHeight));
 
-        float contentHeight = Mathf.Max(40f, nameHeight) + sectionGap + Mathf.Max(50f, descHeight);
-        Vector2 panelSize = new Vector2(targetWidth + padding * 2f, contentHeight + padding * 2f);
+        float contentHeight = Mathf.Max(minNameHeight, nameHeight) + sectionGap + Mathf.Max(minDescHeight, descHeight);
+        float panelW = targetWidth + paddingHorizontal * 2f;
+        float panelH = contentHeight + paddingVertical * 2f;
+        if (maxHeight > 0f) panelH = Mathf.Min(panelH, maxHeight);
+        Vector2 panelSize = new Vector2(panelW, panelH);
         tooltipRectTransform.sizeDelta = panelSize;
 
         // Reposition to keep text fully inside tooltip panel
         float halfH = panelSize.y * 0.5f;
-        float nameY = halfH - padding - Mathf.Max(40f, nameHeight) * 0.5f;
-        float descY = nameY - Mathf.Max(40f, nameHeight) * 0.5f - sectionGap - Mathf.Max(50f, descHeight) * 0.5f;
+        float nameY = halfH - paddingVertical - Mathf.Max(minNameHeight, nameHeight) * 0.5f;
+        float descY = nameY - Mathf.Max(minNameHeight, nameHeight) * 0.5f - sectionGap - Mathf.Max(minDescHeight, descHeight) * 0.5f;
 
         itemNameText.rectTransform.anchoredPosition = new Vector2(0f, nameY);
         itemDescriptionText.rectTransform.anchoredPosition = new Vector2(0f, descY);
@@ -372,12 +452,12 @@ public class ItemTooltipManager : MonoBehaviour
         if (item == null) return string.Empty;
 
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
-        sb.AppendLine($"<color=#888888>{rarity}</color>");
+        sb.AppendLine($"<color=#{Hex(colorRarity)}>{rarity}</color>");
         sb.AppendLine();
 
         if (!string.IsNullOrEmpty(item.description))
         {
-            sb.AppendLine(item.description);
+            sb.AppendLine($"<color=#{Hex(colorDescription)}>{item.description}</color>");
             sb.AppendLine();
         }
 
@@ -411,54 +491,56 @@ public class ItemTooltipManager : MonoBehaviour
     private string GetEquipmentStats(Item item, Rarity rarity)
     {
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        string hSlot = Hex(colorSlotPassive);
+        string hRar = Hex(colorRarity);
         
-        sb.AppendLine($"<color=#FFD700>Slot: {item.equipmentSlot}</color>");
+        sb.AppendLine($"<color=#{hSlot}>Slot: {item.equipmentSlot}</color>");
         sb.AppendLine();
 
         bool hasStats = false;
 
         if (item.ScaledHPBonus(rarity) > 0f)
         {
-            sb.AppendLine($"<color=#00FF00>HP: +{item.ScaledHPBonus(rarity):F0}</color> <color=#888888>(max {item.ScaledHPBonus(rarity):F0})</color>");
+            sb.AppendLine($"<color=#{Hex(colorHP)}>HP: +{item.ScaledHPBonus(rarity):F0}</color> <color=#{hRar}>(max {item.ScaledHPBonus(rarity):F0})</color>");
             hasStats = true;
         }
         if (item.ScaledDefenseBonus(rarity) > 0f)
         {
-            sb.AppendLine($"<color=#00AAFF>Defense: +{item.ScaledDefenseBonus(rarity):F0}</color> <color=#888888>(max {item.ScaledDefenseBonus(rarity):F0})</color>");
+            sb.AppendLine($"<color=#{Hex(colorDefense)}>Defense: +{item.ScaledDefenseBonus(rarity):F0}</color> <color=#{hRar}>(max {item.ScaledDefenseBonus(rarity):F0})</color>");
             hasStats = true;
         }
         if (item.ScaledCritRateBonus(rarity) > 0f)
         {
-            sb.AppendLine($"<color=#FF00FF>Crit Rate: +{item.ScaledCritRateBonus(rarity) * 100f:F1}%</color> <color=#888888>(max {item.ScaledCritRateBonus(rarity) * 100f:F1}%)</color>");
+            sb.AppendLine($"<color=#{Hex(colorCrit)}>Crit Rate: +{item.ScaledCritRateBonus(rarity) * 100f:F1}%</color> <color=#{hRar}>(max {item.ScaledCritRateBonus(rarity) * 100f:F1}%)</color>");
             hasStats = true;
         }
         if (item.ScaledCritDamageMultiplier(rarity) > 1f)
         {
-            sb.AppendLine($"<color=#FF00FF>Crit Damage: +{(item.ScaledCritDamageMultiplier(rarity) - 1f) * 100f:F1}%</color> <color=#888888>(max {(item.ScaledCritDamageMultiplier(rarity) - 1f) * 100f:F1}%)</color>");
+            sb.AppendLine($"<color=#{Hex(colorCrit)}>Crit Damage: +{(item.ScaledCritDamageMultiplier(rarity) - 1f) * 100f:F1}%</color> <color=#{hRar}>(max {(item.ScaledCritDamageMultiplier(rarity) - 1f) * 100f:F1}%)</color>");
             hasStats = true;
         }
         if (item.ScaledMovementSpeedBonus(rarity) > 0f)
         {
-            sb.AppendLine($"<color=#00FFFF>Movement Speed: +{item.ScaledMovementSpeedBonus(rarity) * 100f:F1}%</color> <color=#888888>(max {item.ScaledMovementSpeedBonus(rarity) * 100f:F1}%)</color>");
+            sb.AppendLine($"<color=#{Hex(colorMoveSpeed)}>Movement Speed: +{item.ScaledMovementSpeedBonus(rarity) * 100f:F1}%</color> <color=#{hRar}>(max {item.ScaledMovementSpeedBonus(rarity) * 100f:F1}%)</color>");
             hasStats = true;
         }
         if (item.ScaledAttackSpeedBonus(rarity) > 0f)
         {
-            sb.AppendLine($"<color=#FFAA00>Attack Speed: +{item.ScaledAttackSpeedBonus(rarity) * 100f:F1}%</color> <color=#888888>(max {item.ScaledAttackSpeedBonus(rarity) * 100f:F1}%)</color>");
+            sb.AppendLine($"<color=#{Hex(colorAtkSpeed)}>Attack Speed: +{item.ScaledAttackSpeedBonus(rarity) * 100f:F1}%</color> <color=#{hRar}>(max {item.ScaledAttackSpeedBonus(rarity) * 100f:F1}%)</color>");
             hasStats = true;
         }
 
         if (!hasStats)
         {
-            sb.AppendLine("<color=#888888>No stats</color>");
+            sb.AppendLine($"<color=#{hRar}>No stats</color>");
         }
 
         // Passive description
         if (!string.IsNullOrEmpty(item.passiveDescription))
         {
             sb.AppendLine();
-            sb.AppendLine($"<color=#FFD700>Passive:</color>");
-            sb.AppendLine($"<color=#FFFF00>{item.passiveDescription}</color>");
+            sb.AppendLine($"<color=#{hSlot}>Passive:</color>");
+            sb.AppendLine($"<color=#{Hex(colorPassiveDesc)}>{item.passiveDescription}</color>");
         }
 
         return sb.ToString();
@@ -471,13 +553,13 @@ public class ItemTooltipManager : MonoBehaviour
     {
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
         
-        sb.AppendLine($"<color=#FFD700>Type: {item.gemType}</color>");
+        sb.AppendLine($"<color=#{Hex(colorSlotPassive)}>Type: {item.gemType}</color>");
         sb.AppendLine();
         
         string statText = item.GetGemStatText();
         if (!string.IsNullOrEmpty(statText))
         {
-            sb.AppendLine($"<color=#00FF00>{statText} <color=#888888>(max)</color></color>");
+            sb.AppendLine($"<color=#{Hex(colorHP)}>{statText} <color=#{Hex(colorRarity)}>(max)</color></color>");
         }
 
         return sb.ToString();
@@ -493,11 +575,11 @@ public class ItemTooltipManager : MonoBehaviour
         // Special handling for Health Potion
         if (item != null && item.itemName != null && item.itemName.ToLower().Contains("health potion"))
         {
-            sb.AppendLine("<color=#00FF00>+ 50% HP</color>");
+            sb.AppendLine($"<color=#{Hex(colorHP)}>+ 50% HP</color>");
         }
         else
         {
-            sb.AppendLine("<color=#FFD700>Consumable Item</color>");
+            sb.AppendLine($"<color=#{Hex(colorSlotPassive)}>Consumable Item</color>");
         }
         
         return sb.ToString();
@@ -510,7 +592,7 @@ public class ItemTooltipManager : MonoBehaviour
     {
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
         
-        sb.AppendLine("<color=#FFD700>Material</color>");
+        sb.AppendLine($"<color=#{Hex(colorSlotPassive)}>Material</color>");
         
         return sb.ToString();
     }
@@ -522,10 +604,10 @@ public class ItemTooltipManager : MonoBehaviour
     {
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
 
-        sb.AppendLine("<color=#00FFFF>Crystal Stone</color>");
-        sb.AppendLine("<color=#888888>Socketing material - increases success rate</color>");
+        sb.AppendLine($"<color=#{Hex(colorMoveSpeed)}>Crystal Stone</color>");
+        sb.AppendLine($"<color=#{Hex(colorRarity)}>Socketing material - increases success rate</color>");
         sb.AppendLine();
-        sb.AppendLine("<color=#FFD700>Success Rate:</color>");
+        sb.AppendLine($"<color=#{Hex(colorSlotPassive)}>Success Rate:</color>");
 
         if (SocketingManager.Instance != null)
         {
@@ -547,6 +629,14 @@ public class ItemTooltipManager : MonoBehaviour
     private string GetRarityColor(Rarity rarity)
     {
         return Item.GetRarityColorHex(rarity);
+    }
+
+    /// <summary>
+    /// Convert Color to hex string (RRGGBB) for TMP rich text tags
+    /// </summary>
+    private string Hex(Color c)
+    {
+        return ColorUtility.ToHtmlStringRGB(c);
     }
 }
 

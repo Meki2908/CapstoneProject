@@ -117,6 +117,17 @@ public class InventoryController : MonoBehaviour
         }
     }
 
+    void LateUpdate()
+    {
+        // Force cursor visible while inventory is open — runs AFTER all Update()
+        // (prevents CameraCursor/GameCursorManager from hiding cursor)
+        if (isInventoryOpen)
+        {
+            Cursor.visible = true;
+            Cursor.lockState = CursorLockMode.None;
+        }
+    }
+
     private void ToggleInventory()
     {
         if (isInventoryOpen)
