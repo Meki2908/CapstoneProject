@@ -53,10 +53,6 @@ public class DungeonWaveManager : MonoBehaviour
     public bool waitForPreEnterTimelineBeforeWave1 = true;
     [Tooltip("Nếu bật: gọi Play() từ code khi vào dungeon (dùng khi không Play On Awake hoặc cần reset từ đầu).")]
     public bool playPreEnterTimelineFromCode = false;
-    [Tooltip("Ẩn UI player (Canvas_Menu / HP+Inventory...) trong lúc timeline Pre-enter chạy; bật lại khi timeline xong.")]
-    public bool hidePlayerUiDuringPreEnterTimeline = true;
-    [Tooltip("Optional: kéo root HUD player (vd. UI_HP+Invetory). Để trống = tự tìm dưới Player / tag Player.")]
-    [SerializeField] private GameObject playerHudRootOverrideForPreEnter;
 
     [Header("=== ENEMY COUNT PER WAVE (CÁCH A - HỆ THỐNG MỚI) ===")]
     [Tooltip("Số lượng Skelet (Skeleton + skeleton_archer) mỗi wave [wave1, wave2, wave3, wave4, wave5]")]
@@ -211,12 +207,6 @@ public class DungeonWaveManager : MonoBehaviour
     private int currentDemonCount = 0;
     private int currentMonsterCount = 0;
 
-    /// <summary> Cách đã ẩn HUD trong intro Pre-enter (để khôi phục đúng). </summary>
-    private enum PreEnterHudHideMode { None, SingleRoot, FullHideFallback }
-    private PreEnterHudHideMode _preEnterHudHideMode;
-    private GameObject _preEnterHudHiddenInstance;
-    private bool _preEnterHudWasActiveBeforeHide;
-    
     // Static instance for global access
     public static DungeonWaveManager Instance;
 
@@ -621,77 +611,6 @@ public class DungeonWaveManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Ưu tiên: <see cref="playerHudRootOverrideForPreEnter"/> → tự tìm dưới Player (UI_HP + Invetory/Inventory) → Canvas_Menu dưới player.
-    /// </summary>
-    private GameObject ResolvePlayerHudRootForPreEnter()
-    {
-        if (playerHudRootOverrideForPreEnter != null)
-            return playerHudRootOverrideForPreEnter;
-
-        Transform searchRoot = player;
-        if (searchRoot == null)
-        {
-            GameObject p = GameObject.FindGameObjectWithTag("Player");
-            if (p == null) p = GameObject.Find("Player");
-            if (p == null) p = GameObject.Find("player");
-            if (p != null) searchRoot = p.transform;
-        }
-        if (searchRoot == null) return null;
-
-        foreach (Transform t in searchRoot.GetComponentsInChildren<Transform>(true))
-        {
-            string n = t.name;
-            if (n.IndexOf("UI_HP", StringComparison.OrdinalIgnoreCase) >= 0 &&
-                (n.IndexOf("Invetory", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                 n.IndexOf("Inventory", StringComparison.OrdinalIgnoreCase) >= 0))
-                return t.gameObject;
-        }
-
-        Transform canvasMenu = FindInChildren(searchRoot, "Canvas_Menu");
-        if (canvasMenu != null)
-            return canvasMenu.gameObject;
-
-        return null;
-    }
-
-    private void HidePlayerHudForPreEnterIntro()
-    {
-        _preEnterHudHideMode = PreEnterHudHideMode.None;
-        _preEnterHudHiddenInstance = null;
-
-        GameObject go = ResolvePlayerHudRootForPreEnter();
-        if (go != null)
-        {
-            _preEnterHudHiddenInstance = go;
-            _preEnterHudWasActiveBeforeHide = go.activeSelf;
-            go.SetActive(false);
-            _preEnterHudHideMode = PreEnterHudHideMode.SingleRoot;
-            Debug.Log($"[DungeonWave] Pre-enter: ẩn HUD (single) — {go.name}");
-            return;
-        }
-
-        HidePlayerUIOnComplete();
-        _preEnterHudHideMode = PreEnterHudHideMode.FullHideFallback;
-        Debug.Log("[DungeonWave] Pre-enter: ẩn HUD (full fallback — không tìm thấy root HUD đơn)");
-    }
-
-    private void RestorePlayerHudAfterPreEnterIntro()
-    {
-        switch (_preEnterHudHideMode)
-        {
-            case PreEnterHudHideMode.SingleRoot:
-                if (_preEnterHudHiddenInstance != null)
-                    _preEnterHudHiddenInstance.SetActive(_preEnterHudWasActiveBeforeHide);
-                break;
-            case PreEnterHudHideMode.FullHideFallback:
-                RestorePlayerUI();
-                break;
-        }
-        _preEnterHudHideMode = PreEnterHudHideMode.None;
-        _preEnterHudHiddenInstance = null;
-    }
-
-    /// <summary>
     /// Wave có spawn boss/miniboss (Demon, Stoneogre, Golem, Minotaur, Ifrit) không — dùng cho OST.
     /// </summary>
     private bool CurrentWaveHasBossEnemy(int waveIndex)
@@ -716,13 +635,6 @@ public class DungeonWaveManager : MonoBehaviour
         if (preEnterDungeonTimeline == null) yield break;
 
         var dir = preEnterDungeonTimeline;
-        bool hidPlayerUi = false;
-
-        if (hidePlayerUiDuringPreEnterTimeline)
-        {
-            HidePlayerHudForPreEnterIntro();
-            hidPlayerUi = true;
-        }
 
         if (playPreEnterTimelineFromCode)
         {
@@ -741,8 +653,6 @@ public class DungeonWaveManager : MonoBehaviour
                 Debug.Log("[DungeonWave] Pre-enter timeline đã kết thúc trước bước chờ — bỏ qua.");
             else
                 Debug.LogWarning("[DungeonWave] Pre-enter timeline không ở trạng thái Playing — kiểm tra PlayableDirector / Play On Awake. Bỏ qua chờ.");
-            if (hidPlayerUi)
-                RestorePlayerHudAfterPreEnterIntro();
             yield break;
         }
 
@@ -756,9 +666,6 @@ public class DungeonWaveManager : MonoBehaviour
         while (!completed)
             yield return null;
         dir.stopped -= OnStopped;
-
-        if (hidPlayerUi)
-            RestorePlayerHudAfterPreEnterIntro();
 
         Debug.Log("[DungeonWave] Pre-enter timeline hoàn tất — bắt đầu thông báo wave / đếm ngược.");
     }

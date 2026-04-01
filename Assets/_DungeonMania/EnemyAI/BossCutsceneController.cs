@@ -66,6 +66,9 @@ public class BossCutsceneController : MonoBehaviour
 
     private void OnDestroy()
     {
+        if (_cutsceneActive)
+            EndCutsceneInternal();
+
         if (unsubscribeOnDestroy && director != null)
             director.stopped -= OnDirectorStopped;
     }
@@ -197,27 +200,6 @@ public class BossCutsceneController : MonoBehaviour
         }
 
         playerHudRoot.SetActive(_hudWasActive);
-    }
-
-    private Transform ResolvePlayerRoot()
-    {
-        GameObject player = GameObject.FindGameObjectWithTag("Player");
-        if (player == null) player = GameObject.Find("Player");
-        if (player == null) player = GameObject.Find("player");
-        return player != null ? player.transform : null;
-    }
-
-    private Transform FindInChildren(Transform parent, string name)
-    {
-        if (parent == null) return null;
-        if (parent.name == name) return parent;
-
-        foreach (Transform child in parent)
-        {
-            Transform found = FindInChildren(child, name);
-            if (found != null) return found;
-        }
-        return null;
     }
 
     private void RememberAndSetActive(GameObject go, bool active)
