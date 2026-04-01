@@ -110,6 +110,8 @@ public class DieState : State
     public override void PhysicsUpdate()
     {
         base.PhysicsUpdate();
+        if (character == null || character.controller == null) return;
+        if (!character.controller.enabled || !character.controller.gameObject.activeInHierarchy) return;
 
         // Only apply gravity - no movement allowed
         gravityVelocity.y += character.gravityValue * Time.deltaTime;
