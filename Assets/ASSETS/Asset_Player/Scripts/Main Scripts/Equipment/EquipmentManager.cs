@@ -18,12 +18,15 @@ public class EquipmentManager : MonoBehaviour
     private const int NUM_SLOTS = 4; // Head, Body, Legs, Accessory
     private const int NUM_GEM_SLOTS = 4; // 4 gem slots per equipment piece
 
+    public const int MAX_ENHANCEMENT_LEVEL = 7;
+
     [Serializable]
     private class EquipmentSlots
     {
         public int[] slotItemIds = new int[NUM_SLOTS] { -1, -1, -1, -1 };
         public int[] slotRarities = new int[NUM_SLOTS] { 0, 0, 0, 0 }; // Rarity enum as int
-        public float[] equipStatRolls = new float[NUM_SLOTS] { 1f, 1f, 1f, 1f }; // NEW: rolled stat multiplier per equipment
+        public float[] equipStatRolls = new float[NUM_SLOTS] { 1f, 1f, 1f, 1f }; // rolled stat multiplier per equipment
+        public int[] enhancementLevels = new int[NUM_SLOTS] { 0, 0, 0, 0 }; // +0 to +7
         // Gem slots: [equipSlot][gemSlot] — flat array for JSON serialization
         public int[] gemSlotIds = new int[NUM_SLOTS * NUM_GEM_SLOTS]; // -1 = empty
         public float[] gemRolledValues = new float[NUM_SLOTS * NUM_GEM_SLOTS]; // NEW: rolled gem values
@@ -67,10 +70,11 @@ public class EquipmentManager : MonoBehaviour
             equipmentSlots.gemSlotIds[i] = -1;
             equipmentSlots.gemRolledValues[i] = 0f;
         }
-        // Initialize stat rolls to 1.0 (100%)
+        // Initialize stat rolls to 1.0 (100%) and enhancement to 0
         for (int i = 0; i < NUM_SLOTS; i++)
         {
             equipmentSlots.equipStatRolls[i] = 1f;
+            equipmentSlots.enhancementLevels[i] = 0;
         }
     }
 
@@ -111,6 +115,11 @@ public class EquipmentManager : MonoBehaviour
                 if (equipmentSlots.equipStatRolls == null || equipmentSlots.equipStatRolls.Length != NUM_SLOTS)
                 {
                     equipmentSlots.equipStatRolls = new float[NUM_SLOTS] { 1f, 1f, 1f, 1f };
+                }
+                // Ensure enhancementLevels array exists (backward compat)
+                if (equipmentSlots.enhancementLevels == null || equipmentSlots.enhancementLevels.Length != NUM_SLOTS)
+                {
+                    equipmentSlots.enhancementLevels = new int[NUM_SLOTS] { 0, 0, 0, 0 };
                 }
                 // Ensure gemRolledValues array exists (backward compat)
                 if (equipmentSlots.gemRolledValues == null || equipmentSlots.gemRolledValues.Length != NUM_SLOTS * NUM_GEM_SLOTS)
@@ -234,6 +243,7 @@ public class EquipmentManager : MonoBehaviour
         equipmentSlots.slotItemIds[slotIndex] = -1;
         equipmentSlots.slotRarities[slotIndex] = 0;
         equipmentSlots.equipStatRolls[slotIndex] = 1f;
+        equipmentSlots.enhancementLevels[slotIndex] = 0;
         Save();
         OnEquipmentChanged?.Invoke();
         return true;
@@ -300,7 +310,39 @@ public class EquipmentManager : MonoBehaviour
         }
     }
 
-    // === STAT GETTERS — dùng runtime rarity × rolled multiplier ===
+    // === ENHANCEMENT LEVEL API ===
+
+    /// <summary>
+    /// Get enhancement level (+0 to +7) for a specific equipment slot
+    /// </summary>
+    public int GetEnhancementLevel(int slotIndex)
+    {
+        if (slotIndex < 0 || slotIndex >= NUM_SLOTS) return 0;
+        return equipmentSlots.enhancementLevels[slotIndex];
+    }
+
+    /// <summary>
+    /// Set enhancement level for a specific equipment slot. Clamps to [0, MAX_ENHANCEMENT_LEVEL].
+    /// </summary>
+    public void SetEnhancementLevel(int slotIndex, int level)
+    {
+        if (slotIndex < 0 || slotIndex >= NUM_SLOTS) return;
+        equipmentSlots.enhancementLevels[slotIndex] = Mathf.Clamp(level, 0, MAX_ENHANCEMENT_LEVEL);
+        Save();
+        OnEquipmentChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Get enhancement stat multiplier: 1.0 + level × 0.03
+    /// +0=1.00, +1=1.03, +2=1.06, ... +7=1.21
+    /// </summary>
+    public float GetEnhancementMultiplier(int slotIndex)
+    {
+        int level = GetEnhancementLevel(slotIndex);
+        return 1.0f + level * 0.03f;
+    }
+
+    // === STAT GETTERS — dùng runtime rarity × rolled multiplier × enhancement ===
 
     /// <summary>
     /// Get the rolled stat multiplier for a specific equipment slot
@@ -320,7 +362,7 @@ public class EquipmentManager : MonoBehaviour
             if (item != null)
             {
                 Rarity r = GetEquippedRarity(i);
-                total += item.ScaledHPBonus(r) * equipmentSlots.equipStatRolls[i];
+                total += item.ScaledHPBonus(r) * equipmentSlots.equipStatRolls[i] * GetEnhancementMultiplier(i);
             }
         }
         return total;
@@ -335,7 +377,7 @@ public class EquipmentManager : MonoBehaviour
             if (item != null)
             {
                 Rarity r = GetEquippedRarity(i);
-                total += item.ScaledCritRateBonus(r) * equipmentSlots.equipStatRolls[i];
+                total += item.ScaledCritRateBonus(r) * equipmentSlots.equipStatRolls[i] * GetEnhancementMultiplier(i);
             }
         }
         return Mathf.Clamp01(total);
@@ -350,7 +392,7 @@ public class EquipmentManager : MonoBehaviour
             if (item != null)
             {
                 Rarity r = GetEquippedRarity(i);
-                total += (item.ScaledCritDamageMultiplier(r) - 1f) * equipmentSlots.equipStatRolls[i];
+                total += (item.ScaledCritDamageMultiplier(r) - 1f) * equipmentSlots.equipStatRolls[i] * GetEnhancementMultiplier(i);
             }
         }
         return Mathf.Max(1f, total);
@@ -365,7 +407,7 @@ public class EquipmentManager : MonoBehaviour
             if (item != null)
             {
                 Rarity r = GetEquippedRarity(i);
-                total += item.ScaledMovementSpeedBonus(r) * equipmentSlots.equipStatRolls[i];
+                total += item.ScaledMovementSpeedBonus(r) * equipmentSlots.equipStatRolls[i] * GetEnhancementMultiplier(i);
             }
         }
         return total;
@@ -380,7 +422,7 @@ public class EquipmentManager : MonoBehaviour
             if (item != null)
             {
                 Rarity r = GetEquippedRarity(i);
-                total += item.ScaledAttackSpeedBonus(r) * equipmentSlots.equipStatRolls[i];
+                total += item.ScaledAttackSpeedBonus(r) * equipmentSlots.equipStatRolls[i] * GetEnhancementMultiplier(i);
             }
         }
         return total;
@@ -395,7 +437,7 @@ public class EquipmentManager : MonoBehaviour
             if (item != null)
             {
                 Rarity r = GetEquippedRarity(i);
-                total += item.ScaledDefenseBonus(r) * equipmentSlots.equipStatRolls[i];
+                total += item.ScaledDefenseBonus(r) * equipmentSlots.equipStatRolls[i] * GetEnhancementMultiplier(i);
             }
         }
         return total;
