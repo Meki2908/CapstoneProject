@@ -179,6 +179,7 @@ public class Character : MonoBehaviour
 
     private void FixedUpdate()
     {
+        if (movementSM == null || movementSM.currentState == null) return;
         movementSM.currentState.PhysicsUpdate();
     }
 

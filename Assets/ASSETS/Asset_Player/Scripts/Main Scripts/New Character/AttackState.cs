@@ -1,4 +1,3 @@
-using UnityEditor.Timeline.Actions;
 using UnityEngine;
 
 public class AttackState : State
@@ -15,8 +14,9 @@ public class AttackState : State
     // release-to-cancel support
     bool pressedSinceLastCheck;
     bool nextAttackBuffered;
-    const float commitPoint = 0.5f; // 50% of clip - allow earlier transition
-    const float earlyTransitionPoint = 0.7f; // 70% of clip - can transition early if buffered
+    const float commitPoint = 0.5f; // Buffer from mid-clip
+    const float minChainPoint = 0.70f;
+    const float maxChainPoint = 0.80f;
 
     // Integration
     private EquipmentSystem equipment;
@@ -174,10 +174,12 @@ public class AttackState : State
         
         // Use normalized time from animator state instead of timePassed for more accurate timing
         float normalizedTime = 0f;
+        bool isInTransition = false;
         if (weaponLayerIndex >= 0)
         {
             var stateInfo = character.animator.GetCurrentAnimatorStateInfo(weaponLayerIndex);
             normalizedTime = stateInfo.normalizedTime;
+            isInTransition = character.animator.IsInTransition(weaponLayerIndex);
         }
         else
         {
@@ -191,11 +193,11 @@ public class AttackState : State
             pressedSinceLastCheck = false;
         }
 
-        // Allow early transition if attack is buffered (smoother combo)
-        bool canTransitionEarly = nextAttackBuffered && normalizedTime >= earlyTransitionPoint;
-        bool canTransitionNormal = normalizedTime >= 1f || timePassed >= clipDuration;
+        // Adaptive chain window (70-80%): shorter clips need later chaining, longer clips can chain earlier.
+        float chainPoint = GetAdaptiveChainPoint(clipDuration);
+        bool canTransitionNormal = !isInTransition && normalizedTime >= chainPoint;
 
-        if (canTransitionEarly || canTransitionNormal)
+        if (canTransitionNormal)
         {
             timePassed = 0f;
 
@@ -369,5 +371,16 @@ public class AttackState : State
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Dynamic chain threshold in [0.70..0.80] based on real clip duration.
+    /// Short clips (snappier) chain later; long clips chain earlier to avoid feeling stuck.
+    /// </summary>
+    private float GetAdaptiveChainPoint(float durationSeconds)
+    {
+        // duration <= 0.45s -> 0.80 ; duration >= 1.00s -> 0.70
+        float t = Mathf.InverseLerp(0.45f, 1.00f, Mathf.Max(0.01f, durationSeconds));
+        return Mathf.Lerp(maxChainPoint, minChainPoint, t);
     }
 }
