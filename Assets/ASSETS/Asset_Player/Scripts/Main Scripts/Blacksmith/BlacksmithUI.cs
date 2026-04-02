@@ -97,6 +97,7 @@ public class BlacksmithUI : MonoBehaviour
     [SerializeField] private Image refineSuccessBar;
     [SerializeField] private TextMeshProUGUI refineSuccessText;
     [SerializeField] private Button refineButton;
+    [SerializeField] private RectTransform refineGearImage; // small gear icon next to btn
     [SerializeField] private TextMeshProUGUI refineButtonText;
     [SerializeField] private Image fusionSourceIcon;
     [SerializeField] private Image fusionResultIcon;
@@ -1857,14 +1858,14 @@ public class BlacksmithUI : MonoBehaviour
         float rmul = Item.GetRarityMultiplier(r);
 
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
-        sb.AppendLine("<color=#AAAAAA>Stat          Current      After Refine</color>");
+        sb.AppendLine("<mspace=0.55em><color=#AAAAAA>Stat        Current   After Refine</color>");
 
         void AddStatLine(string name, float baseVal)
         {
             if (baseVal <= 0) return;
             float current = baseVal * rmul * roll * currentMul;
             float next = baseVal * rmul * roll * nextMul;
-            sb.AppendLine($"{name,-14}<color=#FFFFFF>{current:F1}</color>  >>  <color=#00FF00>{next:F1}</color>  <color=#FFD700>(+3%)</color>");
+            sb.AppendLine($"{name,-10} <color=#FFFFFF>{current,7:F1}</color>  >>  <color=#00FF00>{next,7:F1}</color>  <color=#FFD700>(+3%)</color>");
         }
 
         AddStatLine("HP", equip.hpBonus);
@@ -1873,31 +1874,32 @@ public class BlacksmithUI : MonoBehaviour
         {
             float curCR = equip.critRateBonus * rmul * roll * currentMul * 100f;
             float nextCR = equip.critRateBonus * rmul * roll * nextMul * 100f;
-            sb.AppendLine($"Crit Rate      <color=#FFFFFF>{curCR:F1}%</color>  >>  <color=#00FF00>{nextCR:F1}%</color>  <color=#FFD700>(+3%)</color>");
+            sb.AppendLine($"{"Crit Rate",-10} <color=#FFFFFF>{curCR,6:F1}%</color>  >>  <color=#00FF00>{nextCR,6:F1}%</color>  <color=#FFD700>(+3%)</color>");
         }
         if (equip.critDamageMultiplier > 1f)
         {
             float cdBase = equip.critDamageMultiplier - 1f;
             float curCD = (1f + cdBase * rmul * roll * currentMul) * 100f;
             float nextCD = (1f + cdBase * rmul * roll * nextMul) * 100f;
-            sb.AppendLine($"Crit Dmg      <color=#FFFFFF>{curCD:F0}%</color>  >>  <color=#00FF00>{nextCD:F0}%</color>  <color=#FFD700>(+3%)</color>");
+            sb.AppendLine($"{"Crit Dmg",-10} <color=#FFFFFF>{curCD,6:F0}%</color>  >>  <color=#00FF00>{nextCD,6:F0}%</color>  <color=#FFD700>(+3%)</color>");
         }
         if (equip.movementSpeedBonus > 0)
         {
             float curMS = equip.movementSpeedBonus * rmul * roll * currentMul * 100f;
             float nextMS = equip.movementSpeedBonus * rmul * roll * nextMul * 100f;
-            sb.AppendLine($"Move Spd      <color=#FFFFFF>{curMS:F1}%</color>  >>  <color=#00FF00>{nextMS:F1}%</color>  <color=#FFD700>(+3%)</color>");
+            sb.AppendLine($"{"Move Spd",-10} <color=#FFFFFF>{curMS,6:F1}%</color>  >>  <color=#00FF00>{nextMS,6:F1}%</color>  <color=#FFD700>(+3%)</color>");
         }
         if (equip.attackSpeedBonus > 0)
         {
             float curAS = equip.attackSpeedBonus * rmul * roll * currentMul * 100f;
             float nextAS = equip.attackSpeedBonus * rmul * roll * nextMul * 100f;
-            sb.AppendLine($"Atk Spd       <color=#FFFFFF>{curAS:F1}%</color>  >>  <color=#00FF00>{nextAS:F1}%</color>  <color=#FFD700>(+3%)</color>");
+            sb.AppendLine($"{"Atk Spd",-10} <color=#FFFFFF>{curAS,6:F1}%</color>  >>  <color=#00FF00>{nextAS,6:F1}%</color>  <color=#FFD700>(+3%)</color>");
         }
 
-        if (sb.Length < 60)
-            sb.AppendLine("<color=#888888>Không có stat để hiển thị</color>");
+        if (sb.Length < 80)
+            sb.AppendLine("<color=#888888>No stats to display</color>");
 
+        sb.Append("</mspace>");
         refineStatsText.text = sb.ToString().TrimEnd();
     }
 
@@ -1926,36 +1928,96 @@ public class BlacksmithUI : MonoBehaviour
         // Play forge sound
         SoundManager.PlaySound(SoundType.Blacksmith_Forge);
 
-        // Stone shake animation (0.5s)
+        // Cache transforms
+        RectTransform btnRT = refineButton?.GetComponent<RectTransform>();
+        RectTransform gearRT = refineGearImage;
         RectTransform stoneRT = refineMaterialIcon?.GetComponent<RectTransform>();
-        Vector2 originalPos = stoneRT != null ? stoneRT.anchoredPosition : Vector2.zero;
-        float shakeDuration = 0.5f;
-        float shakeTimer = 0f;
-        while (shakeTimer < shakeDuration)
+        RectTransform barRT = refineSuccessBar?.GetComponent<RectTransform>();
+        Vector2 stoneOrigPos = stoneRT != null ? stoneRT.anchoredPosition : Vector2.zero;
+        Quaternion btnOrigRot = btnRT != null ? btnRT.localRotation : Quaternion.identity;
+        Quaternion gearOrigRot = gearRT != null ? gearRT.localRotation : Quaternion.identity;
+        float barOrigFill = refineSuccessBar != null ? refineSuccessBar.fillAmount : 0f;
+        Color barOrigColor = refineSuccessBar != null ? refineSuccessBar.color : Color.green;
+
+        // ── PHASE 1: Dramatic refine animation (~2s) ──
+        float animDuration = 2.0f;
+        float timer = 0f;
+        float spinDirection = 1f;
+        float spinSpeed = 180f;       // degrees/sec
+        float dirChangeTimer = 0f;
+        float nextDirChange = 0.3f;   // first direction change at 0.3s
+
+        while (timer < animDuration)
         {
-            float realDelta = Mathf.Max(Time.unscaledDeltaTime, 0.01f);
-            shakeTimer += realDelta;
-            float progress = shakeTimer / shakeDuration;
-            float intensity = Mathf.Lerp(4f, 12f, progress); // shake increases
-            float offsetX = Mathf.Sin(shakeTimer * 40f) * intensity;
+            float dt = Mathf.Max(Time.unscaledDeltaTime, 0.005f);
+            timer += dt;
+            float progress = timer / animDuration; // 0→1
+
+            // ── Button spin: rotate with increasing speed, alternating direction ──
+            if (btnRT != null)
+            {
+                dirChangeTimer += dt;
+                if (dirChangeTimer >= nextDirChange)
+                {
+                    spinDirection *= -1f;
+                    dirChangeTimer = 0f;
+                    nextDirChange = Mathf.Lerp(0.3f, 0.08f, progress); // faster changes
+                }
+                float currentSpeed = spinSpeed * (1f + progress * 2f); // accelerate
+                btnRT.Rotate(0, 0, currentSpeed * dt * spinDirection);
+                // Small gear: counter-rotate at 1.5x speed (meshing effect)
+                if (gearRT != null)
+                    gearRT.Rotate(0, 0, -currentSpeed * 1.5f * dt * spinDirection);
+            }
+
+            // ── Bar fill: bounce randomly with pulsing color ──
+            if (refineSuccessBar != null)
+            {
+                float bounce = Mathf.Abs(Mathf.Sin(timer * 8f + Mathf.Sin(timer * 3f) * 2f));
+                refineSuccessBar.fillAmount = bounce;
+                // Color shifts: green → yellow → red → green
+                float hue = Mathf.Repeat(timer * 0.8f, 1f);
+                refineSuccessBar.color = Color.HSVToRGB(hue, 0.8f, 0.9f);
+            }
+
+            // ── Stone shake: intensifying ──
             if (stoneRT != null)
-                stoneRT.anchoredPosition = originalPos + new Vector2(offsetX, 0);
+            {
+                float intensity = Mathf.Lerp(3f, 15f, progress);
+                float shakeX = Mathf.Sin(timer * 45f) * intensity;
+                float shakeY = Mathf.Cos(timer * 37f) * intensity * 0.5f;
+                stoneRT.anchoredPosition = stoneOrigPos + new Vector2(shakeX, shakeY);
+            }
+
+            // ── Star images pulse ──
+            if (refineStarImages != null)
+            {
+                for (int i = 0; i < refineStarImages.Length; i++)
+                {
+                    if (refineStarImages[i] != null)
+                    {
+                        float pulse = Mathf.Sin(timer * 12f + i * 0.9f) * 0.5f + 0.5f;
+                        float starHue = Mathf.Repeat(timer * 0.5f + i * 0.1f, 1f);
+                        refineStarImages[i].color = Color.HSVToRGB(starHue, 0.6f, 0.5f + pulse * 0.5f);
+                    }
+                }
+            }
+
             yield return null;
         }
-        if (stoneRT != null) stoneRT.anchoredPosition = originalPos;
 
-        // Success bar blink (3 times)
+        // ── PHASE 2: Quick freeze (dramatic pause) ──
+        if (btnRT != null) btnRT.localRotation = btnOrigRot;
+        if (gearRT != null) gearRT.localRotation = gearOrigRot;
+        if (stoneRT != null) stoneRT.anchoredPosition = stoneOrigPos;
         if (refineSuccessBar != null)
         {
-            Color barColor = refineSuccessBar.color;
-            for (int i = 0; i < 3; i++)
-            {
-                refineSuccessBar.enabled = false;
-                yield return new WaitForSecondsRealtime(0.08f);
-                refineSuccessBar.enabled = true;
-                yield return new WaitForSecondsRealtime(0.08f);
-            }
+            refineSuccessBar.fillAmount = barOrigFill;
+            refineSuccessBar.color = barOrigColor;
         }
+
+        // Flash everything white for a moment
+        yield return new WaitForSecondsRealtime(0.15f);
 
         // Execute refinement
         RefinementResult result = RefinementManager.Instance.TryRefine(selectedRefineSlot, selectedRefineMaterial);
@@ -2114,7 +2176,7 @@ public class BlacksmithUI : MonoBehaviour
             // Clear fusion display
             if (fusionSourceIcon) fusionSourceIcon.enabled = false;
             if (fusionResultIcon) fusionResultIcon.enabled = false;
-            if (fusionInfoText) fusionInfoText.text = "Chọn đá để ghép";
+            if (fusionInfoText) fusionInfoText.text = "Select stone to fuse";
             if (fusionButton) fusionButton.interactable = false;
         }
     }

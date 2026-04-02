@@ -11,159 +11,159 @@ using UnityEngine.Playables;
 public class DungeonWaveManager : MonoBehaviour
 {
     [Header("=== DUNGEON SETTINGS ===")]
-    [Tooltip("Tên dungeon để hiển thị")]
+    [Tooltip("Dungeon display name")]
     public string dungeonName = "Dungeon 1";
-    [Tooltip("Tổng số wave trong dungeon")]
+    [Tooltip("Total waves in dungeon")]
     public int totalWaves = 5;
     [Tooltip("Map type: 0=Desert, 1=Swamp, 2=Hell")]
     public int mapType = 0;
     
     [Header("=== BALANCE DATA ===")]
-    [Tooltip("Kéo EnemyBalanceData.asset vào đây (tạo bằng menu Dungeon → Tạo EnemyBalanceData Asset)")]
+    [Tooltip("Drag EnemyBalanceData.asset here")]
     public EnemyStatTable balanceData;
     
     [Header("=== SCENE TRANSITION ===")]
-    [Tooltip("Tên scene map chính để quay về")]
+    [Tooltip("Main map scene name to return to")]
     public string mainMapSceneName = "Map_Chinh";
-    [Tooltip("Thời gian chờ trước khi tự động quay về map khi THẮNG (giây)")]
+    [Tooltip("Delay before auto-return on WIN (seconds)")]
     public float returnDelayOnWin = 5f;
-    [Tooltip("Thời gian chờ trước khi tự động quay về map khi THUA (giây)")]
+    [Tooltip("Delay before auto-return on LOSE (seconds)")]
     public float returnDelayOnLose = 3f;
 
     [Header("=== SPAWN SETTINGS ===")]
-    [Tooltip("Bán kính spawn enemy xung quanh player")]
+    [Tooltip("Enemy spawn radius around player")]
     public float spawnRadius = 20f;
-    [Tooltip("Khoảng cách tối thiểu từ player khi spawn")]
+    [Tooltip("Minimum spawn distance from player")]
     public float minDistanceFromPlayer = 5f;
-    [Tooltip("Layer của vật cản (tường, đá...)")]
+    [Tooltip("Obstacle layer mask (walls, rocks...)")]
     public LayerMask obstacleLayer;
-    [Tooltip("Số lần thử tìm vị trí spawn hợp lệ")]
+    [Tooltip("Max attempts to find valid spawn position")]
     public int spawnAttemptCount = 10;
 
     [Header("=== WAVE TIMING ===")]
-    [Tooltip("Thời gian đếm ngược trước khi wave bắt đầu (giây)")]
+    [Tooltip("Countdown time before wave starts (seconds)")]
     public float waveCountdownTime = 5f;
-    [Tooltip("Thời gian nghỉ giữa các wave (giây)")]
+    [Tooltip("Rest time between waves (seconds)")]
     public float waveDelayTime = 3f;
 
-    [Header("=== INTRO TIMELINE (trước wave 1) ===")]
-    [Tooltip("PlayableDirector gắn asset 'Pre-enter desert' (quay quanh dungeon). Để trống = không chờ.")]
+    [Header("=== INTRO TIMELINE (before wave 1) ===")]
+    [Tooltip("PlayableDirector for intro cinematic. Leave empty to skip.")]
     public PlayableDirector preEnterDungeonTimeline;
-    [Tooltip("Nếu bật: đợi timeline intro chạy hết rồi mới hiện thông báo wave + đếm ngược (chỉ wave 1).")]
+    [Tooltip("If enabled: wait for intro timeline to finish before wave notification + countdown (wave 1 only).")]
     public bool waitForPreEnterTimelineBeforeWave1 = true;
-    [Tooltip("Nếu bật: gọi Play() từ code khi vào dungeon (dùng khi không Play On Awake hoặc cần reset từ đầu).")]
+    [Tooltip("If enabled: call Play() from code on dungeon enter (use when not Play On Awake or needs reset).")]
     public bool playPreEnterTimelineFromCode = false;
 
-    [Header("=== ENEMY COUNT PER WAVE (CÁCH A - HỆ THỐNG MỚI) ===")]
-    [Tooltip("Số lượng Skelet (Skeleton + skeleton_archer) mỗi wave [wave1, wave2, wave3, wave4, wave5]")]
+    [Header("=== ENEMY COUNT PER WAVE ===")]
+    [Tooltip("Skelet count per wave [wave1, wave2, wave3, wave4, wave5]")]
     public int[] skeletCount = { 3, 4, 5, 4, 0 };
     
-    [Tooltip("Số lượng Lich mỗi wave")]
+    [Tooltip("Lich count per wave")]
     public int[] lichCount = { 0, 0, 0, 1, 0 };
     
-    [Tooltip("Số lượng Stoneogre mỗi wave")]
+    [Tooltip("Stoneogre count per wave")]
     public int[] stoneogreCount = { 0, 0, 0, 0, 0 };
     
-    [Tooltip("Số lượng Golem mỗi wave")]
+    [Tooltip("Golem count per wave")]
     public int[] golemCount = { 0, 0, 0, 0, 0 };
     
-    [Tooltip("Số lượng Minotaur mỗi wave")]
+    [Tooltip("Minotaur count per wave")]
     public int[] minotaurCount = { 0, 0, 0, 0, 0 };
     
-    [Tooltip("Số lượng Ifrit mỗi wave")]
+    [Tooltip("Ifrit count per wave")]
     public int[] ifritCount = { 0, 0, 0, 0, 0 };
     
-    [Tooltip("Số lượng Demon mỗi wave")]
+    [Tooltip("Demon count per wave")]
     public int[] demonCount = { 0, 0, 0, 0, 1 };
     
-    [Tooltip("Số lượng Monster (Orc, Troll, Guul) mỗi wave")]
+    [Tooltip("Monster (Orc, Troll, Guul) count per wave")]
     public int[] monsterCount = { 0, 0, 0, 0, 0 };
     
-    [Tooltip("Tổng số enemy mỗi wave (tự tính)")]
+    [Tooltip("Total enemies per wave (auto-calculated)")]
     public int[] totalEnemiesPerWave;
 
-    [Header("=== PREFAB (CÁCH A) ===")]
-    [Tooltip("Prefab EnemyNew (chứa tất cả enemy bên trong)")]
+    [Header("=== PREFAB ===")]
+    [Tooltip("EnemyNew prefab (contains all enemy types)")]
     public GameObject enemyNewPrefab;
 
-    [Header("=== ITEM DROP CONFIG (theo từng Enemy Type) ===")]
-    [Tooltip("Có drop EXP orb không")]
+    [Header("=== ITEM DROP CONFIG (per Enemy Type) ===")]
+    [Tooltip("Enable EXP orb drops")]
     public bool dropExpOrb = true;
 
-    [Tooltip("Prefab cho item orb rơi (null = tự tạo sphere phát sáng)")]
+    [Tooltip("Item orb prefab (null = auto-generate glowing sphere)")]
     public GameObject itemOrbPrefab;
 
-    [Tooltip("Drop table cho Skeleton/Archer")]
+    [Tooltip("Drop table for Skeleton/Archer")]
     public List<DungeonDropEntry> skeletDrops = new List<DungeonDropEntry>();
-    [Tooltip("Số item tối đa rơi mỗi Skeleton/Archer (0 = không giới hạn)")]
+    [Tooltip("Max items dropped per Skeleton/Archer (0 = unlimited)")]
     public int skeletMaxDrops = 2;
-    [Tooltip("EXP rơi mỗi Skeleton/Archer")]
+    [Tooltip("EXP per Skeleton/Archer kill")]
     public int skeletExp = 100;
 
-    [Tooltip("Drop table cho Monster (Orc, Troll, Guul)")]
+    [Tooltip("Drop table for Monster (Orc, Troll, Guul)")]
     public List<DungeonDropEntry> monsterDrops = new List<DungeonDropEntry>();
-    [Tooltip("Số item tối đa rơi mỗi Monster (0 = không giới hạn)")]
+    [Tooltip("Max items dropped per Monster (0 = unlimited)")]
     public int monsterMaxDrops = 3;
-    [Tooltip("EXP rơi mỗi Monster")]
+    [Tooltip("EXP per Monster kill")]
     public int monsterExp = 300;
 
-    [Tooltip("Drop table cho Lich")]
+    [Tooltip("Drop table for Lich")]
     public List<DungeonDropEntry> lichDrops = new List<DungeonDropEntry>();
-    [Tooltip("Số item tối đa rơi mỗi Lich (0 = không giới hạn)")]
+    [Tooltip("Max items dropped per Lich (0 = unlimited)")]
     public int lichMaxDrops = 3;
-    [Tooltip("EXP rơi mỗi Lich")]
+    [Tooltip("EXP per Lich kill")]
     public int lichExp = 350;
 
-    [Tooltip("Drop table cho Boss chung (fallback)")] 
+    [Tooltip("Drop table for generic Boss (fallback)")] 
     public List<DungeonDropEntry> bossDrops = new List<DungeonDropEntry>();
-    [Tooltip("Số item tối đa rơi mỗi Boss chung (0 = không giới hạn)")]
+    [Tooltip("Max items dropped per Boss (0 = unlimited)")]
     public int bossMaxDrops = 5;
-    [Tooltip("EXP rơi mỗi Boss chung")]
+    [Tooltip("EXP per Boss kill")]
     public int bossExp = 1500;
 
-    [Tooltip("Drop table cho Demon")]
+    [Tooltip("Drop table for Demon")]
     public List<DungeonDropEntry> demonDrops = new List<DungeonDropEntry>();
-    [Tooltip("Số item tối đa rơi mỗi Demon (0 = không giới hạn)")]
+    [Tooltip("Max items dropped per Demon (0 = unlimited)")]
     public int demonMaxDrops = 5;
-    [Tooltip("EXP rơi mỗi Demon")]
+    [Tooltip("EXP per Demon kill")]
     public int demonExp = 3000;
 
-    [Tooltip("Drop table cho Stoneogre")]
+    [Tooltip("Drop table for Stoneogre")]
     public List<DungeonDropEntry> stoneogreDrops = new List<DungeonDropEntry>();
-    [Tooltip("Số item tối đa rơi mỗi Stoneogre (0 = không giới hạn)")]
+    [Tooltip("Max items dropped per Stoneogre (0 = unlimited)")]
     public int stoneogreMaxDrops = 5;
-    [Tooltip("EXP rơi mỗi Stoneogre")]
+    [Tooltip("EXP per Stoneogre kill")]
     public int stoneogreExp = 1500;
 
-    [Tooltip("Drop table cho Golem")]
+    [Tooltip("Drop table for Golem")]
     public List<DungeonDropEntry> golemDrops = new List<DungeonDropEntry>();
-    [Tooltip("Số item tối đa rơi mỗi Golem (0 = không giới hạn)")]
+    [Tooltip("Max items dropped per Golem (0 = unlimited)")]
     public int golemMaxDrops = 5;
-    [Tooltip("EXP rơi mỗi Golem")]
+    [Tooltip("EXP per Golem kill")]
     public int golemExp = 1800;
 
-    [Tooltip("Drop table cho Minotaur")]
+    [Tooltip("Drop table for Minotaur")]
     public List<DungeonDropEntry> minotaurDrops = new List<DungeonDropEntry>();
-    [Tooltip("Số item tối đa rơi mỗi Minotaur (0 = không giới hạn)")]
+    [Tooltip("Max items dropped per Minotaur (0 = unlimited)")]
     public int minotaurMaxDrops = 5;
-    [Tooltip("EXP rơi mỗi Minotaur")]
+    [Tooltip("EXP per Minotaur kill")]
     public int minotaurExp = 2000;
 
-    [Tooltip("Drop table cho Ifrit")]
+    [Tooltip("Drop table for Ifrit")]
     public List<DungeonDropEntry> ifritDrops = new List<DungeonDropEntry>();
-    [Tooltip("Số item tối đa rơi mỗi Ifrit (0 = không giới hạn)")]
+    [Tooltip("Max items dropped per Ifrit (0 = unlimited)")]
     public int ifritMaxDrops = 5;
-    [Tooltip("EXP rơi mỗi Ifrit")]
+    [Tooltip("EXP per Ifrit kill")]
     public int ifritExp = 2500;
 
     [System.Serializable]
     public class DungeonDropEntry
     {
-        [Tooltip("Kéo Item ScriptableObject vào đây")]
+        [Tooltip("Drag Item ScriptableObject here")]
         public Item item;
-        [Tooltip("Số lượng tối thiểu")]
+        [Tooltip("Minimum drop quantity")]
         public int minQuantity = 1;
-        [Tooltip("Số lượng tối đa")]
+        [Tooltip("Maximum drop quantity")]
         public int maxQuantity = 1;
     }
 
@@ -172,19 +172,19 @@ public class DungeonWaveManager : MonoBehaviour
     public Transform player;
     [Tooltip("UI Wave Notification")]
     public GameObject waveNotificationUI;
-    [Tooltip("Text hiển thị tên wave")]
+    [Tooltip("Wave name display text")]
     public TextMeshProUGUI waveNameText;
-    [Tooltip("UI Countdown")]
+    [Tooltip("Countdown UI panel")]
     public GameObject countdownUI;
-    [Tooltip("Text hiển thị đếm ngược")]
+    [Tooltip("Countdown display text")]
     public TextMeshProUGUI countdownText;
-    [Tooltip("UI Dungeon Complete")]
+    [Tooltip("Dungeon Complete UI panel")]
     public GameObject dungeonCompleteUI;
-    [Tooltip("UI Dungeon Failed")]
+    [Tooltip("Dungeon Failed UI panel")]
     public GameObject dungeonFailedUI;
-    [Tooltip("Text hiển thị EXP nhận được")]
+    [Tooltip("EXP reward display text")]
     public TextMeshProUGUI expRewardText;
-    [Tooltip("Text hiển thị thông báo")]
+    [Tooltip("Status notification text")]
     public TextMeshProUGUI statusText;
 
     // ===== PRIVATE VARIABLES =====
@@ -673,8 +673,8 @@ public class DungeonWaveManager : MonoBehaviour
     /// <summary>
     /// Khi wave hoàn thành (kill hết enemy)
     /// </summary>
-    [Header("=== LOOT DELAY (WAVE CUỐI) ===")]
-    [Tooltip("Thời gian chờ sau khi giết hết enemy wave cuối để nhặt đồ (giây)")]
+    [Header("=== LOOT DELAY (FINAL WAVE) ===")]
+    [Tooltip("Delay after killing all enemies in final wave to collect loot (seconds)")]
     public float lastWaveLootDelay = 6f;
 
     private void OnWaveComplete()
@@ -713,7 +713,7 @@ public class DungeonWaveManager : MonoBehaviour
 
         if (statusText != null)
         {
-            statusText.text = "Wave cuối hoàn thành! Nhặt đồ...";
+            statusText.text = "Final wave cleared! Collecting loot...";
             statusText.gameObject.SetActive(true);
         }
 
@@ -732,7 +732,7 @@ public class DungeonWaveManager : MonoBehaviour
     {
         if (waveDelayTime > 0 && statusText != null)
         {
-            statusText.text = $"Wave {currentWave} hoàn thành! Chuẩn bị wave {currentWave + 1}...";
+            statusText.text = $"Wave {currentWave} cleared! Preparing wave {currentWave + 1}...";
             statusText.gameObject.SetActive(true);
             yield return new WaitForSeconds(waveDelayTime);
             statusText.gameObject.SetActive(false);
@@ -771,7 +771,7 @@ public class DungeonWaveManager : MonoBehaviour
     /// Khi player chết
     /// </summary>
     [Header("=== DEATH ANIMATION ===")]
-    [Tooltip("Thời gian chờ animation chết của player trước khi hiện GUI Failed (khớp với DieState.dieDuration)")]
+    [Tooltip("Delay for player death animation before showing Failed GUI (match DieState.dieDuration)")]
     public float deathAnimationDelay = 3f;
 
     public void OnPlayerDied()
@@ -1667,34 +1667,39 @@ public class DungeonWaveManager : MonoBehaviour
     }
 
     /// <summary>
-    /// FIX: Đảm bảo panel Win/Lose luôn hiển thị trên cùng
-    /// Scene có thể override Canvas_Menu lên sortOrder=1000, nên panel phải cao hơn
-    /// Cũng tắt GraphicRaycaster trên các canvas player UI còn sót để không chặn click
+    /// Ensure Win/Lose panel canvas is always on top of all other canvases
+    /// including DungeonRewardCanvas. Also disables GraphicRaycaster on player UI canvases.
     /// </summary>
     private void EnsurePanelOnTop(GameObject panelObj)
     {
         if (panelObj == null) return;
 
-        // Tìm Canvas chứa panel và set sortingOrder rất cao
+        // Set win/fail panel canvas above DungeonRewardCanvas
         Canvas panelCanvas = panelObj.GetComponent<Canvas>();
         if (panelCanvas == null)
             panelCanvas = panelObj.GetComponentInParent<Canvas>();
 
         if (panelCanvas != null)
         {
+            // Set win/fail panel BELOW DungeonRewardCanvas
+            // so reward items are visible on top of win/fail background
+            int rewardSortOrder = 999;
+            if (DungeonRewardUI.Instance != null)
+            {
+                rewardSortOrder = DungeonRewardUI.Instance.RewardCanvasSortOrder;
+            }
+            
             panelCanvas.overrideSorting = true;
-            panelCanvas.sortingOrder = 10000;
-            Debug.Log($"[DungeonWave] FIX: Set '{panelCanvas.gameObject.name}' sortingOrder=10000 (override=true)");
+            panelCanvas.sortingOrder = rewardSortOrder - 1;
+            Debug.Log($"[DungeonWave] Set '{panelCanvas.gameObject.name}' sortingOrder={panelCanvas.sortingOrder} (below reward={rewardSortOrder})");
         }
 
-        // Tắt GraphicRaycaster trên các canvas player UI còn sót (nếu object vẫn active)
-        // để không chặn click lên buttons của panel Win/Lose
+        // Disable GraphicRaycaster on player UI canvases to unblock panel clicks
         Canvas[] allCanvases = FindObjectsByType<Canvas>(FindObjectsSortMode.None);
         foreach (Canvas c in allCanvases)
         {
             if (c == null || c == panelCanvas) continue;
             string cName = c.gameObject.name;
-            // Chỉ tắt raycast trên Canvas_Menu và UI_HP canvases
             if (cName == "Canvas_Menu" || 
                 (cName.StartsWith("UI_HP") && (cName.Contains("Invetory") || cName.Contains("Inventory"))))
             {
@@ -1702,7 +1707,7 @@ public class DungeonWaveManager : MonoBehaviour
                 if (raycaster != null)
                 {
                     raycaster.enabled = false;
-                    Debug.Log($"[DungeonWave] FIX: Disabled GraphicRaycaster on '{cName}' to unblock panel clicks");
+                    Debug.Log($"[DungeonWave] Disabled GraphicRaycaster on '{cName}' to unblock panel clicks");
                 }
             }
         }

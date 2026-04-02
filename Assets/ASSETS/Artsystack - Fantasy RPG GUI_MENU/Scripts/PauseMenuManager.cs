@@ -261,9 +261,22 @@ namespace Artsystack.ArtsystackGui
             Time.timeScale = 1f;
             Cursor.visible = true;
             Cursor.lockState = CursorLockMode.None;
-            HideAllPanels(); // Ẩn pause/settings trước khi chuyển
+            isPaused = false;
+            HideAllPanels();
+
+            // In dungeon: use DungeonWaveManager to return properly
+            // (cleans up reward panel, restores player UI, goes to Map_Chinh)
+            var dwm = FindFirstObjectByType<DungeonWaveManager>();
+            if (dwm != null)
+            {
+                SetPlayerInput(true); // Re-enable player input before transition
+                dwm.ReturnToMainMap();
+                return;
+            }
+
+            // Not in dungeon: go to main menu normally
             if (SceneTransitionManager.Instance != null)
-                SceneTransitionManager.Instance.GoToScene(mainMenuSceneName, "Đang quay về menu...");
+                SceneTransitionManager.Instance.GoToScene(mainMenuSceneName, "Returning to menu...");
             else
                 SceneManager.LoadScene(mainMenuSceneName);
         }

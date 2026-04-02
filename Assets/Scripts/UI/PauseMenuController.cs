@@ -229,8 +229,14 @@ public class PauseMenuController : MonoBehaviour
     
     void Update()
     {
-        // PauseMenuManager.Update() xử lý ESC cho GUI pause
-        // PauseMenuController chỉ xử lý khi có menuCanvas (Canv_Options) riêng
+        // If PauseMenuManager is handling ESC in this scene (dungeon/gameplay),
+        // let it take priority — avoid double-toggle conflicts
+        var pauseManager = Artsystack.ArtsystackGui.PauseMenuManager.Instance;
+        if (pauseManager != null && pauseManager.enabled)
+            return;
+
+        // PauseMenuController only handles ESC when PauseMenuManager is absent
+        // (e.g. in-game options via Canv_Options)
         if (menuCanvas == null)
             return;
 

@@ -1,99 +1,108 @@
 using UnityEngine;
 using UnityEditor;
 using TMPro;
+using UnityEngine.UI;
 
 /// <summary>
 /// Editor tool: "Tools → Fix Refinement Text to English"
-/// Updates existing prefab text from Vietnamese to English without recreating anything.
+/// Updates existing Vietnamese text on prefab to English.
+/// Safe to run multiple times — only changes matching Vietnamese text.
 /// </summary>
 public class RefinementTextFixer : Editor
 {
     [MenuItem("Tools/Fix Refinement Text to English")]
-    public static void Fix()
+    public static void FixText()
     {
         Transform root = null;
         var prefabStage = UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
         if (prefabStage != null)
             root = prefabStage.prefabContentsRoot.transform;
+
         if (root == null)
         {
+            // Try scene
             var bsUI = Object.FindFirstObjectByType<BlacksmithUI>(FindObjectsInactive.Include);
             if (bsUI != null) root = bsUI.transform;
         }
+
         if (root == null)
         {
-            EditorUtility.DisplayDialog("Error", "Open Canvas_Blacksmith prefab first!", "OK");
+            EditorUtility.DisplayDialog("Error",
+                "Open Canvas_Blacksmith in Prefab Mode first!", "OK");
             return;
         }
 
         int count = 0;
 
-        // Tab button
-        count += FixText(root, "RefineTabBtn", "REFINE");
-
-        // Equipment name default
-        count += FixText(root, "RefineEquipName", "Select equipment to refine");
-
-        // Success rate
-        count += FixText(root, "RefineSuccessText", "Success Rate: 0%");
-
-        // Refine button
-        count += FixText(root, "RefineBtn", "REFINE");
-
-        // Fusion
-        count += FixText(root, "FusionTitle", "FUSION");
-        count += FixText(root, "FusionInfoText", "4x >> 1x");
-        count += FixText(root, "FusionBtn", "FUSE");
-
-        // Material slot text (inside RefineMaterial)
-        Transform matSlot = FindChild(root, "RefineMaterial");
-        if (matSlot != null)
+        // Fix all TMP text components
+        var allTMP = root.GetComponentsInChildren<TextMeshProUGUI>(true);
+        foreach (var tmp in allTMP)
         {
-            var texts = matSlot.GetComponentsInChildren<TextMeshProUGUI>(true);
-            foreach (var t in texts)
+            string original = tmp.text;
+            string replaced = ReplaceVietnamese(original);
+            if (replaced != original)
             {
-                if (t.text.Contains("Ch") || t.text.Contains("Da") || t.text.Contains("Tinh"))
+                Undo.RecordObject(tmp, "Fix Text to English");
+                tmp.text = replaced;
+                EditorUtility.SetDirty(tmp);
+                Debug.Log($"[TextFixer] '{tmp.gameObject.name}': \"{original}\" >> \"{replaced}\"");
+                count++;
+            }
+        }
+
+        // Also fix button text on sidebar tab
+        var allButtons = root.GetComponentsInChildren<Button>(true);
+        foreach (var btn in allButtons)
+        {
+            var btnText = btn.GetComponentInChildren<TextMeshProUGUI>(true);
+            if (btnText != null)
+            {
+                string original = btnText.text;
+                string replaced = ReplaceVietnamese(original);
+                if (replaced != original)
                 {
-                    t.text = "Select Refinement Stone";
-                    EditorUtility.SetDirty(t);
+                    Undo.RecordObject(btnText, "Fix Button Text");
+                    btnText.text = replaced;
+                    EditorUtility.SetDirty(btnText);
+                    Debug.Log($"[TextFixer] Button '{btn.gameObject.name}': \"{original}\" >> \"{replaced}\"");
                     count++;
                 }
             }
         }
 
-        // Sidebar buttons — also fix if they have Vietnamese
-        count += FixText(root, "WeaponTabBtn", null);   // don't change weapon tab
-        count += FixText(root, "EquipTabBtn", null);     // don't change equip tab
-
         EditorUtility.DisplayDialog("Done!",
-            $"Fixed {count} text elements to English.\n\nApply Prefab Overrides to save.", "OK");
+            $"Fixed {count} text elements to English.\n\n" +
+            "Apply Prefab Overrides to save.", "OK");
     }
 
-    static int FixText(Transform root, string name, string newText)
+    static string ReplaceVietnamese(string text)
     {
-        if (newText == null) return 0;
-        Transform t = FindChild(root, name);
-        if (t == null) return 0;
+        if (string.IsNullOrEmpty(text)) return text;
 
-        var tmp = t.GetComponentInChildren<TextMeshProUGUI>(true);
-        if (tmp != null)
-        {
-            tmp.text = newText;
-            EditorUtility.SetDirty(tmp);
-            Debug.Log($"[TextFixer] {name}: '{tmp.text}' -> '{newText}'");
-            return 1;
-        }
-        return 0;
-    }
+        // Tab buttons
+        text = text.Replace("TINH LUYEN", "REFINE");
+        text = text.Replace("TINH LUY\u1EC6N", "REFINE");
 
-    static Transform FindChild(Transform parent, string name)
-    {
-        if (parent.name == name) return parent;
-        foreach (Transform child in parent)
-        {
-            Transform found = FindChild(child, name);
-            if (found != null) return found;
-        }
-        return null;
+        // Default texts
+        text = text.Replace("Ch\u1ECDn trang b\u1ECB \u0111\u1EC3 tinh luy\u1EC7n", "Select equipment to refine");
+        text = text.Replace("Chon trang bi de tinh luyen", "Select equipment to refine");
+
+        text = text.Replace("Ch\u1ECDn \u0110\u00E1 Tinh Luy\u1EC7n", "Select Refinement Stone");
+        text = text.Replace("Chon Da Tinh Luyen", "Select Refinement Stone");
+
+        text = text.Replace("T\u1EC9 l\u1EC7 th\u00E0nh c\u00F4ng: 0%", "Success Rate: 0%");
+        text = text.Replace("Ti le thanh cong: 0%", "Success Rate: 0%");
+
+        // Fusion section
+        text = text.Replace("GHEP DA", "FUSION");
+        text = text.Replace("GH\u00C9P \u0110\u00C1", "FUSION");
+        text = text.Replace("GHEP", "FUSE");
+        text = text.Replace("4\u00D7 \u2192 1\u00D7", "4x >> 1x");
+
+        // Fusion placeholder
+        text = text.Replace("Ch\u1ECDn \u0111\u00E1 \u0111\u1EC3 gh\u00E9p", "Select stone to fuse");
+        text = text.Replace("Chon da de ghep", "Select stone to fuse");
+
+        return text;
     }
 }

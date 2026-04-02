@@ -4,64 +4,67 @@ using TMPro;
 using System.Collections.Generic;
 
 /// <summary>
-/// Dungeon Reward UI — Hiển thị tổng hợp item thu được khi hoàn thành dungeon
-/// Kiểu Genshin Impact domain reward screen
-/// Tự tạo UI bằng code, không cần setup prefab
+/// Dungeon Reward UI — Displays collected items after dungeon completion
+/// Genshin Impact-style domain reward screen
+/// Fully code-generated UI, no prefab setup required
 /// </summary>
 public class DungeonRewardUI : MonoBehaviour
 {
     public static DungeonRewardUI Instance { get; private set; }
 
     [Header("=== Settings ===")]
-    [Tooltip("Kích thước mỗi ô item")]
+    [Tooltip("Size of each item slot")]
     [SerializeField] private float slotSize = 200f;
-    [Tooltip("Khoảng cách giữa các ô")]
+    [Tooltip("Spacing between slots")]
     [SerializeField] private float slotSpacing = 20f;
-    [Tooltip("Chiều rộng panel")]
+    [Tooltip("Panel width")]
     [SerializeField] private float panelWidth = 1920f;
-    [Tooltip("Chiều cao panel")]
+    [Tooltip("Panel height")]
     [SerializeField] private float panelHeight = 1080f;
-    [Tooltip("Dịch ngang panel (+ sang phải, - sang trái)")]
+    [Tooltip("Horizontal panel offset (+ right, - left)")]
     [SerializeField] private float panelOffsetX = 0f;
-    [Tooltip("Dịch dọc panel (+ lên trên, - xuống dưới)")]
+    [Tooltip("Vertical panel offset (+ up, - down)")]
     [SerializeField] private float panelOffsetY = 0f;
 
     [Header("=== Font Size ===")]
-    [Tooltip("Font tên item")]
+    [Tooltip("Item name font size")]
     [SerializeField] private float itemNameFontSize = 24f;
-    [Tooltip("Font số lượng (x3)")]
+    [Tooltip("Quantity label font size (x3)")]
     [SerializeField] private float quantityFontSize = 32f;
-    [Tooltip("Font dòng tổng phía dưới")]
+    [Tooltip("Summary text font size (bottom)")]
     [SerializeField] private float countFontSize = 36f;
-    [Tooltip("Font khi không có vật phẩm")]
+    [Tooltip("Summary text vertical offset (+ up, - down)")]
+    [SerializeField] private float countTextOffsetY = 0f;
+    [Tooltip("Font size when no items collected")]
     [SerializeField] private float noItemFontSize = 48f;
 
-    [Header("=== Slot Chi Tiết ===")]
-    [Tooltip("Chiều rộng thêm cho slot")]
+    [Header("=== Slot Details ===")]
+    [Tooltip("Extra width added to each slot")]
     [SerializeField] private float slotExtraWidth = 0f;
-    [Tooltip("Chiều cao thêm cho phần tên item dưới slot")]
+    [Tooltip("Extra height for item name area below slot")]
     [SerializeField] private float slotExtraHeight = 70f;
-    [Tooltip("Viền trong slot (px)")]
+    [Tooltip("Border inset inside slot (px)")]
     [SerializeField] private float slotBorderInset = 8f;
-    [Tooltip("Padding nội dung (trái/phải/trên/dưới)")]
+    [Tooltip("Content padding (left/right/top/bottom)")]
     [SerializeField] private float contentPadding = 40f;
-    [Tooltip("Chiều cao scrollbar")]
+    [Tooltip("Scrollbar height")]
     [SerializeField] private float scrollbarHeight = 24f;
 
-    [Header("=== Custom Assets (kéo vào Inspector) ===")]
-    [Tooltip("Sprite nền panel chính (null = dùng màu mặc định)")]
+    [Header("=== Custom Assets (drag into Inspector) ===")]
+    [Tooltip("Panel background sprite (null = use default color)")]
     [SerializeField] private Sprite panelBackgroundSprite;
-    [Tooltip("Sprite nền mỗi ô item (null = dùng màu mặc định)")]
+    [Tooltip("Slot background sprite (null = use default color)")]
     [SerializeField] private Sprite slotBackgroundSprite;
-    [Tooltip("Sprite viền rarity mỗi ô (null = dùng màu mặc định)")]
+    [Tooltip("Slot rarity border sprite (null = use default color)")]
     [SerializeField] private Sprite slotBorderSprite;
-    [Tooltip("Image Type cho panel/slot sprites")]
+    [Tooltip("Image Type for panel/slot sprites")]
     [SerializeField] private Image.Type spriteImageType = Image.Type.Sliced;
 
     [Header("=== Canvas Sorting ===")] 
-    [Tooltip("SortingOrder cho reward canvas (tạo bằng code)")]
+    [Tooltip("Sorting order for reward canvas (created at runtime)")]
     [SerializeField] private int rewardCanvasSortOrder = 999;
-    [Tooltip("SortingOrder cho tooltip khi hover item trong reward")]
+    public int RewardCanvasSortOrder => rewardCanvasSortOrder;
+    [Tooltip("Sorting order for tooltip when hovering items in reward")]
     [SerializeField] private int tooltipSortOrder = 1000;
 
     // Danh sách item thu được trong dungeon
@@ -72,6 +75,7 @@ public class DungeonRewardUI : MonoBehaviour
     private GameObject panelRoot;
     private GameObject contentContainer;
     private bool isShowing = false;
+    private bool needsRefresh = false; // Flag để Update() rebuild UI khi Inspector thay đổi
     private int originalTooltipSortingOrder = 0;
 
     [System.Serializable]
@@ -119,24 +123,39 @@ public class DungeonRewardUI : MonoBehaviour
 
     /// <summary>
     /// Auto-refresh khi thay đổi Inspector values trong Play mode
+    /// OnValidate chạy trên editor thread → chỉ set flag, xử lý trong Update
     /// </summary>
     private void OnValidate()
     {
         if (!Application.isPlaying || !isShowing) return;
-        
-        // Tạo lại panel với giá trị mới
-        if (panelRoot != null) Destroy(panelRoot);
-        if (rewardCanvas != null) Destroy(rewardCanvas.gameObject);
-        isShowing = false;
-        
-        // Delay 1 frame để tránh lỗi
-        StartCoroutine(RefreshNextFrame());
+        needsRefresh = true;
     }
 
-    private System.Collections.IEnumerator RefreshNextFrame()
+    private void Update()
     {
-        yield return null;
-        ShowRewardPanel();
+        if (needsRefresh && isShowing)
+        {
+            needsRefresh = false;
+            RebuildPanelContent();
+        }
+    }
+
+    /// <summary>
+    /// Rebuild chỉ nội dung panel, giữ canvas nguyên
+    /// Dùng khi thay đổi Inspector values lúc Play mode
+    /// </summary>
+    private void RebuildPanelContent()
+    {
+        if (rewardCanvas == null) return;
+        
+        // Cập nhật sort order từ Inspector
+        rewardCanvas.sortingOrder = rewardCanvasSortOrder;
+        
+        // Xóa panel cũ
+        if (panelRoot != null) Destroy(panelRoot);
+        
+        // Tạo lại nội dung panel (canvas giữ nguyên)
+        BuildPanelContent();
     }
 
     /// <summary>
@@ -213,25 +232,35 @@ public class DungeonRewardUI : MonoBehaviour
     /// </summary>
     private void CreateRewardUI()
     {
+        // Xóa panel cũ nếu có (giữ canvas)
+        if (panelRoot != null) Destroy(panelRoot);
 
-        // Xóa UI cũ nếu có
-        if (rewardCanvas != null) Destroy(rewardCanvas.gameObject);
+        // === CANVAS: chỉ tạo mới nếu chưa có ===
+        if (rewardCanvas == null)
+        {
+            GameObject canvasGO = new GameObject("DungeonRewardCanvas");
+            rewardCanvas = canvasGO.AddComponent<Canvas>();
+            rewardCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvasGO.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            canvasGO.GetComponent<CanvasScaler>().referenceResolution = new Vector2(1920, 1080);
+            canvasGO.GetComponent<CanvasScaler>().screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            canvasGO.GetComponent<CanvasScaler>().matchWidthOrHeight = 0.5f;
+            canvasGO.AddComponent<GraphicRaycaster>();
+        }
 
-        // === CANVAS ===
-        GameObject canvasGO = new GameObject("DungeonRewardCanvas");
-        rewardCanvas = canvasGO.AddComponent<Canvas>();
-        rewardCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        // Luôn cập nhật sort order từ Inspector
         rewardCanvas.sortingOrder = rewardCanvasSortOrder;
-        canvasGO.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        canvasGO.GetComponent<CanvasScaler>().referenceResolution = new Vector2(1920, 1080);
-        canvasGO.GetComponent<CanvasScaler>().screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-        canvasGO.GetComponent<CanvasScaler>().matchWidthOrHeight = 0.5f;
-        canvasGO.AddComponent<GraphicRaycaster>();
 
-        // Dim background đã tắt
+        BuildPanelContent();
+    }
 
+    /// <summary>
+    /// Tạo nội dung panel bên trong canvas đã có sẵn
+    /// </summary>
+    private void BuildPanelContent()
+    {
         // === MAIN PANEL ===
-        panelRoot = CreateUIElement("RewardPanel", canvasGO.transform);
+        panelRoot = CreateUIElement("RewardPanel", rewardCanvas.transform);
         RectTransform panelRT = panelRoot.GetComponent<RectTransform>();
         panelRT.anchorMin = new Vector2(0.5f, 0.5f);
         panelRT.anchorMax = new Vector2(0.5f, 0.5f);
@@ -339,7 +368,7 @@ public class DungeonRewardUI : MonoBehaviour
             // No items
             GameObject noItemGO = CreateUIElement("NoItems", contentGO.transform);
             TextMeshProUGUI noItemText = noItemGO.AddComponent<TextMeshProUGUI>();
-            noItemText.text = "Không có vật phẩm";
+            noItemText.text = "No items collected";
             noItemText.fontSize = noItemFontSize;
             noItemText.alignment = TextAlignmentOptions.Center;
             noItemText.color = Color.gray;
@@ -360,12 +389,12 @@ public class DungeonRewardUI : MonoBehaviour
         countRT.anchorMin = new Vector2(0, 0);
         countRT.anchorMax = new Vector2(1, 0.15f);
         countRT.sizeDelta = Vector2.zero;
-        countRT.anchoredPosition = Vector2.zero;
+        countRT.anchoredPosition = new Vector2(0, countTextOffsetY);
 
         TextMeshProUGUI countText = countGO.AddComponent<TextMeshProUGUI>();
         int totalItems = 0;
         foreach (var e in collectedItems) totalItems += e.quantity;
-        countText.text = $"Tổng: {collectedItems.Count} loại, {totalItems} vật phẩm";
+        countText.text = $"Total: {collectedItems.Count} types, {totalItems} items";
         countText.fontSize = countFontSize;
         countText.alignment = TextAlignmentOptions.Center;
         countText.color = new Color(0.7f, 0.7f, 0.7f);
