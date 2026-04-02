@@ -51,6 +51,10 @@ public enum SoundType
     Blacksmith_Socket_Success,
     Blacksmith_Socket_Fail,
 
+    // Blacksmith refinement
+    Blacksmith_Refine_Success,
+    Blacksmith_Refine_Fail,
+
     // === ENEMY COMMON SOUNDS ===
     Enemy_Attack,           // Monster melee attack swing
     Enemy_GetHit,           // Enemy bị player đánh

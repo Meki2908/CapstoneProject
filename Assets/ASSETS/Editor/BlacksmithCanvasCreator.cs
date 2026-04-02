@@ -115,6 +115,8 @@ public class BlacksmithCanvasCreator : Editor
             GOLD, Color.black);
         Button equipmentTabButton = CreateButton(sidebar.transform, "EquipTabBtn", "TRANG BI", 32, 240, 90,
             BTN_NORMAL, TEXT_WHITE);
+        Button refinementTabButton = CreateButton(sidebar.transform, "RefineTabBtn", "TINH LUYEN", 28, 240, 90,
+            BTN_NORMAL, TEXT_WHITE);
 
         // ─── RIGHT CONTENT AREA (right of sidebar) ──────────────
         GameObject content = CreatePanel(body.transform, "ContentArea",
@@ -206,6 +208,137 @@ public class BlacksmithCanvasCreator : Editor
         // ── Equipment Crystal Slot ──
         GameObject equipCrystalRow = CreateLayoutRow(equipmentTabPanel.transform, "EquipCrystalRow", 130);
         var ecResult = CreateCrystalSlot(equipCrystalRow.transform, "EquipCrystal");
+
+        // ================================================================
+        // REFINEMENT TAB PANEL
+        // ================================================================
+        GameObject refinementTabPanel = CreatePanel(content.transform, "RefinementTabPanel",
+            Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, new Color(0, 0, 0, 0));
+        refinementTabPanel.SetActive(false);
+
+        var refineLayout = refinementTabPanel.AddComponent<VerticalLayoutGroup>();
+        refineLayout.padding = new RectOffset(30, 30, 20, 20);
+        refineLayout.spacing = 14;
+        refineLayout.childAlignment = TextAnchor.UpperCenter;
+        refineLayout.childForceExpandWidth = true;
+        refineLayout.childForceExpandHeight = false;
+
+        // ── Refine Equipment Selection Row (4 slots) ──
+        GameObject refineEquipRow = CreateLayoutRow(refinementTabPanel.transform, "RefineEquipRow", 130);
+        string[] refineSlotLabels = { "Head", "Body", "Legs", "Acc" };
+        Button[] refineEquipSlotButtons = new Button[4];
+        Image[] refineEquipSlotIcons = new Image[4];
+        for (int i = 0; i < 4; i++)
+        {
+            GameObject slotGO = CreatePanel(refineEquipRow.transform, $"RefineEquipSlot_{i}",
+                Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero, SLOT_EMPTY);
+            var slotLE = slotGO.AddComponent<LayoutElement>();
+            slotLE.preferredWidth = 110;
+            slotLE.preferredHeight = 110;
+            AddOutline(slotGO, SLOT_BORDER, 2);
+            refineEquipSlotButtons[i] = slotGO.AddComponent<Button>();
+            SetButtonColors(refineEquipSlotButtons[i], SLOT_EMPTY, BTN_HIGHLIGHT);
+            refineEquipSlotIcons[i] = slotGO.GetComponent<Image>();
+            TextMeshProUGUI rSlotLabel = CreateText(slotGO.transform, "Label", refineSlotLabels[i], 18, TEXT_DIM, TextAlignmentOptions.Bottom);
+            var rLabelRect = rSlotLabel.GetComponent<RectTransform>();
+            rLabelRect.anchorMin = Vector2.zero;
+            rLabelRect.anchorMax = Vector2.one;
+            rLabelRect.offsetMin = Vector2.zero;
+            rLabelRect.offsetMax = Vector2.zero;
+        }
+
+        // ── Refine Equip Name ──
+        TextMeshProUGUI refineEquipNameText = CreateText(refinementTabPanel.transform, "RefineEquipName", "Chọn trang bị để tinh luyện", 30, GOLD, TextAlignmentOptions.Center);
+        refineEquipNameText.fontStyle = FontStyles.Bold;
+        var reNameLE = refineEquipNameText.gameObject.AddComponent<LayoutElement>();
+        reNameLE.preferredHeight = 50;
+
+        // ── Refine Level Display ──
+        TextMeshProUGUI refineLevelText = CreateText(refinementTabPanel.transform, "RefineLevelText", "", 34, GOLD, TextAlignmentOptions.Center);
+        refineLevelText.fontStyle = FontStyles.Bold;
+        var rlLE = refineLevelText.gameObject.AddComponent<LayoutElement>();
+        rlLE.preferredHeight = 50;
+
+        // ── Stats Preview ──
+        GameObject statsPreviewGO = CreatePanel(refinementTabPanel.transform, "RefineStatsPreview",
+            Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero, new Color(0.1f, 0.1f, 0.15f, 0.8f));
+        var statsPreviewLE = statsPreviewGO.AddComponent<LayoutElement>();
+        statsPreviewLE.preferredHeight = 180;
+        statsPreviewLE.flexibleWidth = 1;
+        AddOutline(statsPreviewGO, SLOT_BORDER, 1);
+        TextMeshProUGUI refineStatsText = CreateText(statsPreviewGO.transform, "StatsText", "", 24, TEXT_WHITE, TextAlignmentOptions.Left);
+        refineStatsText.enableWordWrapping = true;
+        var rstRect = refineStatsText.GetComponent<RectTransform>();
+        rstRect.anchorMin = Vector2.zero;
+        rstRect.anchorMax = Vector2.one;
+        rstRect.offsetMin = new Vector2(20, 10);
+        rstRect.offsetMax = new Vector2(-20, -10);
+
+        // ── Material Slot ──
+        GameObject refineMaterialRow = CreateLayoutRow(refinementTabPanel.transform, "RefineMaterialRow", 110);
+        var rmResult = CreateCrystalSlot(refineMaterialRow.transform, "RefineMaterial");
+        // Override default text
+        rmResult.text.text = "Chọn Đá Tinh Luyện";
+
+        // ── Refine Success Rate ──
+        TextMeshProUGUI refineSuccessText = CreateText(refinementTabPanel.transform, "RefineSuccessText",
+            "Tỉ lệ thành công: 0%", 28, TEXT_WHITE, TextAlignmentOptions.Center);
+        var rsTextLE = refineSuccessText.gameObject.AddComponent<LayoutElement>();
+        rsTextLE.preferredHeight = 44;
+
+        GameObject refineBarBG = CreatePanel(refinementTabPanel.transform, "RefineBarBG",
+            Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero,
+            new Color(0.15f, 0.15f, 0.2f, 0.9f));
+        var rbLE = refineBarBG.AddComponent<LayoutElement>();
+        rbLE.preferredHeight = 36;
+        rbLE.flexibleWidth = 1;
+        AddOutline(refineBarBG, SLOT_BORDER, 2);
+
+        GameObject refineBarFill = CreatePanel(refineBarBG.transform, "RefineBarFill",
+            Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, SUCCESS_GREEN);
+        Image refineSuccessBar = refineBarFill.GetComponent<Image>();
+        refineSuccessBar.type = Image.Type.Filled;
+        refineSuccessBar.fillMethod = Image.FillMethod.Horizontal;
+        refineSuccessBar.fillOrigin = (int)Image.OriginHorizontal.Left;
+        refineSuccessBar.fillAmount = 0f;
+
+        // ── Refine Button ──
+        Button refineButton = CreateButton(refinementTabPanel.transform, "RefineBtn", "TINH LUYEN", 34, 500, 85,
+            new Color(0.5f, 0.3f, 0.1f, 0.9f), Color.white);
+        TextMeshProUGUI refineButtonText = refineButton.GetComponentInChildren<TextMeshProUGUI>();
+        refineButton.GetComponent<LayoutElement>().preferredHeight = 85;
+
+        // ── Fusion Section ──
+        GameObject fusionSection = CreatePanel(refinementTabPanel.transform, "FusionSection",
+            Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero,
+            new Color(0.12f, 0.1f, 0.18f, 0.85f));
+        var fsLE = fusionSection.AddComponent<LayoutElement>();
+        fsLE.preferredHeight = 100;
+        fsLE.flexibleWidth = 1;
+        AddOutline(fusionSection, new Color(0.5f, 0.3f, 0.7f, 0.5f), 2);
+
+        var fusionHLG = fusionSection.AddComponent<HorizontalLayoutGroup>();
+        fusionHLG.padding = new RectOffset(20, 20, 10, 10);
+        fusionHLG.spacing = 16;
+        fusionHLG.childAlignment = TextAnchor.MiddleCenter;
+        fusionHLG.childForceExpandWidth = false;
+        fusionHLG.childForceExpandHeight = false;
+
+        TextMeshProUGUI fusionTitle = CreateText(fusionSection.transform, "FusionTitle", "GHEP DA", 24, GOLD, TextAlignmentOptions.Center);
+        fusionTitle.fontStyle = FontStyles.Bold;
+        var ftLE = fusionTitle.gameObject.AddComponent<LayoutElement>();
+        ftLE.preferredWidth = 120;
+
+        Image fusionSourceIcon = CreateImageSlot(fusionSection.transform, "FusionSourceIcon", 60, 60, new Color(0.3f, 0.3f, 0.3f, 0.5f));
+
+        TextMeshProUGUI fusionInfoText = CreateText(fusionSection.transform, "FusionInfoText", "4× → 1×", 24, TEXT_WHITE, TextAlignmentOptions.Center);
+        var fiLE = fusionInfoText.gameObject.AddComponent<LayoutElement>();
+        fiLE.flexibleWidth = 1;
+
+        Image fusionResultIcon = CreateImageSlot(fusionSection.transform, "FusionResultIcon", 60, 60, new Color(0.3f, 0.3f, 0.3f, 0.5f));
+
+        Button fusionButton = CreateButton(fusionSection.transform, "FusionBtn", "GHEP", 24, 120, 60,
+            new Color(0.3f, 0.2f, 0.5f, 0.9f), Color.white);
 
         // ================================================================
         // SUCCESS RATE BAR (shared, at bottom of content)
@@ -347,6 +480,35 @@ public class BlacksmithCanvasCreator : Editor
         so.FindProperty("resultIcon").objectReferenceValue = resultIcon;
 
         so.FindProperty("inventoryContent").objectReferenceValue = inventoryContent;
+
+        // === REFINEMENT TAB REFERENCES ===
+        so.FindProperty("refinementTabButton").objectReferenceValue = refinementTabButton;
+        so.FindProperty("refinementTabPanel").objectReferenceValue = refinementTabPanel;
+
+        var refEquipBtnsProp = so.FindProperty("refineEquipSlotButtons");
+        refEquipBtnsProp.arraySize = 4;
+        for (int i = 0; i < 4; i++)
+            refEquipBtnsProp.GetArrayElementAtIndex(i).objectReferenceValue = refineEquipSlotButtons[i];
+
+        var refEquipIconsProp = so.FindProperty("refineEquipSlotIcons");
+        refEquipIconsProp.arraySize = 4;
+        for (int i = 0; i < 4; i++)
+            refEquipIconsProp.GetArrayElementAtIndex(i).objectReferenceValue = refineEquipSlotIcons[i];
+
+        so.FindProperty("refineEquipNameText").objectReferenceValue = refineEquipNameText;
+        so.FindProperty("refineLevelText").objectReferenceValue = refineLevelText;
+        so.FindProperty("refineStatsText").objectReferenceValue = refineStatsText;
+        so.FindProperty("refineMaterialIcon").objectReferenceValue = rmResult.icon;
+        so.FindProperty("refineMaterialText").objectReferenceValue = rmResult.text;
+        so.FindProperty("refineMaterialClearButton").objectReferenceValue = rmResult.clearBtn;
+        so.FindProperty("refineSuccessBar").objectReferenceValue = refineSuccessBar;
+        so.FindProperty("refineSuccessText").objectReferenceValue = refineSuccessText;
+        so.FindProperty("refineButton").objectReferenceValue = refineButton;
+        so.FindProperty("refineButtonText").objectReferenceValue = refineButtonText;
+        so.FindProperty("fusionSourceIcon").objectReferenceValue = fusionSourceIcon;
+        so.FindProperty("fusionResultIcon").objectReferenceValue = fusionResultIcon;
+        so.FindProperty("fusionButton").objectReferenceValue = fusionButton;
+        so.FindProperty("fusionInfoText").objectReferenceValue = fusionInfoText;
 
         // Try to find ItemUIPrefab from existing InventoryController in scene or project
         var invCtrl = FindFirstObjectByType<InventoryController>(FindObjectsInactive.Include);

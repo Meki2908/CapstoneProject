@@ -7,8 +7,8 @@ using TMPro;
 
 /// <summary>
 /// Main controller for the NPC Blacksmith GUI.
-/// 2 tabs: Weapon Socketing (3 slots) and Equipment Socketing (4 slots).
-/// Handles gem/crystal selection, success rate display, and socketing execution.
+/// 3 tabs: Weapon Socketing (3 slots), Equipment Socketing (4 slots), and Refinement (+0→+7).
+/// Handles gem/crystal selection, success rate display, socketing execution, and equipment refinement.
 /// </summary>
 public class BlacksmithUI : MonoBehaviour
 {
@@ -82,11 +82,37 @@ public class BlacksmithUI : MonoBehaviour
     private TextMeshProUGUI bsTooltipText;
     private RectTransform bsTooltipRect;
 
+    [Header("Refinement Tab")]
+    [SerializeField] private Button refinementTabButton;
+    [SerializeField] private GameObject refinementTabPanel;
+    [SerializeField] private Button[] refineEquipSlotButtons = new Button[4];
+    [SerializeField] private Image[] refineEquipSlotIcons = new Image[4];
+    [SerializeField] private TextMeshProUGUI refineEquipNameText;
+    [SerializeField] private TextMeshProUGUI refineLevelText;
+    [SerializeField] private Image[] refineStarImages = new Image[7];
+    [SerializeField] private TextMeshProUGUI refineStatsText;
+    [SerializeField] private Image refineMaterialIcon;
+    [SerializeField] private TextMeshProUGUI refineMaterialText;
+    [SerializeField] private Button refineMaterialClearButton;
+    [SerializeField] private Image refineSuccessBar;
+    [SerializeField] private TextMeshProUGUI refineSuccessText;
+    [SerializeField] private Button refineButton;
+    [SerializeField] private TextMeshProUGUI refineButtonText;
+    [SerializeField] private Image fusionSourceIcon;
+    [SerializeField] private Image fusionResultIcon;
+    [SerializeField] private Button fusionButton;
+    [SerializeField] private TextMeshProUGUI fusionInfoText;
+
 
 
     // ─── Runtime State ───────────────────────────────────────────
-    private enum ActiveTab { Weapon, Equipment }
+    private enum ActiveTab { Weapon, Equipment, Refinement }
     private ActiveTab currentTab = ActiveTab.Weapon;
+
+    // Refinement state
+    private int selectedRefineSlot = -1;
+    private Item selectedRefineMaterial = null;
+    private bool isRefining = false;
 
     private int selectedEquipmentSlot = -1; // 0-3 for equipment tab
     private Item selectedGem = null;
@@ -124,11 +150,25 @@ public class BlacksmithUI : MonoBehaviour
         if (closeButton) closeButton.onClick.AddListener(Close);
         if (weaponTabButton) weaponTabButton.onClick.AddListener(() => SwitchTab(ActiveTab.Weapon));
         if (equipmentTabButton) equipmentTabButton.onClick.AddListener(() => SwitchTab(ActiveTab.Equipment));
+        if (refinementTabButton) refinementTabButton.onClick.AddListener(() => SwitchTab(ActiveTab.Refinement));
         if (socketButton) socketButton.onClick.AddListener(OnSocketButtonClicked);
 
         // Crystal clear buttons
         if (weaponCrystalClearButton) weaponCrystalClearButton.onClick.AddListener(ClearSelectedCrystal);
         if (equipmentCrystalClearButton) equipmentCrystalClearButton.onClick.AddListener(ClearSelectedCrystal);
+        if (refineMaterialClearButton) refineMaterialClearButton.onClick.AddListener(ClearSelectedRefineMaterial);
+
+        // Refinement button
+        if (refineButton) refineButton.onClick.AddListener(OnRefineButtonClicked);
+        if (fusionButton) fusionButton.onClick.AddListener(OnFusionButtonClicked);
+
+        // Refinement equip slot selection
+        for (int i = 0; i < refineEquipSlotButtons.Length; i++)
+        {
+            int index = i;
+            if (refineEquipSlotButtons[i] != null)
+                refineEquipSlotButtons[i].onClick.AddListener(() => SelectRefineEquipSlot(index));
+        }
 
         // Equipment slot selection
         for (int i = 0; i < equipmentSlotButtons.Length; i++)
@@ -309,10 +349,32 @@ public class BlacksmithUI : MonoBehaviour
 
         if (weaponTabPanel) weaponTabPanel.SetActive(tab == ActiveTab.Weapon);
         if (equipmentTabPanel) equipmentTabPanel.SetActive(tab == ActiveTab.Equipment);
+        if (refinementTabPanel) refinementTabPanel.SetActive(tab == ActiveTab.Refinement);
+
+        // Hide shared socketing UI when on Refinement tab
+        bool isSocketingTab = (tab != ActiveTab.Refinement);
+
+        // Find and toggle SuccessArea + RawImage by name from ContentArea
+        Transform contentParent = refinementTabPanel != null ? refinementTabPanel.transform.parent : null;
+        if (contentParent == null && weaponTabPanel != null) contentParent = weaponTabPanel.transform.parent;
+
+        if (contentParent != null)
+        {
+            Transform successArea = contentParent.Find("SuccessArea");
+            if (successArea != null) successArea.gameObject.SetActive(isSocketingTab);
+
+            Transform rawImage = contentParent.Find("RawImage");
+            if (rawImage != null) rawImage.gameObject.SetActive(isSocketingTab);
+        }
+
+        // Fallback: hide individual elements
+        if (socketButton != null)
+            socketButton.gameObject.SetActive(isSocketingTab);
 
         // Tab button colors
         UpdateTabButtonColor(weaponTabButton, tab == ActiveTab.Weapon);
         UpdateTabButtonColor(equipmentTabButton, tab == ActiveTab.Equipment);
+        UpdateTabButtonColor(refinementTabButton, tab == ActiveTab.Refinement);
 
         ClearSelection();
         RefreshAll();
@@ -777,6 +839,7 @@ public class BlacksmithUI : MonoBehaviour
         UpdateCrystalSlotDisplay();
         UpdateGemDropDisplay();
         UpdateSuccessRate();
+        RefreshRefinementDisplay();
     }
 
     void RefreshWeaponDisplay()
@@ -1000,6 +1063,13 @@ public class BlacksmithUI : MonoBehaviour
                     continue; // not equipment or crystal
             }
 
+            // Filter: Refinement tab → only Material items (refinement stones)
+            if (currentTab == ActiveTab.Refinement)
+            {
+                if (item.itemType != ItemType.Material || item.refinementTier <= 0)
+                    continue;
+            }
+
             GameObject go = Instantiate(itemUIPrefab, inventoryContent);
             // Enable drag-scroll through item buttons
             if (go.GetComponent<ScrollDragPassthrough>() == null)
@@ -1064,6 +1134,18 @@ public class BlacksmithUI : MonoBehaviour
                 {
                     var outline = go.AddComponent<Outline>();
                     outline.effectColor = new Color(1f, 0.84f, 0f);
+                    outline.effectDistance = new Vector2(6, 6);
+                }
+            }
+            else if (item.itemType == ItemType.Material && item.refinementTier > 0)
+            {
+                btn.onClick.AddListener(() => SelectRefineMaterial(capturedItem));
+
+                // Highlight if currently selected
+                if (selectedRefineMaterial != null && selectedRefineMaterial.id == item.id)
+                {
+                    var outline = go.AddComponent<Outline>();
+                    outline.effectColor = new Color(0.9f, 0.5f, 0.1f);
                     outline.effectDistance = new Vector2(6, 6);
                 }
             }
@@ -1599,5 +1681,468 @@ public class BlacksmithUI : MonoBehaviour
             case EquipmentSlotType.Accessory: return 3;
             default: return 0;
         }
+    }
+
+    // ================================================================
+    // REFINEMENT TAB LOGIC
+    // ================================================================
+
+    void SelectRefineEquipSlot(int index)
+    {
+        selectedRefineSlot = index;
+        ClearSelectedRefineMaterial();
+        RefreshRefinementDisplay();
+        RefreshInventoryPanel();
+    }
+
+    public void SelectRefineMaterial(Item stone)
+    {
+        if (stone == null || stone.refinementTier <= 0) return;
+        selectedRefineMaterial = stone;
+        RefreshRefinementDisplay();
+        RefreshInventoryPanel();
+    }
+
+    void ClearSelectedRefineMaterial()
+    {
+        selectedRefineMaterial = null;
+        RefreshRefinementDisplay();
+    }
+
+    void RefreshRefinementDisplay()
+    {
+        if (currentTab != ActiveTab.Refinement) return;
+        if (EquipmentManager.Instance == null) return;
+
+        // Ensure RefinementManager exists
+        if (RefinementManager.Instance == null)
+        {
+            var rmGO = new GameObject("RefinementManager");
+            rmGO.AddComponent<RefinementManager>();
+            Debug.Log("[BlacksmithUI] Auto-created RefinementManager");
+        }
+
+        // Update 4 equipment slot icons
+        string[] slotNames = { "Head", "Body", "Legs", "Acc" };
+        for (int i = 0; i < 4; i++)
+        {
+            var item = EquipmentManager.Instance.GetEquippedItemByIndex(i);
+            if (i < refineEquipSlotIcons.Length && refineEquipSlotIcons[i] != null)
+            {
+                if (item != null)
+                {
+                    refineEquipSlotIcons[i].sprite = item.icon;
+                    refineEquipSlotIcons[i].color = Color.white;
+                }
+                else
+                {
+                    refineEquipSlotIcons[i].sprite = null;
+                    refineEquipSlotIcons[i].color = new Color(0.18f, 0.18f, 0.25f, 0.8f);
+                }
+            }
+            // Highlight selected slot
+            if (i < refineEquipSlotButtons.Length && refineEquipSlotButtons[i] != null)
+            {
+                var outline = refineEquipSlotButtons[i].GetComponent<Outline>();
+                if (i == selectedRefineSlot && item != null)
+                {
+                    if (outline == null) outline = refineEquipSlotButtons[i].gameObject.AddComponent<Outline>();
+                    outline.effectColor = new Color(1f, 0.84f, 0f);
+                    outline.effectDistance = new Vector2(4, 4);
+                    outline.enabled = true;
+                }
+                else if (outline != null)
+                {
+                    outline.enabled = false;
+                }
+            }
+        }
+
+        // Equipment name + level
+        if (selectedRefineSlot >= 0 && selectedRefineSlot < 4)
+        {
+            var equip = EquipmentManager.Instance.GetEquippedItemByIndex(selectedRefineSlot);
+            if (equip != null)
+            {
+                Rarity r = EquipmentManager.Instance.GetEquippedRarity(selectedRefineSlot);
+                int level = EquipmentManager.Instance.GetEnhancementLevel(selectedRefineSlot);
+                string rarityHex = Item.GetRarityColorHex(r);
+                string levelStr = level > 0 ? $" +{level}" : "";
+                if (refineEquipNameText)
+                    refineEquipNameText.text = $"<color={rarityHex}>{equip.itemName} [{r}]{levelStr}</color>";
+
+                // Level display with star images
+                UpdateStarImages(level);
+                if (refineLevelText)
+                {
+                    if (level >= EquipmentManager.MAX_ENHANCEMENT_LEVEL)
+                        refineLevelText.text = $"<color=#FFD700>+{level} MAX</color>";
+                    else
+                        refineLevelText.text = $"<color=#FFD700>+{level}</color> >> <color=#00FF00>+{level + 1}</color>";
+                }
+
+                // Stats preview (before → after)
+                RefreshRefineStatsPreview(equip, r, selectedRefineSlot, level);
+
+                // Update material slot display
+                if (selectedRefineMaterial != null)
+                {
+                    if (refineMaterialIcon) { refineMaterialIcon.sprite = selectedRefineMaterial.icon; refineMaterialIcon.enabled = true; refineMaterialIcon.color = Color.white; }
+                    string stoneHex = Item.GetRarityColorHex(selectedRefineMaterial.rarity);
+                    if (refineMaterialText) refineMaterialText.text = $"<color={stoneHex}>{selectedRefineMaterial.itemName}</color>";
+
+                    // Success rate
+                    float rate = RefinementManager.Instance.CalculateRefineRate(level, selectedRefineMaterial.refinementTier);
+                    if (refineSuccessBar) { refineSuccessBar.fillAmount = rate; refineSuccessBar.color = RefinementManager.Instance.GetRefineRateColor(rate); }
+                    if (refineSuccessText) refineSuccessText.text = $"Success Rate: {rate * 100f:F0}%";
+                }
+                else
+                {
+                    if (refineMaterialIcon) { refineMaterialIcon.enabled = false; }
+                    if (refineMaterialText) refineMaterialText.text = "Select Refinement Stone";
+                    if (refineSuccessBar) refineSuccessBar.fillAmount = 0f;
+                    if (refineSuccessText) refineSuccessText.text = "Success Rate: 0%";
+                }
+
+                // Enable/disable refine button
+                bool canRefine = selectedRefineMaterial != null && level < EquipmentManager.MAX_ENHANCEMENT_LEVEL && !isRefining;
+                if (refineButton) refineButton.interactable = canRefine;
+            }
+            else
+            {
+                ClearRefineDisplay();
+            }
+        }
+        else
+        {
+            ClearRefineDisplay();
+        }
+
+        // Fusion display
+        RefreshFusionDisplay();
+    }
+
+    void ClearRefineDisplay()
+    {
+        if (refineEquipNameText) refineEquipNameText.text = "Select equipment to refine";
+        if (refineLevelText) refineLevelText.text = "";
+        if (refineStatsText) refineStatsText.text = "";
+        if (refineMaterialIcon) refineMaterialIcon.enabled = false;
+        if (refineMaterialText) refineMaterialText.text = "Select Refinement Stone";
+        if (refineSuccessBar) refineSuccessBar.fillAmount = 0f;
+        if (refineSuccessText) refineSuccessText.text = "Success Rate: 0%";
+        if (refineButton) refineButton.interactable = false;
+        UpdateStarImages(-1); // all gray
+    }
+
+    void UpdateStarImages(int level)
+    {
+        if (refineStarImages == null) return;
+        Color gold = new Color(1f, 0.84f, 0f);
+        Color gray = new Color(0.3f, 0.3f, 0.35f);
+        for (int i = 0; i < refineStarImages.Length; i++)
+        {
+            if (refineStarImages[i] != null)
+                refineStarImages[i].color = (i < level) ? gold : gray;
+        }
+    }
+
+    void RefreshRefineStatsPreview(Item equip, Rarity r, int slot, int level)
+    {
+        if (refineStatsText == null) return;
+
+        float roll = EquipmentManager.Instance.GetEquipStatRoll(slot);
+        float currentMul = 1f + level * 0.03f;
+        float nextMul = 1f + (level + 1) * 0.03f;
+        float rmul = Item.GetRarityMultiplier(r);
+
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        sb.AppendLine("<color=#AAAAAA>Stat          Current      After Refine</color>");
+
+        void AddStatLine(string name, float baseVal)
+        {
+            if (baseVal <= 0) return;
+            float current = baseVal * rmul * roll * currentMul;
+            float next = baseVal * rmul * roll * nextMul;
+            sb.AppendLine($"{name,-14}<color=#FFFFFF>{current:F1}</color>  >>  <color=#00FF00>{next:F1}</color>  <color=#FFD700>(+3%)</color>");
+        }
+
+        AddStatLine("HP", equip.hpBonus);
+        AddStatLine("Defense", equip.defenseBonus);
+        if (equip.critRateBonus > 0)
+        {
+            float curCR = equip.critRateBonus * rmul * roll * currentMul * 100f;
+            float nextCR = equip.critRateBonus * rmul * roll * nextMul * 100f;
+            sb.AppendLine($"Crit Rate      <color=#FFFFFF>{curCR:F1}%</color>  >>  <color=#00FF00>{nextCR:F1}%</color>  <color=#FFD700>(+3%)</color>");
+        }
+        if (equip.critDamageMultiplier > 1f)
+        {
+            float cdBase = equip.critDamageMultiplier - 1f;
+            float curCD = (1f + cdBase * rmul * roll * currentMul) * 100f;
+            float nextCD = (1f + cdBase * rmul * roll * nextMul) * 100f;
+            sb.AppendLine($"Crit Dmg      <color=#FFFFFF>{curCD:F0}%</color>  >>  <color=#00FF00>{nextCD:F0}%</color>  <color=#FFD700>(+3%)</color>");
+        }
+        if (equip.movementSpeedBonus > 0)
+        {
+            float curMS = equip.movementSpeedBonus * rmul * roll * currentMul * 100f;
+            float nextMS = equip.movementSpeedBonus * rmul * roll * nextMul * 100f;
+            sb.AppendLine($"Move Spd      <color=#FFFFFF>{curMS:F1}%</color>  >>  <color=#00FF00>{nextMS:F1}%</color>  <color=#FFD700>(+3%)</color>");
+        }
+        if (equip.attackSpeedBonus > 0)
+        {
+            float curAS = equip.attackSpeedBonus * rmul * roll * currentMul * 100f;
+            float nextAS = equip.attackSpeedBonus * rmul * roll * nextMul * 100f;
+            sb.AppendLine($"Atk Spd       <color=#FFFFFF>{curAS:F1}%</color>  >>  <color=#00FF00>{nextAS:F1}%</color>  <color=#FFD700>(+3%)</color>");
+        }
+
+        if (sb.Length < 60)
+            sb.AppendLine("<color=#888888>Không có stat để hiển thị</color>");
+
+        refineStatsText.text = sb.ToString().TrimEnd();
+    }
+
+    // ─── Refinement Execution ─────────────────────────────────────
+
+    void OnRefineButtonClicked()
+    {
+        if (isRefining) return;
+        if (selectedRefineSlot < 0 || selectedRefineMaterial == null) return;
+        if (EquipmentManager.Instance == null || RefinementManager.Instance == null) return;
+
+        var equip = EquipmentManager.Instance.GetEquippedItemByIndex(selectedRefineSlot);
+        if (equip == null) return;
+
+        int level = EquipmentManager.Instance.GetEnhancementLevel(selectedRefineSlot);
+        if (level >= EquipmentManager.MAX_ENHANCEMENT_LEVEL) return;
+
+        StartCoroutine(RefineAnimationCoroutine());
+    }
+
+    IEnumerator RefineAnimationCoroutine()
+    {
+        isRefining = true;
+        if (refineButton) refineButton.interactable = false;
+
+        // Play forge sound
+        SoundManager.PlaySound(SoundType.Blacksmith_Forge);
+
+        // Stone shake animation (0.5s)
+        RectTransform stoneRT = refineMaterialIcon?.GetComponent<RectTransform>();
+        Vector2 originalPos = stoneRT != null ? stoneRT.anchoredPosition : Vector2.zero;
+        float shakeDuration = 0.5f;
+        float shakeTimer = 0f;
+        while (shakeTimer < shakeDuration)
+        {
+            float realDelta = Mathf.Max(Time.unscaledDeltaTime, 0.01f);
+            shakeTimer += realDelta;
+            float progress = shakeTimer / shakeDuration;
+            float intensity = Mathf.Lerp(4f, 12f, progress); // shake increases
+            float offsetX = Mathf.Sin(shakeTimer * 40f) * intensity;
+            if (stoneRT != null)
+                stoneRT.anchoredPosition = originalPos + new Vector2(offsetX, 0);
+            yield return null;
+        }
+        if (stoneRT != null) stoneRT.anchoredPosition = originalPos;
+
+        // Success bar blink (3 times)
+        if (refineSuccessBar != null)
+        {
+            Color barColor = refineSuccessBar.color;
+            for (int i = 0; i < 3; i++)
+            {
+                refineSuccessBar.enabled = false;
+                yield return new WaitForSecondsRealtime(0.08f);
+                refineSuccessBar.enabled = true;
+                yield return new WaitForSecondsRealtime(0.08f);
+            }
+        }
+
+        // Execute refinement
+        RefinementResult result = RefinementManager.Instance.TryRefine(selectedRefineSlot, selectedRefineMaterial);
+
+        // Get equip icon for animation
+        RectTransform equipRT = (selectedRefineSlot >= 0 && selectedRefineSlot < refineEquipSlotIcons.Length)
+            ? refineEquipSlotIcons[selectedRefineSlot]?.GetComponent<RectTransform>() : null;
+        Image equipImg = (selectedRefineSlot >= 0 && selectedRefineSlot < refineEquipSlotIcons.Length)
+            ? refineEquipSlotIcons[selectedRefineSlot] : null;
+
+        if (result == RefinementResult.Success)
+        {
+            // Success animation: flash white + scale bounce
+            SoundManager.PlaySound(SoundType.Blacksmith_Refine_Success);
+
+            // Flash white
+            if (equipImg != null)
+            {
+                Color origColor = equipImg.color;
+                equipImg.color = Color.white;
+                yield return new WaitForSecondsRealtime(0.15f);
+                equipImg.color = origColor;
+            }
+
+            // Scale bounce
+            if (equipRT != null)
+            {
+                Vector3 origScale = equipRT.localScale;
+                float bounceTimer2 = 0f;
+                float bounceDuration = 0.3f;
+                while (bounceTimer2 < bounceDuration)
+                {
+                    bounceTimer2 += Mathf.Max(Time.unscaledDeltaTime, 0.01f);
+                    float t = bounceTimer2 / bounceDuration;
+                    float scale = 1f + 0.3f * Mathf.Sin(t * Mathf.PI) * (1f - t);
+                    equipRT.localScale = origScale * scale;
+                    yield return null;
+                }
+                equipRT.localScale = origScale;
+            }
+
+            int newLevel = EquipmentManager.Instance.GetEnhancementLevel(selectedRefineSlot);
+            var equipItem = EquipmentManager.Instance.GetEquippedItemByIndex(selectedRefineSlot);
+            string eName = equipItem != null ? equipItem.itemName : "Equipment";
+
+            // Show result
+            if (resultPanel && resultText)
+            {
+                resultPanel.SetActive(true);
+                ConfigureResultText();
+                resultText.text = $"REFINE SUCCESS!\n{eName} +{newLevel - 1} >> +{newLevel}";
+                resultText.color = new Color(0.2f, 0.9f, 0.3f);
+                StopCoroutine(nameof(HideResultCoroutine));
+                StartCoroutine(HideResultCoroutine());
+            }
+
+            // Level text glow animation (3 blinks)
+            if (refineLevelText != null)
+            {
+                Color origLevelColor = refineLevelText.color;
+                for (int i = 0; i < 3; i++)
+                {
+                    refineLevelText.color = new Color(1f, 1f, 0.5f);
+                    yield return new WaitForSecondsRealtime(0.12f);
+                    refineLevelText.color = new Color(1f, 0.84f, 0f);
+                    yield return new WaitForSecondsRealtime(0.12f);
+                }
+                refineLevelText.color = origLevelColor;
+            }
+        }
+        else if (result == RefinementResult.Fail)
+        {
+            // Fail animation: shake + red tint
+            SoundManager.PlaySound(SoundType.Blacksmith_Refine_Fail);
+
+            // Shake equipment icon
+            if (equipRT != null)
+            {
+                Vector2 origEqPos = equipRT.anchoredPosition;
+                float shakeT = 0f;
+                while (shakeT < 0.3f)
+                {
+                    shakeT += Mathf.Max(Time.unscaledDeltaTime, 0.01f);
+                    float ox = Mathf.Sin(shakeT * 50f) * 10f * (1f - shakeT / 0.3f);
+                    equipRT.anchoredPosition = origEqPos + new Vector2(ox, 0);
+                    yield return null;
+                }
+                equipRT.anchoredPosition = origEqPos;
+            }
+
+            // Red tint
+            if (equipImg != null)
+            {
+                Color origC = equipImg.color;
+                equipImg.color = new Color(1f, 0.3f, 0.3f);
+                yield return new WaitForSecondsRealtime(0.3f);
+                equipImg.color = origC;
+            }
+
+            string stoneName = selectedRefineMaterial != null ? selectedRefineMaterial.itemName : "Stone";
+            if (resultPanel && resultText)
+            {
+                resultPanel.SetActive(true);
+                ConfigureResultText();
+                resultText.text = $"REFINE FAILED!\nLost {stoneName}";
+                resultText.color = new Color(0.9f, 0.2f, 0.2f);
+                StopCoroutine(nameof(HideResultCoroutine));
+                StartCoroutine(HideResultCoroutine());
+            }
+        }
+
+        // Clear material (consumed) and refresh
+        if (result == RefinementResult.Success || result == RefinementResult.Fail)
+        {
+            // Check if we still have this material
+            if (selectedRefineMaterial != null && InventoryManager.Instance != null
+                && InventoryManager.Instance.GetItemAmount(selectedRefineMaterial.id) <= 0)
+            {
+                selectedRefineMaterial = null;
+            }
+        }
+
+        isRefining = false;
+        RefreshAll();
+    }
+
+    // ─── Fusion ───────────────────────────────────────────────────
+
+    void RefreshFusionDisplay()
+    {
+        if (currentTab != ActiveTab.Refinement) return;
+        if (RefinementManager.Instance == null) return;
+
+        if (selectedRefineMaterial != null && selectedRefineMaterial.refinementTier > 0 && selectedRefineMaterial.refinementTier < 7)
+        {
+            // Show fusion info
+            if (fusionSourceIcon) { fusionSourceIcon.sprite = selectedRefineMaterial.icon; fusionSourceIcon.enabled = true; fusionSourceIcon.color = Color.white; }
+
+            Item resultStone = RefinementManager.Instance.GetFusionResultStone(selectedRefineMaterial);
+            if (resultStone != null)
+            {
+                if (fusionResultIcon) { fusionResultIcon.sprite = resultStone.icon; fusionResultIcon.enabled = true; fusionResultIcon.color = Color.white; }
+                int have = InventoryManager.Instance != null ? InventoryManager.Instance.GetItemAmount(selectedRefineMaterial.id) : 0;
+                if (fusionInfoText) fusionInfoText.text = $"4x ({have}) >> 1x {resultStone.itemName}";
+                if (fusionButton) fusionButton.interactable = RefinementManager.Instance.CanFuse(selectedRefineMaterial);
+            }
+            else
+            {
+                if (fusionResultIcon) fusionResultIcon.enabled = false;
+                if (fusionInfoText) fusionInfoText.text = "";
+                if (fusionButton) fusionButton.interactable = false;
+            }
+        }
+        else
+        {
+            // Clear fusion display
+            if (fusionSourceIcon) fusionSourceIcon.enabled = false;
+            if (fusionResultIcon) fusionResultIcon.enabled = false;
+            if (fusionInfoText) fusionInfoText.text = "Chọn đá để ghép";
+            if (fusionButton) fusionButton.interactable = false;
+        }
+    }
+
+    void OnFusionButtonClicked()
+    {
+        if (selectedRefineMaterial == null || RefinementManager.Instance == null) return;
+
+        bool success = RefinementManager.Instance.TryFuse(selectedRefineMaterial);
+        if (success)
+        {
+            // Check if still have source stones
+            if (InventoryManager.Instance != null && InventoryManager.Instance.GetItemAmount(selectedRefineMaterial.id) <= 0)
+                selectedRefineMaterial = null;
+
+            if (resultPanel && resultText)
+            {
+                resultPanel.SetActive(true);
+                ConfigureResultText();
+                resultText.text = "FUSION SUCCESS!";
+                resultText.color = new Color(0.5f, 0.9f, 0.3f);
+                StopCoroutine(nameof(HideResultCoroutine));
+                StartCoroutine(HideResultCoroutine());
+            }
+
+            SoundManager.PlaySound(SoundType.Blacksmith_Socket_Success);
+        }
+
+        RefreshAll();
     }
 }

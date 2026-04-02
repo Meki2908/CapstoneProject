@@ -48,6 +48,11 @@ public class Item : ScriptableObject
     [Range(0f, 1f)]
     public float attackSpeedBonus = 0f;
 
+    [Header("Refinement Settings")]
+    [Tooltip("0 = not a refinement stone. 1-7 = Refinement Stone tier (used by Blacksmith Refinement system)")]
+    [Range(0, 7)]
+    public int refinementTier = 0;
+
     [Header("Equipment Passive")]
     [Tooltip("Passive ability description")]
     [TextArea(2, 4)]
