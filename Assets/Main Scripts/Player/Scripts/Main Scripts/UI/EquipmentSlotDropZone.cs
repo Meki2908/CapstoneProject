@@ -18,10 +18,11 @@ public class EquipmentSlotDropZone : MonoBehaviour, IPointerEnterHandler, IPoint
 
     private void Awake()
     {
-        slotImage = GetComponent<Image>();
         if (slotImage == null)
         {
-            slotImage = gameObject.AddComponent<Image>();
+            slotImage = GetComponent<Image>();
+            if (slotImage == null)
+                slotImage = gameObject.AddComponent<Image>();
         }
         originalColor = slotImage.color;
     }

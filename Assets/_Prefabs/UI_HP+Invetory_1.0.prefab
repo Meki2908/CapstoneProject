@@ -891,8 +891,8 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 8399245424514526414}
   - {fileID: 8055536506934350034}
+  - {fileID: 8399245424514526414}
   - {fileID: 9011522081316551751}
   m_Father: {fileID: 8912309493141924738}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -980,7 +980,6 @@ GameObject:
   - component: {fileID: 6240433525062933754}
   - component: {fileID: 1183663244927421961}
   - component: {fileID: 1578942053455976369}
-  - component: {fileID: 6858572451927444208}
   m_Layer: 0
   m_Name: Equipment icon
   m_TagString: Untagged
@@ -1029,7 +1028,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -1045,21 +1044,6 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &6858572451927444208
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 531185934945256671}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0fd9a90a5b7c0e14e8e5938a55a66ec3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  slotIndex: 3
-  emptySlotColor: {r: 0, g: 0, b: 0, a: 1}
-  slotImage: {fileID: 0}
 --- !u!1 &661875938646637140
 GameObject:
   m_ObjectHideFlags: 0
@@ -4628,6 +4612,7 @@ GameObject:
   - component: {fileID: 4833991703702087093}
   - component: {fileID: 5854551635401635381}
   - component: {fileID: 4708364961766715450}
+  - component: {fileID: 6858572451927444208}
   m_Layer: 0
   m_Name: Equipment slot 4
   m_TagString: Untagged
@@ -4693,6 +4678,21 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &6858572451927444208
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3396111180622737910}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0fd9a90a5b7c0e14e8e5938a55a66ec3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  slotIndex: 3
+  emptySlotColor: {r: 0, g: 0, b: 0, a: 1}
+  slotImage: {fileID: 1578942053455976369}
 --- !u!1 &3415982394899291239
 GameObject:
   m_ObjectHideFlags: 0
@@ -10277,7 +10277,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &8055536506934350034
 RectTransform:
   m_ObjectHideFlags: 0
