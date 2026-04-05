@@ -11,11 +11,20 @@ public class GameManager : MonoBehaviour {
 
 	void Start () 
 	{
+		if (fx_prefabs == null || fx_prefabs.Length == 0)
+		{
+			if (text_fx_name != null) text_fx_name.text = "[0] (no FX assigned)";
+			return;
+		}
+		index_fx = Mathf.Clamp(index_fx, 0, fx_prefabs.Length - 1);
 		text_fx_name.text = "[" + (index_fx + 1) + "] " + fx_prefabs[ index_fx ].name;
 	}
 
 	void Update () 
 	{
+		if (fx_prefabs == null || fx_prefabs.Length == 0)
+			return;
+
 		if (Input.GetMouseButtonDown (0)) 
 		{
 			ray = Camera.main.ScreenPointToRay(Input.mousePosition);
@@ -31,6 +40,7 @@ public class GameManager : MonoBehaviour {
 					index_fx++;
 					if(index_fx >= fx_prefabs.Length)
 						index_fx = 0;
+					index_fx = Mathf.Clamp(index_fx, 0, fx_prefabs.Length - 1);
 					text_fx_name.text = "[" + (index_fx + 1) + "] " + fx_prefabs[ index_fx ].name;
 					break;
 				case "UI-arrow-left":
@@ -38,6 +48,7 @@ public class GameManager : MonoBehaviour {
 					index_fx--;
 					if(index_fx <= -1)
 						index_fx = fx_prefabs.Length - 1;
+					index_fx = Mathf.Clamp(index_fx, 0, fx_prefabs.Length - 1);
 					text_fx_name.text = "[" + (index_fx + 1) + "] " + fx_prefabs[ index_fx ].name;
 					break;
 				case "Instructions":
@@ -48,18 +59,22 @@ public class GameManager : MonoBehaviour {
 		}
 		//Change-FX keyboard..	
 		if ( Input.GetKeyDown("z") || Input.GetKeyDown("left") ){
-			GameObject.Find("UI-arrow-left").SendMessage("Go");
+			var left = GameObject.Find("UI-arrow-left");
+			if (left != null) left.SendMessage("Go");
 			index_fx--;
 			if(index_fx <= -1)
 				index_fx = fx_prefabs.Length - 1;
+			index_fx = Mathf.Clamp(index_fx, 0, fx_prefabs.Length - 1);
 			text_fx_name.text = "[" + (index_fx + 1) + "] " + fx_prefabs[ index_fx ].name;	
 		}
 
 		if ( Input.GetKeyDown("x") || Input.GetKeyDown("right")){
-			GameObject.Find("UI-arrow-right").SendMessage("Go");
+			var right = GameObject.Find("UI-arrow-right");
+			if (right != null) right.SendMessage("Go");
 			index_fx++;
 			if(index_fx >= fx_prefabs.Length)
 				index_fx = 0;
+			index_fx = Mathf.Clamp(index_fx, 0, fx_prefabs.Length - 1);
 			text_fx_name.text = "[" + (index_fx + 1) + "] " + fx_prefabs[ index_fx ].name;
 		}
 

@@ -94,7 +94,7 @@ public class Character : MonoBehaviour
 
         // Load saved key binding overrides từ Settings
         InputRebindHelper.LoadBindingOverrides(playerInput);
-        cameraTransform = Camera.main.transform;
+        TryAssignCameraTransform();
         cachedPlanarForward = transform.forward;
         cachedPlanarForward.y = 0f;
         if (cachedPlanarForward.sqrMagnitude < 0.0001f) cachedPlanarForward = Vector3.forward;
@@ -169,6 +169,28 @@ public class Character : MonoBehaviour
     {
         // Update speeds when equipment changes
         UpdateSpeedWithGems();
+    }
+
+    private void LateUpdate()
+    {
+        if (cameraTransform == null)
+            TryAssignCameraTransform();
+    }
+
+    private void TryAssignCameraTransform()
+    {
+        if (cameraTransform != null) return;
+
+        if (Camera.main != null)
+        {
+            cameraTransform = Camera.main.transform;
+            return;
+        }
+
+        // Spawn / load scene: camera prefab có thể chưa bật hoặc chưa tag MainCamera
+        var cam = FindFirstObjectByType<Camera>();
+        if (cam != null)
+            cameraTransform = cam.transform;
     }
 
     private void Update()
