@@ -18,20 +18,67 @@ namespace Artsystack.ArtsystackGui
         [SerializeField] private GameObject panel_Exit;
 
         [Header("Main Menu Buttons")]
-        [SerializeField] private UnityEngine.UI.Button btn_Play;
-        [SerializeField] private UnityEngine.UI.Button btn_Help;
         [SerializeField] private UnityEngine.UI.Button btn_Settings;
         [SerializeField] private UnityEngine.UI.Button btn_Exit;
 
+        [Header("GUI_btn_Play — tabs")]
+        [Tooltip("Tab_Play — nút Play trên prefab mở Multiplayer mode bằng UnityEvent, không cần gán vào đây.")]
+        [SerializeField] private GameObject tab_TabPlay;
+        [SerializeField] private GameObject tab_MultiplayerMode;
+        [SerializeField] private GameObject tab_HostOptions;
+
+        [Header("GUI_btn_Play — actions")]
+        [Tooltip("Hàng Tab_Play: Play | Help (giữa) | Exit — Help mặc định mở Settings; đổi OnHelpClicked nếu có panel Help riêng.")]
+        [SerializeField] private UnityEngine.UI.Button btn_HelpMiddle;
+        [SerializeField] private UnityEngine.UI.Button btn_SinglePlayer;
+        [SerializeField] private UnityEngine.UI.Button btn_HostCreate;
+        [SerializeField] private UnityEngine.UI.Button btn_HostJoin;
+
         [Header("Scene Recognition")]
         [Tooltip("Danh sách các scene được xem là Main Menu (Lobby). Nếu không ở các scene này, GameMenuManager sẽ bị vô hiệu hóa.")]
-        [SerializeField] private List<string> mainMenuSceneNames = new List<string> { "DemoSceneSettings", "Menu_Game", "UI_Game" };
+        [SerializeField] private List<string> mainMenuSceneNames = new List<string>
+        {
+            "DemoSceneSettings", "Menu_Game", "UI_Game", "Pre Start Scene",
+        };
 
         [Header("Scene Settings")]
         [SerializeField] private string gameSceneName = "Map_Chinh";
         [SerializeField] private bool showCursorOnPlay = false;
 
+        [Tooltip("Giống Pre Start Scene → Testboss: bật trước khi load Map_Chinh để NetworkHostBootstrap StartHost và spawn player.")]
+        [SerializeField] private bool requestHostWhenLoadingGameplay = true;
+
         private bool isGameRunning = false;
+
+        private void Awake()
+        {
+            SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        private void OnDestroy()
+        {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+        }
+
+        /// <summary>
+        /// Canvas_Menu có thể DontDestroyOnLoad: ẩn lobby khi vào gameplay, hiện lại panel chính khi quay về menu.
+        /// </summary>
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            if (mainMenuSceneNames.Contains(scene.name))
+            {
+                enabled = true;
+                HideAllPanels();
+                if (panel_GUIGame != null)
+                    panel_GUIGame.SetActive(true);
+                ResetPlayModeTabs();
+            }
+            else
+            {
+                HideAllPanels();
+                enabled = false;
+            }
+        }
 
         private void Start()
         {
@@ -39,6 +86,7 @@ namespace Artsystack.ArtsystackGui
             string currentSceneName = SceneManager.GetActiveScene().name;
             if (!mainMenuSceneNames.Contains(currentSceneName))
             {
+                HideAllPanels();
                 Debug.Log($"[GameMenuManager] Current scene '{currentSceneName}' is NOT a Main Menu scene. Disabling GameMenuManager.");
                 this.enabled = false;
                 return;
@@ -46,6 +94,14 @@ namespace Artsystack.ArtsystackGui
 
             Debug.Log($"[GameMenuManager] Active in Main Menu scene '{currentSceneName}'.");
             InitializeMenu();
+        }
+
+        /// <summary>Tab_Play hiện, Multiplayer mode và Host options ẩn (màn hình đầu trong GUI_btn_Play).</summary>
+        private void ResetPlayModeTabs()
+        {
+            if (tab_TabPlay != null) tab_TabPlay.SetActive(true);
+            if (tab_MultiplayerMode != null) tab_MultiplayerMode.SetActive(false);
+            if (tab_HostOptions != null) tab_HostOptions.SetActive(false);
         }
 
         private void InitializeMenu()
@@ -56,9 +112,17 @@ namespace Artsystack.ArtsystackGui
             if (panel_GUIGame != null)
                 panel_GUIGame.SetActive(true);
 
-            // Thiết lập event listeners cho main menu
-            if (btn_Play != null)
-                btn_Play.onClick.AddListener(OnPlayClicked);
+            ResetPlayModeTabs();
+
+            // Tab_Play: nút Play → Multiplayer mode (UnityEvent trên prefab). Help (giữa). Single / Create / Join → code bên dưới.
+            if (btn_HelpMiddle != null)
+                btn_HelpMiddle.onClick.AddListener(OnHelpClicked);
+            if (btn_SinglePlayer != null)
+                btn_SinglePlayer.onClick.AddListener(OnSinglePlayerClicked);
+            if (btn_HostCreate != null)
+                btn_HostCreate.onClick.AddListener(OnHostCreateClicked);
+            if (btn_HostJoin != null)
+                btn_HostJoin.onClick.AddListener(OnJoinHostClicked);
             
             if (btn_Settings != null)
                 btn_Settings.onClick.AddListener(OnSettingsClicked);
@@ -83,11 +147,67 @@ namespace Artsystack.ArtsystackGui
         #region Main Menu Events
 
         /// <summary>
-        /// Khi bấm nút Play - Bắt đầu game mới hoặc tiếp tục
+        /// Nút Help ở giữa hàng Tab_Play. Mặc định mở Settings; override nếu bạn có UI Help riêng.
+        /// </summary>
+        public void OnHelpClicked()
+        {
+            OnSettingsClicked();
+        }
+
+        /// <summary>
+        /// Single player — load scene (host/solo theo requestHostWhenLoadingGameplay).
+        /// </summary>
+        public void OnSinglePlayerClicked()
+        {
+            StartCoroutine(LoadGameScene());
+        }
+
+        /// <summary>
+        /// Create host — cùng luồng load scene + pending host như single (Map_Chinh).
+        /// </summary>
+        public void OnHostCreateClicked()
+        {
+            StartCoroutine(LoadGameScene());
+        }
+
+        /// <summary>
+        /// Tương thích script/UI cũ gọi OnPlayClicked — coi như Single player.
         /// </summary>
         public void OnPlayClicked()
         {
-            StartCoroutine(LoadGameScene());
+            OnSinglePlayerClicked();
+        }
+
+        /// <summary>
+        /// Join host — loading screen + load Map_Chinh + client (MultiplayerManager + NetworkClientBootstrap).
+        /// </summary>
+        public void OnJoinHostClicked()
+        {
+            StartCoroutine(LoadClientGameScene());
+        }
+
+        private IEnumerator LoadClientGameScene()
+        {
+            HideAllPanels();
+
+            var mp = MultiplayerManager.Instance;
+            if (mp == null)
+            {
+                Debug.LogError("[GameMenuManager] MultiplayerManager.Instance is null — không thể Join.");
+                yield break;
+            }
+
+            var stm = SceneTransitionManager.EnsureInstance();
+            if (stm != null)
+            {
+                mp.CommitPendingJoinFromMenu();
+                stm.GoToScene(gameSceneName, "Đang kết nối...");
+                isGameRunning = true;
+                yield break;
+            }
+
+            mp.StartClientAndLoadGame();
+            isGameRunning = true;
         }
 
         /// <summary>
@@ -139,6 +259,7 @@ namespace Artsystack.ArtsystackGui
             
             if (panel_GUIGame != null)
                 panel_GUIGame.SetActive(true);
+            ResetPlayModeTabs();
         }
 
         #endregion
@@ -149,6 +270,9 @@ namespace Artsystack.ArtsystackGui
         {
             // Ẩn menu trước khi chuyển
             HideAllPanels();
+
+            if (requestHostWhenLoadingGameplay && gameSceneName == "Map_Chinh")
+                MultiplayerManager.SetPendingStartHostAfterSceneLoad(true);
 
             // Dùng SceneTransitionManager (tự tạo nếu chưa có — UI_Game không có player)
             var stm = SceneTransitionManager.EnsureInstance();
@@ -184,7 +308,7 @@ namespace Artsystack.ArtsystackGui
         /// </summary>
         public void StartGame()
         {
-            OnPlayClicked();
+            OnSinglePlayerClicked();
         }
 
         /// <summary>
@@ -240,6 +364,7 @@ namespace Artsystack.ArtsystackGui
                 
             if (panel_GUIGame != null)
                 panel_GUIGame.SetActive(true);
+            ResetPlayModeTabs();
         }
 
         #endregion

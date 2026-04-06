@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 public class Character : MonoBehaviour
@@ -187,10 +188,14 @@ public class Character : MonoBehaviour
             return;
         }
 
-        // Spawn / load scene: camera prefab có thể chưa bật hoặc chưa tag MainCamera
-        var cam = FindFirstObjectByType<Camera>();
-        if (cam != null)
+        // Không có MainCamera tag: đừng lấy nhầm camera phụ (vd. Minimap) — FindFirstObjectByType<Camera>() có thể trả về sai.
+        foreach (var cam in UnityEngine.Object.FindObjectsByType<Camera>(FindObjectsSortMode.None))
+        {
+            if (cam == null || !cam.isActiveAndEnabled) continue;
+            if (cam.gameObject.name.IndexOf("Minimap", StringComparison.OrdinalIgnoreCase) >= 0) continue;
             cameraTransform = cam.transform;
+            return;
+        }
     }
 
     private void Update()

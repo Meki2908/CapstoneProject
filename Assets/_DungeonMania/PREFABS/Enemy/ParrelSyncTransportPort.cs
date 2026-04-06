@@ -22,12 +22,35 @@ public static class ParrelSyncTransportPort
 
         var cd = utp.ConnectionData;
         ushort basePort = cd.Port;
+        // Port 0 trong scene YAML khiến bind/offset ParrelSync sai — chuẩn hóa giống Testboss.
+        if (basePort == 0)
+        {
+            const ushort defaultPort = 7777;
+            utp.SetConnectionData(cd.Address, defaultPort, cd.ServerListenAddress);
+            cd = utp.ConnectionData;
+            basePort = cd.Port;
+        }
         ushort newPort = (ushort)(basePort + cloneIndex + 1);
 
         if (newPort == basePort) return;
 
         utp.SetConnectionData(cd.Address, newPort, cd.ServerListenAddress);
         Debug.Log($"[ParrelSync] Clone index {cloneIndex}: UnityTransport port {basePort} → {newPort} (tránh trùng cổng với editor gốc).");
+    }
+
+    /// <summary>
+    /// Cổng khi <see cref="NetworkManager.StartClient"/>: đọc từ UnityTransport, 0→7777.
+    /// Không áp offset clone — offset chỉ dùng khi bind host trên clone; client join Editor (7777) sẽ sai nếu áp offset.
+    /// Join host clone cùng máy (vd. 7778): đặt <c>MultiplayerManager.connectPort</c> &gt; 0.
+    /// </summary>
+    public static ushort GetClientConnectPortWithoutCloneOffset(UnityTransport utp)
+    {
+        if (utp == null) return 7777;
+        var cd = utp.ConnectionData;
+        ushort p = cd.Port;
+        if (p == 0)
+            p = 7777;
+        return p;
     }
 
     static bool TryGetParrelSyncCloneIndex(out int cloneIndex)
