@@ -1,8 +1,9 @@
 using UnityEngine;
 using System; // thêm để dùng Action
+using Unity.Netcode;
 
 [RequireComponent(typeof(Animator))]
-public class WeaponController : MonoBehaviour
+public class WeaponController : NetworkBehaviour
 {
     [Header("References")]
     [SerializeField] private Transform handHolder;
@@ -36,6 +37,41 @@ public class WeaponController : MonoBehaviour
     private GameObject currentHeldInstance;
     private GameObject currentSheathInstance;
     private Coroutine wandScaleRoutine;
+    private bool applyingSyncedWeapon;
+    private readonly NetworkVariable<int> syncedWeaponType = new(
+        (int)WeaponType.None,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Owner);
+
+    private bool IsLocalOwnerContext()
+    {
+        var netObj = GetComponentInParent<NetworkObject>();
+        if (netObj == null) return true; // single-player
+        return netObj.IsOwner;
+    }
+
+    private void OnSyncedWeaponTypeChanged(int previous, int next)
+    {
+        if (IsOwner) return;
+        ApplySyncedWeaponType((WeaponType)next);
+    }
+
+    private void ApplySyncedWeaponType(WeaponType type)
+    {
+        if (type == WeaponType.None) return;
+        var so = WeaponSelectionPersistence.ResolveWeaponSO(type);
+        if (so == null) return;
+
+        applyingSyncedWeapon = true;
+        try
+        {
+            EquipWeapon(so);
+        }
+        finally
+        {
+            applyingSyncedWeapon = false;
+        }
+    }
 
     private void Awake()
     {
@@ -58,6 +94,9 @@ public class WeaponController : MonoBehaviour
 
     private void Start()
     {
+        if (IsSpawned && !IsOwner)
+            return;
+
         var loadedFromDisk = false;
         if (WeaponSelectionPersistence.TryLoad(out var savedType) && savedType != WeaponType.None)
         {
@@ -71,6 +110,27 @@ public class WeaponController : MonoBehaviour
 
         if (!loadedFromDisk)
             ApplyDefaultStartWeaponVisuals();
+    }
+
+    public override void OnNetworkSpawn()
+    {
+        base.OnNetworkSpawn();
+        syncedWeaponType.OnValueChanged += OnSyncedWeaponTypeChanged;
+
+        if (IsOwner)
+        {
+            syncedWeaponType.Value = currentWeapon != null ? (int)currentWeapon.weaponType : (int)WeaponType.None;
+        }
+        else
+        {
+            ApplySyncedWeaponType((WeaponType)syncedWeaponType.Value);
+        }
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        syncedWeaponType.OnValueChanged -= OnSyncedWeaponTypeChanged;
+        base.OnNetworkDespawn();
     }
 
     void ApplyDefaultStartWeaponVisuals()
@@ -92,7 +152,7 @@ public class WeaponController : MonoBehaviour
 
     void OnApplicationQuit()
     {
-        if (currentWeapon != null)
+        if (currentWeapon != null && (!IsSpawned || IsOwner))
             WeaponSelectionPersistence.Save(currentWeapon.weaponType);
     }
 
@@ -104,6 +164,9 @@ public class WeaponController : MonoBehaviour
 
     public void EquipWeapon(WeaponSO weapon)
     {
+        if (IsSpawned && !IsOwner && !applyingSyncedWeapon)
+            return;
+
         currentWeapon = weapon;
         ApplyWeaponLayersAndParams();
 
@@ -130,8 +193,11 @@ public class WeaponController : MonoBehaviour
         // BẮN sự kiện cho tất cả consumer (Skills/HitRunner/UIs...)
         OnWeaponChanged?.Invoke(currentWeapon);
 
-        if (weapon != null)
+        if (weapon != null && (!IsSpawned || IsOwner))
             WeaponSelectionPersistence.Save(weapon.weaponType);
+
+        if (IsSpawned && IsOwner && !applyingSyncedWeapon && weapon != null)
+            syncedWeaponType.Value = (int)weapon.weaponType;
     }
 
     public WeaponSO GetCurrentWeapon() => currentWeapon;
@@ -342,17 +408,20 @@ public class WeaponController : MonoBehaviour
         Debug.Log("[WeaponController] Disabled all weapon skill scripts");
 
         // Clear ability icons when weapon is sheathed
-        if (abilityManager != null)
+        if (abilityManager != null && IsLocalOwnerContext())
         {
             abilityManager.AE_ClearWeaponAbilities();
         }
 
-        // Unassign Ultimate Icon Shader material when sheathing
-        var shaderController = FindFirstObjectByType<WeaponUltimateShaderController>();
-        if (shaderController != null)
+        // Unassign Ultimate Icon Shader material only for local owner HUD.
+        if (IsLocalOwnerContext())
         {
-            shaderController.UnassignMaterial();
-            Debug.Log("[WeaponController] Unassigned Ultimate shader material on sheath");
+            var shaderController = FindFirstObjectByType<WeaponUltimateShaderController>();
+            if (shaderController != null)
+            {
+                shaderController.UnassignMaterial();
+                Debug.Log("[WeaponController] Unassigned Ultimate shader material on sheath");
+            }
         }
     }
 
@@ -494,12 +563,12 @@ public class WeaponController : MonoBehaviour
         }
 
         // Set ability icons when weapon is drawn
-        if (abilityManager != null)
+        if (abilityManager != null && IsLocalOwnerContext())
         {
             abilityManager.AE_SetWeaponAbilities();
             Debug.Log("[WeaponController] AE_SetWeaponAbilities called");
         }
-        else
+        else if (IsLocalOwnerContext())
         {
             // Try to find WeaponAbilityManager in current weapon instance
             if (currentHeldInstance != null)
@@ -538,6 +607,8 @@ public class WeaponController : MonoBehaviour
     // Handle Ultimate Icon Shader based on weapon type and cooldown state
     private void HandleUltimateIconShader(WeaponType weaponType)
     {
+        if (!IsLocalOwnerContext()) return;
+
         // Find Ultimate Icon Shader Controller
         var shaderController = FindFirstObjectByType<WeaponUltimateShaderController>();
         if (shaderController == null)
@@ -566,5 +637,47 @@ public class WeaponController : MonoBehaviour
             // Don't assign material if Ultimate is on cooldown
             Debug.Log($"[WeaponController] Skipped Ultimate shader assignment for {weaponType} (Ultimate on cooldown)");
         }
+    }
+
+    const float MeleeVfxDefaultLifetime = 2f;
+
+    /// <summary>
+    /// Remote players have Character (and WeaponHitRunner) disabled, so normal-attack VFX must be replicated.
+    /// Owner spawns locally then notifies all other clients with the same pose/scale.
+    /// </summary>
+    public void BroadcastMeleeVfx(Vector3 pos, Quaternion rot, Vector3 scale, int hitIndex, WeaponType weaponType)
+    {
+        var netObj = GetComponentInParent<NetworkObject>();
+        if (netObj == null || !netObj.IsSpawned || !netObj.IsOwner) return;
+        MeleeVfxSpawnServerRpc(pos, rot, scale, (byte)hitIndex, (int)weaponType);
+    }
+
+    [ServerRpc(RequireOwnership = true)]
+    void MeleeVfxSpawnServerRpc(Vector3 pos, Quaternion rot, Vector3 scale, byte hitIndex, int weaponTypeInt)
+    {
+        MeleeVfxSpawnClientRpc(pos, rot, scale, hitIndex, weaponTypeInt);
+    }
+
+    [ClientRpc]
+    void MeleeVfxSpawnClientRpc(Vector3 pos, Quaternion rot, Vector3 scale, byte hitIndex, int weaponTypeInt)
+    {
+        var netObj = GetComponentInParent<NetworkObject>();
+        if (netObj != null && netObj.IsOwner) return;
+
+        var wt = (WeaponType)weaponTypeInt;
+        var so = WeaponSelectionPersistence.ResolveWeaponSO(wt);
+        if (so == null || so.normalHitVfx == null || hitIndex >= so.normalHitVfx.Length) return;
+        var prefab = so.normalHitVfx[hitIndex];
+        if (prefab == null) return;
+
+        var vfx = Instantiate(prefab, pos, rot);
+        if (so.hitTimings != null && hitIndex < so.hitTimings.Length)
+        {
+            var timing = so.hitTimings[hitIndex];
+            if (timing.spawnRule.extraEulerOffset != Vector3.zero)
+                vfx.transform.rotation *= Quaternion.Euler(timing.spawnRule.extraEulerOffset);
+        }
+        vfx.transform.localScale = Vector3.Scale(vfx.transform.localScale, scale);
+        Destroy(vfx, MeleeVfxDefaultLifetime);
     }
 }

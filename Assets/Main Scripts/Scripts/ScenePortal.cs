@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using TMPro;
+using Unity.Netcode;
 
 /// <summary>
 /// Portal chuyển scene (Phiên bản cải tiến)
@@ -24,8 +25,6 @@ public class ScenePortal : MonoBehaviour
     [Header("=== EFFECTS ===")]
     public ParticleSystem portalEffect;
 
-    private bool playerInRange = false;
-
     void Start()
     {
         // Ẩn Canvas lúc đầu
@@ -46,20 +45,25 @@ public class ScenePortal : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag(playerTag))
-        {
-            playerInRange = true;
-            OpenPortalUI();
-        }
+        if (!other.CompareTag(playerTag)) return;
+        if (!IsLocalPlayerCollider(other)) return;
+        OpenPortalUI();
     }
 
     private void OnTriggerExit(Collider other)
     {
-        if (other.CompareTag(playerTag))
-        {
-            playerInRange = false;
-            ClosePortalUI();
-        }
+        if (!other.CompareTag(playerTag)) return;
+        if (!IsLocalPlayerCollider(other)) return;
+        ClosePortalUI();
+    }
+
+    static bool IsLocalPlayerCollider(Collider other)
+    {
+        if (other == null) return false;
+        var netObj = other.GetComponentInParent<NetworkObject>();
+        if (netObj == null)
+            return true;
+        return netObj.IsOwner;
     }
 
     public void OpenPortalUI()
@@ -68,6 +72,11 @@ public class ScenePortal : MonoBehaviour
         {
             CursorUIPriority.BeginUiOverlay();
             portalCanvas.SetActive(true);
+            foreach (var coord in portalCanvas.GetComponentsInChildren<DungeonPortalLobbyCoordinator>(true))
+            {
+                if (coord != null)
+                    coord.ResetDungeonPortalPanelsForEntry();
+            }
             
             // Hiển thị chuột để chọn
             Cursor.visible = true;

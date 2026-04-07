@@ -35,6 +35,10 @@ public class SceneTeleportButton : MonoBehaviour
     [Tooltip("Bước hiện tại phải đang ở đây thì mới advance.")]
     public int triggerAtStep = 4;
 
+    [Header("── Dungeon party lobby (multiplayer) ──")]
+    [Tooltip("Để trống: teleport ngay như cũ. Gán DungeonPortalLobbyCoordinator trên cùng Dungeon Canvas để mở bước chọn số người + preparation.")]
+    public DungeonPortalLobbyCoordinator dungeonLobbyCoordinator;
+
     private Button btn;
 
     private void Awake()
@@ -45,6 +49,9 @@ public class SceneTeleportButton : MonoBehaviour
 
     private void OnBtnClick()
     {
+        if (dungeonLobbyCoordinator == null)
+            dungeonLobbyCoordinator = GetComponentInParent<DungeonPortalLobbyCoordinator>(true);
+
         TryAdvanceQuest();
 
         if (string.IsNullOrEmpty(targetSceneName))
@@ -57,6 +64,13 @@ public class SceneTeleportButton : MonoBehaviour
         DungeonConfig.SelectedDifficulty = dungeonDifficulty;
         DungeonConfig.SelectedMapType = mapType;
         Debug.Log($"[SceneTeleportButton] DungeonConfig set: Difficulty={dungeonDifficulty}, MapType={mapType}");
+
+        if (dungeonLobbyCoordinator != null)
+        {
+            Debug.Log($"[SceneTeleportButton] Mở flow lobby dungeon → {targetSceneName}");
+            dungeonLobbyCoordinator.OnDifficultySelected(this);
+            return;
+        }
 
         Debug.Log($"[SceneTeleportButton] Chuẩn bị chuyển đến: {targetSceneName}");
         Invoke(nameof(ExecuteTeleport), delay);

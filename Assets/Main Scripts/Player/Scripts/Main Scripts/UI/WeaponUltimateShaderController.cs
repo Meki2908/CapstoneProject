@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using Unity.Netcode;
 
 /// <summary>
 /// Controller cho Ultimate Icon Shader theo từng weapon type
@@ -76,8 +77,8 @@ public class WeaponUltimateShaderController : MonoBehaviour
             weaponController.OnWeaponChanged -= OnWeaponChanged;
         }
 
-        abilityIconManager = FindFirstObjectByType<AbilityIconManager>();
-        weaponController = FindFirstObjectByType<WeaponController>();
+        abilityIconManager = FindLocalOwnerAbilityIconManager();
+        weaponController = FindLocalOwnerWeaponController();
 
         if (abilityIconManager == null)
         {
@@ -93,6 +94,40 @@ public class WeaponUltimateShaderController : MonoBehaviour
             // Subscribe to weapon change events
             weaponController.OnWeaponChanged += OnWeaponChanged;
         }
+    }
+
+    private WeaponController FindLocalOwnerWeaponController()
+    {
+        WeaponController fallback = null;
+        var all = FindObjectsByType<WeaponController>(FindObjectsSortMode.None);
+        for (int i = 0; i < all.Length; i++)
+        {
+            var wc = all[i];
+            if (wc == null) continue;
+            var netObj = wc.GetComponentInParent<NetworkObject>();
+            if (netObj == null)
+                fallback = fallback == null ? wc : fallback;
+            else if (netObj.IsOwner)
+                return wc;
+        }
+        return fallback;
+    }
+
+    private AbilityIconManager FindLocalOwnerAbilityIconManager()
+    {
+        AbilityIconManager fallback = null;
+        var all = FindObjectsByType<AbilityIconManager>(FindObjectsSortMode.None);
+        for (int i = 0; i < all.Length; i++)
+        {
+            var mgr = all[i];
+            if (mgr == null) continue;
+            var netObj = mgr.GetComponentInParent<NetworkObject>();
+            if (netObj == null)
+                fallback = fallback == null ? mgr : fallback;
+            else if (netObj.IsOwner)
+                return mgr;
+        }
+        return fallback;
     }
 
     private void InitializeComponents()
@@ -215,6 +250,13 @@ public class WeaponUltimateShaderController : MonoBehaviour
 
         // Ultimate is ready when: not on cooldown AND weapon is drawn AND Ultimate is unlocked
         isReady = !isOnCooldown && isWeaponDrawn && isUltimateUnlocked;
+
+        // Nếu material đã bị unassign lúc sheath và giờ Ultimate ready + weapon drawn,
+        // re-attach material instance để shader hiển thị lại ngay.
+        if (isReady && ultimateIcon != null && materialInstance != null && ultimateIcon.material == null)
+        {
+            ultimateIcon.material = materialInstance;
+        }
 
         // Update target glow intensity based on state
         if (isReady)

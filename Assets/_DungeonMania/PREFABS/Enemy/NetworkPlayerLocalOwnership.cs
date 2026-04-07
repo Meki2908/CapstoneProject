@@ -2,6 +2,7 @@ using Unity.Cinemachine;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using MovementSystem;
 
 /// <summary>
 /// Chỉ client sở hữu (owner) chạy input, CharacterController, Character và CinemachineCamera.
@@ -38,5 +39,13 @@ public class NetworkPlayerLocalOwnership : NetworkBehaviour
 
         foreach (var cm in GetComponentsInChildren<CinemachineCamera>(true))
             cm.enabled = local;
+
+        if (local)
+        {
+            CursorUIPriority.EndAllUiOverlays();
+            Cursor.visible = false;
+            Cursor.lockState = CursorLockMode.Locked;
+            CameraCursor.ApplyGameplayCursorAfterUiClosed();
+        }
     }
 }

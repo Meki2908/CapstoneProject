@@ -3,10 +3,18 @@ using UnityEngine.InputSystem;
 using System.Collections.Generic;
 using UnityEngine.Playables;
 using System.Collections;
+using Unity.Netcode;
 
 [RequireComponent(typeof(Animator))]
 public class SwordSkills : MonoBehaviour
 {
+    private bool IsLocalOwnerContext()
+    {
+        var netObj = GetComponentInParent<NetworkObject>();
+        if (netObj == null) return true; // single-player
+        return netObj.IsOwner;
+    }
+
     [Header("Refs")]
     public EquipmentSystem equipment;
     public Transform defaultVfxSpawn;
@@ -41,6 +49,7 @@ public class SwordSkills : MonoBehaviour
     // Animation Event: Trigger cooldown for specific ability
     public void AE_TriggerCooldown(int inputIndex)
     {
+        if (!IsLocalOwnerContext()) return;
         var abilityIconManager = FindFirstObjectByType<AbilityIconManager>();
         if (abilityIconManager != null)
         {
@@ -117,6 +126,7 @@ public class SwordSkills : MonoBehaviour
 
     private void Update()
     {
+        if (!IsLocalOwnerContext()) return;
         if (Keyboard.current == null) return;
 
         if (Keyboard.current.eKey.wasPressedThisFrame) TryUse(AbilityInput.E);
@@ -127,6 +137,7 @@ public class SwordSkills : MonoBehaviour
 
     public void TryUse(AbilityInput input)
     {
+        if (!IsLocalOwnerContext()) return;
         var weapon = equipment != null ? equipment.GetCurrentWeapon() : null;
         bool inCombat = character != null && character.movementSM != null
                                           && character.movementSM.currentState == character.combatMove;

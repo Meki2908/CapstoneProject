@@ -25393,8 +25393,8 @@ MonoBehaviour:
   disableCameraLookOnCursorVisible: 1
   disableCameraZoomOnCursorVisible: 1
   fixedCinemachineVersion: 1
-  lookInputAction: {fileID: 0}
-  zoomInputAction: {fileID: 0}
+  lookInputAction: {fileID: -5630151704836100654, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  zoomInputAction: {fileID: -8144155706926662009, guid: 052faaac586de48259a63d0c4782560b, type: 3}
 --- !u!114 &1215054310798034151
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -85980,6 +85980,17 @@ MonoBehaviour:
   lastAttackInputTime: 0
   dashLockUntil: 116.801414
   canStartJump: 1
+  groundLayers:
+    serializedVersion: 2
+    m_Bits: 4104
+  groundRayDistance: 0.38
+  footRayHalfWidth: 0.12
+  jumpBufferDuration: 0.12
+  coyoteTime: 0.08
+  coyoteMaxUpSpeed: 0.35
+  jumpCooldownSeconds: 1.5
+  locomotionIdleMoveThreshold: 0.05
+  locomotionIdleSnapAfterSeconds: 0.2
 --- !u!143 &9011594198968732796
 CharacterController:
   m_ObjectHideFlags: 0
@@ -106331,7 +106342,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7891149897360037319}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.12384256, y: 0.3515949, z: 0.04698478, w: 0.9267343}
+  m_LocalRotation: {x: -0.2182071, y: 0.45820147, z: 0.11712384, w: 0.85365045}
   m_LocalPosition: {x: -3.34, y: 0.21700001, z: -4.09}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0

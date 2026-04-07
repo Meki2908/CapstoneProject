@@ -31,6 +31,7 @@ public class JumpingState : State
 
         character.animator.SetFloat("speed", 0);
         character.animator.SetTrigger("jump");
+        character.NotifyJumpImpulseStarted();
         Jump();
     }
     public override void HandleInput()

@@ -97,6 +97,15 @@ public class WeaponHitRunner : MonoBehaviour
         }
         vfx.transform.localScale = Vector3.Scale(vfx.transform.localScale, scl);
         if (vfxLifetime > 0f) Destroy(vfx, vfxLifetime);
+        TryBroadcastMeleeVfx(pos, rot, scl, hitIndex);
+    }
+
+    void TryBroadcastMeleeVfx(Vector3 pos, Quaternion rot, Vector3 scale, int hitIndex)
+    {
+        if (weapon == null) return;
+        var wc = GetComponent<WeaponController>() ?? GetComponentInParent<WeaponController>();
+        if (wc == null) return;
+        wc.BroadcastMeleeVfx(pos, rot, scale, hitIndex, weapon.weaponType);
     }
 
     private (Vector3 pos, Quaternion rot, Vector3 scl) BuildSpawnTransform(HitTiming timing)
@@ -243,6 +252,7 @@ public class WeaponHitRunner : MonoBehaviour
 
             // Auto-destroy after lifetime
             if (vfxLifetime > 0f) Destroy(vfx, vfxLifetime);
+            TryBroadcastMeleeVfx(pos, rot, scl, currentHitIndex);
         }
         else
         {
@@ -264,6 +274,7 @@ public class WeaponHitRunner : MonoBehaviour
             var vfx = Instantiate(prefab, pos, rot);
             vfx.transform.localScale = Vector3.Scale(vfx.transform.localScale, scl);
             if (vfxLifetime > 0f) Destroy(vfx, vfxLifetime);
+            TryBroadcastMeleeVfx(pos, rot, scl, currentHitIndex);
         }
     }
 
@@ -297,6 +308,7 @@ public class WeaponHitRunner : MonoBehaviour
 
             // Auto-destroy after lifetime
             if (vfxLifetime > 0f) Destroy(vfx, vfxLifetime);
+            TryBroadcastMeleeVfx(pos, rot, scl, hitIndex);
         }
         else
         {
@@ -318,6 +330,7 @@ public class WeaponHitRunner : MonoBehaviour
             var vfx = Instantiate(prefab, pos, rot);
             vfx.transform.localScale = Vector3.Scale(vfx.transform.localScale, scl);
             if (vfxLifetime > 0f) Destroy(vfx, vfxLifetime);
+            TryBroadcastMeleeVfx(pos, rot, scl, hitIndex);
         }
     }
 }

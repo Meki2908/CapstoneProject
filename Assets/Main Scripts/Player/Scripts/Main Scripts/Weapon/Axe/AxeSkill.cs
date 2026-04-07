@@ -2,9 +2,17 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Playables;
+using Unity.Netcode;
 
 public class AxeSkill : MonoBehaviour
 {
+    private bool IsLocalOwnerContext()
+    {
+        var netObj = GetComponentInParent<NetworkObject>();
+        if (netObj == null) return true; // single-player
+        return netObj.IsOwner;
+    }
+
     [Header("Refs")]
     [SerializeField] private EquipmentSystem equipment;     // chỉ dùng nếu KHÔNG dùng VFX-collision cho damage
     [SerializeField] private Transform defaultVfxSpawn;     // vị trí spawn VFX mặc định (ví dụ tip weapon)
@@ -91,6 +99,7 @@ public class AxeSkill : MonoBehaviour
 
     private void Update()
     {
+        if (!IsLocalOwnerContext()) return;
         if (Keyboard.current == null) return;
         if (Keyboard.current.eKey.wasPressedThisFrame) TryUse(AbilityInput.E);
         if (Keyboard.current.rKey.wasPressedThisFrame) TryUse(AbilityInput.R);
@@ -100,6 +109,7 @@ public class AxeSkill : MonoBehaviour
 
     public void TryUse(AbilityInput input)
     {
+        if (!IsLocalOwnerContext()) return;
         Debug.Log($"[AxeSkill.TryUse] key={input} pressed");
 
         var weapon = equipment != null ? equipment.GetCurrentWeapon() : null;
@@ -283,6 +293,7 @@ public class AxeSkill : MonoBehaviour
     // Animation Event: Trigger cooldown for specific ability
     public void AE_TriggerCooldown(int inputIndex)
     {
+        if (!IsLocalOwnerContext()) return;
         var abilityIconManager = FindFirstObjectByType<AbilityIconManager>();
         if (abilityIconManager != null)
         {

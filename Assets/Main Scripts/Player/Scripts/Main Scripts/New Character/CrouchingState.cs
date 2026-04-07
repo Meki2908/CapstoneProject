@@ -77,7 +77,6 @@ public class CrouchingState : State
     public override void LogicUpdate()
     {
         base.LogicUpdate();
-        character.animator.SetFloat("speed", input.magnitude, character.speedDampTime, Time.deltaTime);
 
         if (crouchHeld || crouchAction.triggered)
         {

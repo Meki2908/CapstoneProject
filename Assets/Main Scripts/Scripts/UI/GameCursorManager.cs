@@ -69,6 +69,15 @@ public class GameCursorManager : MonoBehaviour
 
     private void LateUpdate()
     {
+        // Gameplay/FPS mode: chuột đã lock thì manager UI không được bật lại cursor.
+        // Nếu bật lại sẽ lệch state với CameraCursor (gây hiện tượng phải bấm Alt 2 lần).
+        if (Cursor.lockState == CursorLockMode.Locked)
+        {
+            if (Cursor.visible)
+                Cursor.visible = false;
+            return;
+        }
+
         if (!ShouldApplyCursorOverrides()) return;
 
         // Ensure cursor remains visible while UI is interactive

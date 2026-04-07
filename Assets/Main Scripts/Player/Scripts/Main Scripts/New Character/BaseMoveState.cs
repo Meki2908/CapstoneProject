@@ -67,8 +67,8 @@ public class BaseMoveState : State
             return;
         }
 
-        // Space chỉ đủ khi đã về locomotion (canStartJump) và physics báo grounded — impulse Y chỉ áp trong JumpingState.Enter (Jump()).
-        if (jumpAction.triggered && character.canStartJump && character.controller.isGrounded)
+        // Ray hai chân + jump buffer (Character.Update) — không phụ thuộc CC.isGrounded một frame.
+        if (character.TryConsumeJumpBuffered(character.canStartJump))
         {
             jump = true;
         }
@@ -150,8 +150,7 @@ public class BaseMoveState : State
     public override void LogicUpdate()
     {
         base.LogicUpdate();
-        // Use built-in SetFloat with dampTime for smooth exponential damping
-        character.animator.SetFloat("speed", input.magnitude, character.speedDampTime, Time.deltaTime);
+        character.SetAnimatorLocomotionSpeed(input.magnitude);
 
         if (dash) // Transition to DashState if dash is triggered
         {

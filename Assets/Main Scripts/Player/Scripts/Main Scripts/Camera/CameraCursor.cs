@@ -138,7 +138,10 @@ namespace MovementSystem
 
         private void ToggleCursor()
         {
-            isCursorHidden = !isCursorHidden;
+            // Đồng bộ theo trạng thái THỰC tế trước khi toggle để tránh lệch cờ nội bộ
+            // (case vào scene bị script khác override Cursor.visible/lockState -> phải bấm Alt 2 lần).
+            bool actualHiddenNow = Cursor.lockState == CursorLockMode.Locked && !Cursor.visible;
+            isCursorHidden = !actualHiddenNow;
 
             if (isCursorHidden)
             {

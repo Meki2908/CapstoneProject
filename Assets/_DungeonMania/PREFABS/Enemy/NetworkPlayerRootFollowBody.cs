@@ -3,15 +3,19 @@ using UnityEngine;
 
 /// <summary>
 /// CC + Character nằm trên child "player", còn <see cref="NetworkObject"/> + <see cref="NetworkTransform"/> trên root.
-/// Chỉ đồng bộ vị trí root với CC; không gán root.rotation theo thân nhân vật (camera là con của root → sẽ xoay theo hướng đi).
+/// Chỉ đồng bộ vị trí root với CC; không gán root.rotation theo thân nhân vật (camera là con của root -> sẽ xoay theo hướng đi).
 /// Hướng mesh giữ bằng localRotation của body: Inverse(root) * childWorldRot.
 /// </summary>
 [DefaultExecutionOrder(100)]
-public class NetworkPlayerRootFollowBody : MonoBehaviour
+public class NetworkPlayerRootFollowBody : NetworkBehaviour
 {
     Transform _body;
     Vector3 _localPos;
     NetworkObject _netObj;
+    readonly NetworkVariable<Quaternion> _bodyWorldRotation = new(
+        Quaternion.identity,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Owner);
 
     void Awake()
     {
@@ -28,19 +32,29 @@ public class NetworkPlayerRootFollowBody : MonoBehaviour
     {
         if (_body == null) return;
 
-        if (_netObj != null && _netObj.IsSpawned && !_netObj.IsOwner)
+        bool networkReady = _netObj != null && _netObj.IsSpawned;
+        if (networkReady && !IsOwner)
+        {
+            // Remote proxy: root pos/rot do NetworkTransform sync; chỉ dựng lại local body rot cho đúng hướng mesh.
+            Quaternion rootRotRemote = transform.rotation;
+            _body.localPosition = _localPos;
+            _body.localRotation = Quaternion.Inverse(rootRotRemote) * _bodyWorldRotation.Value;
             return;
+        }
 
         // Không được đặt root.position = child.position (offset local) — đã xử lý bằng rootPos.
         Vector3 childWorldPos = _body.position;
         Quaternion childWorldRot = _body.rotation;
 
-        // Giữ nguyên góc root (spawn / hệ camera nếu có chỉnh root). Không dùng rotation của body làm root → camera không quay theo hướng đi.
+        // Giữ nguyên góc root (spawn / hệ camera nếu có chỉnh root). Không dùng rotation của body làm root -> camera không quay theo hướng đi.
         Quaternion rootRot = transform.rotation;
         Vector3 rootPos = childWorldPos - rootRot * _localPos;
 
         transform.SetPositionAndRotation(rootPos, rootRot);
         _body.localPosition = _localPos;
         _body.localRotation = Quaternion.Inverse(rootRot) * childWorldRot;
+
+        if (networkReady && IsOwner)
+            _bodyWorldRotation.Value = childWorldRot;
     }
 }

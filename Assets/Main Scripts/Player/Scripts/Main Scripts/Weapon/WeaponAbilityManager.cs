@@ -1,4 +1,5 @@
 using UnityEngine;
+using Unity.Netcode;
 
 public class WeaponAbilityManager : MonoBehaviour
 {
@@ -16,7 +17,7 @@ public class WeaponAbilityManager : MonoBehaviour
         // Find icon manager if not assigned
         if (iconManager == null)
         {
-            iconManager = FindFirstObjectByType<AbilityIconManager>();
+            iconManager = FindLocalOwnerAbilityIconManager();
             if (iconManager != null)
             {
                 Debug.Log("[WeaponAbilityManager] Auto-found AbilityIconManager");
@@ -28,9 +29,36 @@ public class WeaponAbilityManager : MonoBehaviour
         }
     }
 
+    AbilityIconManager FindLocalOwnerAbilityIconManager()
+    {
+        AbilityIconManager fallback = null;
+        var all = FindObjectsByType<AbilityIconManager>(FindObjectsSortMode.None);
+        for (int i = 0; i < all.Length; i++)
+        {
+            var mgr = all[i];
+            if (mgr == null) continue;
+            var netObj = mgr.GetComponentInParent<NetworkObject>();
+            if (netObj == null)
+                fallback = fallback == null ? mgr : fallback;
+            else if (netObj.IsOwner)
+                return mgr;
+        }
+        return fallback;
+    }
+
+    bool IsLocalOwnerContext()
+    {
+        var wc = GetComponentInParent<WeaponController>();
+        if (wc == null) return true;
+        var netObj = wc.GetComponentInParent<NetworkObject>();
+        if (netObj == null) return true; // single-player
+        return netObj.IsOwner;
+    }
+
     // Animation Event: Set ability icons when weapon is drawn
     public void AE_SetWeaponAbilities()
     {
+        if (!IsLocalOwnerContext()) return;
         Debug.Log($"[WeaponAbilityManager] AE_SetWeaponAbilities called - iconManager: {iconManager != null}, abilities: {weaponAbilities?.Length ?? 0}");
 
         if (iconManager != null && weaponAbilities != null)
@@ -62,6 +90,7 @@ public class WeaponAbilityManager : MonoBehaviour
     // Animation Event: Clear ability icons when weapon is sheathed
     public void AE_ClearWeaponAbilities()
     {
+        if (!IsLocalOwnerContext()) return;
         if (iconManager != null)
         {
             iconManager.AE_ClearAbilityIcons();

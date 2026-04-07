@@ -118,7 +118,7 @@ public class AttackState : State
             attack = true;
             pressedSinceLastCheck = true;
         }
-        if (jumpAction.triggered && character.canStartJump && character.controller.isGrounded)
+        if (character.TryConsumeJumpBuffered(character.canStartJump))
         {
             jump = true;
         }

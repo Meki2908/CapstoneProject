@@ -133,6 +133,13 @@ public class DashState : State
 
         // Reset dash-related variables if needed
         dashDirection = Vector3.zero;
+
+        // Snap blend "speed" theo input hiện tại — tránh damp + drift làm para dao động sau dash khi đứng yên.
+        if (character != null)
+        {
+            Vector2 m = moveAction.ReadValue<Vector2>();
+            character.SetAnimatorLocomotionSpeed(m.magnitude);
+        }
     }
 
     #region Animation Events

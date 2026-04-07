@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Events;
 using TMPro;
+using Unity.Netcode;
 
 public class WeaponSwapper : MonoBehaviour
 {
@@ -47,14 +48,33 @@ public class WeaponSwapper : MonoBehaviour
 
     private WeaponType pendingWeaponType;
 
+    private WeaponController FindLocalOwnerWeaponController()
+    {
+        WeaponController fallback = null;
+        var all = FindObjectsByType<WeaponController>(FindObjectsSortMode.None);
+        for (int i = 0; i < all.Length; i++)
+        {
+            var wc = all[i];
+            if (wc == null) continue;
+            var netObj = wc.GetComponentInParent<NetworkObject>();
+            if (netObj == null)
+                fallback = fallback == null ? wc : fallback; // single-player fallback
+            else if (netObj.IsOwner)
+                return wc;
+        }
+        return fallback;
+    }
+
     private void Awake()
     {
         // Auto-find references if not assigned
         if (weaponController == null)
-            weaponController = FindFirstObjectByType<WeaponController>();
+            weaponController = FindLocalOwnerWeaponController();
 
         if (character == null)
-            character = FindFirstObjectByType<Character>();
+            character = weaponController != null
+                ? weaponController.GetComponentInChildren<Character>(true)
+                : FindFirstObjectByType<Character>();
 
         if (enemyDetection == null)
             enemyDetection = FindFirstObjectByType<EnemyDetection>();
@@ -177,7 +197,7 @@ public class WeaponSwapper : MonoBehaviour
         }
 
         if (weaponController == null)
-            weaponController = FindFirstObjectByType<WeaponController>();
+            weaponController = FindLocalOwnerWeaponController();
 
         if (weaponController == null)
         {

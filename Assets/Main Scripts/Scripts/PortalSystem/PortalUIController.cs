@@ -1,5 +1,6 @@
 using System.Collections;
 using Unity.Cinemachine;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
@@ -60,6 +61,23 @@ public class PortalUIController : MonoBehaviour
 
     private Transform currentPlayer;
 
+    Transform FindLocalPlayerTransform()
+    {
+        // Multiplayer: ưu tiên NetworkObject owner trên client hiện tại.
+        foreach (var netObj in FindObjectsByType<NetworkObject>(FindObjectsSortMode.None))
+        {
+            if (netObj != null && netObj.IsOwner)
+            {
+                var cc = netObj.GetComponentInChildren<CharacterController>(true);
+                if (cc != null) return cc.transform;
+            }
+        }
+
+        // Fallback single-player.
+        GameObject p = GameObject.FindGameObjectWithTag("Player");
+        return p != null ? p.transform : null;
+    }
+
     private void Awake()
     {
         if (btnPortal1 != null) btnPortal1.onClick.AddListener(() => TeleportTo(portal1_Dest, 1));
@@ -116,11 +134,7 @@ public class PortalUIController : MonoBehaviour
         if (currentPlayer == null)
         {
             if (playerOverride != null) currentPlayer = playerOverride;
-            else
-            {
-                GameObject p = GameObject.FindGameObjectWithTag("Player");
-                if (p != null) currentPlayer = p.transform;
-            }
+            else currentPlayer = FindLocalPlayerTransform();
         }
 
         if (currentPlayer == null)

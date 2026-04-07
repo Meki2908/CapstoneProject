@@ -60,10 +60,9 @@ public class SprintState : State
             sprint = false;
         }
 
-        if (jumpAction.triggered && character.canStartJump && character.controller.isGrounded)
+        if (character.TryConsumeJumpBuffered(character.canStartJump))
         {
             sprintJump = true;
-
         }
         if (dashAction.triggered)
         {
@@ -81,7 +80,7 @@ public class SprintState : State
 
         if (sprint)
         {
-            character.animator.SetFloat("speed", input.magnitude + 0.5f, character.speedDampTime, Time.deltaTime);
+            character.SetAnimatorLocomotionSpeed(input.magnitude + 0.5f);
         }
         else if (input.sqrMagnitude == 0f) // chỉ khi buông hết phím di chuyển mới HardStop
         {

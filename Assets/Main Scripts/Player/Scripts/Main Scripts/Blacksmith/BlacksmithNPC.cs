@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using Unity.Netcode;
 
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -26,6 +27,7 @@ public class BlacksmithNPC : MonoBehaviour
 
     private bool _canInteract = false;
     private bool _isOpen = false;
+    private PlayerInput _localInteractingPlayerInput;
 
     void Awake()
     {
@@ -226,6 +228,9 @@ public class BlacksmithNPC : MonoBehaviour
     void OnTriggerEnter(Collider other)
     {
         if (!other.CompareTag(playerTag)) return;
+        if (!IsLocalPlayerCollider(other)) return;
+
+        _localInteractingPlayerInput = other.GetComponentInParent<PlayerInput>();
         _canInteract = true;
         if (!_isOpen && promptCanvas) promptCanvas.SetActive(true);
     }
@@ -233,7 +238,10 @@ public class BlacksmithNPC : MonoBehaviour
     void OnTriggerExit(Collider other)
     {
         if (!other.CompareTag(playerTag)) return;
+        if (!IsLocalPlayerCollider(other)) return;
+
         _canInteract = false;
+        _localInteractingPlayerInput = null;
         if (promptCanvas) promptCanvas.SetActive(false);
 
         // Auto-close if player walks away
@@ -246,7 +254,9 @@ public class BlacksmithNPC : MonoBehaviour
     void DisablePlayerInput()
     {
 #if ENABLE_INPUT_SYSTEM
-        var playerInput = FindFirstObjectByType<PlayerInput>();
+        var playerInput = _localInteractingPlayerInput != null
+            ? _localInteractingPlayerInput
+            : FindFirstObjectByType<PlayerInput>();
         if (playerInput != null)
         {
             var playerMap = playerInput.actions.FindActionMap("Player", false);
@@ -261,7 +271,9 @@ public class BlacksmithNPC : MonoBehaviour
     void EnablePlayerInput()
     {
 #if ENABLE_INPUT_SYSTEM
-        var playerInput = FindFirstObjectByType<PlayerInput>();
+        var playerInput = _localInteractingPlayerInput != null
+            ? _localInteractingPlayerInput
+            : FindFirstObjectByType<PlayerInput>();
         if (playerInput != null)
         {
             var playerMap = playerInput.actions.FindActionMap("Player", false);
@@ -299,5 +311,14 @@ public class BlacksmithNPC : MonoBehaviour
             }
         }
         catch { }
+    }
+
+    bool IsLocalPlayerCollider(Collider other)
+    {
+        if (other == null) return false;
+        var netObj = other.GetComponentInParent<NetworkObject>();
+        if (netObj == null)
+            return true; // Single-player hoặc object không dùng Netcode
+        return netObj.IsOwner;
     }
 }
