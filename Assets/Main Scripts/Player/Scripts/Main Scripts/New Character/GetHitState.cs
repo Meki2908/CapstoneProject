@@ -126,7 +126,7 @@ public class GetHitState : State
         //     dash = true;
         // }
         
-        if (jumpAction.triggered && character.canStartJump && character.controller.isGrounded)
+        if (character.TryConsumeJumpBuffered(character.canStartJump))
         {
             jump = true;
         }

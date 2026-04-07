@@ -79,8 +79,35 @@ public class Character : MonoBehaviour
     public bool IsDashing { get; set; } // For invincibility frame during dash
     public float dashLockUntil = 0f; // Thời điểm trước đó dash bị khóa (để tránh auto-dash sau khi bị hit)
 
-    /// <summary> Khi false, bỏ qua input nhảy cho đến khi vào lại locomotion. Nhảy thật sự còn cần isGrounded + chuyển sang JumpingState (impulse Y trong JumpingState.Enter). </summary>
+    /// <summary> Khi false, bỏ qua input nhảy cho đến khi vào lại locomotion. Nhảy thật sự còn cần <see cref="TryConsumeJumpBuffered"/> (ray chân + buffer + coyote nhẹ). </summary>
     public bool canStartJump = true;
+
+    [Header("Jump — ground & buffer")]
+    [Tooltip("Layer được coi là mặt đất cho 2 ray dưới chân. Để trống = mọi layer (DefaultRaycastLayers).")]
+    [SerializeField] LayerMask groundLayers;
+    [SerializeField] float groundRayDistance = 0.38f;
+    [SerializeField] float footRayHalfWidth = 0.12f;
+    [SerializeField] float jumpBufferDuration = 0.12f;
+    [SerializeField] float coyoteTime = 0.08f;
+    [Tooltip("Coyote không áp dụng khi vận tốc Y lớn hơn (đang nhảy lên, tránh double jump).")]
+    [SerializeField] float coyoteMaxUpSpeed = 0.35f;
+    [Tooltip("Khoảng thời gian tối thiểu giữa hai lần nhảy (chống spam Space + buffer tích trên không).")]
+    [SerializeField] float jumpCooldownSeconds = 0.32f;
+
+    [Header("Animator locomotion speed")]
+    [Tooltip("Input magnitude >= giá trị này được coi là đang di chuyển (cập nhật thời điểm \"có move\").")]
+    [SerializeField] float locomotionIdleMoveThreshold = 0.05f;
+    [Tooltip("Sau khi input < threshold liên tục đủ lâu mới snap speed=0 (tránh jitter, vẫn blend mượt lúc vừa buông phím).")]
+    [SerializeField] float locomotionIdleSnapAfterSeconds = 0.2f;
+    float lastLocomotionMoveTime;
+
+    /// <summary>Hai ray dưới chân đều chạm ground layer (cập nhật mỗi Update, trước input).</summary>
+    public bool CachedGroundedFeet { get; private set; }
+
+    private InputAction jumpActionCache;
+    float jumpBufferRemaining;
+    float lastGroundedFeetTime = -999f;
+    float jumpAllowedAfterTime = -999f;
 
     private int originalLayer; // Store original layer before dash
     private const int NOTHING_LAYER = 0; // Unity's "Nothing" layer index
@@ -94,6 +121,7 @@ public class Character : MonoBehaviour
 
         // Load saved key binding overrides từ Settings
         InputRebindHelper.LoadBindingOverrides(playerInput);
+        jumpActionCache = playerInput.actions["Jump"];
         cameraTransform = Camera.main.transform;
         cachedPlanarForward = transform.forward;
         cachedPlanarForward.y = 0f;
@@ -163,6 +191,8 @@ public class Character : MonoBehaviour
 
         // Apply initial speed multipliers
         UpdateSpeedWithGems();
+
+        lastLocomotionMoveTime = Time.time;
     }
 
     private void OnEquipmentChanged()
@@ -175,9 +205,91 @@ public class Character : MonoBehaviour
     {
         if (movementSM == null || movementSM.currentState == null) return;
 
+        UpdateGroundedAndJumpBuffer();
         movementSM.currentState.HandleInput();
 
         movementSM.currentState.LogicUpdate();
+    }
+
+    void UpdateGroundedAndJumpBuffer()
+    {
+        CachedGroundedFeet = ComputeGroundedFeetRays();
+        if (CachedGroundedFeet)
+            lastGroundedFeetTime = Time.time;
+
+        if (jumpActionCache != null && jumpActionCache.triggered)
+            jumpBufferRemaining = jumpBufferDuration;
+        else
+            jumpBufferRemaining = Mathf.Max(0f, jumpBufferRemaining - Time.deltaTime);
+
+        // Không giữ buffer trong phase bay lên (tránh spam Space tích buffer rồi chạm đất là nhảy lại ngay).
+        if (controller != null && controller.velocity.y > 0.25f)
+            jumpBufferRemaining = 0f;
+    }
+
+    bool ComputeGroundedFeetRays()
+    {
+        if (controller == null) return false;
+        LayerMask mask = groundLayers.value == 0 ? Physics.DefaultRaycastLayers : groundLayers;
+        float bottomY = transform.position.y + controller.center.y - controller.height * 0.5f + controller.skinWidth;
+        Vector3 basePos = new Vector3(transform.position.x, bottomY, transform.position.z);
+        Vector3 left = basePos + transform.TransformDirection(new Vector3(-footRayHalfWidth, 0f, 0f));
+        Vector3 right = basePos + transform.TransformDirection(new Vector3(footRayHalfWidth, 0f, 0f));
+        float dist = groundRayDistance + controller.skinWidth;
+        bool hitL = Physics.Raycast(left, Vector3.down, out _, dist, mask, QueryTriggerInteraction.Ignore);
+        bool hitR = Physics.Raycast(right, Vector3.down, out _, dist, mask, QueryTriggerInteraction.Ignore);
+        return hitL && hitR;
+    }
+
+    /// <summary>Đứng trên đất (2 ray) hoặc coyote ngắn sau khi rời mép; không dùng CC.isGrounded để tránh nhấp nháy.</summary>
+    public bool IsGroundedForJump()
+    {
+        if (CachedGroundedFeet) return true;
+        if (coyoteTime <= 0f) return false;
+        if (Time.time - lastGroundedFeetTime > coyoteTime) return false;
+        return controller != null && controller.velocity.y <= coyoteMaxUpSpeed;
+    }
+
+    /// <summary>Gọi khi impulse nhảy đã áp (JumpingState / SprintJump): xóa buffer và bật cooldown.</summary>
+    public void NotifyJumpImpulseStarted()
+    {
+        jumpBufferRemaining = 0f;
+        jumpAllowedAfterTime = Time.time + Mathf.Max(0f, jumpCooldownSeconds);
+    }
+
+    /// <summary>Consume một lần nhảy đã buffer khi được phép và đang grounded/coyote.</summary>
+    public bool TryConsumeJumpBuffered(bool canJump)
+    {
+        if (!canJump || jumpBufferRemaining <= 0f) return false;
+        if (Time.time < jumpAllowedAfterTime) return false;
+        if (!IsGroundedForJump()) return false;
+        jumpBufferRemaining = 0f;
+        return true;
+    }
+
+    /// <summary>
+    /// Blend tree locomotion (param "speed"): có move thì damp; khi input nhỏ thì vẫn damp tới khi đủ lâu không có move mới snap 0
+    /// (cách 2 — tránh jitter sau dash nhưng blend lúc dừng vẫn mượt).
+    /// </summary>
+    public void SetAnimatorLocomotionSpeed(float targetMagnitude)
+    {
+        if (animator == null) return;
+        float threshold = Mathf.Max(1e-4f, locomotionIdleMoveThreshold);
+
+        if (targetMagnitude >= threshold)
+            lastLocomotionMoveTime = Time.time;
+
+        if (targetMagnitude < threshold)
+        {
+            if (Time.time - lastLocomotionMoveTime >= locomotionIdleSnapAfterSeconds)
+                animator.SetFloat("speed", 0f);
+            else
+                animator.SetFloat("speed", targetMagnitude, speedDampTime, Time.deltaTime);
+        }
+        else
+        {
+            animator.SetFloat("speed", targetMagnitude, speedDampTime, Time.deltaTime);
+        }
     }
 
     private void FixedUpdate()

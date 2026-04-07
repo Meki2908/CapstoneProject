@@ -14,6 +14,7 @@ public class SprintJumpState : State
         base.Enter();
 
         character.canStartJump = false;
+        character.NotifyJumpImpulseStarted();
 
         // Drive jump by physics so this state actually moves on Y.
         character.animator.applyRootMotion = false;
