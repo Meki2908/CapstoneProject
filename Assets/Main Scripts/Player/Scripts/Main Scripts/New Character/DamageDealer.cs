@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
+using Unity.Netcode;
 using UnityEngine;
 
 public class DamageDealer : MonoBehaviour
@@ -15,12 +16,14 @@ public class DamageDealer : MonoBehaviour
     bool canDealDamage;
     bool hasPlayedHitSfxInCurrentSwing;
     List<GameObject> hasDealtDamage;
+    NetworkObject _netObj;
 
     void Start()
     {
         canDealDamage = false;
         hasPlayedHitSfxInCurrentSwing = false;
         hasDealtDamage = new List<GameObject>();
+        _netObj = GetComponentInParent<NetworkObject>();
 
         if (hitAudioSource == null)
         {
@@ -30,41 +33,43 @@ public class DamageDealer : MonoBehaviour
 
     void Update()
     {
-        if (canDealDamage)
+        if (!canDealDamage) return;
+
+        // Network: chỉ owner mới xử lý hit detection (tránh double damage từ remote clone)
+        if (_netObj != null && _netObj.IsSpawned && !_netObj.IsOwner) return;
+
+        // Primary detection: spherecast along forward (useful for swings/projectiles)
+        RaycastHit[] hits = Physics.SphereCastAll(
+            transform.position,
+            hitRadius,
+            transform.forward,
+            weaponLength,
+            targetLayer
+        );
+
+        HashSet<GameObject> processed = new HashSet<GameObject>();
+
+        foreach (var hit in hits)
         {
-            // Primary detection: spherecast along forward (useful for swings/projectiles)
-            RaycastHit[] hits = Physics.SphereCastAll(
-                transform.position,
-                hitRadius,
-                transform.forward,
-                weaponLength,
-                targetLayer
-            );
+            if (hit.transform == null) continue;
+            var go = hit.transform.gameObject;
+            if (processed.Contains(go) || hasDealtDamage.Contains(go)) continue;
+            ProcessHitTransform(hit.transform, hit.point);
+            processed.Add(go);
+        }
 
-            HashSet<GameObject> processed = new HashSet<GameObject>();
-
-            foreach (var hit in hits)
-            {
-                if (hit.transform == null) continue;
-                var go = hit.transform.gameObject;
-                if (processed.Contains(go) || hasDealtDamage.Contains(go)) continue;
-                ProcessHitTransform(hit.transform, hit.point);
-                processed.Add(go);
-            }
-
-            // Secondary detection: overlap capsule from base to top of weapon (covers vertical spikes)
-            Vector3 capsuleStart = transform.position;
-            Vector3 capsuleEnd = transform.position + Vector3.up * Mathf.Max(0.01f, weaponLength);
-            Collider[] overlaps = Physics.OverlapCapsule(capsuleStart, capsuleEnd, Mathf.Max(0.01f, hitRadius), targetLayer);
-            foreach (var col in overlaps)
-            {
-                if (col == null || col.transform == null) continue;
-                var go = col.transform.gameObject;
-                if (processed.Contains(go) || hasDealtDamage.Contains(go)) continue;
-                Vector3 hitPoint = col.ClosestPoint(transform.position);
-                ProcessHitTransform(col.transform, hitPoint);
-                processed.Add(go);
-            }
+        // Secondary detection: overlap capsule from base to top of weapon (covers vertical spikes)
+        Vector3 capsuleStart = transform.position;
+        Vector3 capsuleEnd = transform.position + Vector3.up * Mathf.Max(0.01f, weaponLength);
+        Collider[] overlaps = Physics.OverlapCapsule(capsuleStart, capsuleEnd, Mathf.Max(0.01f, hitRadius), targetLayer);
+        foreach (var col in overlaps)
+        {
+            if (col == null || col.transform == null) continue;
+            var go = col.transform.gameObject;
+            if (processed.Contains(go) || hasDealtDamage.Contains(go)) continue;
+            Vector3 hitPoint = col.ClosestPoint(transform.position);
+            ProcessHitTransform(col.transform, hitPoint);
+            processed.Add(go);
         }
     }
 

@@ -14,6 +14,10 @@ public class NetworkPlayerSpawnSnap : NetworkBehaviour
             gameObject.AddComponent<NetworkPlayerRootFollowBody>();
         if (!TryGetComponent<NetworkPlayerLocalOwnership>(out _))
             gameObject.AddComponent<NetworkPlayerLocalOwnership>();
+        if (!TryGetComponent<NetworkAnimatorSync>(out _))
+            gameObject.AddComponent<NetworkAnimatorSync>();
+        if (!TryGetComponent<NetworkPlayerStats>(out _))
+            gameObject.AddComponent<NetworkPlayerStats>();
     }
 
     public override void OnNetworkSpawn()

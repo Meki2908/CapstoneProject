@@ -1,5 +1,6 @@
 using UnityEngine;
 using TMPro;
+using Unity.Netcode;
 
 public class PlayerHealth : MonoBehaviour
 {
@@ -10,6 +11,7 @@ public class PlayerHealth : MonoBehaviour
     [Header("Components")]
     private Character character;
     private Animator animator;
+    private NetworkPlayerStats _networkStats;
 
     [Header("UI")]
     [Tooltip("Text to display current/max HP below health bar (auto-found if not assigned)")]
@@ -44,6 +46,7 @@ public class PlayerHealth : MonoBehaviour
         currentHealth = maxHealth;
         character = GetComponent<Character>();
         animator = GetComponent<Animator>();
+        _networkStats = GetComponentInParent<NetworkPlayerStats>();
 
         if (animator == null)
         {
@@ -64,6 +67,7 @@ public class PlayerHealth : MonoBehaviour
 
         // Update health text
         UpdateHealthText();
+        SyncNetworkStats();
 
         Debug.Log($"[PlayerHealth] Player initialized with {maxHealth} HP");
     }
@@ -160,6 +164,7 @@ public class PlayerHealth : MonoBehaviour
 
         OnHealthChanged?.Invoke(currentHealth);
         UpdateHealthText();
+        SyncNetworkStats();
     }
 
     /// <summary>
@@ -254,6 +259,7 @@ public class PlayerHealth : MonoBehaviour
 
         OnHealthChanged?.Invoke(currentHealth);
         UpdateHealthText();
+        SyncNetworkStats();
 
         Debug.Log($"[PlayerHealth] DAMAGE APPLIED: {finalDamage} (original: {damage}) | HP: {hpBefore} → {currentHealth}/{maxHealth}");
 
@@ -343,6 +349,7 @@ public class PlayerHealth : MonoBehaviour
 
         OnHealthChanged?.Invoke(currentHealth);
         UpdateHealthText();
+        SyncNetworkStats();
         Debug.Log($"[PlayerHealth] Player healed for {amount}! Current HP: {currentHealth}/{maxHealth}");
     }
 
@@ -351,6 +358,7 @@ public class PlayerHealth : MonoBehaviour
         currentHealth = maxHealth;
         OnHealthChanged?.Invoke(currentHealth);
         UpdateHealthText();
+        SyncNetworkStats();
         Debug.Log($"[PlayerHealth] Player health reset to {maxHealth}");
     }
 
@@ -399,6 +407,13 @@ public class PlayerHealth : MonoBehaviour
         try { StopCoroutine("InvulnerabilityCoroutine"); } catch { }
         isInvulnerable = value;
         Debug.Log($"[PlayerHealth] SetInvulnerable -> {value}");
+    }
+
+    /// <summary>Sync HP/MaxHP/Alive tới network (nếu có NetworkPlayerStats).</summary>
+    private void SyncNetworkStats()
+    {
+        if (_networkStats != null)
+            _networkStats.UpdateHP(currentHealth, maxHealth, IsAlive);
     }
 }
 

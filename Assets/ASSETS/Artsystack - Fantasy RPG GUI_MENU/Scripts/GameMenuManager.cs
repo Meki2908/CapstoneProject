@@ -163,11 +163,21 @@ namespace Artsystack.ArtsystackGui
         }
 
         /// <summary>
-        /// Create host — cùng luồng load scene + pending host như single (Map_Chinh).
+        /// Create host — dùng MultiplayerManager (Relay hoặc LAN tùy config).
         /// </summary>
         public void OnHostCreateClicked()
         {
-            StartCoroutine(LoadGameScene());
+            var mp = MultiplayerManager.Instance;
+            if (mp != null)
+            {
+                mp.StartHostAndLoadGame();
+                isGameRunning = true;
+            }
+            else
+            {
+                Debug.LogWarning("[GameMenuManager] MultiplayerManager.Instance is null — fallback to LoadGameScene.");
+                StartCoroutine(LoadGameScene());
+            }
         }
 
         /// <summary>
@@ -179,35 +189,20 @@ namespace Artsystack.ArtsystackGui
         }
 
         /// <summary>
-        /// Join host — loading screen + load Map_Chinh + client (MultiplayerManager + NetworkClientBootstrap).
+        /// Join host — dùng MultiplayerManager (Relay join code hoặc LAN IP).
         /// </summary>
         public void OnJoinHostClicked()
         {
-            StartCoroutine(LoadClientGameScene());
-        }
-
-        private IEnumerator LoadClientGameScene()
-        {
-            HideAllPanels();
-
             var mp = MultiplayerManager.Instance;
-            if (mp == null)
+            if (mp != null)
             {
-                Debug.LogError("[GameMenuManager] MultiplayerManager.Instance is null — không thể Join.");
-                yield break;
-            }
-
-            var stm = SceneTransitionManager.EnsureInstance();
-            if (stm != null)
-            {
-                mp.CommitPendingJoinFromMenu();
-                stm.GoToScene(gameSceneName, "Đang kết nối...");
+                mp.StartClientAndLoadGame();
                 isGameRunning = true;
-                yield break;
             }
-
-            mp.StartClientAndLoadGame();
-            isGameRunning = true;
+            else
+            {
+                Debug.LogError("[GameMenuManager] MultiplayerManager.Instance is null — cannot Join.");
+            }
         }
 
         /// <summary>
