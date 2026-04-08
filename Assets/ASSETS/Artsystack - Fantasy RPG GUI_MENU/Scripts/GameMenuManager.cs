@@ -51,7 +51,7 @@ namespace Artsystack.ArtsystackGui
         [SerializeField] private string gameSceneName = "Map_Chinh";
         [SerializeField] private bool showCursorOnPlay = false;
 
-        [Tooltip("Giống Pre Start Scene → Testboss: bật trước khi load Map_Chinh để NetworkHostBootstrap StartHost và spawn player.")]
+        [Tooltip("Giữ cho tương thích; NGO đã gỡ — load scene qua Fusion hoặc offline.")]
         [SerializeField] private bool requestHostWhenLoadingGameplay = true;
 
         private bool isGameRunning = false;
@@ -283,8 +283,7 @@ namespace Artsystack.ArtsystackGui
             // Ẩn menu trước khi chuyển
             HideAllPanels();
 
-            if (requestHostWhenLoadingGameplay && gameSceneName == "Map_Chinh")
-                MultiplayerManager.SetPendingStartHostAfterSceneLoad(true);
+            // NGO đã gỡ — không còn SetPendingStartHost (Fusion: MultiplayerManager).
 
             // Dùng SceneTransitionManager (tự tạo nếu chưa có — UI_Game không có player)
             var stm = SceneTransitionManager.EnsureInstance();

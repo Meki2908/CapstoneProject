@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using Unity.Netcode;
 using UnityEngine;
 
 public class DamageDealer : MonoBehaviour
@@ -16,14 +15,12 @@ public class DamageDealer : MonoBehaviour
     bool canDealDamage;
     bool hasPlayedHitSfxInCurrentSwing;
     List<GameObject> hasDealtDamage;
-    NetworkObject _netObj;
 
     void Start()
     {
         canDealDamage = false;
         hasPlayedHitSfxInCurrentSwing = false;
         hasDealtDamage = new List<GameObject>();
-        _netObj = GetComponentInParent<NetworkObject>();
 
         if (hitAudioSource == null)
         {
@@ -34,9 +31,6 @@ public class DamageDealer : MonoBehaviour
     void Update()
     {
         if (!canDealDamage) return;
-
-        // Network: chỉ owner mới xử lý hit detection (tránh double damage từ remote clone)
-        if (_netObj != null && _netObj.IsSpawned && !_netObj.IsOwner) return;
 
         // Primary detection: spherecast along forward (useful for swings/projectiles)
         RaycastHit[] hits = Physics.SphereCastAll(

@@ -1,4 +1,3 @@
-using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -20,28 +19,19 @@ public class MinimapCameraFollow : MonoBehaviour
     public GameObject minimapUIRoot;       // Gán thủ công hoặc auto-find
 
     private Camera _minimapCamera;
-    bool _loggedNetcodePlayer;
-
     void Start()
     {
         _minimapCamera = GetComponent<Camera>();
 
         if (player == null)
-            TryBindLocalPlayerFromNetcode();
-
-        if (player == null && (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening))
         {
             GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
             if (playerObj != null)
-            {
                 player = playerObj.transform;
-                Debug.Log("[MinimapCameraFollow] Đã tự động tìm thấy Player (tag, offline).");
-            }
-            else
-            {
-                Debug.LogWarning("[MinimapCameraFollow] Không tìm thấy GameObject với tag 'Player'. Hãy gán thủ công trong Inspector!");
-            }
         }
+
+        if (player == null)
+            Debug.LogWarning("[MinimapCameraFollow] Không tìm thấy Player — gán trong Inspector.");
 
         // Tự động tìm Main Camera nếu chưa gán
         if (cameraTransform == null && Camera.main != null)
@@ -70,8 +60,6 @@ public class MinimapCameraFollow : MonoBehaviour
 
     void LateUpdate()
     {
-        if (player == null)
-            TryBindLocalPlayerFromNetcode();
         if (player == null) return;
 
         // Camera minimap theo sát player
@@ -84,24 +72,6 @@ public class MinimapCameraFollow : MonoBehaviour
         // Icon player luôn hướng lên trên UI (không xoay theo map)
         if (playerIcon != null)
             playerIcon.localRotation = Quaternion.identity;
-    }
-
-    /// <summary>Player spawn sau Start — thử lại cho tới khi SpawnManager có local player.</summary>
-    void TryBindLocalPlayerFromNetcode()
-    {
-        if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
-            return;
-
-        var local = NetworkManager.Singleton.SpawnManager.GetLocalPlayerObject();
-        if (local == null)
-            return;
-
-        player = local.transform;
-        if (!_loggedNetcodePlayer)
-        {
-            _loggedNetcodePlayer = true;
-            Debug.Log("[MinimapCameraFollow] Đã gán player = local NetworkObject (Netcode).");
-        }
     }
 
     // ==================== MINIMAP TOGGLE ====================

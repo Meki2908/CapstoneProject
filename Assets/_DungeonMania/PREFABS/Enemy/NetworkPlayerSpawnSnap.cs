@@ -1,12 +1,10 @@
-using Unity.Netcode;
 using UnityEngine;
 
 /// <summary>
-/// Gắn trên root prefab player (cùng <see cref="NetworkObject"/>).
-/// NGO khuyên chỉnh transform trước khi gọi base.OnNetworkSpawn (spawn sequence).
+/// Gắn root prefab player — snap spawn từ <see cref="PlayerSpawnConfig"/>.
 /// </summary>
 [DefaultExecutionOrder(-200)]
-public class NetworkPlayerSpawnSnap : NetworkBehaviour
+public class NetworkPlayerSpawnSnap : MonoBehaviour
 {
     void Awake()
     {
@@ -22,15 +20,10 @@ public class NetworkPlayerSpawnSnap : NetworkBehaviour
             gameObject.AddComponent<NetworkPlayerName>();
     }
 
-    public override void OnNetworkSpawn()
+    void Start()
     {
-        if (IsOwner)
-        {
-            var pt = PlayerSpawnConfig.SpawnPoint;
-            if (pt != null)
-                transform.SetPositionAndRotation(pt.position, pt.rotation);
-        }
-
-        base.OnNetworkSpawn();
+        var pt = PlayerSpawnConfig.SpawnPoint;
+        if (pt != null)
+            transform.SetPositionAndRotation(pt.position, pt.rotation);
     }
 }

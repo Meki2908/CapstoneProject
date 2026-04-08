@@ -3,17 +3,10 @@ using UnityEngine.InputSystem;
 using System.Collections.Generic;
 using UnityEngine.Playables;
 using System.Collections;
-using Unity.Netcode;
-
 [RequireComponent(typeof(Animator))]
 public class SwordSkills : MonoBehaviour
 {
-    private bool IsLocalOwnerContext()
-    {
-        var netObj = GetComponentInParent<NetworkObject>();
-        if (netObj == null) return true; // single-player
-        return netObj.IsOwner;
-    }
+    private bool IsLocalOwnerContext() => true;
 
     [Header("Refs")]
     public EquipmentSystem equipment;

@@ -1,6 +1,5 @@
 using System.Collections;
 using Unity.Cinemachine;
-using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
@@ -63,17 +62,6 @@ public class PortalUIController : MonoBehaviour
 
     Transform FindLocalPlayerTransform()
     {
-        // Multiplayer: ưu tiên NetworkObject owner trên client hiện tại.
-        foreach (var netObj in FindObjectsByType<NetworkObject>(FindObjectsSortMode.None))
-        {
-            if (netObj != null && netObj.IsOwner)
-            {
-                var cc = netObj.GetComponentInChildren<CharacterController>(true);
-                if (cc != null) return cc.transform;
-            }
-        }
-
-        // Fallback single-player.
         GameObject p = GameObject.FindGameObjectWithTag("Player");
         return p != null ? p.transform : null;
     }

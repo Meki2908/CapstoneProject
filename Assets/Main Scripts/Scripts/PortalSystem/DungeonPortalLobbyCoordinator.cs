@@ -1,5 +1,4 @@
 using System.Collections;
-using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -204,7 +203,7 @@ public class DungeonPortalLobbyCoordinator : MonoBehaviour
         _pendingSceneName = source.targetSceneName;
         DungeonConfig.SelectedDifficulty = source.dungeonDifficulty;
         DungeonConfig.SelectedMapType = source.mapType;
-        Debug.Log($"[DungeonPortalLobby] Difficulty selected by local={NetworkManager.Singleton?.LocalClientId.ToString() ?? "offline"} scene={_pendingSceneName}");
+        Debug.Log($"[DungeonPortalLobby] Difficulty selected scene={_pendingSceneName}");
 
         if (difficultyButtonsRoot != null)
             difficultyButtonsRoot.SetActive(false);
@@ -217,45 +216,7 @@ public class DungeonPortalLobbyCoordinator : MonoBehaviour
 
     void OnPlayerCountClicked(int maxPlayers)
     {
-        int connected = (NetworkManager.Singleton != null && NetworkManager.Singleton.ConnectedClientsList != null)
-            ? NetworkManager.Singleton.ConnectedClientsList.Count
-            : 0;
-        Debug.Log($"[DungeonPortalLobby] Player count clicked: {maxPlayers}, listening={NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening}, host={NetworkManager.Singleton != null && NetworkManager.Singleton.IsHost}, client={NetworkManager.Singleton != null && NetworkManager.Singleton.IsClient}, local={NetworkManager.Singleton?.LocalClientId.ToString() ?? "offline"}, connected={connected}");
-        bool inNetGame = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
-        bool netLobby = inNetGame;
-
-        if (netLobby)
-        {
-            if (!DungeonPartyLobbySession.TryGetSessionForNetwork(out var partySession))
-            {
-                Debug.LogWarning("[DungeonPortalLobby] Không có DungeonPartyLobbySession đã spawn/replicate. Kiểm tra scene có NetworkObject + DungeonPartyLobbySession.");
-                return;
-            }
-            Debug.Log($"[DungeonPortalLobby] Session found. spawned={partySession.IsSpawned} server={partySession.IsServer} ownerClient={partySession.OwnerClientId}");
-            if (numberOfPlayersPanel != null)
-                numberOfPlayersPanel.SetActive(false);
-            if (preparationPanel != null)
-                preparationPanel.SetActive(true);
-            if (countdownText != null)
-                countdownText.text = string.Empty;
-
-            SetJoinedExpected(1, maxPlayers);
-
-            var sessionNo = partySession.GetComponent<NetworkObject>();
-            if (sessionNo == null || !sessionNo.IsSpawned)
-            {
-                Debug.LogError("[DungeonPortalLobby] DungeonPartyLobbySession chưa spawn NetworkObject — không gửi StartDungeonLobbyServerRpc.");
-                return;
-            }
-
-            Debug.Log("[DungeonPortalLobby] Gọi StartDungeonLobbyServerRpc (máy initiator sẽ không thấy panel invite — xem máy client).");
-            partySession.StartDungeonLobbyServerRpc(
-                maxPlayers,
-                (int)DungeonConfig.SelectedDifficulty,
-                DungeonConfig.SelectedMapType,
-                _pendingSceneName);
-            return;
-        }
+        Debug.Log($"[DungeonPortalLobby] Player count clicked: {maxPlayers} (solo / Fusion lobby sau này)");
 
         if (numberOfPlayersPanel != null)
             numberOfPlayersPanel.SetActive(false);

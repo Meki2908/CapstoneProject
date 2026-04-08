@@ -1,5 +1,4 @@
 using UnityEngine;
-using Unity.Netcode;
 
 public class WeaponAbilityManager : MonoBehaviour
 {
@@ -31,29 +30,16 @@ public class WeaponAbilityManager : MonoBehaviour
 
     AbilityIconManager FindLocalOwnerAbilityIconManager()
     {
-        AbilityIconManager fallback = null;
         var all = FindObjectsByType<AbilityIconManager>(FindObjectsSortMode.None);
         for (int i = 0; i < all.Length; i++)
         {
             var mgr = all[i];
-            if (mgr == null) continue;
-            var netObj = mgr.GetComponentInParent<NetworkObject>();
-            if (netObj == null)
-                fallback = fallback == null ? mgr : fallback;
-            else if (netObj.IsOwner)
-                return mgr;
+            if (mgr != null) return mgr;
         }
-        return fallback;
+        return null;
     }
 
-    bool IsLocalOwnerContext()
-    {
-        var wc = GetComponentInParent<WeaponController>();
-        if (wc == null) return true;
-        var netObj = wc.GetComponentInParent<NetworkObject>();
-        if (netObj == null) return true; // single-player
-        return netObj.IsOwner;
-    }
+    bool IsLocalOwnerContext() => true;
 
     // Animation Event: Set ability icons when weapon is drawn
     public void AE_SetWeaponAbilities()

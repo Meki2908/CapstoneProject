@@ -1,28 +1,16 @@
 using Unity.Cinemachine;
-using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using MovementSystem;
 
 /// <summary>
-/// Chỉ client sở hữu (owner) chạy input, CharacterController, Character và CinemachineCamera.
-/// Bản remote trên cùng máy không tranh Camera.main / Brain và không nhận cùng bộ phím chuột.
+/// Bật input / Character / camera cho instance local (Fusion authority sẽ bổ sung sau).
 /// </summary>
 [DefaultExecutionOrder(-150)]
-public class NetworkPlayerLocalOwnership : NetworkBehaviour
+public class NetworkPlayerLocalOwnership : MonoBehaviour
 {
-    public override void OnNetworkSpawn()
-    {
-        ApplyLocalOwnership(IsOwner);
-    }
-
     void Start()
     {
-        var netObj = GetComponent<NetworkObject>();
-        if (netObj != null && netObj.IsSpawned)
-            return;
-        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
-            return;
         ApplyLocalOwnership(true);
     }
 

@@ -2,7 +2,6 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using TMPro;
-using Unity.Netcode;
 
 /// <summary>
 /// Portal chuyển scene (Phiên bản cải tiến)
@@ -59,11 +58,7 @@ public class ScenePortal : MonoBehaviour
 
     static bool IsLocalPlayerCollider(Collider other)
     {
-        if (other == null) return false;
-        var netObj = other.GetComponentInParent<NetworkObject>();
-        if (netObj == null)
-            return true;
-        return netObj.IsOwner;
+        return other != null;
     }
 
     public void OpenPortalUI()

@@ -1,6 +1,5 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
-using Unity.Netcode;
 
 public class PortalNode : MonoBehaviour
 {
@@ -53,14 +52,7 @@ public class PortalNode : MonoBehaviour
 
     bool IsLocalPlayerCollider(Collider other)
     {
-        if (other == null) return false;
-
-        var netObj = other.GetComponentInParent<NetworkObject>();
-        if (netObj == null)
-            return true; // Single-player or non-network object
-
-        // Multiplayer: chỉ player local/owner trên máy hiện tại mới được mở UI này.
-        return netObj.IsOwner;
+        return other != null;
     }
 
     /// <summary>

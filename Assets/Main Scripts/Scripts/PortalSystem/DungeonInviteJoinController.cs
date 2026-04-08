@@ -1,10 +1,8 @@
-using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Gắn lên root "Join Dungeon request". Gỡ SceneTeleportButton khỏi Accept/Refuse (tránh teleport nhầm),
-/// nối Accept → <see cref="DungeonPartyLobbySession.AcceptDungeonInviteServerRpc"/>, Refuse → Decline.
+/// Panel invite dungeon — NGO RPC đã gỡ; Accept/Refuse chỉ đóng UI.
 /// </summary>
 [DisallowMultipleComponent]
 [DefaultExecutionOrder(50)]
@@ -47,9 +45,7 @@ public class DungeonInviteJoinController : MonoBehaviour
             st.enabled = false;
             var b = st.GetComponent<Button>();
             if (b != null)
-            {
                 b.onClick.RemoveAllListeners();
-            }
         }
 
         var accept = FindChildByName(transform, "Accept");
@@ -81,22 +77,12 @@ public class DungeonInviteJoinController : MonoBehaviour
 
     void OnAcceptClicked()
     {
-        if (DungeonPartyLobbySession.Instance != null &&
-            NetworkManager.Singleton != null &&
-            NetworkManager.Singleton.IsListening)
-        {
-            DungeonPartyLobbySession.Instance.AcceptDungeonInviteServerRpc();
-        }
+        SetPanelVisibleInternal(false);
     }
 
     void OnRefuseClicked()
     {
-        if (DungeonPartyLobbySession.Instance != null &&
-            NetworkManager.Singleton != null &&
-            NetworkManager.Singleton.IsListening)
-        {
-            DungeonPartyLobbySession.Instance.DeclineDungeonInviteServerRpc();
-        }
+        SetPanelVisibleInternal(false);
     }
 
     public void ShowPanel()
@@ -117,7 +103,6 @@ public class DungeonInviteJoinController : MonoBehaviour
         panelRoot.SetActive(visible);
     }
 
-    /// <summary>Nếu cha nào đang tắt thì child SetActive(true) vẫn không hiện trên màn hình.</summary>
     static void EnsureAncestorsActive(Transform leaf)
     {
         if (leaf == null) return;
@@ -137,7 +122,6 @@ public class DungeonInviteJoinController : MonoBehaviour
 
     public static void SetInvitePanelVisible(bool visible)
     {
-        Debug.Log($"[DungeonInviteUI] SetInvitePanelVisible({visible}) instance={(Instance != null)}");
         if (Instance != null)
         {
             Instance.SetPanelVisibleInternal(visible);
@@ -148,7 +132,6 @@ public class DungeonInviteJoinController : MonoBehaviour
         if (found != null)
         {
             Instance = found;
-            Debug.Log("[DungeonInviteUI] Found controller via FindFirstObjectByType.");
             found.SetPanelVisibleInternal(visible);
             return;
         }

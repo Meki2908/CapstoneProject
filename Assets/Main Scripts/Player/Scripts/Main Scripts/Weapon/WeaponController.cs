@@ -1,9 +1,8 @@
 using UnityEngine;
 using System; // thêm để dùng Action
-using Unity.Netcode;
 
 [RequireComponent(typeof(Animator))]
-public class WeaponController : NetworkBehaviour
+public class WeaponController : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private Transform handHolder;
@@ -37,41 +36,7 @@ public class WeaponController : NetworkBehaviour
     private GameObject currentHeldInstance;
     private GameObject currentSheathInstance;
     private Coroutine wandScaleRoutine;
-    private bool applyingSyncedWeapon;
-    private readonly NetworkVariable<int> syncedWeaponType = new(
-        (int)WeaponType.None,
-        NetworkVariableReadPermission.Everyone,
-        NetworkVariableWritePermission.Owner);
-
-    private bool IsLocalOwnerContext()
-    {
-        var netObj = GetComponentInParent<NetworkObject>();
-        if (netObj == null) return true; // single-player
-        return netObj.IsOwner;
-    }
-
-    private void OnSyncedWeaponTypeChanged(int previous, int next)
-    {
-        if (IsOwner) return;
-        ApplySyncedWeaponType((WeaponType)next);
-    }
-
-    private void ApplySyncedWeaponType(WeaponType type)
-    {
-        if (type == WeaponType.None) return;
-        var so = WeaponSelectionPersistence.ResolveWeaponSO(type);
-        if (so == null) return;
-
-        applyingSyncedWeapon = true;
-        try
-        {
-            EquipWeapon(so);
-        }
-        finally
-        {
-            applyingSyncedWeapon = false;
-        }
-    }
+    private bool IsLocalOwnerContext() => true;
 
     private void Awake()
     {
@@ -94,9 +59,6 @@ public class WeaponController : NetworkBehaviour
 
     private void Start()
     {
-        if (IsSpawned && !IsOwner)
-            return;
-
         var loadedFromDisk = false;
         if (WeaponSelectionPersistence.TryLoad(out var savedType) && savedType != WeaponType.None)
         {
@@ -110,27 +72,6 @@ public class WeaponController : NetworkBehaviour
 
         if (!loadedFromDisk)
             ApplyDefaultStartWeaponVisuals();
-    }
-
-    public override void OnNetworkSpawn()
-    {
-        base.OnNetworkSpawn();
-        syncedWeaponType.OnValueChanged += OnSyncedWeaponTypeChanged;
-
-        if (IsOwner)
-        {
-            syncedWeaponType.Value = currentWeapon != null ? (int)currentWeapon.weaponType : (int)WeaponType.None;
-        }
-        else
-        {
-            ApplySyncedWeaponType((WeaponType)syncedWeaponType.Value);
-        }
-    }
-
-    public override void OnNetworkDespawn()
-    {
-        syncedWeaponType.OnValueChanged -= OnSyncedWeaponTypeChanged;
-        base.OnNetworkDespawn();
     }
 
     void ApplyDefaultStartWeaponVisuals()
@@ -152,7 +93,7 @@ public class WeaponController : NetworkBehaviour
 
     void OnApplicationQuit()
     {
-        if (currentWeapon != null && (!IsSpawned || IsOwner))
+        if (currentWeapon != null)
             WeaponSelectionPersistence.Save(currentWeapon.weaponType);
     }
 
@@ -164,9 +105,6 @@ public class WeaponController : NetworkBehaviour
 
     public void EquipWeapon(WeaponSO weapon)
     {
-        if (IsSpawned && !IsOwner && !applyingSyncedWeapon)
-            return;
-
         currentWeapon = weapon;
         ApplyWeaponLayersAndParams();
 
@@ -193,11 +131,8 @@ public class WeaponController : NetworkBehaviour
         // BẮN sự kiện cho tất cả consumer (Skills/HitRunner/UIs...)
         OnWeaponChanged?.Invoke(currentWeapon);
 
-        if (weapon != null && (!IsSpawned || IsOwner))
+        if (weapon != null)
             WeaponSelectionPersistence.Save(weapon.weaponType);
-
-        if (IsSpawned && IsOwner && !applyingSyncedWeapon && weapon != null)
-            syncedWeaponType.Value = (int)weapon.weaponType;
     }
 
     public WeaponSO GetCurrentWeapon() => currentWeapon;
@@ -641,31 +576,10 @@ public class WeaponController : NetworkBehaviour
 
     const float MeleeVfxDefaultLifetime = 2f;
 
-    /// <summary>
-    /// Remote players have Character (and WeaponHitRunner) disabled, so normal-attack VFX must be replicated.
-    /// Owner spawns locally then notifies all other clients with the same pose/scale.
-    /// </summary>
+    /// <summary>Spawn melee VFX locally (Fusion: replicate sau).</summary>
     public void BroadcastMeleeVfx(Vector3 pos, Quaternion rot, Vector3 scale, int hitIndex, WeaponType weaponType)
     {
-        var netObj = GetComponentInParent<NetworkObject>();
-        if (netObj == null || !netObj.IsSpawned || !netObj.IsOwner) return;
-        MeleeVfxSpawnServerRpc(pos, rot, scale, (byte)hitIndex, (int)weaponType);
-    }
-
-    [ServerRpc(RequireOwnership = true)]
-    void MeleeVfxSpawnServerRpc(Vector3 pos, Quaternion rot, Vector3 scale, byte hitIndex, int weaponTypeInt)
-    {
-        MeleeVfxSpawnClientRpc(pos, rot, scale, hitIndex, weaponTypeInt);
-    }
-
-    [ClientRpc]
-    void MeleeVfxSpawnClientRpc(Vector3 pos, Quaternion rot, Vector3 scale, byte hitIndex, int weaponTypeInt)
-    {
-        var netObj = GetComponentInParent<NetworkObject>();
-        if (netObj != null && netObj.IsOwner) return;
-
-        var wt = (WeaponType)weaponTypeInt;
-        var so = WeaponSelectionPersistence.ResolveWeaponSO(wt);
+        var so = WeaponSelectionPersistence.ResolveWeaponSO(weaponType);
         if (so == null || so.normalHitVfx == null || hitIndex >= so.normalHitVfx.Length) return;
         var prefab = so.normalHitVfx[hitIndex];
         if (prefab == null) return;

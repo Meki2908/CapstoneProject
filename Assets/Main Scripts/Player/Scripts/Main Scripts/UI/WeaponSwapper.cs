@@ -2,8 +2,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Events;
 using TMPro;
-using Unity.Netcode;
-
 public class WeaponSwapper : MonoBehaviour
 {
     [Header("UI References")]
@@ -50,19 +48,13 @@ public class WeaponSwapper : MonoBehaviour
 
     private WeaponController FindLocalOwnerWeaponController()
     {
-        WeaponController fallback = null;
         var all = FindObjectsByType<WeaponController>(FindObjectsSortMode.None);
         for (int i = 0; i < all.Length; i++)
         {
             var wc = all[i];
-            if (wc == null) continue;
-            var netObj = wc.GetComponentInParent<NetworkObject>();
-            if (netObj == null)
-                fallback = fallback == null ? wc : fallback; // single-player fallback
-            else if (netObj.IsOwner)
-                return wc;
+            if (wc != null) return wc;
         }
-        return fallback;
+        return null;
     }
 
     private void Awake()

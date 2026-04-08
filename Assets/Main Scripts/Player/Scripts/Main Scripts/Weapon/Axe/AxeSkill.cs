@@ -2,16 +2,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Playables;
-using Unity.Netcode;
-
 public class AxeSkill : MonoBehaviour
 {
-    private bool IsLocalOwnerContext()
-    {
-        var netObj = GetComponentInParent<NetworkObject>();
-        if (netObj == null) return true; // single-player
-        return netObj.IsOwner;
-    }
+    private bool IsLocalOwnerContext() => true;
 
     [Header("Refs")]
     [SerializeField] private EquipmentSystem equipment;     // chỉ dùng nếu KHÔNG dùng VFX-collision cho damage

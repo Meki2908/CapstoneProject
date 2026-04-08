@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using Unity.Netcode;
 
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -315,10 +314,6 @@ public class BlacksmithNPC : MonoBehaviour
 
     bool IsLocalPlayerCollider(Collider other)
     {
-        if (other == null) return false;
-        var netObj = other.GetComponentInParent<NetworkObject>();
-        if (netObj == null)
-            return true; // Single-player hoặc object không dùng Netcode
-        return netObj.IsOwner;
+        return other != null;
     }
 }

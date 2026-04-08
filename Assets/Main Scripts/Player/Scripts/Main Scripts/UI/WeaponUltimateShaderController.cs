@@ -1,8 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
-using Unity.Netcode;
-
 /// <summary>
 /// Controller cho Ultimate Icon Shader theo từng weapon type
 /// Sword: Thunder, Axe: Wind, Mage: Fire
@@ -98,36 +96,24 @@ public class WeaponUltimateShaderController : MonoBehaviour
 
     private WeaponController FindLocalOwnerWeaponController()
     {
-        WeaponController fallback = null;
         var all = FindObjectsByType<WeaponController>(FindObjectsSortMode.None);
         for (int i = 0; i < all.Length; i++)
         {
             var wc = all[i];
-            if (wc == null) continue;
-            var netObj = wc.GetComponentInParent<NetworkObject>();
-            if (netObj == null)
-                fallback = fallback == null ? wc : fallback;
-            else if (netObj.IsOwner)
-                return wc;
+            if (wc != null) return wc;
         }
-        return fallback;
+        return null;
     }
 
     private AbilityIconManager FindLocalOwnerAbilityIconManager()
     {
-        AbilityIconManager fallback = null;
         var all = FindObjectsByType<AbilityIconManager>(FindObjectsSortMode.None);
         for (int i = 0; i < all.Length; i++)
         {
             var mgr = all[i];
-            if (mgr == null) continue;
-            var netObj = mgr.GetComponentInParent<NetworkObject>();
-            if (netObj == null)
-                fallback = fallback == null ? mgr : fallback;
-            else if (netObj.IsOwner)
-                return mgr;
+            if (mgr != null) return mgr;
         }
-        return fallback;
+        return null;
     }
 
     private void InitializeComponents()
