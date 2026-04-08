@@ -1,4 +1,5 @@
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -41,23 +42,23 @@ public class SetupMultiplayerUI : EditorWindow
 
     void CreateBothPanels()
     {
-        // Tìm parent — tab_HostOptions hoặc tab_MultiplayerMode
-        var parent = FindObjectByName("tab_HostOptions") ?? FindObjectByName("tab_MultiplayerMode");
+        // Tìm parent — Panel_GUIGame (đúng theo prefab gốc)
+        var parent = FindObjectByName("Panel_GUIGame");
         if (parent == null)
         {
-            // Fallback: tìm Panel_GUIGame
-            parent = FindObjectByName("Panel_GUIGame");
+            // Fallback: tìm tab_HostOptions hoặc tab_MultiplayerMode
+            parent = FindObjectByName("tab_HostOptions") ?? FindObjectByName("tab_MultiplayerMode");
         }
         if (parent == null)
         {
             EditorUtility.DisplayDialog("Error",
-                "Cannot find tab_HostOptions / tab_MultiplayerMode / Panel_GUIGame.\n\nOpen Canvas_Menu prefab first!", "OK");
+                "Cannot find Panel_GUIGame / tab_HostOptions / tab_MultiplayerMode.\n\nOpen Canvas_Menu prefab first!", "OK");
             return;
         }
 
         var root = parent.transform;
 
-        // Xóa cũ
+        // Xóa panel cũ bên trong parent
         DestroyChildByName(root, "Panel_CreateRoom");
         DestroyChildByName(root, "Panel_JoinRoom");
 
@@ -90,7 +91,7 @@ public class SetupMultiplayerUI : EditorWindow
         SetRect(playerCount, 0.05f, 1, 0.95f, 1, 0, -345, 0, 35);
         playerCount.GetComponent<TextMeshProUGUI>().color = new Color(0.7f, 0.9f, 1f);
 
-        // Player list frame (dark bg with vertical layout)
+        // Player list frame (dark bg with vertical layout) — match prefab exactly
         var listFrame = new GameObject("PlayerListFrame", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(VerticalLayoutGroup));
         listFrame.transform.SetParent(createPanel.transform, false);
         listFrame.layer = 5;
@@ -111,16 +112,16 @@ public class SetupMultiplayerUI : EditorWindow
         hostEntry.GetComponent<TextMeshProUGUI>().color = new Color(1f, 1f, 1f, 0.3f);
         hostEntry.GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Italic;
 
-        // Button: CREATE ROOM
+        // Button: CREATE ROOM — match prefab: anchor bottom, y=95
         var btnCreate = CreateStyledButton(createPanel.transform, "Button_CreateRoom", "CREATE ROOM", new Color(0.2f, 0.6f, 0.3f));
         SetRect(btnCreate, 0.15f, 0, 0.85f, 0, 0, 95, 0, 55);
 
-        // Button: ENTER GAME (hidden until room created)
+        // Button: ENTER GAME (hidden until room created) — same position as CREATE ROOM
         var btnEnter = CreateStyledButton(createPanel.transform, "Button_EnterGame", "ENTER GAME", new Color(0.8f, 0.5f, 0.1f));
         SetRect(btnEnter, 0.15f, 0, 0.85f, 0, 0, 95, 0, 55);
         btnEnter.SetActive(false);
 
-        // Status
+        // Status — match prefab: anchor bottom, y=30
         var statusCreate = CreateText(createPanel.transform, "Text_Status_Create", "", 24, TextAlignmentOptions.Center);
         SetRect(statusCreate, 0.05f, 0, 0.95f, 0, 0, 30, 0, 35);
         statusCreate.GetComponent<TextMeshProUGUI>().color = new Color(0.7f, 0.9f, 1f);
@@ -151,14 +152,14 @@ public class SetupMultiplayerUI : EditorWindow
         var labelJoinCode = CreateText(joinPanel.transform, "Text_LabelCode", "Enter Room Code:", 28, TextAlignmentOptions.Left);
         SetRect(labelJoinCode, 0.05f, 1, 0.95f, 1, 0, -225, 0, 40);
 
-        var joinCodeInput = CreateInputField(joinPanel.transform, "InputField_JoinCode", "Room code (e.g. A1B2C3)", 6);
+        var joinCodeInput = CreateInputField(joinPanel.transform, "InputField_JoinCode", "Room code (e.g. A1B2C3)", 8);
         SetRect(joinCodeInput, 0.1f, 1, 0.9f, 1, 0, -286, 0, 65);
 
-        // Nút THAM GIA
+        // Nút THAM GIA — match prefab
         var btnJoin = CreateStyledButton(joinPanel.transform, "Button_JoinRoom", "JOIN", new Color(0.2f, 0.4f, 0.8f));
         SetRect(btnJoin, 0.15f, 0, 0.85f, 0, 0, 95, 0, 55);
 
-        // Status
+        // Status — match prefab
         var statusJoin = CreateText(joinPanel.transform, "Text_Status_Join", "", 24, TextAlignmentOptions.Center);
         SetRect(statusJoin, 0.05f, 0, 0.95f, 0, 0, 30, 0, 35);
         statusJoin.GetComponent<TextMeshProUGUI>().color = new Color(0.7f, 0.9f, 1f);
@@ -179,16 +180,15 @@ public class SetupMultiplayerUI : EditorWindow
 
             SetRef(so, "joinCodeInput", joinCodeInput.GetComponent<TMP_InputField>());
             SetRef(so, "joinCodeDisplay", joinCodeDisplay.GetComponent<TextMeshProUGUI>());
-            SetRef(so, "statusText", statusCreate.GetComponent<TextMeshProUGUI>());
-            SetRef(so, "playerNameInput", nameInput1.GetComponent<TMP_InputField>());
-            // Wire Join panel name input (client uses this when joining)
-            SetRef(so, "playerNameInputJoin", nameInput2.GetComponent<TMP_InputField>());
-            // Wire Join panel status text
-            SetRef(so, "statusTextJoin", statusJoin.GetComponent<TextMeshProUGUI>());
             SetRef(so, "createRoomButton", btnCreate);
             SetRef(so, "enterGameButton", btnEnter);
             SetRef(so, "playerListContainer", listFrame);
             SetRef(so, "playerCountText", playerCount.GetComponent<TextMeshProUGUI>());
+
+            // Wire playerNameInput → Host panel (default, overridden by JoinNameRelay for client)
+            SetRef(so, "playerNameInput", nameInput1.GetComponent<TMP_InputField>());
+            // Wire statusText → Host panel (default, overridden by JoinNameRelay for client)
+            SetRef(so, "statusText", statusCreate.GetComponent<TextMeshProUGUI>());
 
             var propRelay = so.FindProperty("useRelay");
             if (propRelay != null) propRelay.boolValue = true;
@@ -199,6 +199,20 @@ public class SetupMultiplayerUI : EditorWindow
             // Auto-wire button onClick events
             WireButtonOnClick(btnCreate.GetComponent<Button>(), mp, "CreateRoom");
             WireButtonOnClick(btnJoin.GetComponent<Button>(), mp, "StartClientAndLoadGame");
+
+            // BUG #4+#6 FIX: Add JoinNameRelay to Join button so client uses Join panel's inputs
+            var joinRelay = btnJoin.GetComponent<JoinNameRelay>();
+            if (joinRelay == null)
+                joinRelay = Undo.AddComponent<JoinNameRelay>(btnJoin);
+
+            var soRelay = new SerializedObject(joinRelay);
+            var pName = soRelay.FindProperty("joinNameInput");
+            if (pName != null) pName.objectReferenceValue = nameInput2.GetComponent<TMP_InputField>();
+            var pStatus = soRelay.FindProperty("joinStatusText");
+            if (pStatus != null) pStatus.objectReferenceValue = statusJoin.GetComponent<TextMeshProUGUI>();
+            var pMgr = soRelay.FindProperty("multiplayerManager");
+            if (pMgr != null) pMgr.objectReferenceValue = mp;
+            soRelay.ApplyModifiedProperties();
 
             Debug.Log("[SetupMultiplayerUI] ✅ Auto-wired fields + button onClick to MultiplayerManager!");
         }
@@ -290,9 +304,32 @@ public class SetupMultiplayerUI : EditorWindow
 
     static GameObject FindObjectByName(string name)
     {
-        foreach (var t in Resources.FindObjectsOfTypeAll<Transform>())
-            if (t.name == name && t.hideFlags == HideFlags.None)
-                return t.gameObject;
+        // 1) Tìm trong scene hiện tại (active + inactive)
+        foreach (var root in UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects())
+        {
+            var found = FindDeepChild(root.transform, name);
+            if (found != null) return found.gameObject;
+        }
+
+        // 2) Tìm trong Prefab Mode (nếu đang mở prefab)
+        var prefabStage = PrefabStageUtility.GetCurrentPrefabStage();
+        if (prefabStage != null)
+        {
+            var found = FindDeepChild(prefabStage.prefabContentsRoot.transform, name);
+            if (found != null) return found.gameObject;
+        }
+
+        return null;
+    }
+
+    static Transform FindDeepChild(Transform parent, string name)
+    {
+        if (parent.name == name) return parent;
+        foreach (Transform child in parent)
+        {
+            var result = FindDeepChild(child, name);
+            if (result != null) return result;
+        }
         return null;
     }
 
@@ -300,7 +337,7 @@ public class SetupMultiplayerUI : EditorWindow
     {
         for (int i = parent.childCount - 1; i >= 0; i--)
             if (parent.GetChild(i).name == name)
-                DestroyImmediate(parent.GetChild(i).gameObject);
+                DestroyImmediate(parent.GetChild(i).gameObject, true);
     }
 
     static GameObject CreateFullPanel(Transform parent, string name)
@@ -310,6 +347,7 @@ public class SetupMultiplayerUI : EditorWindow
         go.layer = 5;
 
         var rt = go.GetComponent<RectTransform>();
+        // Match prefab: stretch 60% width, 80% height, centered
         rt.anchorMin = new Vector2(0.2f, 0.1f);
         rt.anchorMax = new Vector2(0.8f, 0.9f);
         rt.anchoredPosition = Vector2.zero;

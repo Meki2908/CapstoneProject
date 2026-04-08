@@ -57,16 +57,12 @@ public class MultiplayerManager : MonoBehaviour
     [Tooltip("Text hiển thị Join Code sau khi host tạo phòng.")]
     [SerializeField] private TextMeshProUGUI joinCodeDisplay;
 
-    [Tooltip("Text hiển thị trạng thái (connecting, error...) — Host panel.")]
+    [Tooltip("Text hiển thị trạng thái (connecting, error...).")]
     [SerializeField] private TextMeshProUGUI statusText;
-    [Tooltip("Text hiển thị trạng thái — Join panel.")]
-    [SerializeField] private TextMeshProUGUI statusTextJoin;
 
     [Header("=== PLAYER NAME ===")]
-    [Tooltip("Input field to enter player name (Host panel).")]
+    [Tooltip("Input field to enter player name.")]
     [SerializeField] private TMP_InputField playerNameInput;
-    [Tooltip("Input field to enter player name (Join panel).")]
-    [SerializeField] private TMP_InputField playerNameInputJoin;
 
     [Header("=== HOST BUTTONS ===")]
     [Tooltip("CREATE ROOM button (hidden after room created).")]
@@ -84,17 +80,19 @@ public class MultiplayerManager : MonoBehaviour
 
     private void Awake()
     {
-        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
         Instance = this;
 
         // Load player name from PlayerPrefs
-        string saved = PlayerPrefs.GetString("PlayerName", "");
-        if (!string.IsNullOrEmpty(saved))
+        if (playerNameInput != null)
         {
-            if (playerNameInput != null)
+            string saved = PlayerPrefs.GetString("PlayerName", "");
+            if (!string.IsNullOrEmpty(saved))
                 playerNameInput.text = saved;
-            if (playerNameInputJoin != null)
-                playerNameInputJoin.text = saved;
         }
 
         // Wire ENTER GAME button onClick
@@ -107,8 +105,6 @@ public class MultiplayerManager : MonoBehaviour
                 btn.onClick.AddListener(LoadGameAsHost);
             }
         }
-
-
     }
 
     private void OnDestroy()
@@ -116,6 +112,7 @@ public class MultiplayerManager : MonoBehaviour
         if (Instance == this)
             Instance = null;
     }
+
 
     // ───────────────────── HOST ─────────────────────
 
@@ -130,11 +127,10 @@ public class MultiplayerManager : MonoBehaviour
 
         if (useRelay)
         {
-            // Check RelayManager exists
             if (RelayManager.Instance == null)
             {
                 SetStatus("ERROR: RelayManager not found! Add RelayManager to scene.");
-                Debug.LogError("[MultiplayerManager] RelayManager.Instance is null! Create a GameObject with RelayManager script.");
+                Debug.LogError("[MultiplayerManager] RelayManager.Instance is null!");
                 return;
             }
 
@@ -155,7 +151,7 @@ public class MultiplayerManager : MonoBehaviour
                 SetStatus($"Room Code: {joinCode}");
                 Debug.Log($"[MultiplayerManager] Relay Host created. Code: {joinCode}");
 
-                // Copy to clipboard (safe)
+                // Copy to clipboard
                 try { GUIUtility.systemCopyBuffer = joinCode; }
                 catch (System.Exception) { /* ignore clipboard errors */ }
             }
@@ -171,7 +167,7 @@ public class MultiplayerManager : MonoBehaviour
             SetStatus("Room created (LAN).");
         }
 
-        // Swap buttons: hide CREATE ROOM, show ENTER GAME (enabled immediately)
+        // Swap buttons: hide CREATE ROOM, show ENTER GAME
         if (createRoomButton != null) createRoomButton.SetActive(false);
         if (enterGameButton != null)
             enterGameButton.SetActive(true);
@@ -179,20 +175,19 @@ public class MultiplayerManager : MonoBehaviour
         // Show host in player list
         AddPlayerToList(NetworkPlayerName.LocalPlayerName, true);
         UpdatePlayerCount(1);
+
+        SetStatus("Room ready! Press ENTER GAME to start.");
     }
 
     /// <summary>
     /// Step 2: Load gameplay scene as Host. Call after CreateRoom().
-    /// Can also be called directly for backwards compatibility.
     /// </summary>
     public void LoadGameAsHost()
     {
-        // Host loads scene immediately. NetworkLobbyManager in gameplay scene
-        // will handle waiting for players before starting the actual game.
+        Debug.Log("[MultiplayerManager] LoadGameAsHost — loading gameplay scene.");
         _pendingClient = false;
         _pendingConnectPort = 0;
         _pendingHost = true;
-        Debug.Log("[MultiplayerManager] Host loading gameplay scene...");
         SceneManager.LoadScene(gameplaySceneName, LoadSceneMode.Single);
     }
 
@@ -232,20 +227,37 @@ public class MultiplayerManager : MonoBehaviour
     /// <summary>Join relay room and load gameplay scene.</summary>
     public async void StartClientAndLoadGame()
     {
+        // BUG FIX: Apply Join panel overrides (name + statusText) TRƯỚC khi đọc input.
+        // JoinNameRelay listener ordering: persistent listeners chạy trước runtime,
+        // nên phải gọi trực tiếp thay vì dùng AddListener.
+        JoinNameRelay.ApplyJoinPanelOverrides(this);
+
         SavePlayerName();
         UsingRelay = useRelay;
 
         if (useRelay)
         {
             string code = joinCodeInput != null ? joinCodeInput.text : "";
+            Debug.Log($"[MultiplayerManager] Join code raw='{code}' (length={code.Length})");
+
             if (string.IsNullOrWhiteSpace(code))
             {
                 SetStatus("Enter room code first!");
                 return;
             }
 
+            string cleanCode = code.Trim().ToUpper();
+            Debug.Log($"[MultiplayerManager] Join code clean='{cleanCode}' (length={cleanCode.Length})");
+
+            if (RelayManager.Instance == null)
+            {
+                SetStatus("ERROR: RelayManager not found!");
+                Debug.LogError("[MultiplayerManager] RelayManager.Instance is null!");
+                return;
+            }
+
             SetStatus("Connecting...");
-            bool ok = await RelayManager.Instance.JoinRelayAsync(code);
+            bool ok = await RelayManager.Instance.JoinRelayAsync(cleanCode);
             if (!ok)
             {
                 SetStatus("Connection failed! Check room code.");
@@ -253,9 +265,11 @@ public class MultiplayerManager : MonoBehaviour
             }
 
             SetStatus("Connected. Loading...");
+            Debug.Log($"[MultiplayerManager] Relay join OK. Pending host={_pendingHost} client={_pendingClient}");
         }
 
         CommitPendingJoinFromMenu();
+        Debug.Log($"[MultiplayerManager] Loading scene '{gameplaySceneName}'. PendingHost={_pendingHost} PendingClient={_pendingClient} UsingRelay={UsingRelay}");
         SceneManager.LoadScene(gameplaySceneName, LoadSceneMode.Single);
     }
 
@@ -297,20 +311,12 @@ public class MultiplayerManager : MonoBehaviour
     {
         if (statusText != null)
             statusText.text = msg;
-        if (statusTextJoin != null)
-            statusTextJoin.text = msg;
         Debug.Log($"[MultiplayerManager] {msg}");
     }
 
     private void SavePlayerName()
     {
-        // Try Join panel input first (for client), then Host panel input
-        string name = "";
-        if (playerNameInputJoin != null && !string.IsNullOrWhiteSpace(playerNameInputJoin.text))
-            name = playerNameInputJoin.text.Trim();
-        else if (playerNameInput != null)
-            name = playerNameInput.text.Trim();
-
+        string name = playerNameInput != null ? playerNameInput.text.Trim() : "";
         if (string.IsNullOrEmpty(name))
             name = $"Player_{Random.Range(100, 999)}";
 

@@ -44,37 +44,28 @@ public class NetworkHostBootstrap : MonoBehaviour
         if (NetworkManager.Singleton.IsServer)
             return;
 
-        // Only apply port offset for LAN mode (Relay overrides connection data anyway)
-        if (!MultiplayerManager.UsingRelay)
-            ParrelSyncTransportPort.ApplyClonePortOffsetIfNeeded(NetworkManager.Singleton);
-
         // Apply Relay data if using internet relay
         bool usedRelay = RelayManager.ApplyPendingRelayData(NetworkManager.Singleton);
+
+        if (!usedRelay)
+        {
+            // LAN only: offset port for ParrelSync clone
+            ParrelSyncTransportPort.ApplyClonePortOffsetIfNeeded(NetworkManager.Singleton);
+        }
+
         Debug.Log($"[NetworkHostBootstrap] Relay={usedRelay}");
 
-        // Đăng ký callback khi client kết nối (dùng một lần hoặc nhiều lần)
-        NetworkManager.Singleton.OnClientConnectedCallback += OnHostClientConnected;
-        Debug.Log("[NetworkHostBootstrap] Registered OnClientConnectedCallback.");
+        // Hook disconnect/connect recovery TRƯỚC StartHost
+        TryHookDisconnectRecovery();
 
         if (!NetworkManager.Singleton.StartHost())
             Debug.LogError("[NetworkHostBootstrap] StartHost() failed.");
-
-        TryHookDisconnectRecovery();
+        else
+            Debug.Log("[NetworkHostBootstrap] StartHost() thành công.");
     }
 
-    // Dùng static event để thông báo Menu rằng client đã kết nối
+    // Static event để thông báo bên ngoài khi client kết nối trong gameplay
     private static event Action<ulong> _onHostClientConnected;
-
-    void OnHostClientConnected(ulong clientId)
-    {
-        var nm = NetworkManager.Singleton;
-        if (nm == null || !nm.IsServer) return;
-        if (clientId == nm.LocalClientId) return;
-
-        Debug.Log($"[NetworkHostBootstrap] Client {clientId} connected!");
-        RelayManager.MarkClientJoined();
-        _onHostClientConnected?.Invoke(clientId);
-    }
 
     public static event Action<ulong> OnAnyClientConnectedInGameplay
     {
@@ -125,6 +116,7 @@ public class NetworkHostBootstrap : MonoBehaviour
 
         Debug.Log($"[NetworkHostBootstrap] Client {clientId} connected! Marking client joined.");
         RelayManager.MarkClientJoined();
+        _onHostClientConnected?.Invoke(clientId);
     }
 
     System.Collections.IEnumerator RecoverHostGameplayNextFrame()

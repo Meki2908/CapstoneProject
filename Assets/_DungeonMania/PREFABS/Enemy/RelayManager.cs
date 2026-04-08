@@ -6,6 +6,7 @@ using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using Unity.Services.Authentication;
 using Unity.Services.Core;
+using Unity.Services.Core.Environments;
 using Unity.Services.Relay;
 using Unity.Services.Relay.Models;
 using UnityEngine;
@@ -62,14 +63,54 @@ public class RelayManager : MonoBehaviour
             if (UnityServices.State != ServicesInitializationState.Initialized)
             {
 #if UNITY_EDITOR
-                if (ParrelSync.ClonesManager.IsClone())
+                bool isMppmClone = false;
+                string mppmProfile = null;
+
+                // ═══════════════════════════════════════════════════════════
+                // MPPM (Multiplayer Play Mode) virtual player detection
+                // Dùng reflection vì VirtualProjectsEditor ở Editor-only assembly
+                // ═══════════════════════════════════════════════════════════
+                try
+                {
+                    var vpType = System.Type.GetType(
+                        "Unity.Multiplayer.Playmode.VirtualProjects.Editor.VirtualProjectsEditor, Unity.Multiplayer.Playmode.VirtualProjects.Editor");
+                    if (vpType != null)
+                    {
+                        var isCloneProp = vpType.GetProperty("IsClone", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                        if (isCloneProp != null)
+                        {
+                            isMppmClone = (bool)isCloneProp.GetValue(null);
+                        }
+                        if (isMppmClone)
+                        {
+                            var idProp = vpType.GetProperty("CloneIdentifier", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                            if (idProp != null)
+                            {
+                                mppmProfile = $"mppm_{idProp.GetValue(null)}";
+                            }
+                        }
+                    }
+                }
+                catch (System.Exception)
+                {
+                    // MPPM package không có hoặc API thay đổi — bỏ qua
+                }
+
+                if (isMppmClone && !string.IsNullOrEmpty(mppmProfile))
+                {
+                    var initOptions = new InitializationOptions();
+                    initOptions.SetProfile(mppmProfile);
+                    await UnityServices.InitializeAsync(initOptions);
+                    Debug.Log($"[RelayManager] MPPM CLONE init. Profile: {mppmProfile}");
+                }
+                else if (ParrelSync.ClonesManager.IsClone())
                 {
                     string customArg = ParrelSync.ClonesManager.GetArgument();
                     string profile = string.IsNullOrEmpty(customArg) ? "clone" : customArg;
                     var initOptions = new InitializationOptions();
                     initOptions.SetProfile(profile);
                     await UnityServices.InitializeAsync(initOptions);
-                    Debug.Log($"[RelayManager] CLONE init. Profile: {profile}");
+                    Debug.Log($"[RelayManager] PARRELSYNC CLONE init. Profile: {profile}");
                 }
                 else
                 {
@@ -95,6 +136,10 @@ public class RelayManager : MonoBehaviour
             {
                 Debug.Log($"[RelayManager] Already signed in. PlayerId: {AuthenticationService.Instance.PlayerId}");
             }
+
+            // Diagnostic: verify project identity matches between host & client
+            Debug.Log($"[RelayManager] CloudProjectId: {UnityEngine.Application.cloudProjectId}");
+            Debug.Log($"[RelayManager] UnityServices State: {UnityServices.State}");
 
             // DNS diagnostic
             LogDnsResolution();
@@ -193,7 +238,9 @@ public class RelayManager : MonoBehaviour
                 catch (Exception retryEx)
                 {
                     lastEx = retryEx;
-                    Debug.LogWarning($"[RelayManager] Attempt {attempt} failed: {retryEx.Message}");
+                    Debug.LogWarning($"[RelayManager] Attempt {attempt} failed: {retryEx.GetType().Name}: {retryEx.Message}");
+                    if (retryEx.InnerException != null)
+                        Debug.LogWarning($"[RelayManager]   Inner: {retryEx.InnerException.GetType().Name}: {retryEx.InnerException.Message}");
 
                     if (attempt < joinRetryCount)
                     {

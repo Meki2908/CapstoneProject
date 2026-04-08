@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 namespace ModularFootstepSystem.Extensions
 {
     using System.Collections.Generic;
@@ -132,3 +133,4 @@ namespace ModularFootstepSystem.Extensions
         }
     }
 }
+#endif

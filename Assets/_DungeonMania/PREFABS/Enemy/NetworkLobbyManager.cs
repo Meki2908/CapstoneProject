@@ -49,9 +49,9 @@ public class NetworkLobbyManager : NetworkBehaviour
     public event Action OnGameStarted;
 
     private List<GameObject> _spawnedItems = new List<GameObject>();
-    // Map clientId → index in _playerNames for removal
+
+    /// <summary>Mapping clientId → index trong _playerNames (server only).</summary>
     private Dictionary<ulong, int> _clientIdToNameIndex = new Dictionary<ulong, int>();
-    private int _nextNameIndex = 0;
 
     void Awake()
     {
@@ -80,7 +80,7 @@ public class NetworkLobbyManager : NetworkBehaviour
             string hostName = NetworkPlayerName.LocalPlayerName;
             if (string.IsNullOrEmpty(hostName)) hostName = "Host";
             _playerNames.Add(new FixedString64Bytes(hostName));
-            _clientIdToNameIndex[NetworkManager.LocalClientId] = _nextNameIndex++;
+            _clientIdToNameIndex[NetworkManager.LocalClientId] = 0;
         }
 
         if (IsClient && !IsServer)
@@ -127,63 +127,37 @@ public class NetworkLobbyManager : NetworkBehaviour
 
         Debug.Log($"[Lobby] Client {clientId} disconnected.");
 
-        // Remove player name from list
-        if (_clientIdToNameIndex.TryGetValue(clientId, out int nameIdx))
+        // Remove player name from synced list
+        if (_clientIdToNameIndex.TryGetValue(clientId, out int index))
         {
-            // Find current position (may have shifted due to earlier removals)
-            // Rebuild: search by tracking. Since indices shift, find the correct current index.
-            int currentIdx = -1;
-            int count = 0;
-            foreach (var kv in _clientIdToNameIndex)
+            if (index >= 0 && index < _playerNames.Count)
             {
-                if (kv.Value < nameIdx) count++;
+                _playerNames.RemoveAt(index);
+                Debug.Log($"[Lobby] Removed player at index {index}.");
             }
-            // No exact way without more bookkeeping, so just remove by counting order
-            // Simpler approach: remove the entry by scanning
             _clientIdToNameIndex.Remove(clientId);
 
-            // Rebuild the list: clear and re-add from connected clients
-            RebuildPlayerNames();
+            // Rebuild index mapping after removal
+            var newMapping = new Dictionary<ulong, int>();
+            foreach (var kv in _clientIdToNameIndex)
+            {
+                int newIdx = kv.Value > index ? kv.Value - 1 : kv.Value;
+                newMapping[kv.Key] = newIdx;
+            }
+            _clientIdToNameIndex = newMapping;
         }
 
         UpdatePlayerCount();
     }
 
-    void RebuildPlayerNames()
-    {
-        _playerNames.Clear();
-        _clientIdToNameIndex.Clear();
-        _nextNameIndex = 0;
-
-        // Re-add host
-        string hostName = NetworkPlayerName.LocalPlayerName;
-        if (string.IsNullOrEmpty(hostName)) hostName = "Host";
-        _playerNames.Add(new FixedString64Bytes(hostName));
-        _clientIdToNameIndex[NetworkManager.LocalClientId] = _nextNameIndex++;
-
-        // Re-add connected clients (except host)
-        foreach (var kv in NetworkManager.ConnectedClients)
-        {
-            if (kv.Key == NetworkManager.LocalClientId) continue;
-            var playerObj = kv.Value.PlayerObject;
-            if (playerObj != null)
-            {
-                var nameComp = playerObj.GetComponent<NetworkPlayerName>();
-                string name = nameComp != null ? nameComp.NetName.Value.ToString() : $"Player_{kv.Key}";
-                if (string.IsNullOrEmpty(name)) name = $"Player_{kv.Key}";
-                _playerNames.Add(new FixedString64Bytes(name));
-                _clientIdToNameIndex[kv.Key] = _nextNameIndex++;
-            }
-        }
-    }
-
     [ServerRpc(RequireOwnership = false)]
     void RegisterPlayerNameServerRpc(FixedString64Bytes playerName, ServerRpcParams rpcParams = default)
     {
-        ulong clientId = rpcParams.Receive.SenderClientId;
-        Debug.Log($"[Lobby] Player registered: {playerName} (clientId={clientId})");
+        ulong senderClientId = rpcParams.Receive.SenderClientId;
+        Debug.Log($"[Lobby] Player registered: {playerName} (clientId={senderClientId})");
+        int idx = _playerNames.Count;
         _playerNames.Add(playerName);
-        _clientIdToNameIndex[clientId] = _nextNameIndex++;
+        _clientIdToNameIndex[senderClientId] = idx;
         UpdatePlayerCount();
     }
 
