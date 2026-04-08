@@ -488,7 +488,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &4469523544793556960
 Transform:
   m_ObjectHideFlags: 0
@@ -674,7 +674,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7624128153095808132}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.07190689, y: 0.06783214, z: -0.0049016643, w: 0.99509007}
+  m_LocalRotation: {x: 0.06725927, y: 0.068670325, z: -0.004640253, w: 0.99535877}
   m_LocalPosition: {x: -1.5625, y: 4.6625004, z: -11.924999}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -1127,9 +1127,37 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6265146747336409381, guid: 50c1992c9671e784085fd993b5ea4364, type: 3}
+      propertyPath: m_Materials.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6265146747537805216, guid: 50c1992c9671e784085fd993b5ea4364, type: 3}
+      propertyPath: m_Materials.Array.size
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 6366025302349797026, guid: 50c1992c9671e784085fd993b5ea4364, type: 3}
       propertyPath: m_Name
       value: Effect_20_EnergyRelease_2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7752893783268328638, guid: 50c1992c9671e784085fd993b5ea4364, type: 3}
+      propertyPath: m_Materials.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7752893783329318500, guid: 50c1992c9671e784085fd993b5ea4364, type: 3}
+      propertyPath: m_Materials.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7752893783362995591, guid: 50c1992c9671e784085fd993b5ea4364, type: 3}
+      propertyPath: m_Materials.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7752893783545967557, guid: 50c1992c9671e784085fd993b5ea4364, type: 3}
+      propertyPath: m_Materials.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7752893783989311690, guid: 50c1992c9671e784085fd993b5ea4364, type: 3}
+      propertyPath: m_Materials.Array.size
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -2920,6 +2948,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 100084, guid: 3cf8ed06ad0b8d64bb4fe9a7f8f6ca3a, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1468774778627235961}
+    - targetCorrespondingSourceObject: {fileID: 100084, guid: 3cf8ed06ad0b8d64bb4fe9a7f8f6ca3a, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6924084111294333547}
   m_SourcePrefab: {fileID: 100100000, guid: 3cf8ed06ad0b8d64bb4fe9a7f8f6ca3a, type: 3}
 --- !u!95 &8447469564601938852 stripped
 Animator:
@@ -3016,7 +3047,7 @@ MonoBehaviour:
   wait: 0
   alive: 0
   enemyName: Grondar
-  attackDamage: 10
+  attackDamage: 199
   armorValue: 5
   magicValue: 0
   critChance: 10
@@ -3177,3 +3208,30 @@ MonoBehaviour:
   warpDistanceFromPlayer: 5
   warpCooldown: 8
   maxWarpCount: 5
+--- !u!54 &6924084111294333547
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8447469564611313712}
+  serializedVersion: 4
+  m_Mass: 1
+  m_Drag: 0
+  m_AngularDrag: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 8192
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 0
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 16
+  m_CollisionDetection: 0

@@ -17,7 +17,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &6089846374273038610
 Transform:
   m_ObjectHideFlags: 0
@@ -189,7 +189,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1775404536997310882}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.16540928, y: 0.8002824, z: -0.5161539, w: -0.25646254}
+  m_LocalRotation: {x: 0.19873685, y: 0.72268885, z: 0.6201513, w: -0.23159654}
   m_LocalPosition: {x: 0.05, y: 2.77, z: 0.07}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -7827,6 +7827,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 100082, guid: 2579ec83d296f564381920e405d36f54, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2505554892402257960}
+    - targetCorrespondingSourceObject: {fileID: 100082, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5748555227496620702}
   m_SourcePrefab: {fileID: 100100000, guid: 2579ec83d296f564381920e405d36f54, type: 3}
 --- !u!1 &6596514106577753363 stripped
 GameObject:
@@ -7933,15 +7936,15 @@ MonoBehaviour:
   delay: 0
   wait: 0
   alive: 0
-  enemyName: Enemy
-  attackDamage: 25
+  enemyName: Ignazar
+  attackDamage: 50
   armorValue: 5
-  magicValue: 20
+  magicValue: 290
   critChance: 10
   accuracy: 50
   goldReward: 10
   scoreReward: 100
-  attackDistanceOverride: 8
+  attackDistanceOverride: 6
   moveSpeed: 3.5
   isBoss: 1
   enemyType: 4
@@ -7958,7 +7961,7 @@ MonoBehaviour:
   - {fileID: 0}
   skillScript: {fileID: 0}
   skillVfxPrefab: {fileID: 4060967071236614201, guid: 3d164b7d14e44244589693d586e6a368, type: 3}
-  skillVfxRadius: 5
+  skillVfxRadius: 6
   skillIsDirectional: 0
   skillAngle: 90
   skillDistance: 5
@@ -8074,6 +8077,33 @@ MonoBehaviour:
   warpDistanceFromPlayer: 5
   warpCooldown: 8
   maxWarpCount: 5
+--- !u!54 &5748555227496620702
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6596514106577753363}
+  serializedVersion: 4
+  m_Mass: 1
+  m_Drag: 0
+  m_AngularDrag: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 8192
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 0
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 16
+  m_CollisionDetection: 0
 --- !u!4 &6596514106577783091 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 400082, guid: 2579ec83d296f564381920e405d36f54, type: 3}
