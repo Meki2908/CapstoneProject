@@ -103,6 +103,7 @@ public class PaladinDialogue : MonoBehaviour
         if (!other.CompareTag(playerTag)) return;
         _playerNear = false;
         if (promptPanel) promptPanel.SetActive(false);
+        if (_isOpen) CloseDialogue();
     }
 
     bool ShouldShowPrompt()

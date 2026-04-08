@@ -40,6 +40,9 @@ public class QuestMarker : MonoBehaviour
         QuestManager.OnQuestAccepted     += Refresh;
         QuestManager.OnQuestStepAdvanced += Refresh;
         QuestManager.OnQuestCompleted    += Refresh;
+
+        // Khi parent NPC được bật lại → cập nhật ngay
+        Refresh(-1);
     }
 
     void OnDisable()
