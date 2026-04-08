@@ -1,3 +1,4 @@
+using System;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -43,12 +44,42 @@ public class NetworkHostBootstrap : MonoBehaviour
         if (NetworkManager.Singleton.IsServer)
             return;
 
-        ParrelSyncTransportPort.ApplyClonePortOffsetIfNeeded(NetworkManager.Singleton);
+        // Only apply port offset for LAN mode (Relay overrides connection data anyway)
+        if (!MultiplayerManager.UsingRelay)
+            ParrelSyncTransportPort.ApplyClonePortOffsetIfNeeded(NetworkManager.Singleton);
+
+        // Apply Relay data if using internet relay
+        bool usedRelay = RelayManager.ApplyPendingRelayData(NetworkManager.Singleton);
+        Debug.Log($"[NetworkHostBootstrap] Relay={usedRelay}");
+
+        // Đăng ký callback khi client kết nối (dùng một lần hoặc nhiều lần)
+        NetworkManager.Singleton.OnClientConnectedCallback += OnHostClientConnected;
+        Debug.Log("[NetworkHostBootstrap] Registered OnClientConnectedCallback.");
 
         if (!NetworkManager.Singleton.StartHost())
-            Debug.LogError("[NetworkHostBootstrap] StartHost() thất bại.");
+            Debug.LogError("[NetworkHostBootstrap] StartHost() failed.");
 
         TryHookDisconnectRecovery();
+    }
+
+    // Dùng static event để thông báo Menu rằng client đã kết nối
+    private static event Action<ulong> _onHostClientConnected;
+
+    void OnHostClientConnected(ulong clientId)
+    {
+        var nm = NetworkManager.Singleton;
+        if (nm == null || !nm.IsServer) return;
+        if (clientId == nm.LocalClientId) return;
+
+        Debug.Log($"[NetworkHostBootstrap] Client {clientId} connected!");
+        RelayManager.MarkClientJoined();
+        _onHostClientConnected?.Invoke(clientId);
+    }
+
+    public static event Action<ulong> OnAnyClientConnectedInGameplay
+    {
+        add => _onHostClientConnected += value;
+        remove => _onHostClientConnected -= value;
     }
 
     void OnEnable()
@@ -61,6 +92,7 @@ public class NetworkHostBootstrap : MonoBehaviour
         if (NetworkManager.Singleton != null && _disconnectHooked)
         {
             NetworkManager.Singleton.OnClientDisconnectCallback -= OnClientDisconnected;
+            NetworkManager.Singleton.OnClientConnectedCallback -= OnClientConnected;
             _disconnectHooked = false;
         }
     }
@@ -69,6 +101,7 @@ public class NetworkHostBootstrap : MonoBehaviour
     {
         if (NetworkManager.Singleton == null || _disconnectHooked) return;
         NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
+        NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
         _disconnectHooked = true;
     }
 
@@ -80,6 +113,18 @@ public class NetworkHostBootstrap : MonoBehaviour
         // Ignore host local shutdown path; only recover when a remote client leaves.
         if (clientId == nm.LocalClientId) return;
         StartCoroutine(RecoverHostGameplayNextFrame());
+    }
+
+    void OnClientConnected(ulong clientId)
+    {
+        var nm = NetworkManager.Singleton;
+        if (nm == null || !nm.IsServer) return;
+
+        // Bỏ qua chính host
+        if (clientId == nm.LocalClientId) return;
+
+        Debug.Log($"[NetworkHostBootstrap] Client {clientId} connected! Marking client joined.");
+        RelayManager.MarkClientJoined();
     }
 
     System.Collections.IEnumerator RecoverHostGameplayNextFrame()

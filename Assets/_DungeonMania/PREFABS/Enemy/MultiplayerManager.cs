@@ -57,12 +57,58 @@ public class MultiplayerManager : MonoBehaviour
     [Tooltip("Text hiển thị Join Code sau khi host tạo phòng.")]
     [SerializeField] private TextMeshProUGUI joinCodeDisplay;
 
-    [Tooltip("Text hiển thị trạng thái (connecting, error...).")]
+    [Tooltip("Text hiển thị trạng thái (connecting, error...) — Host panel.")]
     [SerializeField] private TextMeshProUGUI statusText;
+    [Tooltip("Text hiển thị trạng thái — Join panel.")]
+    [SerializeField] private TextMeshProUGUI statusTextJoin;
+
+    [Header("=== PLAYER NAME ===")]
+    [Tooltip("Input field to enter player name (Host panel).")]
+    [SerializeField] private TMP_InputField playerNameInput;
+    [Tooltip("Input field to enter player name (Join panel).")]
+    [SerializeField] private TMP_InputField playerNameInputJoin;
+
+    [Header("=== HOST BUTTONS ===")]
+    [Tooltip("CREATE ROOM button (hidden after room created).")]
+    [SerializeField] private GameObject createRoomButton;
+    [Tooltip("ENTER GAME button (shown after room created).")]
+    [SerializeField] private GameObject enterGameButton;
+    [Tooltip("Text thông báo yêu cầu người chơi trước khi vào game.")]
+    [SerializeField] private TextMeshProUGUI waitingForPlayersText;
+
+    [Header("=== PLAYER LIST (Panel_CreateRoom) ===")]
+    [Tooltip("Container with VerticalLayoutGroup for player entries.")]
+    [SerializeField] private Transform playerListContainer;
+    [Tooltip("Text showing 'Players: X/4'.")]
+    [SerializeField] private TextMeshProUGUI playerCountText;
 
     private void Awake()
     {
+        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
+
+        // Load player name from PlayerPrefs
+        string saved = PlayerPrefs.GetString("PlayerName", "");
+        if (!string.IsNullOrEmpty(saved))
+        {
+            if (playerNameInput != null)
+                playerNameInput.text = saved;
+            if (playerNameInputJoin != null)
+                playerNameInputJoin.text = saved;
+        }
+
+        // Wire ENTER GAME button onClick
+        if (enterGameButton != null)
+        {
+            var btn = enterGameButton.GetComponent<UnityEngine.UI.Button>();
+            if (btn != null)
+            {
+                btn.onClick.RemoveAllListeners();
+                btn.onClick.AddListener(LoadGameAsHost);
+            }
+        }
+
+
     }
 
     private void OnDestroy()
@@ -73,26 +119,105 @@ public class MultiplayerManager : MonoBehaviour
 
     // ───────────────────── HOST ─────────────────────
 
-    /// <summary>Gọi từ nút UI: tạo phòng (relay hoặc LAN) rồi load scene gameplay.</summary>
-    public async void StartHostAndLoadGame()
+    /// <summary>
+    /// Step 1: Create Relay room, show join code. Does NOT load scene yet.
+    /// Call LoadGameAsHost() to actually load the gameplay scene.
+    /// </summary>
+    public async void CreateRoom()
     {
+        SavePlayerName();
         UsingRelay = useRelay;
 
         if (useRelay)
         {
-            SetStatus("Đang tạo phòng...");
-            string joinCode = await RelayManager.Instance.CreateRelayAsync();
-            if (joinCode == null)
+            // Check RelayManager exists
+            if (RelayManager.Instance == null)
             {
-                SetStatus("Lỗi tạo phòng! Kiểm tra kết nối internet.");
+                SetStatus("ERROR: RelayManager not found! Add RelayManager to scene.");
+                Debug.LogError("[MultiplayerManager] RelayManager.Instance is null! Create a GameObject with RelayManager script.");
                 return;
             }
 
-            // Hiển thị join code cho host
+            try
+            {
+                SetStatus("Creating room...");
+                string joinCode = await RelayManager.Instance.CreateRelayAsync();
+                if (joinCode == null)
+                {
+                    SetStatus("Failed to create room! Check internet.");
+                    return;
+                }
+
+                // Show join code
+                if (joinCodeDisplay != null)
+                    joinCodeDisplay.text = joinCode;
+
+                SetStatus($"Room Code: {joinCode}");
+                Debug.Log($"[MultiplayerManager] Relay Host created. Code: {joinCode}");
+
+                // Copy to clipboard (safe)
+                try { GUIUtility.systemCopyBuffer = joinCode; }
+                catch (System.Exception) { /* ignore clipboard errors */ }
+            }
+            catch (System.Exception e)
+            {
+                SetStatus($"Error: {e.Message}");
+                Debug.LogError($"[MultiplayerManager] CreateRoom exception: {e}");
+                return;
+            }
+        }
+        else
+        {
+            SetStatus("Room created (LAN).");
+        }
+
+        // Swap buttons: hide CREATE ROOM, show ENTER GAME (enabled immediately)
+        if (createRoomButton != null) createRoomButton.SetActive(false);
+        if (enterGameButton != null)
+            enterGameButton.SetActive(true);
+
+        // Show host in player list
+        AddPlayerToList(NetworkPlayerName.LocalPlayerName, true);
+        UpdatePlayerCount(1);
+    }
+
+    /// <summary>
+    /// Step 2: Load gameplay scene as Host. Call after CreateRoom().
+    /// Can also be called directly for backwards compatibility.
+    /// </summary>
+    public void LoadGameAsHost()
+    {
+        // Host loads scene immediately. NetworkLobbyManager in gameplay scene
+        // will handle waiting for players before starting the actual game.
+        _pendingClient = false;
+        _pendingConnectPort = 0;
+        _pendingHost = true;
+        Debug.Log("[MultiplayerManager] Host loading gameplay scene...");
+        SceneManager.LoadScene(gameplaySceneName, LoadSceneMode.Single);
+    }
+
+    /// <summary>
+    /// Legacy: Create room + immediately load scene (backwards compatible).
+    /// </summary>
+    public async void StartHostAndLoadGame()
+    {
+        SavePlayerName();
+        UsingRelay = useRelay;
+
+        if (useRelay)
+        {
+            SetStatus("Creating room...");
+            string joinCode = await RelayManager.Instance.CreateRelayAsync();
+            if (joinCode == null)
+            {
+                SetStatus("Failed to create room! Check internet.");
+                return;
+            }
+
             if (joinCodeDisplay != null)
                 joinCodeDisplay.text = joinCode;
 
-            SetStatus($"Mã phòng: {joinCode}");
+            SetStatus($"Room Code: {joinCode}");
             Debug.Log($"[MultiplayerManager] Relay Host created. Code: {joinCode}");
         }
 
@@ -104,9 +229,10 @@ public class MultiplayerManager : MonoBehaviour
 
     // ───────────────────── CLIENT ─────────────────────
 
-    /// <summary>Gọi từ nút UI: nhập join code → join relay → load scene gameplay.</summary>
+    /// <summary>Join relay room and load gameplay scene.</summary>
     public async void StartClientAndLoadGame()
     {
+        SavePlayerName();
         UsingRelay = useRelay;
 
         if (useRelay)
@@ -114,19 +240,19 @@ public class MultiplayerManager : MonoBehaviour
             string code = joinCodeInput != null ? joinCodeInput.text : "";
             if (string.IsNullOrWhiteSpace(code))
             {
-                SetStatus("Nhập mã phòng trước!");
+                SetStatus("Enter room code first!");
                 return;
             }
 
-            SetStatus("Đang kết nối...");
+            SetStatus("Connecting...");
             bool ok = await RelayManager.Instance.JoinRelayAsync(code);
             if (!ok)
             {
-                SetStatus("Không thể kết nối! Kiểm tra mã phòng.");
+                SetStatus("Connection failed! Check room code.");
                 return;
             }
 
-            SetStatus("Đã kết nối. Đang tải...");
+            SetStatus("Connected. Loading...");
         }
 
         CommitPendingJoinFromMenu();
@@ -171,6 +297,63 @@ public class MultiplayerManager : MonoBehaviour
     {
         if (statusText != null)
             statusText.text = msg;
+        if (statusTextJoin != null)
+            statusTextJoin.text = msg;
         Debug.Log($"[MultiplayerManager] {msg}");
+    }
+
+    private void SavePlayerName()
+    {
+        // Try Join panel input first (for client), then Host panel input
+        string name = "";
+        if (playerNameInputJoin != null && !string.IsNullOrWhiteSpace(playerNameInputJoin.text))
+            name = playerNameInputJoin.text.Trim();
+        else if (playerNameInput != null)
+            name = playerNameInput.text.Trim();
+
+        if (string.IsNullOrEmpty(name))
+            name = $"Player_{Random.Range(100, 999)}";
+
+        NetworkPlayerName.LocalPlayerName = name;
+        PlayerPrefs.SetString("PlayerName", name);
+        PlayerPrefs.Save();
+        Debug.Log($"[MultiplayerManager] Player name: {name}");
+    }
+
+    private void AddPlayerToList(string playerName, bool isHost)
+    {
+        if (playerListContainer == null) return;
+
+        // Clear placeholder entries (italic "Waiting...")
+        for (int i = playerListContainer.childCount - 1; i >= 0; i--)
+        {
+            var child = playerListContainer.GetChild(i);
+            var tmp = child.GetComponent<TextMeshProUGUI>();
+            if (tmp != null && (tmp.fontStyle & FontStyles.Italic) != 0)
+                Destroy(child.gameObject);
+        }
+
+        // Create entry
+        var entryGO = new GameObject($"Player_{playerListContainer.childCount}",
+            typeof(RectTransform), typeof(TMPro.TextMeshProUGUI));
+        entryGO.transform.SetParent(playerListContainer, false);
+        entryGO.layer = 5;
+
+        var rt = entryGO.GetComponent<RectTransform>();
+        rt.sizeDelta = new Vector2(0, 40);
+
+        var text = entryGO.GetComponent<TextMeshProUGUI>();
+        string icon = isHost ? "\ud83d\udc51" : "\ud83c\udfae";
+        string role = isHost ? " (Host)" : "";
+        text.text = $"  {icon}  {playerName}{role}";
+        text.fontSize = 26;
+        text.alignment = TextAlignmentOptions.Left;
+        text.color = isHost ? new Color(1f, 0.84f, 0f) : Color.white;
+    }
+
+    private void UpdatePlayerCount(int count)
+    {
+        if (playerCountText != null)
+            playerCountText.text = $"Players: {count}/4";
     }
 }

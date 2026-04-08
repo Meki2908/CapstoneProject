@@ -27,6 +27,12 @@ namespace Artsystack.ArtsystackGui
         [SerializeField] private GameObject tab_MultiplayerMode;
         [SerializeField] private GameObject tab_HostOptions;
 
+        [Header("GUI_btn_Play — Multiplayer Panels")]
+        [Tooltip("Panel Create Room (Host) — tạo bởi SetupMultiplayerUI tool.")]
+        [SerializeField] private GameObject panel_CreateRoom;
+        [Tooltip("Panel Join Room (Client) — tạo bởi SetupMultiplayerUI tool.")]
+        [SerializeField] private GameObject panel_JoinRoom;
+
         [Header("GUI_btn_Play — actions")]
         [Tooltip("Hàng Tab_Play: Play | Help (giữa) | Exit — Help mặc định mở Settings; đổi OnHelpClicked nếu có panel Help riêng.")]
         [SerializeField] private UnityEngine.UI.Button btn_HelpMiddle;
@@ -102,6 +108,8 @@ namespace Artsystack.ArtsystackGui
             if (tab_TabPlay != null) tab_TabPlay.SetActive(true);
             if (tab_MultiplayerMode != null) tab_MultiplayerMode.SetActive(false);
             if (tab_HostOptions != null) tab_HostOptions.SetActive(false);
+            if (panel_CreateRoom != null) panel_CreateRoom.SetActive(false);
+            if (panel_JoinRoom != null) panel_JoinRoom.SetActive(false);
         }
 
         private void InitializeMenu()
@@ -163,20 +171,24 @@ namespace Artsystack.ArtsystackGui
         }
 
         /// <summary>
-        /// Create host — dùng MultiplayerManager (Relay hoặc LAN tùy config).
+        /// Create host — hiện Panel_CreateRoom (Host nhập tên và tạo phòng).
         /// </summary>
         public void OnHostCreateClicked()
         {
-            var mp = MultiplayerManager.Instance;
-            if (mp != null)
-            {
-                mp.StartHostAndLoadGame();
-                isGameRunning = true;
-            }
+            // Ẩn các tab multiplayer trước
+            if (tab_MultiplayerMode != null) tab_MultiplayerMode.SetActive(false);
+            if (tab_HostOptions != null) tab_HostOptions.SetActive(false);
+            if (panel_JoinRoom != null) panel_JoinRoom.SetActive(false);
+
+            // Hiện Panel_CreateRoom
+            if (panel_CreateRoom != null)
+                panel_CreateRoom.SetActive(true);
             else
             {
-                Debug.LogWarning("[GameMenuManager] MultiplayerManager.Instance is null — fallback to LoadGameScene.");
-                StartCoroutine(LoadGameScene());
+                // Fallback: gọi trực tiếp nếu chưa setup panel
+                var mp = MultiplayerManager.Instance;
+                if (mp != null) { mp.StartHostAndLoadGame(); isGameRunning = true; }
+                else StartCoroutine(LoadGameScene());
             }
         }
 
@@ -189,19 +201,24 @@ namespace Artsystack.ArtsystackGui
         }
 
         /// <summary>
-        /// Join host — dùng MultiplayerManager (Relay join code hoặc LAN IP).
+        /// Join host — hiện Panel_JoinRoom (Client nhập tên và mã phòng).
         /// </summary>
         public void OnJoinHostClicked()
         {
-            var mp = MultiplayerManager.Instance;
-            if (mp != null)
-            {
-                mp.StartClientAndLoadGame();
-                isGameRunning = true;
-            }
+            // Ẩn các tab multiplayer trước
+            if (tab_MultiplayerMode != null) tab_MultiplayerMode.SetActive(false);
+            if (tab_HostOptions != null) tab_HostOptions.SetActive(false);
+            if (panel_CreateRoom != null) panel_CreateRoom.SetActive(false);
+
+            // Hiện Panel_JoinRoom
+            if (panel_JoinRoom != null)
+                panel_JoinRoom.SetActive(true);
             else
             {
-                Debug.LogError("[GameMenuManager] MultiplayerManager.Instance is null — cannot Join.");
+                // Fallback: gọi trực tiếp nếu chưa setup panel
+                var mp = MultiplayerManager.Instance;
+                if (mp != null) { mp.StartClientAndLoadGame(); isGameRunning = true; }
+                else Debug.LogError("[GameMenuManager] MultiplayerManager.Instance is null.");
             }
         }
 
