@@ -90,6 +90,8 @@ public class AbilityIconManager : MonoBehaviour
     /// </summary>
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
+        // WeaponController trên player mới — không giữ reference prefab/scene cũ
+        weaponController = FindFirstObjectByType<WeaponController>();
         AE_ClearAbilityIcons();
     }
 

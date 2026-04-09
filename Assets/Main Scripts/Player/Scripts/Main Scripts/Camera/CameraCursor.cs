@@ -95,8 +95,15 @@ namespace MovementSystem
             if (IsUiOverlayBlocking()) return;
 
             isCursorHidden = true;
-            Cursor.visible = false;
-            Cursor.lockState = CursorLockMode.Locked;
+            if (MouseLockManager.Instance != null)
+            {
+                MouseLockManager.Instance.SetGameplayCursorLocked(true);
+            }
+            else
+            {
+                Cursor.visible = false;
+                Cursor.lockState = CursorLockMode.Locked;
+            }
             SetCinemachineInput(true);
         }
 
@@ -138,7 +145,20 @@ namespace MovementSystem
 
         private void ToggleCursor()
         {
-            isCursorHidden = !isCursorHidden;
+            if (MouseLockManager.Instance != null)
+            {
+                bool wasFree = !MouseLockManager.Instance.IsGameplayCursorLocked;
+                bool nextGameplay = !MouseLockManager.Instance.IsGameplayCursorLocked;
+                MouseLockManager.Instance.SetGameplayCursorLocked(nextGameplay, fromUserToggleFromFreeCursor: wasFree && nextGameplay);
+                if (!nextGameplay)
+                    MouseLockManager.Instance.ClearGameplayLockRetries();
+                isCursorHidden = nextGameplay;
+                SetCinemachineInput(nextGameplay);
+                return;
+            }
+
+            // Legacy: không có MouseLockManager — dựa Cursor.visible
+            isCursorHidden = !Cursor.visible;
 
             if (isCursorHidden)
             {
@@ -150,6 +170,7 @@ namespace MovementSystem
             {
                 Cursor.visible = true;
                 Cursor.lockState = CursorLockMode.None;
+                GameCursorManager.TryApplyNormalCursorTextureFromScene();
                 SetCinemachineInput(false);
             }
         }
@@ -260,8 +281,13 @@ namespace MovementSystem
         private void ApplyGameplayCursorInternal()
         {
             isCursorHidden = true;
-            Cursor.visible = false;
-            Cursor.lockState = CursorLockMode.Locked;
+            if (MouseLockManager.Instance != null)
+                MouseLockManager.Instance.SetGameplayCursorLocked(true);
+            else
+            {
+                Cursor.visible = false;
+                Cursor.lockState = CursorLockMode.Locked;
+            }
             SetCinemachineInput(true);
         }
 

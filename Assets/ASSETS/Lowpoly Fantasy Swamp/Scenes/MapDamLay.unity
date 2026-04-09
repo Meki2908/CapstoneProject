@@ -2934,6 +2934,60 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 2926250553289686149, guid: 4a983a3daaf28464b8a22eb254cefe14, type: 3}
   m_PrefabInstance: {fileID: 91896527}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &91949332
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 91949334}
+  - component: {fileID: 91949333}
+  m_Layer: 0
+  m_Name: GameCursorManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &91949333
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 91949332}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9182a37d5c99eca48ab121ddc52b0390, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  normalCursorTexture: {fileID: 2800000, guid: a5f9cc9a5efbe894eb85de4851711ba8, type: 3}
+  buttonHoverCursorTexture: {fileID: 2800000, guid: 0f45821c9378469498c0044ff9068ea2, type: 3}
+  itemHoverCursorTexture: {fileID: 2800000, guid: 486d9c27e3b5dd047967d6c94bbd7fae, type: 3}
+  settingsHoverCursorTexture: {fileID: 0}
+  normalHotspot: {x: 0, y: 0}
+  buttonHotspot: {x: 0, y: 0}
+  itemHotspot: {x: 0, y: 0}
+  settingsHotspot: {x: 0, y: 0}
+  syncVisibilityWithCursorLock: 1
+  keepRefreshingCursor: 0
+--- !u!4 &91949334
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 91949332}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1180, y: 617.8196, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &94353229
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -46632,3 +46686,4 @@ SceneRoots:
   - {fileID: 123514934}
   - {fileID: 61282019}
   - {fileID: 1999000002}
+  - {fileID: 91949334}

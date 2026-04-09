@@ -2,7 +2,9 @@ using UnityEngine;
 using Unity.Cinemachine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 using TMPro;
+using System.Collections;
 using System.Collections.Generic;
 
 public class InventoryController : MonoBehaviour
@@ -37,9 +39,58 @@ public class InventoryController : MonoBehaviour
 
     public bool isInventoryOpen = false;
 
+    private void OnInventoryPerformed(InputAction.CallbackContext ctx) => ToggleInventory();
+
     // Snapshot camera Cinemachine (cursor do CursorUIPriority quản lý)
     private bool cameraLookWasEnabledBeforeInventory;
     private bool cameraZoomWasEnabledBeforeInventory;
+
+    void Awake()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        // Player prefab spawn sau scene load — gán lại Character/PlayerInput (HUD DontDestroyOnLoad).
+        StopCoroutine(nameof(RebindPlayerInputAfterSceneLoad));
+        StartCoroutine(RebindPlayerInputAfterSceneLoad());
+    }
+
+    private IEnumerator RebindPlayerInputAfterSceneLoad()
+    {
+        yield return null;
+        yield return null;
+        SetupPlayerInputBinding();
+    }
+
+    /// <summary>
+    /// Gỡ subscription cũ rồi tìm player hiện tại và gắn lại action Inventory (I).
+    /// </summary>
+    private void SetupPlayerInputBinding()
+    {
+        if (inventoryToggleAction != null)
+        {
+            inventoryToggleAction.performed -= OnInventoryPerformed;
+            inventoryToggleAction = null;
+        }
+
+        character = FindFirstObjectByType<Character>();
+        playerInput = character != null && character.playerInput != null
+            ? character.playerInput
+            : FindFirstObjectByType<PlayerInput>();
+
+        if (playerInput != null && playerInput.actions != null)
+        {
+            inventoryToggleAction = playerInput.actions.FindAction("Inventory");
+            if (inventoryToggleAction != null)
+                inventoryToggleAction.performed += OnInventoryPerformed;
+            else
+                Debug.LogWarning("[InventoryController] 'Inventory' action not found in PlayerInput. Please add it to your Input Actions asset.");
+        }
+        else
+            Debug.LogWarning("[InventoryController] No PlayerInput after scene load — inventory hotkey disabled until player exists.");
+    }
 
     void Start()
     {
@@ -47,24 +98,7 @@ public class InventoryController : MonoBehaviour
         isInventoryOpen = false;
         isRemoveModeActive = false;
 
-        if (character == null)
-            character = FindFirstObjectByType<Character>();
-        if (playerInput == null && character != null)
-            playerInput = character.GetComponent<PlayerInput>();
-
-        // Setup Input System action for inventory toggle
-        if (playerInput != null && playerInput.actions != null)
-        {
-            inventoryToggleAction = playerInput.actions.FindAction("Inventory");
-            if (inventoryToggleAction != null)
-            {
-                inventoryToggleAction.performed += _ => ToggleInventory();
-            }
-            else
-            {
-                Debug.LogWarning("[InventoryController] 'Inventory' action not found in PlayerInput. Please add it to your Input Actions asset.");
-            }
-        }
+        SetupPlayerInputBinding();
 
         // Setup remove mode button
         if (removeModeButton != null)
@@ -540,11 +574,10 @@ public class InventoryController : MonoBehaviour
 
     private void OnDestroy()
     {
-        // Unsubscribe from Input System action
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+
         if (inventoryToggleAction != null)
-        {
-            inventoryToggleAction.performed -= _ => ToggleInventory();
-        }
+            inventoryToggleAction.performed -= OnInventoryPerformed;
 
         // Unsubscribe from InventoryManager events
         if (InventoryManager.Instance != null)

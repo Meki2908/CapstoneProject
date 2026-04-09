@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Events;
+using UnityEngine.SceneManagement;
 using TMPro;
 
 public class WeaponSwapper : MonoBehaviour
@@ -49,15 +50,29 @@ public class WeaponSwapper : MonoBehaviour
 
     private void Awake()
     {
-        // Auto-find references if not assigned
-        if (weaponController == null)
-            weaponController = FindFirstObjectByType<WeaponController>();
+        RefreshPlayerReferences();
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
 
-        if (character == null)
-            character = FindFirstObjectByType<Character>();
+    private void OnDestroy()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
 
-        if (enemyDetection == null)
-            enemyDetection = FindFirstObjectByType<EnemyDetection>();
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        // Player mới spawn sau load scene — gán lại (HUD DontDestroyOnLoad giữ reference cũ = null).
+        RefreshPlayerReferences();
+    }
+
+    /// <summary>
+    /// Luôn lấy instance player hiện tại trong scene (sau dungeon / teleport).
+    /// </summary>
+    public void RefreshPlayerReferences()
+    {
+        weaponController = FindFirstObjectByType<WeaponController>();
+        character = FindFirstObjectByType<Character>();
+        enemyDetection = FindFirstObjectByType<EnemyDetection>();
     }
 
     private void Start()

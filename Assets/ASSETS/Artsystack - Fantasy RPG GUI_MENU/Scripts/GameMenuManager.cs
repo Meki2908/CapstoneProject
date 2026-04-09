@@ -124,6 +124,14 @@ namespace Artsystack.ArtsystackGui
         /// </summary>
         public void OnContinueClicked()
         {
+            // Trong scene chơi, PauseMenuManager mới khôi phục timeScale + PlayerInput đầy đủ.
+            var pm = PauseMenuManager.Instance;
+            if (pm != null && pm.enabled)
+            {
+                pm.ResumeGame();
+                return;
+            }
+
             if (panel_PopUpPause != null)
                 panel_PopUpPause.SetActive(false);
 

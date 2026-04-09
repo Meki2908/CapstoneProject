@@ -912,9 +912,8 @@ public class DungeonWaveManager : MonoBehaviour
         // Dừng tất cả enemy
         StopAllEnemies();
 
-        // FIX: Ẩn UI player (Canvas_Menu, UI_HP...) trước khi hiện panel thua
-        // Nếu không ẩn, Canvas_Menu (sort order 1000) sẽ chặn click lên buttons
-        HidePlayerUIOnComplete();
+        // Không ẩn Canvas_Menu / UI_HP+Inventory nữa — DDOL dễ bị inactive vĩnh viễn xuyên scene.
+        // Panel thua dùng EnsurePanelOnTop + tắt GraphicRaycaster HUD (trong ShowDungeonFailed) để click được.
 
         // Hiển thị UI thua
         ShowDungeonFailed();
@@ -953,8 +952,8 @@ public class DungeonWaveManager : MonoBehaviour
     {
         yield return new WaitForSecondsRealtime(4f);
 
-        // Ẩn UI_HP và UI_Inventory của player
-        HidePlayerUIOnComplete();
+        // Không ẩn HUD player (UI_HP+Inventory, Canvas_Menu) — restore xuyên scene không tin cậy.
+        // Panel thắng dùng EnsurePanelOnTop để nằm trên HUD.
 
         // Hiển thị UI thắng
         ShowDungeonComplete();
@@ -970,85 +969,14 @@ public class DungeonWaveManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Ẩn UI_HP và UI_Inventory khi dungeon hoàn thành hoặc thua
+    /// Gốc hierarchy UI player: PlayerRoot (Canvas_Menu, HUD...) — ưu tiên trước transform player.
     /// </summary>
-    private void HidePlayerUIOnComplete()
+    private Transform GetRootForPlayerUI()
     {
-        // Ẩn toàn bộ Canvas_Menu (chứa tất cả GUI player: HP, Inventory, Skills, XP...)
-        string[] canvasNames = { "Canvas_Menu" };
-        foreach (string n in canvasNames)
-        {
-            // Tìm trong DontDestroyOnLoad + scene
-            Canvas[] allCanvases = Resources.FindObjectsOfTypeAll<Canvas>();
-            foreach (Canvas c in allCanvases)
-            {
-                if (c.gameObject.name == n && c.gameObject.scene.IsValid())
-                {
-                    c.gameObject.SetActive(false);
-                    Debug.Log($"[DungeonWave] Hidden Canvas: {n}");
-                    break;
-                }
-            }
-        }
-
-        // Fallback: tìm từng panel riêng nếu Canvas_Menu không tìm thấy
-        // FIX: Thêm tên có version number ("_1.0", "_1") và variations khác
-        string[] uiNames = { 
-            "UI_HP+Inventory", "UI_HP+Invetory",
-            "UI_HP+Invetory_1.0", "UI_HP+Inventory_1.0",
-            "UI_HP+Invetory_1", "UI_HP+Inventory_1",
-            "UI_HP_Invetory", "UI_HP_Inventory", "UI_HP-Invetory", "UI_HP-Inventory",
-            "UI_HP", "UI_Invetory", "UI_Inventory",
-            "AbilityIcons", "SkillBar", "UI_Skills"
-        };
-
-        // Cách 1: Tìm trong player hierarchy (recursive) — dùng StartsWith matching
-        Transform searchRoot = player;
-        if (searchRoot == null)
-        {
-            GameObject pr = GameObject.Find("PlayerRoot");
-            if (pr != null) searchRoot = pr.transform;
-        }
-
-        if (searchRoot != null)
-        {
-            // Tìm chính xác theo tên
-            foreach (string n in uiNames)
-            {
-                Transform t = FindInChildren(searchRoot, n);
-                if (t != null && t.gameObject.activeSelf) 
-                { 
-                    t.gameObject.SetActive(false); 
-                    Debug.Log($"[DungeonWave] Hidden {n} (in player)"); 
-                }
-            }
-
-            // FIX: Tìm bằng StartsWith cho các UI có version number không dự đoán được
-            foreach (Transform child in searchRoot.GetComponentsInChildren<Transform>(true))
-            {
-                string childName = child.name;
-                if ((childName.StartsWith("UI_HP") && (childName.Contains("Invetory") || childName.Contains("Inventory"))) ||
-                    childName == "AbilityIcons" || childName == "SkillBar" || childName == "UI_Skills")
-                {
-                    if (child.gameObject.activeSelf)
-                    {
-                        child.gameObject.SetActive(false);
-                        Debug.Log($"[DungeonWave] Hidden '{childName}' (fuzzy match in player)");
-                    }
-                }
-            }
-        }
-
-        // Cách 2: Fallback — tìm toàn scene
-        foreach (string n in uiNames)
-        {
-            GameObject go = GameObject.Find(n);
-            if (go != null && go.activeSelf) 
-            { 
-                go.SetActive(false); 
-                Debug.Log($"[DungeonWave] Hidden {n} (scene)"); 
-            }
-        }
+        GameObject pr = GameObject.Find("PlayerRoot");
+        if (pr != null) return pr.transform;
+        if (player != null) return player;
+        return null;
     }
 
     /// <summary>
@@ -1070,23 +998,38 @@ public class DungeonWaveManager : MonoBehaviour
     /// </summary>
     private void RestorePlayerUI()
     {
-        // Bật lại Canvas_Menu đã bị ẩn khi complete
-        Canvas[] allCanvases = Resources.FindObjectsOfTypeAll<Canvas>();
-        foreach (Canvas c in allCanvases)
+        Transform searchRoot = GetRootForPlayerUI();
+
+        // Bật lại MỌI Canvas_Menu dưới PlayerRoot (không break — tránh chỉ bật canvas sắp bị destroy cùng scene dungeon).
+        if (searchRoot != null)
         {
-            if (c.gameObject.name == "Canvas_Menu" && !c.gameObject.activeSelf)
+            foreach (Canvas c in searchRoot.GetComponentsInChildren<Canvas>(true))
             {
-                c.gameObject.SetActive(true);
-                // FIX: Bật lại GraphicRaycaster đã bị tắt bởi EnsurePanelOnTop
-                var raycaster = c.GetComponent<UnityEngine.UI.GraphicRaycaster>();
-                if (raycaster != null) raycaster.enabled = true;
-                Debug.Log("[DungeonWave] Restored Canvas_Menu");
-                break;
+                if (c != null && c.gameObject.name == "Canvas_Menu" && !c.gameObject.activeSelf)
+                {
+                    c.gameObject.SetActive(true);
+                    var raycaster = c.GetComponent<UnityEngine.UI.GraphicRaycaster>();
+                    if (raycaster != null) raycaster.enabled = true;
+                    Debug.Log("[DungeonWave] Restored Canvas_Menu (player hierarchy)");
+                }
             }
         }
 
-        // Fallback: bật lại các panel riêng
-        // FIX: Thêm tên có version number
+        Canvas[] allCanvases = Resources.FindObjectsOfTypeAll<Canvas>();
+        foreach (Canvas c in allCanvases)
+        {
+            if (c == null || c.gameObject.name != "Canvas_Menu") continue;
+            if (!c.gameObject.scene.IsValid()) continue;
+            if (searchRoot != null && c.transform.IsChildOf(searchRoot)) continue;
+            if (!c.gameObject.activeSelf)
+            {
+                c.gameObject.SetActive(true);
+                var raycaster = c.GetComponent<UnityEngine.UI.GraphicRaycaster>();
+                if (raycaster != null) raycaster.enabled = true;
+                Debug.Log("[DungeonWave] Restored Canvas_Menu (outside player root)");
+            }
+        }
+
         string[] uiNames = { 
             "UI_HP+Invetory_1.0", "UI_HP+Inventory_1.0",
             "UI_HP+Invetory_1", "UI_HP+Inventory_1",
@@ -1094,13 +1037,6 @@ public class DungeonWaveManager : MonoBehaviour
             "UI_HP_Invetory", "UI_HP_Inventory", "UI_HP-Invetory", "UI_HP-Inventory",
             "UI_HP", "UI_Invetory", "UI_Inventory" 
         };
-
-        Transform searchRoot = player;
-        if (searchRoot == null)
-        {
-            GameObject pr = GameObject.Find("PlayerRoot");
-            if (pr != null) searchRoot = pr.transform;
-        }
 
         if (searchRoot != null)
         {
@@ -1110,36 +1046,63 @@ public class DungeonWaveManager : MonoBehaviour
                 if (t != null) 
                 { 
                     t.gameObject.SetActive(true); 
-                    // FIX: Bật lại GraphicRaycaster
                     var raycaster = t.GetComponent<UnityEngine.UI.GraphicRaycaster>();
                     if (raycaster != null) raycaster.enabled = true;
                     Debug.Log($"[DungeonWave] Restored {n}"); 
-                    return; 
                 }
             }
 
-            // FIX: Fuzzy match cho version-numbered UI
+            // Khớp Hide: bật lại mọi HUD con (không return sớm — trước đây AbilityIcons/SkillBar không được bật lại).
             foreach (Transform child in searchRoot.GetComponentsInChildren<Transform>(true))
             {
                 string childName = child.name;
-                if (childName.StartsWith("UI_HP") && (childName.Contains("Invetory") || childName.Contains("Inventory")))
+                if ((childName.StartsWith("UI_HP") && (childName.Contains("Invetory") || childName.Contains("Inventory"))) ||
+                    childName == "AbilityIcons" || childName == "SkillBar" || childName == "UI_Skills")
                 {
                     child.gameObject.SetActive(true);
                     var raycaster = child.GetComponent<UnityEngine.UI.GraphicRaycaster>();
                     if (raycaster != null) raycaster.enabled = true;
                     Debug.Log($"[DungeonWave] Restored '{childName}' (fuzzy match)");
-                    return;
                 }
             }
         }
 
-        // Tìm inactive objects trong scene
         foreach (GameObject root in UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects())
         {
             foreach (string n in uiNames)
             {
                 Transform t = FindInChildren(root.transform, n);
-                if (t != null) { t.gameObject.SetActive(true); Debug.Log($"[DungeonWave] Restored {n} (scene)"); return; }
+                if (t != null)
+                {
+                    t.gameObject.SetActive(true);
+                    Debug.Log($"[DungeonWave] Restored {n} (scene)");
+                }
+            }
+        }
+
+        // EnsurePanelOnTop() tắt GraphicRaycaster trên HUD mà không ẩn GameObject — Restore phải bật lại dù canvas vẫn active.
+        ReenablePlayerHudRaycasters();
+    }
+
+    /// <summary>
+    /// Bật lại raycast cho Canvas_Menu / UI_HP* sau win-lose (EnsurePanelOnTop đã tắt để click được nút dungeon).
+    /// </summary>
+    private static void ReenablePlayerHudRaycasters()
+    {
+        Canvas[] canvases = FindObjectsByType<Canvas>(FindObjectsSortMode.None);
+        foreach (Canvas c in canvases)
+        {
+            if (c == null) continue;
+            string cName = c.gameObject.name;
+            if (cName != "Canvas_Menu" &&
+                !(cName.StartsWith("UI_HP") && (cName.Contains("Invetory") || cName.Contains("Inventory"))))
+                continue;
+
+            var ray = c.GetComponent<UnityEngine.UI.GraphicRaycaster>();
+            if (ray != null && !ray.enabled)
+            {
+                ray.enabled = true;
+                Debug.Log($"[DungeonWave] Re-enabled GraphicRaycaster on '{cName}'");
             }
         }
     }

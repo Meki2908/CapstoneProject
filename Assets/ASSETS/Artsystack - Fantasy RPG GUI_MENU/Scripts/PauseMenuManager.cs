@@ -36,8 +36,12 @@ namespace Artsystack.ArtsystackGui
         [SerializeField] private string mainMenuSceneName = "MainMenu";
         [SerializeField] private bool cursorVisibleOnPause = true;
 
+        [Tooltip("Chặn TogglePause bị gọi 2 lần cùng frame (Input System + Legacy, hoặc script khác) → Esc một lần mở pause ngay.")]
+        [SerializeField] private float togglePauseDebounceSeconds = 0.2f;
+
         private static PauseMenuManager instance;
         private bool isPaused = false;
+        private float _lastTogglePauseUnscaledTime = -999f;
 
         public static PauseMenuManager Instance
         {
@@ -114,6 +118,9 @@ namespace Artsystack.ArtsystackGui
 
             if (escPressed)
             {
+                if (Time.unscaledTime - _lastTogglePauseUnscaledTime < togglePauseDebounceSeconds)
+                    return;
+                _lastTogglePauseUnscaledTime = Time.unscaledTime;
                 Debug.Log($"[PauseMenuManager] ESC detected! isPaused={isPaused}, enabled={enabled}");
                 TogglePause();
             }
@@ -174,12 +181,24 @@ namespace Artsystack.ArtsystackGui
             {
                 Cursor.visible = true;
                 Cursor.lockState = CursorLockMode.None;
+                GameCursorManager.TryApplyNormalCursorTextureFromScene();
             }
+
+            // Đồng bộ với CameraCursor / UI — tránh trạng thái cursor/input lệch
+            CursorUIPriority.BeginUiOverlay();
+
+            // Giống Alt “mở chuột”: dừng retry ép lock sau load scene (MouseLockManager), tránh đè cùng frame với pause.
+            if (MouseLockManager.Instance != null)
+                MouseLockManager.Instance.ClearGameplayLockRetries();
         }
 
         public void ResumeGame()
         {
-            if (!isPaused) return;
+            // Cho phép resume khi panel vẫn bật nhưng isPaused bị lệch (Continue / script khác đã đụng UI).
+            bool panelVisible = panel_PopUpPause != null && panel_PopUpPause.activeSelf;
+            if (!isPaused && !panelVisible)
+                return;
+
             isPaused = false;
             SoundManager.PlayUICloseMenu();
             HideAllPanels();
@@ -188,11 +207,18 @@ namespace Artsystack.ArtsystackGui
             RestoreParents();
 
             Time.timeScale = 1f;
-            Cursor.visible = false;
-            Cursor.lockState = CursorLockMode.Locked;
+            if (MouseLockManager.Instance != null)
+                MouseLockManager.Instance.SetGameplayCursorLocked(true);
+            else
+            {
+                Cursor.visible = false;
+                Cursor.lockState = CursorLockMode.Locked;
+            }
 
             // Bật lại PlayerInput khi resume
             SetPlayerInput(true);
+
+            CursorUIPriority.EndUiOverlay();
 
             // Hiện lại HUD khi resume
             if (panel_HUD != null)
@@ -201,19 +227,28 @@ namespace Artsystack.ArtsystackGui
 
         private void SetPlayerInput(bool enabled)
         {
-            var character = FindFirstObjectByType<Character>();
-            if (character != null && character.playerInput != null && character.playerInput.actions != null)
+            var characters = FindObjectsByType<Character>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            for (int i = 0; i < characters.Length; i++)
             {
-                // Tắt/bật Player action map (movement, combat, attack...)
-                var playerMap = character.playerInput.actions.FindActionMap("Player");
+                var character = characters[i];
+                if (character == null || !character.isActiveAndEnabled)
+                    continue;
+
+                var pi = character.playerInput != null ? character.playerInput : character.GetComponent<PlayerInput>();
+                if (pi == null || pi.actions == null)
+                    continue;
+
+                if (enabled)
+                    pi.enabled = true;
+
+                var playerMap = pi.actions.FindActionMap("Player");
                 if (playerMap != null)
                 {
                     if (enabled) playerMap.Enable();
                     else playerMap.Disable();
                 }
 
-                // Tắt/bật Skill action map
-                var skillMap = character.playerInput.actions.FindActionMap("Skill");
+                var skillMap = pi.actions.FindActionMap("Skill");
                 if (skillMap != null)
                 {
                     if (enabled) skillMap.Enable();
@@ -265,6 +300,7 @@ namespace Artsystack.ArtsystackGui
             Time.timeScale = 1f;
             Cursor.visible = true;
             Cursor.lockState = CursorLockMode.None;
+            GameCursorManager.TryApplyNormalCursorTextureFromScene();
             isPaused = false;
             HideAllPanels();
 

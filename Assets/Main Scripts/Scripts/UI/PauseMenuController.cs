@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
+using UnityEngine.SceneManagement;
 
 
 /// <summary>
@@ -31,6 +32,10 @@ public class PauseMenuController : MonoBehaviour
     [Tooltip("UI_HP sẽ bị ẩn khi mở menu")]
     public GameObject uiHP;
     
+    [Header("=== SCENE SCOPE (ESC) ===")]
+    [Tooltip("Ở các scene này, PauseMenuManager giữ ESC — không mở Canv_Options (tránh hai menu pause / xung đột input).")]
+    [SerializeField] private string[] scenesWhereEscIsOnlyForPauseMenuManager = new[] { "Map_Chinh", "MapSaMac", "MapDamLay", "MapDemon" };
+
     [Header("=== SETTINGS ===")]
     [Tooltip("Pause game khi mở menu")]
     public bool pauseOnOpen = true;
@@ -229,6 +234,17 @@ public class PauseMenuController : MonoBehaviour
     
     void Update()
     {
+        // Gameplay / dungeon: never steal ESC — PauseMenuManager owns pause (even if Instance was null on first frame).
+        string sceneName = SceneManager.GetActiveScene().name;
+        if (scenesWhereEscIsOnlyForPauseMenuManager != null)
+        {
+            for (int i = 0; i < scenesWhereEscIsOnlyForPauseMenuManager.Length; i++)
+            {
+                if (scenesWhereEscIsOnlyForPauseMenuManager[i] == sceneName)
+                    return;
+            }
+        }
+
         // If PauseMenuManager is handling ESC in this scene (dungeon/gameplay),
         // let it take priority — avoid double-toggle conflicts
         var pauseManager = Artsystack.ArtsystackGui.PauseMenuManager.Instance;
