@@ -85095,6 +85095,7 @@ GameObject:
   - component: {fileID: 505734898532284177}
   - component: {fileID: 5395804327490155289}
   - component: {fileID: 4574784741352068433}
+  - component: {fileID: 28585171296665295}
   m_Layer: 8
   m_Name: player
   m_TagString: Player
@@ -85675,6 +85676,30 @@ MonoBehaviour:
   autoDashCooldown: 3
   dashForce: 15
   dashDuration: 0.3
+--- !u!114 &28585171296665295
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5966522928997625730}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bce20b9f99c9e17479aa4b9e041cb8ae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  playerTransform: {fileID: 4443364280475888411}
+  circleRadius: 0.7
+  circleThickness: 0.04
+  circleSegments: 32
+  arrowSize: 0.4
+  arrowBaseDistance: 1
+  arrowMoveAmount: 0.25
+  arrowMoveSpeed: 1.5
+  groundOffset: 0.08
+  color: {r: 1, g: 1, b: 0, a: 1}
+  hideDistance: 3
+  searchInterval: 1
 --- !u!1 &6046149470515190070
 GameObject:
   m_ObjectHideFlags: 0
@@ -105641,7 +105666,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7891149897360037319}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.12384256, y: 0.3515949, z: 0.04698478, w: 0.9267343}
+  m_LocalRotation: {x: -0.13610947, y: 0.36374572, z: 0.053818617, w: 0.9199276}
   m_LocalPosition: {x: -3.3400269, y: 0.21700001, z: -4.0899963}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
