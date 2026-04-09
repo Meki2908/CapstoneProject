@@ -92,10 +92,10 @@ public class AxeSkill : MonoBehaviour
     private void Update()
     {
         if (Keyboard.current == null) return;
-        if (Keyboard.current.eKey.wasPressedThisFrame) TryUse(AbilityInput.E);
-        if (Keyboard.current.rKey.wasPressedThisFrame) TryUse(AbilityInput.R);
-        if (Keyboard.current.tKey.wasPressedThisFrame) TryUse(AbilityInput.T);
-        if (Keyboard.current.qKey.wasPressedThisFrame) TryUse(AbilityInput.Q_Ultimate);
+        if (Keyboard.current.eKey.wasPressedThisFrame && TutorialInputGate.AllowsSkill(AbilityInput.E)) TryUse(AbilityInput.E);
+        if (Keyboard.current.rKey.wasPressedThisFrame && TutorialInputGate.AllowsSkill(AbilityInput.R)) TryUse(AbilityInput.R);
+        if (Keyboard.current.tKey.wasPressedThisFrame && TutorialInputGate.AllowsSkill(AbilityInput.T)) TryUse(AbilityInput.T);
+        if (Keyboard.current.qKey.wasPressedThisFrame && TutorialInputGate.AllowsSkill(AbilityInput.Q_Ultimate)) TryUse(AbilityInput.Q_Ultimate);
     }
 
     public void TryUse(AbilityInput input)
@@ -138,6 +138,8 @@ public class AxeSkill : MonoBehaviour
         int idx = InputToIndex(input);
         animator.SetInteger(skillIndexParam, idx);
         animator.SetTrigger(skillTriggerParam);
+
+        TutorialTextDisplay.NotifySkillActivatedFromGameplay(input);
 
         // if (skillLock == null)
         // {

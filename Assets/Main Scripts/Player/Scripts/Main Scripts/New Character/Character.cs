@@ -217,7 +217,8 @@ public class Character : MonoBehaviour
         if (CachedGroundedFeet)
             lastGroundedFeetTime = Time.time;
 
-        if (jumpActionCache != null && jumpActionCache.triggered)
+        if (jumpActionCache != null && jumpActionCache.triggered
+            && (!TutorialInputGate.IsActive || TutorialInputGate.Allows(TutorialInputMask.Jump)))
             jumpBufferRemaining = jumpBufferDuration;
         else
             jumpBufferRemaining = Mathf.Max(0f, jumpBufferRemaining - Time.deltaTime);

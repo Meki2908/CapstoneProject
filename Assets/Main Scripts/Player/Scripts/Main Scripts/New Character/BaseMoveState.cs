@@ -113,6 +113,28 @@ public class BaseMoveState : State
                 sheathWeapon = false; // Prevent triggering both
             }
         }
+
+        ApplyTutorialInputGate();
+    }
+
+    void ApplyTutorialInputGate()
+    {
+        if (!TutorialInputGate.IsActive) return;
+        var m = TutorialInputGate.EffectiveMask;
+        if ((m & TutorialInputMask.Move) == 0)
+        {
+            input = Vector2.zero;
+            velocity = Vector3.zero;
+        }
+        if ((m & TutorialInputMask.Jump) == 0) jump = false;
+        if ((m & TutorialInputMask.Crouch) == 0) crouch = false;
+        if ((m & TutorialInputMask.Sprint) == 0) sprint = false;
+        if ((m & TutorialInputMask.Dash) == 0) dash = false;
+        if ((m & TutorialInputMask.ToggleWeapon) == 0)
+        {
+            drawWeapon = false;
+            sheathWeapon = false;
+        }
     }
 
     public override void PhysicsUpdate()

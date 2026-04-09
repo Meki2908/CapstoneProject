@@ -72,6 +72,12 @@ public class CrouchingState : State
         velocity = velocity.x * camRight + velocity.z * camForward;
         if (velocity.sqrMagnitude > 1f) velocity.Normalize();
         velocity.y = 0f;
+
+        if (TutorialInputGate.IsActive && (TutorialInputGate.EffectiveMask & TutorialInputMask.Move) == 0)
+        {
+            input = Vector2.zero;
+            velocity = Vector3.zero;
+        }
     }
 
     public override void LogicUpdate()

@@ -25,9 +25,14 @@ public class StandingState : BaseMoveState
     {
         base.HandleInput();
 
-        if (toggleWeaponAction.triggered)
+        if (toggleWeaponAction.triggered
+            && (!TutorialInputGate.IsActive || TutorialInputGate.Allows(TutorialInputMask.ToggleWeapon)))
         {
             drawWeapon = true;
+        }
+        else if (TutorialInputGate.IsActive && !TutorialInputGate.Allows(TutorialInputMask.ToggleWeapon))
+        {
+            drawWeapon = false;
         }
     }
 

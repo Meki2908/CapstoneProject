@@ -107,10 +107,10 @@ public class MageSkills : MonoBehaviour
     private void Update()
     {
         if (Keyboard.current == null) return;
-        if (Keyboard.current.eKey.wasPressedThisFrame) TryUse(AbilityInput.E);
-        if (Keyboard.current.rKey.wasPressedThisFrame) TryUse(AbilityInput.R);
-        if (Keyboard.current.tKey.wasPressedThisFrame) TryUse(AbilityInput.T);
-        if (Keyboard.current.qKey.wasPressedThisFrame) TryUse(AbilityInput.Q_Ultimate);
+        if (Keyboard.current.eKey.wasPressedThisFrame && TutorialInputGate.AllowsSkill(AbilityInput.E)) TryUse(AbilityInput.E);
+        if (Keyboard.current.rKey.wasPressedThisFrame && TutorialInputGate.AllowsSkill(AbilityInput.R)) TryUse(AbilityInput.R);
+        if (Keyboard.current.tKey.wasPressedThisFrame && TutorialInputGate.AllowsSkill(AbilityInput.T)) TryUse(AbilityInput.T);
+        if (Keyboard.current.qKey.wasPressedThisFrame && TutorialInputGate.AllowsSkill(AbilityInput.Q_Ultimate)) TryUse(AbilityInput.Q_Ultimate);
     }
 
     public void TryUse(AbilityInput input)
@@ -158,6 +158,8 @@ public class MageSkills : MonoBehaviour
             ultimateDirector.time = 0;
             ultimateDirector.Play();
         }
+
+        TutorialTextDisplay.NotifySkillActivatedFromGameplay(input);
     }
     // Mage giờ dùng logic VFX như Sword/Axe - loại bỏ projectile methods thừa
 

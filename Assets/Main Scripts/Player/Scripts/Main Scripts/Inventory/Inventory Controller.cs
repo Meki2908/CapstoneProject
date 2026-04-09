@@ -134,6 +134,9 @@ public class InventoryController : MonoBehaviour
 
     private void ToggleInventory()
     {
+        if (!isInventoryOpen && TutorialInputGate.IsActive && !TutorialInputGate.Allows(TutorialInputMask.Inventory))
+            return;
+
         if (isInventoryOpen)
         {
             CloseInventory();

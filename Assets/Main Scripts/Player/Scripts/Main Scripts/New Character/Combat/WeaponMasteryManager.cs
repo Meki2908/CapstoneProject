@@ -13,6 +13,9 @@ public class WeaponMasteryManager : MonoBehaviour
     private Dictionary<WeaponType, WeaponMasteryData> masteryData = new Dictionary<WeaponType, WeaponMasteryData>();
     private WeaponMasterySaveData saveData;
 
+    /// <summary>Khi true: thay đổi mastery chỉ trong RAM — không ghi file (dùng Tutorial).</summary>
+    bool _tutorialMasterySessionActive;
+
     // Events
     public event Action<WeaponType, int> OnLevelUp;
     public event Action<WeaponType> OnExpGained;
@@ -97,7 +100,8 @@ public class WeaponMasteryManager : MonoBehaviour
             OnLevelUp?.Invoke(weaponType, data.currentLevel);
         }
 
-        SaveMasteryData();
+        if (!_tutorialMasterySessionActive)
+            SaveMasteryData();
     }
 
     public bool IsSkillUnlocked(WeaponType weaponType, AbilityInput input)
@@ -144,7 +148,8 @@ public class WeaponMasteryManager : MonoBehaviour
             masteryData[weaponType] = new WeaponMasteryData(weaponType);
         }
         masteryData[weaponType].SetLevel(level);
-        SaveMasteryData();
+        if (!_tutorialMasterySessionActive)
+            SaveMasteryData();
         OnLevelUp?.Invoke(weaponType, level);
     }
 
@@ -155,8 +160,24 @@ public class WeaponMasteryManager : MonoBehaviour
             masteryData[weaponType] = new WeaponMasteryData(weaponType);
         }
         masteryData[weaponType].SetExp(exp);
-        SaveMasteryData();
+        if (!_tutorialMasterySessionActive)
+            SaveMasteryData();
         OnExpGained?.Invoke(weaponType);
+    }
+
+    /// <summary>Bắt đầu Tutorial: chỉnh mastery/lock skill trong RAM, không ghi weapon_mastery.json.</summary>
+    public void BeginTutorialMasterySession()
+    {
+        _tutorialMasterySessionActive = true;
+    }
+
+    /// <summary>Kết thúc Tutorial: nạp lại mastery từ file (trạng thái Map Chính / save thật).</summary>
+    public void EndTutorialMasterySession()
+    {
+        if (!_tutorialMasterySessionActive) return;
+        _tutorialMasterySessionActive = false;
+        LoadMasteryData();
+        Debug.Log("[WeaponMasteryManager] Tutorial mastery session ended — reloaded from disk");
     }
 
     // Save/Load
@@ -191,6 +212,7 @@ public class WeaponMasteryManager : MonoBehaviour
         if (!File.Exists(filePath))
         {
             Debug.Log($"[WeaponMasteryManager] No save file found at {filePath}, using default data");
+            InitializeMasteryData();
             return;
         }
 

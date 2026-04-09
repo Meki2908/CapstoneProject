@@ -60,7 +60,10 @@ public class SprintJumpState : State
             }
 
             Vector2 moveInput = moveAction.ReadValue<Vector2>();
-            bool keepSprinting = sprintAction.IsPressed() && moveInput.sqrMagnitude > 0f;
+            if (TutorialInputGate.IsActive && (TutorialInputGate.EffectiveMask & TutorialInputMask.Move) == 0)
+                moveInput = Vector2.zero;
+            bool keepSprinting = sprintAction.IsPressed() && moveInput.sqrMagnitude > 0f
+                && (!TutorialInputGate.IsActive || TutorialInputGate.Allows(TutorialInputMask.Sprint));
             stateMachine.ChangeState(keepSprinting ? character.sprinting : character.currentLocomotionState);
             character.animator.SetTrigger("move");
         }
@@ -71,6 +74,8 @@ public class SprintJumpState : State
         base.PhysicsUpdate();
 
         Vector2 moveInput = moveAction.ReadValue<Vector2>();
+        if (TutorialInputGate.IsActive && (TutorialInputGate.EffectiveMask & TutorialInputMask.Move) == 0)
+            moveInput = Vector2.zero;
         GetPlanarCameraBasis(out Vector3 camForward, out Vector3 camRight);
         Vector3 desiredDirection = (camRight * moveInput.x + camForward * moveInput.y).normalized;
         if (desiredDirection.sqrMagnitude > 0.0001f)

@@ -126,6 +126,15 @@ public class AttackState : State
         {
             dash = true;
         }
+
+        if (TutorialInputGate.IsActive)
+        {
+            var m = TutorialInputGate.EffectiveMask;
+            if ((m & TutorialInputMask.Move) == 0) movementInput = Vector2.zero;
+            if ((m & TutorialInputMask.Attack) == 0) attack = false;
+            if ((m & TutorialInputMask.Jump) == 0) jump = false;
+            if ((m & TutorialInputMask.Dash) == 0) dash = false;
+        }
     }
 
     public override void LogicUpdate()

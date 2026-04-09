@@ -40,6 +40,8 @@ public class JumpingState : State
 
         input = moveAction.ReadValue<Vector2>();
         // Trong state này không xét jump; Space không đổi Y — impulse đã được gán trong Enter().
+        if (TutorialInputGate.IsActive && (TutorialInputGate.EffectiveMask & TutorialInputMask.Move) == 0)
+            input = Vector2.zero;
     }
 
     public override void LogicUpdate()

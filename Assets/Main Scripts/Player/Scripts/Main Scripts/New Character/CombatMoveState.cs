@@ -34,6 +34,8 @@ public class CombatMoveState : BaseMoveState
             return;
 
         attack = attackAction.triggered;
+        if (TutorialInputGate.IsActive && (TutorialInputGate.EffectiveMask & TutorialInputMask.Attack) == 0)
+            attack = false;
     }
 
     public override void LogicUpdate()
