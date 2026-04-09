@@ -296,13 +296,8 @@ public class EnemyAttack : MonoBehaviour {
     void SpawnSkillVFX(){
         if (enemyScript == null || enemyScript.skillVfxPrefab == null) return;
         
-        // Demon: bắn 3 lần liên tục cho hoành tráng
-        if (enemyScript.specificEnemyType == EnemyScript.SpecificEnemyType.Demon)
-        {
-            StartCoroutine(DemonTripleBlast());
-            return;
-        }
-        
+        // Multi-cast giờ do charge system xử lý (skillRepeatCount)
+        // Mỗi lần animation "skill" chạy → spawn 1 VFX
         SpawnSkillVFXSingle();
     }
     

@@ -117,6 +117,10 @@ public class EnemyScript : MonoBehaviour {
     public float skillCooldown = 8f;
     [Tooltip("Hệ số damage skill (2.0 = gấp đôi attack thường)")]
     public float skillDamageMultiplier = 2.0f;
+    [Tooltip("Số lần lặp skill liên tục (VD: Demon = 3 lần FireBlast)")]
+    public int skillRepeatCount = 1;
+    [Tooltip("Thời gian chờ giữa các lần lặp skill (giây)")]
+    public float skillRepeatDelay = 1f;
     
     [Header("=== SPAWN VFX ===")]
     [Tooltip("VFX hiệu ứng khi enemy spawn (cột sáng/portal) — gán cùng 1 prefab cho tất cả")]

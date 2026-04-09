@@ -724,6 +724,22 @@ public class TakeDamageTest : MonoBehaviour
         if (isBossType && !isSkill)
             return; // Boss không bị choáng bởi đánh thường
         
+        // === SUPER ARMOR: Boss đang cast skill/shield/attack → KHÔNG bị knock/stagger ===
+        if (isBossType)
+        {
+            var enemyState = enemyScript.GetComponent<EnemyState>();
+            if (enemyState == null) enemyState = enemyScript.GetComponentInParent<EnemyState>();
+            var bms = enemyScript.GetComponent<BossMultiSkill>();
+            if (bms == null) bms = enemyScript.GetComponentInParent<BossMultiSkill>();
+            bool isCasting = (enemyState != null && enemyState.isCastingSkill);
+            bool isShielded = (bms != null && bms.isShielded);
+            if (isCasting || isShielded)
+            {
+                Debug.Log($"[TakeDamageTest] Boss SUPER ARMOR — cast={isCasting} shield={isShielded} atk={enemyScript.attack}");
+                return;
+            }
+        }
+        
         // Hit animation
         enemyScript.animator.SetBool("hit", true);
         enemyScript.animator.SetBool("attack", false);

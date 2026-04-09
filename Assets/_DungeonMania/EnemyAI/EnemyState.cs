@@ -65,15 +65,16 @@ public class EnemyState : MonoBehaviour{
     
     /// <summary>
     /// Boss dùng skill — CHARGE SYSTEM: đứng yên, xoay mặt theo player, warning lớn dần, rồi bắn
+    /// Gọi từ AI loop (attack=false) HOẶC SelectEnemyType (attack=true)
     /// </summary>
     void UseBossSkill() {
-        if (!enemyScript.attack && !enemyScript.hit) {
-            StartCoroutine(BossSkillChargeSequence());
-        }
+        if (isCastingSkill) return; // Đã đang charge → không start thêm coroutine
+        StartCoroutine(BossSkillChargeSequence());
     }
     
     /// <summary>
     /// Coroutine charge skill: boss đứng yên, warning mở rộng dần, rồi bắn skill
+    /// Hỗ trợ multi-cast (skillRepeatCount > 1, VD: Demon 3x FireBlast)
     /// </summary>
     IEnumerator BossSkillChargeSequence()
     {
@@ -85,116 +86,162 @@ public class EnemyState : MonoBehaviour{
         enemyScript.navMeshAgent.isStopped = true;
         enemyScript.animator.SetBool("run", false);
         
-        // Spawn warning tracking (theo dõi player, mở rộng dần)
-        float chargeDur = enemyScript.skillWarningDuration;
-        BossSkillWarning warning = null;
+        // === KHÓA RIGIDBODY (tránh bị hất tung/đẩy bởi player spell) ===
+        Rigidbody rb = enemyScript.GetComponent<Rigidbody>();
+        if (rb == null) rb = enemyScript.GetComponentInParent<Rigidbody>();
+        bool wasKinematic = (rb != null) ? rb.isKinematic : true;
+        if (rb != null) { rb.isKinematic = true; rb.linearVelocity = Vector3.zero; }
         
-        if (enemyScript.skillVfxPrefab != null)
-        {
-            if (enemyScript.skillIsDirectional)
-            {
-                warning = BossSkillWarning.SpawnConeTracking(
-                    enemyScript.transform,
-                    enemyScript.target,
-                    enemyScript.skillVfxRadius,
-                    enemyScript.skillAngle,
-                    chargeDur
-                );
-            }
-            else
-            {
-                warning = BossSkillWarning.SpawnCircleTracking(
-                    enemyScript.transform,
-                    enemyScript.skillVfxRadius,
-                    chargeDur
-                );
-            }
-        }
+        int totalCasts = Mathf.Max(enemyScript.skillRepeatCount, 1);
         
-        // === CHARGE PHASE: xoay mặt theo player, chờ warning đầy ===
-        float elapsed = 0f;
-        while (elapsed < chargeDur)
+        for (int castIndex = 0; castIndex < totalCasts; castIndex++)
         {
+            // Safety check
             if (enemyScript == null || !enemyScript.alive)
             {
-                if (warning != null) Destroy(warning.gameObject);
+                if (rb != null) rb.isKinematic = wasKinematic;
                 isCastingSkill = false;
-                enemyScript.attack = false;
                 yield break;
             }
             
-            // ENFORCE khóa vị trí MỖI FRAME (tránh bị override)
-            enemyScript.navMeshAgent.isStopped = true;
-            enemyScript.navMeshAgent.velocity = Vector3.zero;
+            // === CHARGE PHASE ===
+            // Cast đầu: full warning. Cast sau: KHÔNG warning, bắn ngay cho nhanh
+            float chargeDur = (castIndex == 0) ? enemyScript.skillWarningDuration : 0f;
             
-            // Xoay mặt về player (nhưng KHÔNG di chuyển)
-            if (enemyScript.target != null)
+            // Spawn warning CHỈ cho lần cast ĐẦU TIÊN
+            BossSkillWarning warning = null;
+            if (castIndex == 0 && enemyScript.skillVfxPrefab != null)
             {
-                Vector3 dir = enemyScript.target.position - enemyScript.transform.position;
-                dir.y = 0;
-                if (dir.sqrMagnitude > 0.001f)
+                if (enemyScript.skillIsDirectional)
                 {
-                    Quaternion targetRot = Quaternion.LookRotation(dir);
-                    enemyScript.transform.rotation = Quaternion.Slerp(
-                        enemyScript.transform.rotation, targetRot,
-                        Time.deltaTime * enemyScript.rotationSpeed * 2f
+                    warning = BossSkillWarning.SpawnConeTracking(
+                        enemyScript.transform,
+                        enemyScript.target,
+                        enemyScript.skillVfxRadius,
+                        enemyScript.skillAngle,
+                        chargeDur
+                    );
+                }
+                else
+                {
+                    warning = BossSkillWarning.SpawnCircleTracking(
+                        enemyScript.transform,
+                        enemyScript.skillVfxRadius,
+                        chargeDur
                     );
                 }
             }
             
-            elapsed += Time.deltaTime;
-            yield return null;
+            // Charge loop: xoay mặt theo player
+            float elapsed = 0f;
+            while (elapsed < chargeDur)
+            {
+                if (enemyScript == null || !enemyScript.alive)
+                {
+                    if (warning != null) Destroy(warning.gameObject);
+                    if (rb != null) rb.isKinematic = wasKinematic;
+                    isCastingSkill = false;
+                    yield break;
+                }
+                
+                // ENFORCE khóa vị trí + trạng thái MỖI FRAME
+                enemyScript.navMeshAgent.isStopped = true;
+                enemyScript.navMeshAgent.velocity = Vector3.zero;
+                enemyScript.hit = false;
+                enemyScript.attack = true;
+                if (rb != null) { rb.isKinematic = true; rb.linearVelocity = Vector3.zero; }
+                
+                // Xoay mặt về player
+                if (enemyScript.target != null)
+                {
+                    Vector3 dir = enemyScript.target.position - enemyScript.transform.position;
+                    dir.y = 0;
+                    if (dir.sqrMagnitude > 0.001f)
+                    {
+                        Quaternion targetRot = Quaternion.LookRotation(dir);
+                        enemyScript.transform.rotation = Quaternion.Slerp(
+                            enemyScript.transform.rotation, targetRot,
+                            Time.deltaTime * enemyScript.rotationSpeed * 2f
+                        );
+                    }
+                }
+                
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+            
+            // === FIRE PHASE ===
+            skillCastDirection = enemyScript.transform.forward;
+            enemyScript.animator.Play("skill");
+            
+            Debug.Log($"[EnemyState] Boss SKILL #{castIndex+1}/{totalCasts} FIRED! dir={skillCastDirection}");
+            
+            // Chờ skill animation xong
+            yield return new WaitForSeconds(0.15f);
+            
+            float animWait = 0f;
+            while (animWait < 4f)
+            {
+                if (enemyScript == null || !enemyScript.alive)
+                {
+                    if (rb != null) rb.isKinematic = wasKinematic;
+                    isCastingSkill = false;
+                    yield break;
+                }
+                
+                enemyScript.navMeshAgent.isStopped = true;
+                enemyScript.hit = false;
+                enemyScript.attack = true;
+                if (rb != null) { rb.isKinematic = true; rb.linearVelocity = Vector3.zero; }
+                
+                var animState = enemyScript.animator.GetCurrentAnimatorStateInfo(0);
+                bool isSkillPlaying = animState.IsName("Base Layer.skill") || animState.IsName("skill");
+                
+                if (isSkillPlaying && animState.normalizedTime >= 0.95f)
+                    break;
+                if (!isSkillPlaying && animWait > 0.3f)
+                    break;
+                
+                animWait += Time.deltaTime;
+                yield return null;
+            }
+            
+            // Nếu còn lần cast tiếp → chờ repeatDelay
+            if (castIndex < totalCasts - 1)
+            {
+                float waitTime = enemyScript.skillRepeatDelay;
+                float waited = 0f;
+                while (waited < waitTime)
+                {
+                    if (enemyScript == null || !enemyScript.alive)
+                    {
+                        if (rb != null) rb.isKinematic = wasKinematic;
+                        isCastingSkill = false;
+                        yield break;
+                    }
+                    enemyScript.navMeshAgent.isStopped = true;
+                    enemyScript.hit = false;
+                    if (rb != null) rb.isKinematic = true;
+                    waited += Time.deltaTime;
+                    yield return null;
+                }
+            }
         }
         
-        // === FIRE PHASE: khóa hướng, bắn skill ===
-        skillCastDirection = enemyScript.transform.forward;
-        
-        // Play animation
-        enemyScript.animator.Play("skill");
-        
-        // Cooldown
+        // === COOLDOWN chỉ sau lần cast cuối ===
         enemyScript.lastSkillTime = Time.time;
         enemyScript.skillOnCooldown = true;
         
-        Debug.Log($"[EnemyState] Boss SKILL FIRED after {chargeDur}s charge! dir={skillCastDirection}");
-        
-        // === CHờ skill animation xong rồi RESET tất cả ===
-        yield return new WaitForSeconds(0.15f); // Chờ animator transition
-        
-        float animWait = 0f;
-        while (animWait < 4f) // Max 4s safety
-        {
-            if (enemyScript == null || !enemyScript.alive)
-            {
-                isCastingSkill = false;
-                yield break;
-            }
-            
-            // ENFORCE khóa vị trí cả trong lúc play animation
-            enemyScript.navMeshAgent.isStopped = true;
-            
-            var animState = enemyScript.animator.GetCurrentAnimatorStateInfo(0);
-            bool isSkillPlaying = animState.IsName("Base Layer.skill") || animState.IsName("skill");
-            
-            if (isSkillPlaying && animState.normalizedTime >= 0.95f)
-                break; // Skill animation gần xong
-            
-            if (!isSkillPlaying && animWait > 0.3f)
-                break; // Đã transition sang state khác (idle)
-            
-            animWait += Time.deltaTime;
-            yield return null;
-        }
-        
-        // RESET — mở khóa hoàn toàn (LUÔN chạy dù loop exit cách nào)
+        // RESET — mở khóa hoàn toàn
         enemyScript.attack = false;
         enemyScript.hit = false;
         isCastingSkill = false;
         attackStartTime = 0f;
+        if (rb != null) rb.isKinematic = wasKinematic; // Khôi phục physics
         if (enemyScript.navMeshAgent != null)
-            enemyScript.navMeshAgent.isStopped = false; // Mở khóa di chuyển
+            enemyScript.navMeshAgent.isStopped = false;
         
-        Debug.Log($"[EnemyState] Boss skill complete. All flags reset.");
+        Debug.Log($"[EnemyState] Boss skill complete ({totalCasts} casts). All flags reset.");
     }
     
     /// <summary>

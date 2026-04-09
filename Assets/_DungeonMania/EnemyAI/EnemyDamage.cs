@@ -49,8 +49,16 @@ public class EnemyDamage : MonoBehaviour{
         // === HIT STAGGER ===
         if (damage.isSpell)
         {
-            // Boss đang dùng skill/attack → SUPER ARMOR (nhận damage nhưng KHÔNG bị knock)
-            if (enemyScript.isBoss && enemyScript.attack)
+            // Boss đang dùng skill/attack/charge/shield → SUPER ARMOR
+            var es = GetComponent<EnemyState>();
+            if (es == null) es = GetComponentInParent<EnemyState>();
+            var bms = GetComponent<BossMultiSkill>();
+            if (bms == null) bms = GetComponentInParent<BossMultiSkill>();
+            bool isCasting = (es != null && es.isCastingSkill);
+            bool isShielded = (bms != null && bms.isShielded);
+            bool isSuperArmor = enemyScript.isBoss && (isCasting || isShielded);
+            
+            if (isSuperArmor)
             {
                 // Chỉ nhận damage, không bị stagger — boss tiếp tục skill
                 Debug.Log("[EnemyDamage] Boss SUPER ARMOR — skill not interrupted!");
