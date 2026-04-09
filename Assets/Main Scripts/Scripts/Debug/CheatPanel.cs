@@ -14,7 +14,14 @@ public class CheatPanel : MonoBehaviour
     public static float DamageMultiplier { get; private set; } = 1f;
 
     private bool _show;
-    private Rect _windowRect = new Rect(Screen.width - 320, 20, 300, 380);
+    private Rect _windowRect;
+    private bool _rectInitialized;
+
+    // Cache
+    private AbilityIconManager _aimCache;
+    // Cursor state backup
+    private bool _cursorWasVisible;
+    private CursorLockMode _cursorWasLockMode;
 
     void Awake()
     {
@@ -26,16 +33,54 @@ public class CheatPanel : MonoBehaviour
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.F1))
+        {
             _show = !_show;
+
+            if (_show)
+            {
+                // Backup cursor state
+                _cursorWasVisible = Cursor.visible;
+                _cursorWasLockMode = Cursor.lockState;
+
+                // Show and unlock cursor
+                Cursor.visible = true;
+                Cursor.lockState = CursorLockMode.None;
+            }
+            else
+            {
+                // Restore cursor state
+                Cursor.visible = _cursorWasVisible;
+                Cursor.lockState = _cursorWasLockMode;
+            }
+        }
 
         // Continuously clear cooldowns when cheat is on
         if (NoCooldown)
-            ClearAllCooldowns();
+        {
+            if (_aimCache == null)
+                _aimCache = FindFirstObjectByType<AbilityIconManager>();
+
+            if (_aimCache != null)
+            {
+                _aimCache.TutorialClearCooldown(AbilityInput.E);
+                _aimCache.TutorialClearCooldown(AbilityInput.R);
+                _aimCache.TutorialClearCooldown(AbilityInput.T);
+                _aimCache.TutorialClearCooldown(AbilityInput.Q_Ultimate);
+            }
+        }
     }
 
     void OnGUI()
     {
         if (!_show) return;
+
+        // Initialize rect on first use (Screen.width not reliable in field initializer)
+        if (!_rectInitialized)
+        {
+            _windowRect = new Rect(Screen.width - 320, 20, 300, 380);
+            _rectInitialized = true;
+        }
+
         _windowRect = GUI.Window(999, _windowRect, DrawWindow, "⚡ CHEAT PANEL (F1)");
     }
 
@@ -97,18 +142,6 @@ public class CheatPanel : MonoBehaviour
     }
 
     // ── Implementations ──
-
-    void ClearAllCooldowns()
-    {
-        var aim = FindFirstObjectByType<AbilityIconManager>();
-        if (aim == null) return;
-
-        // Clear cooldowns for all ability inputs
-        aim.TutorialClearCooldown(AbilityInput.E);
-        aim.TutorialClearCooldown(AbilityInput.R);
-        aim.TutorialClearCooldown(AbilityInput.T);
-        aim.TutorialClearCooldown(AbilityInput.Q_Ultimate);
-    }
 
     void SkipQuest()
     {
