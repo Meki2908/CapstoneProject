@@ -53,6 +53,9 @@ public class DungeonWaveManager : MonoBehaviour
     public bool waitForPreEnterTimelineBeforeWave1 = true;
     [Tooltip("If enabled: call Play() from code on dungeon enter (use when not Play On Awake or needs reset).")]
     public bool playPreEnterTimelineFromCode = false;
+    [Tooltip("Tự tạo nút Skip góc phải trên khi đang chờ intro timeline (wave 1). Tắt nếu tự làm UI và gọi SkipPreEnterTimeline().")]
+    [SerializeField] private bool showRuntimeSkipPreEnterButton = true;
+    [SerializeField] private string skipPreEnterButtonLabel = "Skip";
 
     [Header("=== ENEMY COUNT PER WAVE ===")]
     [Tooltip("Skelet count per wave [wave1, wave2, wave3, wave4, wave5]")]
@@ -196,6 +199,7 @@ public class DungeonWaveManager : MonoBehaviour
     private bool isDungeonComplete = false;
     private bool showDebugLog = true;
     private bool isWaveCompleting = false; // Guard: tránh gọi OnWaveComplete() 2 lần
+    private GameObject _preEnterSkipUiRoot;
     
     // Trackers for enemy spawn (tránh gọi GetEnemyCounts nhiều lần)
     private int currentSkeletCount = 0;
@@ -656,6 +660,8 @@ public class DungeonWaveManager : MonoBehaviour
             yield break;
         }
 
+        CreatePreEnterSkipButtonIfNeeded();
+
         bool completed = false;
         void OnStopped(PlayableDirector d)
         {
@@ -663,11 +669,84 @@ public class DungeonWaveManager : MonoBehaviour
         }
 
         dir.stopped += OnStopped;
-        while (!completed)
-            yield return null;
-        dir.stopped -= OnStopped;
+        try
+        {
+            while (!completed)
+                yield return null;
+        }
+        finally
+        {
+            dir.stopped -= OnStopped;
+            DestroyPreEnterSkipButton();
+        }
 
         Debug.Log("[DungeonWave] Pre-enter timeline hoàn tất — bắt đầu thông báo wave / đếm ngược.");
+    }
+
+    /// <summary>
+    /// Gọi từ nút Skip (runtime hoặc UI tự gắn) — nhảy đến cuối timeline và dừng (kích hoạt stopped).
+    /// </summary>
+    public void SkipPreEnterTimeline()
+    {
+        if (preEnterDungeonTimeline == null) return;
+        if (preEnterDungeonTimeline.state != PlayState.Playing) return;
+        preEnterDungeonTimeline.time = preEnterDungeonTimeline.duration;
+        preEnterDungeonTimeline.Stop();
+    }
+
+    void CreatePreEnterSkipButtonIfNeeded()
+    {
+        if (!showRuntimeSkipPreEnterButton) return;
+        DestroyPreEnterSkipButton();
+
+        var root = new GameObject("PreEnterSkipUI");
+        var canvas = root.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 2000;
+        root.AddComponent<GraphicRaycaster>();
+        var scaler = root.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920, 1080);
+
+        var btnGo = new GameObject("SkipButton", typeof(RectTransform));
+        btnGo.transform.SetParent(root.transform, false);
+        var rt = btnGo.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(1f, 1f);
+        rt.anchorMax = new Vector2(1f, 1f);
+        rt.pivot = new Vector2(1f, 1f);
+        rt.anchoredPosition = new Vector2(-32f, -32f);
+        rt.sizeDelta = new Vector2(140f, 44f);
+
+        var img = btnGo.AddComponent<Image>();
+        img.color = new Color(0.12f, 0.12f, 0.18f, 0.92f);
+
+        var btn = btnGo.AddComponent<Button>();
+        btn.targetGraphic = img;
+        btn.onClick.AddListener(SkipPreEnterTimeline);
+
+        var textGo = new GameObject("Label", typeof(RectTransform));
+        textGo.transform.SetParent(btnGo.transform, false);
+        var trt = textGo.GetComponent<RectTransform>();
+        trt.anchorMin = Vector2.zero;
+        trt.anchorMax = Vector2.one;
+        trt.sizeDelta = Vector2.zero;
+        var tmp = textGo.AddComponent<TextMeshProUGUI>();
+        tmp.text = skipPreEnterButtonLabel;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.fontSize = 22f;
+        tmp.color = Color.white;
+        tmp.raycastTarget = false;
+
+        _preEnterSkipUiRoot = root;
+    }
+
+    void DestroyPreEnterSkipButton()
+    {
+        if (_preEnterSkipUiRoot != null)
+        {
+            Destroy(_preEnterSkipUiRoot);
+            _preEnterSkipUiRoot = null;
+        }
     }
 
     /// <summary>
@@ -1848,6 +1927,9 @@ public class DungeonWaveManager : MonoBehaviour
     public void RestartDungeon()
     {
         Debug.Log("[DungeonWave] Restart dungeon...");
+
+        // Lần vào dungeon sau reload: không ẩn HUD trong lúc pre-enter timeline (PreEnterDungeonCutsceneController).
+        DungeonPreEnterSession.SkipHudHideOnNextPreEnterTimeline = true;
 
         CursorUIPriority.EndAllUiOverlays();
 

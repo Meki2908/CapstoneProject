@@ -81,6 +81,10 @@ public class PreEnterDungeonCutsceneController : MonoBehaviour
         if (_cutsceneActive) return;
         _cutsceneActive = true;
 
+        // Restart dungeon: không ẩn HUD trong lúc intro (xem DungeonPreEnterSession).
+        if (DungeonPreEnterSession.ConsumeSkipHudHideNextEntry())
+            return;
+
         if (hideAllPlayerUi)
             HideAllPlayerUi();
         else
