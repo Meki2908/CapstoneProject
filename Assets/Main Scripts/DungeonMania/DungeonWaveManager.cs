@@ -876,6 +876,7 @@ public class DungeonWaveManager : MonoBehaviour
         if (DungeonRewardUI.Instance != null)
         {
             DungeonRewardUI.Instance.ShowRewardPanel();
+            DungeonRewardUI.BringWinButtonsAboveReward(dungeonCompleteUI);
         }
 
         OnDungeonCompleted?.Invoke();

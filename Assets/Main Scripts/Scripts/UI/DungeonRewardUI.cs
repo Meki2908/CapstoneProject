@@ -1,5 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 using TMPro;
 using System.Collections.Generic;
 
@@ -77,6 +79,7 @@ public class DungeonRewardUI : MonoBehaviour
     private bool isShowing = false;
     private bool needsRefresh = false; // Flag để Update() rebuild UI khi Inspector thay đổi
     private int originalTooltipSortingOrder = 0;
+    private static bool s_tooltipCanvasOrderRaisedForThisPanel;
 
     [System.Serializable]
     public class RewardEntry
@@ -194,13 +197,16 @@ public class DungeonRewardUI : MonoBehaviour
     {
         if (isShowing) return;
 
+        EnsureEventSystemExists();
+        s_tooltipCanvasOrderRaisedForThisPanel = false;
+
         CreateRewardUI();
         isShowing = true;
 
         CursorUIPriority.BeginUiOverlay();
 
-        // Raise tooltip canvas lên trên reward canvas
-        RaiseTooltipCanvas(true);
+        // Không RaiseTooltipCanvas(true) ở đây — canvas tooltip sort 1000 có thể cản raycast tới reward (999).
+        // Chỉ nâng order khi hover slot (NotifyTooltipLayerForHover).
 
         // Hiện cursor
         Cursor.visible = true;
@@ -216,6 +222,7 @@ public class DungeonRewardUI : MonoBehaviour
 
         // Restore tooltip canvas sortingOrder
         RaiseTooltipCanvas(false);
+        s_tooltipCanvasOrderRaisedForThisPanel = false;
 
         if (panelRoot != null)
         {
@@ -282,6 +289,9 @@ public class DungeonRewardUI : MonoBehaviour
         {
             panelBG.color = new Color(0.08f, 0.08f, 0.15f, 0.95f);
         }
+
+        // Nền full màn không bắt raycast — vùng scroll/slot vẫn bắt; phần trống cho xuyên tới nút Win (canvas dưới).
+        panelBG.raycastTarget = false;
 
         // === SCROLL AREA (full height, no title) ===
         GameObject scrollGO = CreateUIElement("ScrollArea", panelRoot.transform);
@@ -376,6 +386,7 @@ public class DungeonRewardUI : MonoBehaviour
             noItemText.fontSize = noItemFontSize;
             noItemText.alignment = TextAlignmentOptions.Center;
             noItemText.color = Color.gray;
+            noItemText.raycastTarget = false;
 
             noItemGO.GetComponent<RectTransform>().sizeDelta = new Vector2(600, slotSize);
         }
@@ -402,6 +413,7 @@ public class DungeonRewardUI : MonoBehaviour
         countText.fontSize = countFontSize;
         countText.alignment = TextAlignmentOptions.Center;
         countText.color = new Color(0.7f, 0.7f, 0.7f);
+        countText.raycastTarget = false;
 
 
         // Ép toàn bộ Canvas + UI elements tính toán lại layout ngay lập tức
@@ -525,6 +537,58 @@ public class DungeonRewardUI : MonoBehaviour
     }
 
     /// <summary>
+    /// Gọi từ hover slot trước khi mở tooltip — chỉ lần đầu mới nâng sort canvas tooltip lên trên reward.
+    /// </summary>
+    public static void NotifyTooltipLayerForHover()
+    {
+        if (Instance == null || s_tooltipCanvasOrderRaisedForThisPanel) return;
+        Instance.RaiseTooltipCanvas(true);
+        s_tooltipCanvasOrderRaisedForThisPanel = true;
+    }
+
+    /// <summary>
+    /// Đưa nút Retry/Return (object con tên "Buttons" trong GUI_Dungeon) lên Overlay sort cao hơn reward.
+    /// </summary>
+    public static void BringWinButtonsAboveReward(GameObject dungeonCompleteRoot)
+    {
+        if (dungeonCompleteRoot == null) return;
+
+        int order = 1000;
+        if (Instance != null)
+            order = Instance.RewardCanvasSortOrder + 1;
+
+        foreach (Transform t in dungeonCompleteRoot.GetComponentsInChildren<Transform>(true))
+        {
+            if (t.name != "Buttons") continue;
+            if (!t.gameObject.activeInHierarchy) continue;
+
+            var c = t.GetComponent<Canvas>();
+            if (c == null)
+                c = t.gameObject.AddComponent<Canvas>();
+
+            c.renderMode = RenderMode.ScreenSpaceOverlay;
+            c.overrideSorting = true;
+            c.sortingOrder = order;
+
+            if (t.GetComponent<GraphicRaycaster>() == null)
+                t.gameObject.AddComponent<GraphicRaycaster>();
+            break;
+        }
+    }
+
+    static void EnsureEventSystemExists()
+    {
+        var systems = UnityEngine.Object.FindObjectsByType<EventSystem>(FindObjectsSortMode.None);
+        if (systems != null && systems.Length > 0)
+            return;
+
+        var go = new GameObject("EventSystem");
+        go.AddComponent<EventSystem>();
+        go.AddComponent<InputSystemUIInputModule>();
+        Debug.Log("[DungeonRewardUI] Created EventSystem (scene had none)");
+    }
+
+    /// <summary>
     /// Raise/restore tooltip canvas để hiện trên reward panel
     /// </summary>
     private void RaiseTooltipCanvas(bool raise)
@@ -563,6 +627,8 @@ public class RewardSlotHover : MonoBehaviour, UnityEngine.EventSystems.IPointerE
 
     public void OnPointerEnter(UnityEngine.EventSystems.PointerEventData eventData)
     {
+        DungeonRewardUI.NotifyTooltipLayerForHover();
+
         if (itemData != null && ItemTooltipManager.Instance != null)
         {
             ItemTooltipManager.Instance.ShowTooltip(itemData, itemRarity);
