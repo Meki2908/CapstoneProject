@@ -135,6 +135,10 @@ public class WaveSpawner : MonoBehaviour
         }
     }
 
+    [Header("Difficulty Unlock")]
+    [Tooltip("Difficulty hiện tại của dungeon này (để unlock difficulty tiếp theo khi win)")]
+    public DungeonDifficultyManager.Difficulty currentDifficulty = DungeonDifficultyManager.Difficulty.Easy;
+
     void WaveCompleted()
     {
         Debug.Log($"[WaveSpawner] Wave {currentWaveIndex + 1} completed!");
@@ -152,6 +156,14 @@ public class WaveSpawner : MonoBehaviour
             // All waves completed!
             UpdateWaveUI("All Waves Completed! Victory!");
             Debug.Log("[WaveSpawner] All waves completed!");
+
+            // Unlock difficulty tiếp theo
+            if (DungeonDifficultyManager.Instance != null)
+            {
+                DungeonDifficultyManager.Instance.OnDungeonWin(currentDifficulty);
+                Debug.Log($"[WaveSpawner] Unlocked next difficulty after {currentDifficulty}!");
+            }
+
             enabled = false; // Stop the spawner
         }
         else
