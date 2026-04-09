@@ -217,6 +217,7 @@ public class MariaDialogue : MonoBehaviour
         SetText(npcNameTMP, npcNameLegacy, "Maria");
         Cursor.visible   = true;
         Cursor.lockState = CursorLockMode.None;
+        DialogueNextButton.Register(OnNextClicked);
         ShowLine(0);
     }
 
@@ -244,6 +245,7 @@ public class MariaDialogue : MonoBehaviour
 
     public void OnNextClicked()
     {
+        if (!_isOpen || _activeLines == null) return;
         if (_isTyping)
         {
             StopAllCoroutines();
@@ -295,6 +297,7 @@ public class MariaDialogue : MonoBehaviour
     void CloseDialogue()
     {
         _isOpen = false;
+        DialogueNextButton.Unregister();
         if (dialoguePanel)  dialoguePanel.SetActive(false);
         if (dialogueCanvas != null) dialogueCanvas.gameObject.SetActive(false);
         Cursor.lockState = CursorLockMode.Locked;

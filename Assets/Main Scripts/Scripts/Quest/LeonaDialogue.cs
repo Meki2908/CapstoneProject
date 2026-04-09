@@ -232,6 +232,7 @@ public class LeonaDialogue : MonoBehaviour
         Cursor.visible   = true;
         Cursor.lockState = CursorLockMode.None;
 
+        DialogueNextButton.Register(OnNextClicked);
         ShowLine(0);
     }
 
@@ -415,10 +416,10 @@ public class LeonaDialogue : MonoBehaviour
     void CloseDialogue()
     {
         _isOpen = false;
+        DialogueNextButton.Unregister();
         if (dialoguePanel) dialoguePanel.SetActive(false);
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible   = false;
-        // Xoá focus khỏi UI để lần trigger tiếp theo không bị chặn
         if (EventSystem.current != null)
             EventSystem.current.SetSelectedGameObject(null);
     }

@@ -1,60 +1,52 @@
 using UnityEngine;
+using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Quest Direction Tracker — Vòng tròn vàng + mũi tên chỉ hướng dưới chân player.
-/// Mũi tên di chuyển xa gần liên tục.
-/// 
-/// ★ Tự tìm QuestMarker đang active → chỉ về đó
-/// ★ Dùng LineRenderer + Sprites/Default (URP safe)
-/// ★ Gắn lên Player
+/// Quest Direction Tracker — Vòng tròn + mũi tên dưới chân player.
+/// Dùng World Space Canvas (hoạt động 100% trên mọi render pipeline).
 /// </summary>
 public class QuestDirectionTracker : MonoBehaviour
 {
+    [Header("=== Player ===")]
+    public Transform playerTransform;
+
     [Header("=== Circle ===")]
-    [Range(0.3f, 2f)] public float circleRadius = 0.7f;
-    [Range(0.02f, 0.15f)] public float circleWidth = 0.06f;
-    [Range(16, 64)] public int circleSegments = 32;
+    public float circleRadius = 0.7f;
+    public float circleThickness = 0.04f;
+    public int circleSegments = 64;
 
     [Header("=== Arrow ===")]
-    [Range(0.3f, 1.5f)] public float arrowBodyLength = 0.4f;
-    [Range(0.1f, 0.5f)] public float arrowBodyWidth  = 0.15f;
-    [Range(0.2f, 0.8f)] public float arrowHeadWidth   = 0.35f;
-    [Range(0.1f, 0.5f)] public float arrowHeadLength  = 0.25f;
+    public float arrowSize = 0.4f;
 
     [Header("=== Position ===")]
-    [Range(0.5f, 3f)] public float arrowBaseDistance = 1.0f;
-    [Range(0.1f, 0.5f)] public float arrowMoveAmount = 0.25f;
-    [Range(0.5f, 3f)] public float arrowMoveSpeed = 1.5f;
-    [Range(0.01f, 0.2f)] public float groundOffset = 0.08f;
+    public float arrowBaseDistance = 1.0f;
+    public float arrowMoveAmount = 0.2f;
+    public float arrowMoveSpeed = 1.5f;
+    public float groundOffset = 0.15f;
 
     [Header("=== Visual ===")]
-    public Color color = new Color(1f, 1f, 0f, 1f); // Yellow
-    [Range(1f, 5f)] public float pulseSpeed = 2f;
+    public Color color = new Color(1f, 0.9f, 0f, 1f);
 
     [Header("=== Behavior ===")]
-    [Range(1f, 10f)] public float hideDistance = 3f;
-    [Range(0.5f, 5f)] public float searchInterval = 1f;
+    public float hideDistance = 3f;
+    public float searchInterval = 1f;
 
-    // ─── Runtime ────────────────────────────────────────────
     Transform _player;
     Transform _target;
-    LineRenderer _circleLine;
-    LineRenderer _arrowLine;
-    Material _mat;
     float _searchTimer;
-    GameObject _circleObj;
-    GameObject _arrowObj;
 
-    // ═══════════════════════════════════════════════════════════
-    //  LIFECYCLE
-    // ═══════════════════════════════════════════════════════════
+    Canvas _canvas;
+    RawImage _circleImg;
+    RawImage _arrowImg;
+    GameObject _root;
 
     void Start()
     {
-        _player = FindPlayer();
-        BuildVisuals();
+        _player = playerTransform != null ? playerTransform : FindPlayer();
+        CreateUI();
         FindActiveMarker();
+        Debug.Log($"[Tracker] START! player={_player != null}, gắn trên='{gameObject.name}'");
 
         SceneManager.sceneLoaded += OnSceneLoaded;
         QuestManager.OnQuestAccepted += OnQuestChanged;
@@ -68,22 +60,18 @@ public class QuestDirectionTracker : MonoBehaviour
         QuestManager.OnQuestAccepted -= OnQuestChanged;
         QuestManager.OnQuestStepAdvanced -= OnQuestChanged;
         QuestManager.OnQuestCompleted -= OnQuestChanged;
-        if (_mat != null) Destroy(_mat);
+        if (_root) Destroy(_root);
     }
 
     void OnSceneLoaded(Scene s, LoadSceneMode m)
     {
-        _player = FindPlayer();
+        _player = playerTransform != null ? playerTransform : FindPlayer();
         _target = null;
         FindActiveMarker();
     }
 
-    void OnQuestChanged(int id)
-    {
-        StartCoroutine(DelayedSearch());
-    }
-
-    System.Collections.IEnumerator DelayedSearch()
+    void OnQuestChanged(int id) => StartCoroutine(DelaySearch());
+    System.Collections.IEnumerator DelaySearch()
     {
         yield return null;
         FindActiveMarker();
@@ -95,206 +83,229 @@ public class QuestDirectionTracker : MonoBehaviour
         if (_searchTimer >= searchInterval)
         {
             _searchTimer = 0f;
-            if (_player == null) _player = FindPlayer();
+            if (_player == null) _player = playerTransform != null ? playerTransform : FindPlayer();
             FindActiveMarker();
         }
-        UpdateVisuals();
     }
 
-    // ═══════════════════════════════════════════════════════════
-    //  BUILD VISUALS
-    // ═══════════════════════════════════════════════════════════
-
-    void BuildVisuals()
+    void LateUpdate()
     {
-        var shader = Shader.Find("Sprites/Default");
-        if (shader == null) shader = Shader.Find("Unlit/Color");
-        _mat = new Material(shader);
-        _mat.color = color;
+        if (_player == null || _target == null || _root == null)
+        {
+            if (_root) _root.SetActive(false);
+            return;
+        }
 
-        // ── Circle ──
-        _circleObj = new GameObject("TrackerCircle");
-        _circleObj.transform.SetParent(transform);
-        _circleLine = _circleObj.AddComponent<LineRenderer>();
-        SetupLine(_circleLine, circleWidth);
-        _circleLine.loop = true;
-        _circleLine.positionCount = circleSegments;
-        _circleLine.enabled = false;
+        float dist = Vector3.Distance(_player.position, _target.position);
+        if (dist < hideDistance)
+        {
+            _root.SetActive(false);
+            return;
+        }
 
-        // ── Arrow ──
-        _arrowObj = new GameObject("TrackerArrow");
-        _arrowObj.transform.SetParent(transform);
-        _arrowLine = _arrowObj.AddComponent<LineRenderer>();
-        SetupLine(_arrowLine, arrowBodyWidth);
-        _arrowLine.loop = true;
-        _arrowLine.positionCount = 7; // Arrow polygon
-        _arrowLine.enabled = false;
+        _root.SetActive(true);
 
-        // Arrow width: uniform (polygon outline)
-        _arrowLine.widthMultiplier = arrowBodyWidth * 0.5f;
+        // Vị trí dưới chân player
+        Vector3 feetPos = _player.position;
+        feetPos.y += groundOffset;
+        _root.transform.position = feetPos;
+
+        // Xoay canvas nằm ngang (flat trên mặt đất)
+        _root.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+
+        // ── Hướng đến target ──
+        Vector3 dir = _target.position - _player.position;
+        dir.y = 0f;
+        if (dir.sqrMagnitude < 0.01f) dir = _player.forward;
+        dir.Normalize();
+
+        // Debug mỗi 2 giây
+        if (Time.frameCount % 120 == 0)
+            Debug.Log($"[Tracker] Pointing to '{_target.name}' pos={_target.position}, player={_player.position}, dir={dir}, angle={Mathf.Atan2(dir.x, dir.z) * Mathf.Rad2Deg:F1}°");
+
+        // ── Arrow: di chuyển xa gần + xoay về target ──
+        float bob = Mathf.Sin(Time.time * arrowMoveSpeed) * arrowMoveAmount;
+        float arrowDist = circleRadius + 0.05f + arrowBaseDistance + bob;
+
+        // Tính góc từ forward (Z+) đến hướng target
+        float angle = Mathf.Atan2(dir.x, dir.z) * Mathf.Rad2Deg;
+        _arrowImg.rectTransform.localRotation = Quaternion.Euler(0f, 0f, -angle);
+        _arrowImg.rectTransform.localPosition = new Vector3(dir.x * arrowDist, dir.z * arrowDist, 0f);
+
+        // ── Pulse ──
+        float pulse = Mathf.Lerp(0.7f, 1f, (Mathf.Sin(Time.time * 2f) + 1f) * 0.5f);
+        Color c = color;
+        c.a = pulse;
+        _circleImg.color = c;
+        _arrowImg.color = c;
     }
 
-    void SetupLine(LineRenderer lr, float width)
+    // ═══════════════════════════════════════
+    //  TẠO UI (World Space Canvas)
+    // ═══════════════════════════════════════
+
+    void CreateUI()
     {
-        lr.material = _mat;
-        lr.startColor = color;
-        lr.endColor = color;
-        lr.widthMultiplier = width;
-        lr.useWorldSpace = true;
-        lr.numCapVertices = 2;
-        lr.numCornerVertices = 2;
-        lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        lr.receiveShadows = false;
-        lr.allowOcclusionWhenDynamic = false;
+        // Root object
+        _root = new GameObject("QDT_Root");
+        _root.SetActive(false);
+
+        // Canvas World Space
+        _canvas = _root.AddComponent<Canvas>();
+        _canvas.renderMode = RenderMode.WorldSpace;
+        _canvas.sortingOrder = 100;
+
+        // Chặn EventSystem raycast
+        var cg = _root.AddComponent<CanvasGroup>();
+        cg.interactable = false;
+        cg.blocksRaycasts = false;
+
+        // Scale canvas: 1 unit = 1 meter
+        _root.transform.localScale = Vector3.one;
+        var rt = _root.GetComponent<RectTransform>();
+        rt.sizeDelta = new Vector2(5f, 5f); // 5x5 meter area
+        rt.pivot = new Vector2(0.5f, 0.5f);
+
+        // ── Circle Image ──
+        var circleGo = new GameObject("Circle");
+        circleGo.transform.SetParent(_root.transform, false);
+        _circleImg = circleGo.AddComponent<RawImage>();
+        _circleImg.texture = GenerateCircleTexture(256, circleRadius, circleThickness);
+        _circleImg.color = color;
+        _circleImg.raycastTarget = false;
+        var circleRT = _circleImg.rectTransform;
+        float circleWorldSize = circleRadius * 2f + circleThickness;
+        circleRT.sizeDelta = new Vector2(circleWorldSize, circleWorldSize);
+        circleRT.localPosition = Vector3.zero;
+
+        // ── Arrow Image ──
+        var arrowGo = new GameObject("Arrow");
+        arrowGo.transform.SetParent(_root.transform, false);
+        _arrowImg = arrowGo.AddComponent<RawImage>();
+        _arrowImg.texture = GenerateArrowTexture(128);
+        _arrowImg.color = color;
+        _arrowImg.raycastTarget = false;
+        var arrowRT = _arrowImg.rectTransform;
+        arrowRT.sizeDelta = new Vector2(arrowSize, arrowSize);
+        arrowRT.localPosition = Vector3.zero;
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════
+    //  GENERATE TEXTURES
+    // ═══════════════════════════════════════
+
+    Texture2D GenerateCircleTexture(int size, float radius, float thickness)
+    {
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Bilinear;
+        float center = size * 0.5f;
+        // Normalize radius/thickness to pixel space
+        float rNorm = radius / (radius + thickness * 0.5f); // Normalized to [0,1]
+        float halfThick = (thickness / (radius + thickness * 0.5f)) * 0.5f;
+        float rInner = (rNorm - halfThick) * center;
+        float rOuter = (rNorm + halfThick) * center;
+        float aa = 1.5f; // antialiasing
+
+        Color clear = new Color(1, 1, 1, 0);
+        Color white = Color.white;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float dx = x - center;
+                float dy = y - center;
+                float dist = Mathf.Sqrt(dx * dx + dy * dy);
+
+                float alpha = 0f;
+                if (dist >= rInner - aa && dist <= rOuter + aa)
+                {
+                    float innerEdge = Mathf.Clamp01((dist - (rInner - aa)) / aa);
+                    float outerEdge = Mathf.Clamp01(((rOuter + aa) - dist) / aa);
+                    alpha = Mathf.Min(innerEdge, outerEdge);
+                }
+
+                tex.SetPixel(x, y, alpha > 0 ? new Color(1, 1, 1, alpha) : clear);
+            }
+        }
+
+        tex.Apply();
+        return tex;
+    }
+
+    Texture2D GenerateArrowTexture(int size)
+    {
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Bilinear;
+        Color clear = new Color(1, 1, 1, 0);
+
+        // Arrow pointing UP (Y+)
+        float cx = size * 0.5f;
+        float tipY = size * 0.85f;
+        float baseY = size * 0.15f;
+        float bodyW = size * 0.15f;
+        float headW = size * 0.35f;
+        float headBaseY = size * 0.55f;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                bool inside = false;
+                float fx = x;
+                float fy = y;
+
+                // Body rectangle
+                if (fy >= baseY && fy <= headBaseY)
+                {
+                    if (Mathf.Abs(fx - cx) <= bodyW)
+                        inside = true;
+                }
+
+                // Head triangle
+                if (fy >= headBaseY && fy <= tipY)
+                {
+                    float t = (fy - headBaseY) / (tipY - headBaseY);
+                    float halfW = Mathf.Lerp(headW, 0f, t);
+                    if (Mathf.Abs(fx - cx) <= halfW)
+                        inside = true;
+                }
+
+                tex.SetPixel(x, y, inside ? Color.white : clear);
+            }
+        }
+
+        tex.Apply();
+        return tex;
+    }
+
+    // ═══════════════════════════════════════
     //  FIND ACTIVE MARKER
-    // ═══════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════
 
     void FindActiveMarker()
     {
         _target = null;
         var markers = FindObjectsByType<QuestMarker>(FindObjectsSortMode.None);
+        if (QuestManager.Instance == null) return;
+
+        // Tìm marker đúng quest active + đúng step
         foreach (var m in markers)
         {
             if (m == null || !m.gameObject.activeInHierarchy) continue;
-            if (m.markerObject == null) continue;
 
-            bool isVisible;
-            if (m.markerObject == m.gameObject)
-            {
-                var r = m.GetComponentInChildren<Renderer>();
-                isVisible = r != null && r.enabled;
-            }
-            else
-            {
-                isVisible = m.markerObject.activeInHierarchy;
-            }
+            var state = QuestManager.Instance.GetState(m.questID);
+            if (state != QuestManager.QuestState.Active) continue;
 
-            if (isVisible)
-            {
-                _target = m.transform;
-                return;
-            }
-        }
-    }
+            int currentStep = QuestManager.Instance.GetStepIndex(m.questID);
+            if (m.showAtStep != currentStep) continue;
 
-    // ═══════════════════════════════════════════════════════════
-    //  UPDATE VISUALS
-    // ═══════════════════════════════════════════════════════════
-
-    void UpdateVisuals()
-    {
-        bool show = _player != null && _target != null;
-
-        if (show)
-        {
-            float dist = Vector3.Distance(_player.position, _target.position);
-            if (dist < hideDistance) show = false;
-        }
-
-        if (!show)
-        {
-            if (_circleLine) _circleLine.enabled = false;
-            if (_arrowLine) _arrowLine.enabled = false;
+            // Marker đúng quest + step → dùng luôn (không cần check visible)
+            _target = m.transform;
+            Debug.Log($"[Tracker] Matched quest={m.questID} step={currentStep}, marker='{m.name}' at {m.transform.position}");
             return;
         }
-
-        _circleLine.enabled = true;
-        _arrowLine.enabled = true;
-
-        // ── Direction ──
-        Vector3 dir = (_target.position - _player.position);
-        dir.y = 0;
-        if (dir.sqrMagnitude < 0.01f) dir = _player.forward;
-        dir.Normalize();
-
-        Vector3 right = Vector3.Cross(Vector3.up, dir).normalized;
-        float groundY = _player.position.y + groundOffset;
-
-        // ── Pulse ──
-        float pulse = Mathf.Lerp(0.7f, 1f, (Mathf.Sin(Time.time * pulseSpeed) + 1f) * 0.5f);
-        Color c = color;
-        c.a = pulse;
-        _circleLine.startColor = c;
-        _circleLine.endColor = c;
-        _arrowLine.startColor = c;
-        _arrowLine.endColor = c;
-
-        // ══════════════════════════════════
-        //  CIRCLE — dưới chân player
-        // ══════════════════════════════════
-        Vector3 circleCenter = _player.position;
-        circleCenter.y = groundY;
-
-        for (int i = 0; i < circleSegments; i++)
-        {
-            float angle = (float)i / circleSegments * Mathf.PI * 2f;
-            float x = Mathf.Cos(angle) * circleRadius;
-            float z = Mathf.Sin(angle) * circleRadius;
-            _circleLine.SetPosition(i, circleCenter + new Vector3(x, 0, z));
-        }
-
-        // ══════════════════════════════════
-        //  ARROW — phía trước, di chuyển xa gần
-        // ══════════════════════════════════
-        float moveOffset = Mathf.Sin(Time.time * arrowMoveSpeed) * arrowMoveAmount;
-        float arrowDist = circleRadius + 0.15f + arrowBaseDistance + moveOffset;
-
-        Vector3 arrowCenter = circleCenter + dir * arrowDist;
-
-        // 7 points tạo hình mũi tên (polygon loop):
-        //
-        //        6
-        //       / \
-        //      5   0
-        //      |   |
-        //      4   1
-        //      |   |
-        //      3───2
-        //
-        float hw = arrowBodyWidth * 0.5f;   // Half body width
-        float hhw = arrowHeadWidth * 0.5f;  // Half head width
-        float bodyLen = arrowBodyLength;
-        float headLen = arrowHeadLength;
-
-        Vector3 bodyBottom = arrowCenter - dir * bodyLen * 0.5f;
-        Vector3 bodyTop = arrowCenter + dir * bodyLen * 0.5f;
-        Vector3 tipPoint = bodyTop + dir * headLen;
-
-        Vector3[] pts = new Vector3[7];
-        pts[0] = bodyTop + right * hw;       // Body top-right
-        pts[1] = bodyBottom + right * hw;    // Body bottom-right
-        pts[2] = bodyBottom - right * hw;    // Body bottom-left
-        pts[3] = bodyBottom - right * hw;    // Body bottom-left (same, for clean corner)
-        pts[4] = bodyTop - right * hw;       // Body top-left
-        pts[5] = bodyTop - right * hhw;      // Head base-left (wider)
-        pts[6] = tipPoint;                    // Tip
-
-        // Sửa lại để head rộng hơn body:
-        pts[0] = bodyTop + right * hhw;      // Head base-right
-        pts[5] = bodyTop - right * hhw;      // Head base-left
-
-        // Insert body points correctly (rectangle + triangle)
-        // Bottom-right → Bottom-left → Top-left → Head-left → Tip → Head-right → Top-right
-        pts[0] = bodyBottom + right * hw;       // Bottom-right
-        pts[1] = bodyBottom - right * hw;       // Bottom-left
-        pts[2] = bodyTop - right * hw;          // Top-left (body)
-        pts[3] = bodyTop - right * hhw;         // Head base-left (wider)
-        pts[4] = tipPoint;                       // Tip
-        pts[5] = bodyTop + right * hhw;         // Head base-right (wider)
-        pts[6] = bodyTop + right * hw;          // Top-right (body)
-
-        // Set Y = ground
-        for (int i = 0; i < 7; i++) pts[i].y = groundY;
-
-        _arrowLine.positionCount = 7;
-        for (int i = 0; i < 7; i++)
-            _arrowLine.SetPosition(i, pts[i]);
     }
-
-    // ═══════════════════════════════════════════════════════════
 
     Transform FindPlayer()
     {

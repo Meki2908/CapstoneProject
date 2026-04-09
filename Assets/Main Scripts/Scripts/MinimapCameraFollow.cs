@@ -1,24 +1,33 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Rendering;
 
 public class MinimapCameraFollow : MonoBehaviour
 {
     [Header("Player Settings")]
-    public Transform player;               // Nhân vật
+    public Transform player;
     public Vector3 offset = new Vector3(0, 50, 0);
 
     [Header("Rotation Settings")]
     [Tooltip("Kéo Main Camera vào đây để minimap xoay theo hướng nhìn của camera. Để trống sẽ xoay theo player body.")]
-    public Transform cameraTransform;      // Main Camera (optional)
+    public Transform cameraTransform;
 
     [Header("UI Settings")]
-    public RectTransform playerIcon;       // Icon Player trên RawImage
+    public RectTransform playerIcon;
 
     [Header("Minimap Toggle")]
     [Tooltip("Panel/Canvas cha chứa toàn bộ minimap UI. Để trống sẽ tự động tìm.")]
-    public GameObject minimapUIRoot;       // Gán thủ công hoặc auto-find
+    public GameObject minimapUIRoot;
+
+    [Header("Brightness (Night Override)")]
+    [Tooltip("Bật để minimap luôn sáng như ban ngày.")]
+    public bool brightenMinimap = true;
+    [Range(0.5f, 3f)] public float minimapAmbientIntensity = 1.5f;
 
     private Camera _minimapCamera;
+    private Color _savedAmbientColor;
+    private float _savedAmbientIntensity;
+    private AmbientMode _savedAmbientMode;
 
     void Start()
     {
@@ -56,16 +65,27 @@ public class MinimapCameraFollow : MonoBehaviour
 
         // Subscribe để cập nhật khi user đổi settings
         GameSettings.OnSettingsChanged += OnSettingsChanged;
+
+        // URP camera events cho brightness
+        RenderPipelineManager.beginCameraRendering += OnBeginCamera;
+        RenderPipelineManager.endCameraRendering += OnEndCamera;
     }
 
     void OnDestroy()
     {
         GameSettings.OnSettingsChanged -= OnSettingsChanged;
+        RenderPipelineManager.beginCameraRendering -= OnBeginCamera;
+        RenderPipelineManager.endCameraRendering -= OnEndCamera;
     }
 
     void LateUpdate()
     {
-        if (player == null) return;
+        if (player == null)
+        {
+            GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+            if (playerObj != null) player = playerObj.transform;
+            else return;
+        }
 
         // Camera minimap theo sát player
         transform.position = player.position + offset;
@@ -77,6 +97,33 @@ public class MinimapCameraFollow : MonoBehaviour
         // Icon player luôn hướng lên trên UI (không xoay theo map)
         if (playerIcon != null)
             playerIcon.localRotation = Quaternion.identity;
+    }
+
+    // ==================== MINIMAP BRIGHTNESS ====================
+
+    void OnBeginCamera(ScriptableRenderContext ctx, Camera cam)
+    {
+        if (!brightenMinimap || _minimapCamera == null || cam != _minimapCamera) return;
+
+        // Lưu lại ambient hiện tại
+        _savedAmbientColor = RenderSettings.ambientLight;
+        _savedAmbientIntensity = RenderSettings.ambientIntensity;
+        _savedAmbientMode = RenderSettings.ambientMode;
+
+        // Đổi sang sáng cho minimap
+        RenderSettings.ambientMode = AmbientMode.Flat;
+        RenderSettings.ambientLight = Color.white;
+        RenderSettings.ambientIntensity = minimapAmbientIntensity;
+    }
+
+    void OnEndCamera(ScriptableRenderContext ctx, Camera cam)
+    {
+        if (!brightenMinimap || _minimapCamera == null || cam != _minimapCamera) return;
+
+        // Khôi phục ambient gốc
+        RenderSettings.ambientMode = _savedAmbientMode;
+        RenderSettings.ambientLight = _savedAmbientColor;
+        RenderSettings.ambientIntensity = _savedAmbientIntensity;
     }
 
     // ==================== MINIMAP TOGGLE ====================
@@ -108,7 +155,6 @@ public class MinimapCameraFollow : MonoBehaviour
 
     /// <summary>
     /// Tự động tìm panel/canvas cha chứa minimap UI.
-    /// Tìm RawImage hiển thị output của minimap camera, rồi lấy panel cha.
     /// </summary>
     private void FindMinimapUIRoot()
     {
@@ -120,7 +166,6 @@ public class MinimapCameraFollow : MonoBehaviour
             {
                 if (img.texture == _minimapCamera.targetTexture)
                 {
-                    // Tìm panel cha gần nhất (2-3 cấp lên)
                     Transform parent = img.transform.parent;
                     if (parent != null)
                     {
@@ -148,4 +193,3 @@ public class MinimapCameraFollow : MonoBehaviour
         Debug.LogWarning("[MinimapCameraFollow] Không tìm thấy minimap UI root! Hãy gán thủ công trong Inspector.");
     }
 }
-
