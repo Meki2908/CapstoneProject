@@ -495,6 +495,8 @@ public class TakeDamageTest : MonoBehaviour
         if (bossSkill == null) bossSkill = GetComponentInParent<BossMultiSkill>();
         if (bossSkill != null && bossSkill.ShouldBlockDamage())
         {
+            // Hiện "BLOCKED" floating text
+            FloatingCombatText.SpawnBlocked(transform.position);
             if (showDebugInfo) Debug.Log($"[TakeDamageTest] {gameObject.name} SHIELD BLOCKED {damage} damage!");
             return;
         }

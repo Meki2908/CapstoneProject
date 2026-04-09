@@ -291,20 +291,59 @@ public class EnemyAttack : MonoBehaviour {
         }
     }
     /// <summary>
-    /// Spawn VFX prefab từ PixPlays tại vị trí boss
-    /// Hỗ trợ 2 chế độ: AoE (360°) và Directional (cone phía trước)
+    /// Wrapper: check Demon triple blast, nếu không thì spawn 1 VFX bình thường
     /// </summary>
     void SpawnSkillVFX(){
         if (enemyScript == null || enemyScript.skillVfxPrefab == null) return;
+        
+        // Demon: bắn 3 lần liên tục cho hoành tráng
+        if (enemyScript.specificEnemyType == EnemyScript.SpecificEnemyType.Demon)
+        {
+            StartCoroutine(DemonTripleBlast());
+            return;
+        }
+        
+        SpawnSkillVFXSingle();
+    }
+    
+    /// <summary>
+    /// Demon triple FireBlast: 3 lần liên tục với delay ngắn
+    /// </summary>
+    IEnumerator DemonTripleBlast()
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            SpawnSkillVFXSingle();
+            
+            // Sound cho mỗi blast
+            SoundManager.PlaySound(SoundType.Boss_Demon_FireBlast, null, 0.8f);
+            
+            if (i < 2) yield return new WaitForSeconds(0.35f);
+        }
+        Debug.Log("[EnemyAttack] Demon TRIPLE FireBlast complete!");
+    }
+    
+    /// <summary>
+    /// Spawn 1 VFX prefab từ PixPlays tại vị trí boss
+    /// Hỗ trợ 2 chế độ: AoE (360°) và Directional (cone phía trước)
+    /// </summary>
+    void SpawnSkillVFXSingle(){
+        if (enemyScript == null || enemyScript.skillVfxPrefab == null) return;
+        
+        // Lấy hướng cast đã lưu từ EnemyState (khớp với warning zone)
+        EnemyState es = GetComponent<EnemyState>();
+        Vector3 castDir = (es != null && es.skillCastDirection.sqrMagnitude > 0.01f) 
+            ? es.skillCastDirection 
+            : transform.forward; // Fallback nếu không có
         
         Vector3 spawnPos;
         Quaternion spawnRot;
         
         if (enemyScript.skillIsDirectional) {
-            // Directional: spawn VFX phía trước boss
-            spawnPos = transform.position + transform.forward * 1.5f;
+            // Directional: spawn VFX theo hướng đã khóa lúc bắt đầu cast
+            spawnPos = transform.position + castDir * 1.5f;
             spawnPos.y = transform.position.y + 0.2f;
-            spawnRot = transform.rotation;
+            spawnRot = Quaternion.LookRotation(castDir);
         } else {
             // AoE: spawn VFX tại vị trí boss
             spawnPos = transform.position;
@@ -326,12 +365,12 @@ public class EnemyAttack : MonoBehaviour {
         int skillMagic = damageStruct.damageElemental + enemyScript.enemy.magicValue;
         
         if (enemyScript.skillIsDirectional) {
-            // Directional: truyền hướng boss để check góc
+            // Directional: dùng castDir thay vì transform.forward
             skillDmg.SetupDirectional(
                 skillDamage, skillMagic, damageStruct.crit,
                 damageStruct.elementalType,
                 enemyScript.skillVfxRadius, 4f,
-                transform.position, transform.forward,
+                transform.position, castDir,
                 enemyScript.skillAngle
             );
         } else {

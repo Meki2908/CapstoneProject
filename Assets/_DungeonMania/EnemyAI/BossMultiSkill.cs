@@ -139,6 +139,39 @@ public class BossMultiSkill : MonoBehaviour
             TryShield();
             TryProjectile();
         }
+        
+        // === DEBUG KEYS (chỉ hoạt động trong Editor) ===
+        #if UNITY_EDITOR
+        if (Input.GetKeyDown(KeyCode.F9))
+        {
+            // F9: Force vào Phase 2 + bật Shield ngay
+            if (!isPhase2)
+            {
+                isPhase2 = true;
+                Debug.Log("[BossMultiSkill] DEBUG: Forced Phase 2!");
+            }
+            if (!isShielded && shieldVfxPrefab != null)
+            {
+                StartCoroutine(ShieldSequence());
+                Debug.Log("[BossMultiSkill] DEBUG: Shield activated! Hit boss to test BLOCKED text.");
+            }
+        }
+        if (Input.GetKeyDown(KeyCode.F10))
+        {
+            // F10: Toggle Shield on/off
+            if (isShielded)
+            {
+                isShielded = false;
+                if (shieldInstance != null) Destroy(shieldInstance);
+                Debug.Log("[BossMultiSkill] DEBUG: Shield OFF");
+            }
+            else
+            {
+                isShielded = true;
+                Debug.Log("[BossMultiSkill] DEBUG: Shield ON (no VFX)");
+            }
+        }
+        #endif
     }
     
     /// <summary>
@@ -195,13 +228,14 @@ public class BossMultiSkill : MonoBehaviour
         
         if (hpPercent <= phase2Threshold && hpPercent > 0)
         {
+            isPhase2 = true; // SET TRƯỜC StartCoroutine để tránh race condition
             StartCoroutine(Phase2Sequence());
         }
     }
     
     IEnumerator Phase2Sequence()
     {
-        isPhase2 = true;
+        // isPhase2 đã được set trước khi vào đây (trong CheckPhase2)
 
         if (DungeonOSTManager.Instance != null)
             DungeonOSTManager.Instance.OnBossEnteredPhase2();
@@ -327,6 +361,9 @@ public class BossMultiSkill : MonoBehaviour
             var vfxData = new PixPlays.ElementalVFX.VfxData(sourcePos, targetPos, 4f, 3f);
             projectileVfx.Play(vfxData);
             
+            // Xác định elemental type dựa trên loại boss
+            int projElementalType = GetBossElementalType();
+            
             // Tìm child "Fireball" (projectile particle) → gắn collision damage
             Transform fireballChild = proj.transform.Find("Fireball");
             if (fireballChild == null)
@@ -351,7 +388,8 @@ public class BossMultiSkill : MonoBehaviour
                 // Gắn BossProjectile lên child projectile → collision damage
                 BossProjectile bp = fireballChild.gameObject.AddComponent<BossProjectile>();
                 bp.SetupCollisionOnly(dmg, magic);
-                if (showDebug) Debug.Log($"[BossMultiSkill] Collision damage attached to: {fireballChild.name}");
+                bp.elementalType = projElementalType;
+                if (showDebug) Debug.Log($"[BossMultiSkill] Collision damage attached to: {fireballChild.name}, element={projElementalType}");
             }
             else
             {
@@ -473,12 +511,17 @@ public class BossMultiSkill : MonoBehaviour
             randomEnemy.EnableSpecificType(enemyTypeIndex);
         }
         
-        // Set player target cho enemy vừa spawn
+        // Set player target + force start chase
         EnemyScript es = enemy.GetComponentInChildren<EnemyScript>(false);
         if (es != null && playerTarget != null)
         {
             es.target = playerTarget;
-            if (showDebug) Debug.Log($"[BossMultiSkill] Summoned index={enemyTypeIndex} at {spawnPos}");
+            // Force start chase immediately — tránh enemy đứng im
+            es.delay = false;
+            es.wait = false;
+            es.cont = true;
+            es.StartChase();
+            if (showDebug) Debug.Log($"[BossMultiSkill] Summoned index={enemyTypeIndex} at {spawnPos}, forced chase!");
         }
         
         // Safety: Force-enable components (phòng trường hợp prefab source bị disable)
@@ -677,6 +720,27 @@ public class BossMultiSkill : MonoBehaviour
                 return SoundType.Boss_Demon_FireBlast;
             default:
                 return SoundType.Boss_Attack;
+        }
+    }
+    
+    #endregion
+    
+    #region UTILITY HELPERS
+    
+    /// <summary>
+    /// Trả về elemental type cho projectile dựa trên loại boss
+    /// </summary>
+    int GetBossElementalType()
+    {
+        if (enemyScript == null) return 1; // fire default
+        switch (enemyScript.specificEnemyType)
+        {
+            case EnemyScript.SpecificEnemyType.Lich: return 4; // dead
+            case EnemyScript.SpecificEnemyType.Demon: return Random.Range(1, 5); // random
+            case EnemyScript.SpecificEnemyType.Ifrit: return 1; // fire
+            case EnemyScript.SpecificEnemyType.Golem: return 2; // ice
+            case EnemyScript.SpecificEnemyType.Minotaur: return 3; // light
+            default: return 1;
         }
     }
     
