@@ -9,16 +9,17 @@ using UnityEngine.InputSystem;
 #endif
 
 /// <summary>
-/// NPC Maria – warrior stationed outside the City Gate, near the newly appeared portal.
-/// Quest 2, Step 3: Player talks to Maria → she briefs to enter the dungeon → step 3→4.
+/// NPC Maria — handles dialogue for multiple quests:
+///   Quest 2, Step 3: Maria at City Gate → briefs player to enter dungeon
+///   Quest 3, Step 2: Maria at Battlefield → briefs player to enter Swamp Dungeon
+///   Quest 4, Step 0: Maria at Battlefield → tells about Final Gate at mountain top
 /// </summary>
 public class MariaDialogue : MonoBehaviour
 {
     [Header("── Quest Settings ──")]
-    [Tooltip("Quest 2 = City Gate. Quest 3 = Battlefield. Script auto-detects which is active.")]
-    public int quest2ID  = 2;
-    public int quest3ID  = 3;
-    public int stepIndex = 3;   // Maria handles step 3 in both quests
+    public int quest2ID = 2;
+    public int quest3ID = 3;
+    public int quest4ID = 4;
 
     [Header("── Prompt UI ──")]
     public GameObject promptPanel;
@@ -42,9 +43,9 @@ public class MariaDialogue : MonoBehaviour
 
     // ─── Dialogue Lines ───────────────────────────────────────────────────
 
-    [Header("── Dialogue (Step 3 – First meeting at City Gate) ──")]
+    [Header("── Quest 2 Step 3 – City Gate ──")]
     [TextArea(2, 4)]
-    public string[] openingLines = {
+    public string[] quest2Lines = {
         "You made it! Leona said she'd send someone — I'm glad it's you.",
         "I'm Maria. I've been holding this position for two days now.",
         "That portal — the one right behind me — it appeared out of nowhere.",
@@ -56,21 +57,41 @@ public class MariaDialogue : MonoBehaviour
         "Please. Go through that portal and put an end to this. We'll hold the line as long as we can."
     };
 
-    [Header("── Dialogue: Quest 3 – Battlefield ──")]
+    [Header("── Quest 3 Step 2 – Battlefield ──")]
     [TextArea(2, 4)]
     public string[] quest3Lines = {
         "You made it out here! I'm relieved.",
         "I was pushing toward the Demon Gate — our real objective — but something is blocking the path.",
         "Another gate appeared overnight. Smaller than the Demon Gate, but crawling with creatures.",
+        "It leads to a swamp dungeon. Dark, dangerous, and full of monsters.",
         "We can't advance until it's dealt with.",
         "I'd go in myself, but I need to hold this perimeter.",
         "Please — go through that gate and close it from the inside. Then we push forward together."
     };
 
-    [Header("── Reminder Dialogue (if player returns) ──")]
+    [Header("── Quest 4 Step 0 – Final Gate ──")]
+    [TextArea(2, 4)]
+    public string[] quest4Lines = {
+        "You did it! The swamp dungeon is cleared. I knew I could count on you.",
+        "While you were in there, my scouts finally returned with intel.",
+        "The source of all this — the final gate — it's at the top of the mountain.",
+        "That's where the biggest threat is. Everything we've faced so far has been coming from up there.",
+        "I need to stay here and guard this position. These creatures don't stop coming.",
+        "But you... you've proven yourself. You can handle what's up there.",
+        "Go to the mountain top. Close that gate. End this once and for all.",
+        "And hey — be careful up there. I'll be waiting for you when you come back."
+    };
+
+    [Header("── Reminder ──")]
     [TextArea(2, 4)]
     public string[] reminderLines = {
         "The portal is right there. Go in — we'll hold the line out here!"
+    };
+
+    [Header("── Quest 4 Reminder ──")]
+    [TextArea(2, 4)]
+    public string[] quest4ReminderLines = {
+        "The final gate is at the mountain top. Hurry — I'll guard here!"
     };
 
     [Header("── Settings ──")]
@@ -79,11 +100,14 @@ public class MariaDialogue : MonoBehaviour
     public string playerTag        = "Player";
 
     // ─── Runtime ──────────────────────────────────────────────────────────
-    string[] _activeLines;
-    int      _lineIndex  = 0;
-    bool     _isOpen     = false;
-    bool     _isTyping   = false;
-    bool     _playerNear = false;
+    enum DialogueMode { Quest2Step3, Quest3Step2, Quest4Step0, Reminder, Quest4Reminder, None }
+
+    string[]     _activeLines;
+    DialogueMode _mode;
+    int          _lineIndex  = 0;
+    bool         _isOpen     = false;
+    bool         _isTyping   = false;
+    bool         _playerNear = false;
 
     // ──────────────────────────────────────────────────────────────────────
 
@@ -101,14 +125,14 @@ public class MariaDialogue : MonoBehaviour
     {
         if (!_playerNear) return;
         if (_isOpen) { if (IsFPressed()) OnNextClicked(); return; }
-        if (IsCorrectStep() && IsFPressed()) OpenDialogue();
+        if (CanTalk() && IsFPressed()) OpenDialogue();
     }
 
     void OnTriggerEnter(Collider other)
     {
         if (!other.CompareTag(playerTag)) return;
         _playerNear = true;
-        if (IsCorrectStep() && promptPanel) promptPanel.SetActive(true);
+        if (CanTalk() && promptPanel) promptPanel.SetActive(true);
     }
 
     void OnTriggerExit(Collider other)
@@ -116,56 +140,81 @@ public class MariaDialogue : MonoBehaviour
         if (!other.CompareTag(playerTag)) return;
         _playerNear = false;
         if (promptPanel) promptPanel.SetActive(false);
+        if (_isOpen) CloseDialogue();
     }
 
-    // ─── Dialogue Logic ───────────────────────────────────────────────────
+    // ─── Logic ────────────────────────────────────────────────────────────
 
-    bool IsCorrectStep()
+    bool CanTalk()
     {
-        if (QuestManager.Instance == null) return false;
-        // Check Quest 2 first, then Quest 3
-        foreach (int qid in new[] { quest2ID, quest3ID })
-        {
-            var state = QuestManager.Instance.GetState(qid);
-            int step  = QuestManager.Instance.GetStepIndex(qid);
-            if (state == QuestManager.QuestState.Active && step >= stepIndex) return true;
-        }
-        return false;
+        return PickMode() != DialogueMode.None;
     }
 
-    int ActiveQuestID()
+    DialogueMode PickMode()
     {
-        if (QuestManager.Instance == null) return quest2ID;
-        foreach (int qid in new[] { quest2ID, quest3ID })
+        if (QuestManager.Instance == null) return DialogueMode.None;
+
+        // Quest 3 TRƯỚC — ưu tiên quest đang active
+        var q3 = QuestManager.Instance.GetState(quest3ID);
+        if (q3 == QuestManager.QuestState.Active)
         {
-            var state = QuestManager.Instance.GetState(qid);
-            int step  = QuestManager.Instance.GetStepIndex(qid);
-            if (state == QuestManager.QuestState.Active && step >= stepIndex) return qid;
+            int q3step = QuestManager.Instance.GetStepIndex(quest3ID);
+            if (q3step == 2) return DialogueMode.Quest3Step2;
+            if (q3step > 2)  return DialogueMode.Reminder;
         }
-        return quest2ID;
+
+        // Quest 4 — CHỈ khi Q3 đã Completed
+        if (q3 == QuestManager.QuestState.Completed)
+        {
+            var q4 = QuestManager.Instance.GetState(quest4ID);
+            if (q4 == QuestManager.QuestState.Active || q4 == QuestManager.QuestState.Available)
+            {
+                int q4step = QuestManager.Instance.GetStepIndex(quest4ID);
+                if (q4step == 0) return DialogueMode.Quest4Step0;
+                if (q4step > 0)  return DialogueMode.Quest4Reminder;
+            }
+        }
+
+        // Quest 2 — step 3: Maria at City Gate
+        var q2 = QuestManager.Instance.GetState(quest2ID);
+        if (q2 == QuestManager.QuestState.Active)
+        {
+            int q2step = QuestManager.Instance.GetStepIndex(quest2ID);
+            if (q2step == 3) return DialogueMode.Quest2Step3;
+            if (q2step > 3)  return DialogueMode.Reminder;
+        }
+
+        return DialogueMode.None;
+    }
+
+    string[] GetLines(DialogueMode mode)
+    {
+        switch (mode)
+        {
+            case DialogueMode.Quest2Step3:   return quest2Lines;
+            case DialogueMode.Quest3Step2:   return quest3Lines;
+            case DialogueMode.Quest4Step0:   return quest4Lines;
+            case DialogueMode.Quest4Reminder:return quest4ReminderLines;
+            case DialogueMode.Reminder:      return reminderLines;
+            default:                         return reminderLines;
+        }
     }
 
     void OpenDialogue()
     {
-        int activeQID = ActiveQuestID();
-        int step = QuestManager.Instance != null
-            ? QuestManager.Instance.GetStepIndex(activeQID) : stepIndex;
+        _mode = PickMode();
+        _activeLines = GetLines(_mode);
 
-        // Pick lines: Q3 gets quest3Lines, Q2 gets openingLines; reminder if past stepIndex
-        if (step == stepIndex)
-            _activeLines = (activeQID == quest3ID) ? quest3Lines : openingLines;
-        else
-            _activeLines = reminderLines;
-        _isOpen      = true;
-        _lineIndex   = 0;
+        if (_activeLines == null || _activeLines.Length == 0) return;
+
+        _isOpen    = true;
+        _lineIndex = 0;
 
         if (promptPanel) promptPanel.SetActive(false);
         if (dialogueCanvas != null) dialogueCanvas.gameObject.SetActive(true);
         if (dialoguePanel)  dialoguePanel.SetActive(true);
 
-        // Re-set tên NPC khi mở, tránh bị script khác ghi đè
         SetText(npcNameTMP, npcNameLegacy, "Maria");
-
         Cursor.visible   = true;
         Cursor.lockState = CursorLockMode.None;
         ShowLine(0);
@@ -210,12 +259,36 @@ public class MariaDialogue : MonoBehaviour
     void OnDialogueFinished()
     {
         if (QuestManager.Instance == null) return;
-        int activeQID = ActiveQuestID();
-        int step = QuestManager.Instance.GetStepIndex(activeQID);
-        if (step == stepIndex)
+
+        switch (_mode)
         {
-            QuestManager.Instance.AdvanceStep(activeQID);
-            Debug.Log($"[MariaDialogue] Quest {activeQID} step {stepIndex} → {stepIndex + 1}: Enter dungeon gate.");
+            case DialogueMode.Quest2Step3:
+                // Quest 2 step 3 → 4: enter dungeon
+                if (QuestManager.Instance.GetStepIndex(quest2ID) == 3)
+                {
+                    QuestManager.Instance.AdvanceStep(quest2ID);
+                    Debug.Log("[MariaDialogue] Quest 2 step 3 → 4: Enter dungeon gate.");
+                }
+                break;
+
+            case DialogueMode.Quest3Step2:
+                // Quest 3 step 2 → 3: go to Swamp Dungeon
+                if (QuestManager.Instance.GetStepIndex(quest3ID) == 2)
+                {
+                    QuestManager.Instance.AdvanceStep(quest3ID);
+                    Debug.Log("[MariaDialogue] Quest 3 step 2 → 3: Go to Swamp Dungeon.");
+                }
+                break;
+
+            case DialogueMode.Quest4Step0:
+                // Quest 4 step 0 → 1: Accept + advance → go to mountain
+                QuestManager.Instance.AcceptQuest(quest4ID);
+                if (QuestManager.Instance.GetStepIndex(quest4ID) == 0)
+                {
+                    QuestManager.Instance.AdvanceStep(quest4ID);
+                    Debug.Log("[MariaDialogue] Quest 4 step 0 → 1: Go to the mountain top.");
+                }
+                break;
         }
     }
 
@@ -249,7 +322,7 @@ public class MariaDialogue : MonoBehaviour
         Gizmos.color = new Color(1f, 0.3f, 0f, 0.3f);
         Gizmos.DrawWireSphere(transform.position, 3f);
         UnityEditor.Handles.Label(transform.position + Vector3.up * 2f,
-            "Maria – Quest 2 Step 3\n(City Gate / Portal)");
+            "Maria – Q2/Q3/Q4");
     }
 #endif
 }

@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5566772379433597238}
   - component: {fileID: 1973985350356289740}
+  - component: {fileID: 9081430024968827977}
   m_Layer: 0
   m_Name: QuestManager
   m_TagString: Untagged
@@ -47,3 +48,32 @@ MonoBehaviour:
   quests:
   - {fileID: 11400000, guid: 5131590ba501d1e44baedadb50b5536d, type: 2}
   - {fileID: 11400000, guid: 1baea652fa1456e4c90bcb19be415561, type: 2}
+  - {fileID: 11400000, guid: e40979a6119ffa64a8f9be92771ecbdc, type: 2}
+  - {fileID: 11400000, guid: 5b419f4e9e966e44eadbd4ea40a70709, type: 2}
+--- !u!114 &9081430024968827977
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5692293214279097555}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 669595ad9b63fe6408096ab9cbfa7e83, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  rules:
+  - questID: 3
+    showWhenState: 2
+    showWhenStepMin: 0
+    showObjects:
+    - {fileID: 0}
+    - {fileID: 0}
+    hideObjects:
+    - {fileID: 0}
+  - questID: 4
+    showWhenState: 2
+    showWhenStepMin: 0
+    showObjects:
+    - {fileID: 0}
+    hideObjects: []

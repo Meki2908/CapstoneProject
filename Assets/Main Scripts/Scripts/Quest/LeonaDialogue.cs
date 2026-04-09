@@ -193,6 +193,7 @@ public class LeonaDialogue : MonoBehaviour
         if (!other.CompareTag(playerTag)) return;
         _playerNear = false;
         if (promptPanel) promptPanel.SetActive(false);
+        if (_isOpen) CloseDialogue();
     }
 
     // ─── Dialogue Logic ───────────────────────────────────────────────────
@@ -275,15 +276,7 @@ public class LeonaDialogue : MonoBehaviour
         if (q2 == QuestManager.QuestState.Active)
             return DialogueMode.Quest2Reminder;
 
-        // Quest 2 completed + Quest 3 active
-        var q3 = QuestManager.Instance.GetState(3);
-        if (q2 == QuestManager.QuestState.Completed && q3 == QuestManager.QuestState.Active)
-        {
-            int q3step = QuestManager.Instance.GetStepIndex(3);
-            if (q3step == 3) return DialogueMode.Quest3Battlefield;
-            if (q3step > 3)  return DialogueMode.Default;   // past it, done
-        }
-
+        // Quest 2 completed → default (Maria handles Quest 3+4 now)
         return DialogueMode.Default;
     }
 
