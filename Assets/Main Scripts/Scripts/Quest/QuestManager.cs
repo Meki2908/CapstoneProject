@@ -70,6 +70,12 @@ public class QuestManager : MonoBehaviour
             return;
         }
 
+        ForceRefreshFromPrefs();
+    }
+
+    /// <summary>Bỏ qua guard, buộc đọc lại toàn bộ từ PlayerPrefs (dùng cho New Game).</summary>
+    public void ForceRefreshFromPrefs()
+    {
         _states.Clear();
         _stepIndex.Clear();
 

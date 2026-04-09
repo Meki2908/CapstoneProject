@@ -369,7 +369,21 @@ namespace Artsystack.ArtsystackGui
                 }
             }
             PlayerPrefs.Save();
-            Debug.Log("[NewGame] All save data deleted!");
+
+            // Force reload all DontDestroyOnLoad singletons so in-memory state is cleared
+            if (QuestManager.Instance != null)
+                QuestManager.Instance.ForceRefreshFromPrefs();
+
+            if (InventoryManager.Instance != null)
+                InventoryManager.Instance.ClearInventory();
+
+            if (EquipmentManager.Instance != null)
+                EquipmentManager.Instance.Load();
+
+            if (WeaponGemManager.Instance != null)
+                WeaponGemManager.Instance.Load();
+
+            Debug.Log("[NewGame] All save data deleted and singletons refreshed!");
         }
 
         #endregion
