@@ -101,6 +101,14 @@ public class MapChinhPlayerPositionPersistence : MonoBehaviour
     {
         if (gameObject.scene.name != sceneName)
             return;
+
+        // Multiplayer: Fusion quản lý vị trí qua SpawnPoint — không load vị trí cũ
+        if (IsMultiplayer())
+        {
+            Debug.Log("[MapChinhPos] Multiplayer mode — skip position load (Fusion manages spawn)");
+            return;
+        }
+
         StartCoroutine(ApplyLoadedNextFrame());
     }
 
@@ -130,6 +138,20 @@ public class MapChinhPlayerPositionPersistence : MonoBehaviour
     {
         if (gameObject.scene.name != sceneName)
             return;
+
+        // Multiplayer: không lưu vị trí multiplayer đè lên save singleplayer
+        if (IsMultiplayer())
+            return;
+
         MapChinhPlayerPositionStore.SaveTransform(transform, sceneName);
+    }
+
+    /// <summary>Kiểm tra có đang chơi multiplayer không.</summary>
+    bool IsMultiplayer()
+    {
+        var runners = FindObjectsByType<Fusion.NetworkRunner>(FindObjectsSortMode.None);
+        foreach (var r in runners)
+            if (r.IsRunning) return true;
+        return false;
     }
 }

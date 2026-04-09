@@ -25219,8 +25219,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 891238828306482759}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.0018093166, y: 0.034690905, z: -0.000062804735, w: -0.9993965}
-  m_LocalPosition: {x: 0.6240574, y: 1.5695872, z: -8.978279}
+  m_LocalRotation: {x: 0.0018828545, y: -0.034713734, z: 0.00006540044, w: 0.99939555}
+  m_LocalPosition: {x: 0.6240574, y: 1.4495873, z: -8.978279}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -50758,6 +50758,10 @@ GameObject:
   - component: {fileID: 1245353089643615957}
   - component: {fileID: 2161905063516728712}
   - component: {fileID: 5964067916941750304}
+  - component: {fileID: 1217203111446829160}
+  - component: {fileID: 7395132026827731130}
+  - component: {fileID: 2835269925919614526}
+  - component: {fileID: 2840114483026350857}
   m_Layer: 8
   m_Name: Player_3.0
   m_TagString: Player
@@ -50801,6 +50805,10 @@ MonoBehaviour:
   NestedObjects: []
   NetworkedBehaviours:
   - {fileID: 5964067916941750304}
+  - {fileID: 1217203111446829160}
+  - {fileID: 7395132026827731130}
+  - {fileID: 2835269925919614526}
+  - {fileID: 2840114483026350857}
   ForceRemoteRenderTimeframe: 0
 --- !u!114 &5964067916941750304
 MonoBehaviour:
@@ -50819,6 +50827,67 @@ MonoBehaviour:
   SyncParent: 0
   _autoAOIOverride: 1
   DisableSharedModeInterpolation: 0
+--- !u!114 &1217203111446829160
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3698074488449676619}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7ac4e91d82fb4a68b3c1056e9d2f8a31, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  resnapDelay: 0.5
+  snapDistanceThreshold: 0.5
+  maxWaitFrames: 60
+--- !u!114 &7395132026827731130
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3698074488449676619}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a24f6f6748cc8a2469fd8a1cf9804be4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _NetName: 
+  nameTagHeight: 2.2
+  fontSize: 5
+  showOwnName: 0
+--- !u!114 &2835269925919614526
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3698074488449676619}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7012a82b8bde41d4da44e79a6b82a7c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &2840114483026350857
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3698074488449676619}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 506319458, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Animator: {fileID: 4338629433160989586}
+  ApplyTiming: 2
+  SyncSettings: 79
+  StateHashes: 0000000077eb4a19d86b6d8aac5102fbd4ef0a9a4278b79961c8b43f0dda2c773e6909408b1f5424a8af57823e725c3b6c282312d245800df1f583abcba5411c6ee1a6a370231b2543903e12105d7ec2844d79f0601fd8d6a40d4a7f0c695d405da7d3b44faf2313e340bb0fa6fdefe98a8a9336684390526e0fcb465c14a283a76828fb78c352bafe32fcd20d286c409ac2295a2a909f72d49d400cbca0980542ad477bc1edf7d4bc806ddcd930e5c3cf309e99fa2f4b3eec2f30648bf5b048c6a5e0bf674ad900c47fa302d27fd858d470e7cc92038799d6af5958ae0b4aab1ae183754a8e12db93b0f6ae83e9f166db5f9b5cdab3254f1614ba26e141c6f47771c18306f1919ccd20c81a8e4f377e4a62ae707fcbdac7bbe643c958fbb5fb9cd62cf5e5e55e82ed13fbc0f21c4cf7faeae9b58e91769ea7f518893919f597e906f61d5afdfc76f96347c1c9396a13be05a910f8d036f677624aadbd2715322e389e840577b03e5a80f160da1964c890c196ebf6786a2660486d5119ce499b37e4f40de84aa422c66019b4cf7acb1ee1507688287f612962dfe39da105d1705d78cff9c0471ee0a6fee22d
+  TriggerHashes: 00000000874303a7c6fab1d2940292181606b3a7d8d500a878373eeff25465e600dd6e9be5389559dc6a000f5e26def13b2dc047e4ae2fb4d7ff7839
+  TotalWords: 9
 --- !u!1 &3762816990167538178
 GameObject:
   m_ObjectHideFlags: 0
@@ -85135,7 +85204,7 @@ Transform:
   m_GameObject: {fileID: 5966522928997625730}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.12, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -85152,9 +85221,9 @@ Transform:
   - {fileID: 4679597862785520111}
   - {fileID: 803060622961347247}
   - {fileID: 6477256300060136252}
-  - {fileID: 4594953227588964827}
   - {fileID: 867762759274735584}
   - {fileID: 3776041091584896032}
+  - {fileID: 4594953227588964827}
   m_Father: {fileID: 1245353089643615957}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &5863155082676024749

@@ -11,6 +11,7 @@ public class PlayerHealth : MonoBehaviour
     private Character character;
     private Animator animator;
     private NetworkPlayerStats _networkStats;
+    private NetworkPlayerDeathManager _deathManager;
 
     [Header("UI")]
     [Tooltip("Text to display current/max HP below health bar (auto-found if not assigned)")]
@@ -46,6 +47,7 @@ public class PlayerHealth : MonoBehaviour
         character = GetComponent<Character>();
         animator = GetComponent<Animator>();
         _networkStats = GetComponentInParent<NetworkPlayerStats>();
+        _deathManager = GetComponentInParent<NetworkPlayerDeathManager>();
 
         if (animator == null)
         {
@@ -332,11 +334,59 @@ public class PlayerHealth : MonoBehaviour
         // Notify listeners
         OnPlayerDied?.Invoke();
 
-        // Change to DieState - DieState will handle animation based on currentLocomotionState
+        // ─── Gọi Network Death Manager (multiplayer) ───
+        if (_deathManager != null)
+        {
+            _deathManager.RequestPlayerDeath();
+        }
+        else
+        {
+            // Fallback: không có network death manager → chỉ local death
+            ChangeToDieStateLocal();
+        }
+    }
+
+    /// <summary>
+    /// Chuyển sang DieState cục bộ (không qua network).
+    /// Dùng khi không có NetworkPlayerDeathManager.
+    /// </summary>
+    private void ChangeToDieStateLocal()
+    {
         if (character != null && character.dieState != null)
         {
             character.movementSM.ChangeState(character.dieState);
         }
+    }
+
+    /// <summary>
+    /// Được gọi bởi NetworkPlayerDeathManager khi server đã xử lý death state.
+    /// Đảm bảo chuyển sang DieState cho tất cả clients.
+    /// </summary>
+    public void ConfirmDeathFromNetwork()
+    {
+        if (character != null && character.dieState != null)
+        {
+            // Chỉ chuyển nếu chưa ở DieState
+            if (character.movementSM.currentState != character.dieState)
+            {
+                character.movementSM.ChangeState(character.dieState);
+                Debug.Log("[PlayerHealth] Confirmed death from network — entered DieState");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Được gọi khi player được respawn từ network.
+    /// Reset health và state.
+    /// </summary>
+    public void RespawnFromNetwork()
+    {
+        currentHealth = maxHealth;
+        OnHealthChanged?.Invoke(currentHealth);
+        UpdateHealthText();
+        SyncNetworkStats();
+
+        Debug.Log($"[PlayerHealth] Respawned from network! HP: {currentHealth}/{maxHealth}");
     }
 
     public void Heal(float amount)

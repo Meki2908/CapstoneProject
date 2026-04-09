@@ -119,6 +119,18 @@ public class Character : MonoBehaviour
         animator = GetComponent<Animator>();
         playerInput = GetComponent<PlayerInput>();
 
+        // ─── MULTIPLAYER: chỉ owner mới điều khiển ───
+        var netObj = GetComponentInParent<Fusion.NetworkObject>();
+        if (netObj != null && !netObj.HasInputAuthority)
+        {
+            // Đây là player của người khác → tắt input + camera
+            if (playerInput != null) playerInput.enabled = false;
+            // Tắt các component điều khiển khác
+            enabled = false; // Tắt Character.Update/FixedUpdate
+            Debug.Log($"[Character] Remote player '{gameObject.name}' — input disabled.");
+            return; // Không cần init thêm
+        }
+
         // Load saved key binding overrides từ Settings
         InputRebindHelper.LoadBindingOverrides(playerInput);
         jumpActionCache = playerInput.actions["Jump"];
@@ -193,6 +205,8 @@ public class Character : MonoBehaviour
         UpdateSpeedWithGems();
 
         lastLocomotionMoveTime = Time.time;
+
+        Debug.Log($"[Character] Local player '{gameObject.name}' initialized — input ENABLED.");
     }
 
     private void OnEquipmentChanged()

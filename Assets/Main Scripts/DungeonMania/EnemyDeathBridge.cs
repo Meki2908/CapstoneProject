@@ -1,13 +1,19 @@
 using System;
 using UnityEngine;
+using Fusion;
 
 /// <summary>
 /// Kết nối TakeDamageTest với DungeonMania Enemy System
 /// - Theo dõi khi enemy chết (qua TakeDamageTest.IsAlive() hoặc EnemyScript.alive)
 /// - Gọi EnemyEvent.DeadEvent để thông báo cho hệ thống
 /// - Set EnemyScript.alive = false khi enemy chết (vì TakeDamageTest không làm điều này)
+/// 
+/// MULTIPLAYER FIX:
+/// - Khi chạy dưới Fusion, gửi RPC tới server để server gọi OnEnemyKilled
+/// - Client không gọi trực tiếp DungeonWaveManager vì nó có thể không tồn tại trên máy client
 /// </summary>
-public class EnemyDeathBridge : MonoBehaviour
+[RequireComponent(typeof(NetworkObject))]
+public class EnemyDeathBridge : NetworkBehaviour
 {
     public event Action OnEnemyDied;
 
@@ -43,10 +49,8 @@ public class EnemyDeathBridge : MonoBehaviour
         // Kiểm tra enemy có chết không (ưu tiên TakeDamageTest)
         if (takeDamage != null)
         {
-            // Theo dõi TakeDamageTest
             bool currentAlive = takeDamage.IsAlive();
             
-            // Khi chuyển từ sống sang chết
             if (wasAlive && !currentAlive)
             {
                 OnEnemyDead();
@@ -56,7 +60,6 @@ public class EnemyDeathBridge : MonoBehaviour
         }
         else if (enemyScript != null)
         {
-            // Fallback: theo dõi EnemyScript.alive
             if (wasAlive && !enemyScript.alive)
             {
                 OnEnemyDead();
@@ -67,17 +70,15 @@ public class EnemyDeathBridge : MonoBehaviour
 
     void OnEnemyDead()
     {
+        if (hasCalledDeadEvent) return;
         hasCalledDeadEvent = true;
         OnEnemyDied?.Invoke();
 
-        // QUAN TRỌNG: Set EnemyScript.alive = false để AI dừng lại
-        // TakeDamageTest Die() không làm điều này!
         if (enemyScript != null)
         {
             enemyScript.alive = false;
             Debug.Log("[EnemyDeathBridge] Set EnemyScript.alive = false");
             
-            // Disable NavMeshAgent để enemy dừng di chuyển
             var navAgent = enemyScript.GetComponent<UnityEngine.AI.NavMeshAgent>();
             if (navAgent != null)
             {
@@ -85,7 +86,6 @@ public class EnemyDeathBridge : MonoBehaviour
                 navAgent.enabled = false;
             }
             
-            // Disable collider để không còn tương tác
             var collider = enemyScript.GetComponent<Collider>();
             if (collider != null)
             {
@@ -93,32 +93,19 @@ public class EnemyDeathBridge : MonoBehaviour
             }
         }
         
-        // Disable TakeDamageTest để không nhận damage nữa
         if (takeDamage != null)
         {
             takeDamage.enabled = false;
         }
         
-        // Gọi EnemyEvent.DeadEvent để thông báo cho hệ thống
-        // Sử dụng EnemyEventSystem(5) thay vì gọi trực tiếp event
         EnemyEvent.EnemyEventSystem(5);
         
         Debug.Log("[EnemyDeathBridge] Enemy dead, called DeadEvent");
 
-        // Gửi thông báo cho DungeonWaveManager nếu có
-        if (DungeonWaveManager.Instance != null && enemyScript != null)
-        {
-            int enemyTypeValue = (int)enemyScript.enemyType;
-            int exp = GetExpByType(enemyTypeValue);
-            DungeonWaveManager.Instance.OnEnemyKilled(enemyTypeValue, exp);
-        }
+        // ─── MULTIPLAYER: Thông báo cho DungeonWaveManager qua network ───
+        NotifyWaveManager();
 
-        if (DungeonOSTManager.Instance != null && enemyScript != null &&
-            DungeonOSTManager.IsOstBossCategory(enemyScript.enemyType))
-            DungeonOSTManager.Instance.BossPresenceLeave();
-        
-        // Hủy enemy sau khi chết (với delay nhỏ để hoàn thành animation nếu có)
-        // === SPAWN ITEM DROPS (Genshin-style) ===
+        // SPAWN ITEM DROPS (Genshin-style)
         var dropSpawner = GetComponent<ItemDropSpawner>();
         if (dropSpawner == null) dropSpawner = GetComponentInParent<ItemDropSpawner>();
         if (dropSpawner != null)
@@ -127,6 +114,7 @@ public class EnemyDeathBridge : MonoBehaviour
             Debug.Log("[EnemyDeathBridge] Item drops spawned!");
         }
 
+        // Hủy enemy sau khi chết (với delay nhỏ để hoàn thành animation nếu có)
         GameObject objToDestroy = gameObject;
         Transform parent = objToDestroy.transform.parent;
         if (parent != null && parent.name.Contains("EnemyNew"))
@@ -139,30 +127,93 @@ public class EnemyDeathBridge : MonoBehaviour
             Debug.Log("[EnemyDeathBridge] Queueing enemy directly for destruction: " + objToDestroy.name);
         }
         
-        // Destroy sau 5.5s để đảm bảo EnemyDamage.Death() kịp chạy animation và spawn effect
         Destroy(objToDestroy, 5.5f);
+    }
+
+    /// <summary>
+    /// Thông báo cho DungeonWaveManager rằng enemy đã chết.
+    /// Client gửi RPC tới server → server gọi OnEnemyKilled.
+    /// </summary>
+    private void NotifyWaveManager()
+    {
+        int enemyTypeValue = enemyScript != null ? (int)enemyScript.enemyType : 0;
+        int exp = GetExpByType(enemyTypeValue);
+
+        if (HasStateAuthority)
+        {
+            // Server: gọi trực tiếp
+            CallOnEnemyKilled(enemyTypeValue, exp);
+        }
+        else if (HasInputAuthority)
+        {
+            // Client: gửi RPC tới server
+            RPC_NotifyEnemyDeath(enemyTypeValue, exp);
+        }
+        else
+        {
+            // Proxy (remote player object): không làm gì
+            Debug.Log("[EnemyDeathBridge] Proxy enemy death — no action needed");
+        }
+    }
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    void RPC_NotifyEnemyDeath(int enemyType, int exp)
+    {
+        Debug.Log($"[EnemyDeathBridge] RPC: Enemy {enemyType} died, exp={exp}");
+        CallOnEnemyKilled(enemyType, exp);
+    }
+
+    private void CallOnEnemyKilled(int enemyType, int exp)
+    {
+        if (DungeonWaveManager.Instance != null)
+        {
+            DungeonWaveManager.Instance.OnEnemyKilled(enemyType, exp);
+        }
+        else
+        {
+            Debug.LogWarning("[EnemyDeathBridge] DungeonWaveManager.Instance is null!");
+        }
+    }
+
+    /// <summary>
+    /// Gọi trực tiếp từ EnemyScript/EnemyAttack (single-player fallback).
+    /// </summary>
+    public void NotifyDeathDirect(int enemyType, int exp)
+    {
+        if (hasCalledDeadEvent) return;
+        hasCalledDeadEvent = true;
+
+        int expVal = exp > 0 ? exp : GetExpByType(enemyType);
+
+        if (DungeonWaveManager.Instance != null)
+        {
+            DungeonWaveManager.Instance.OnEnemyKilled(enemyType, expVal);
+        }
+
+        if (DungeonOSTManager.Instance != null && enemyScript != null &&
+            DungeonOSTManager.IsOstBossCategory(enemyScript.enemyType))
+            DungeonOSTManager.Instance.BossPresenceLeave();
     }
 
     int GetExpByType(int enemyType)
     {
         switch (enemyType)
         {
-            case 0: return 100;    // Skeleton
-            case 1: return 150;    // Archer
-            case 2: return 300;    // Monster
-            case 3: return 350;    // Lich
-            case 4: return 1500;   // Boss (chung)
-            case 5: return 3000;   // Demon
-            case 6: return 1500;   // Stoneogre
-            case 7: return 1800;   // Golem
-            case 8: return 2000;   // Minotaur
-            case 9: return 2500;   // Ifrit
+            case 0: return 100;
+            case 1: return 150;
+            case 2: return 300;
+            case 3: return 350;
+            case 4: return 1500;
+            case 5: return 3000;
+            case 6: return 1500;
+            case 7: return 1800;
+            case 8: return 2000;
+            case 9: return 2500;
             default: return 100;
         }
     }
 
     void OnDestroy()
     {
-        // Cleanup nếu cần
     }
 }

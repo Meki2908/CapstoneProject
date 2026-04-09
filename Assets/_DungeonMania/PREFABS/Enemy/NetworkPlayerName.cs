@@ -1,71 +1,129 @@
+using Fusion;
 using UnityEngine;
 using TMPro;
 
 /// <summary>
-/// Tên player (menu → <see cref="LocalPlayerName"/>) + name tag world-space.
+/// Gắn trên player prefab (root, cùng NetworkObject).
+/// Sync tên player qua network + hiện tên trên đầu player (World Space).
+///
+/// Flow:
+/// 1. Menu: player nhập tên → lưu vào static <see cref="LocalPlayerName"/>
+/// 2. Spawned (input authority): ghi tên vào [Networked]
+/// 3. Remote: đọc [Networked] → hiện tên trên đầu player
+/// 4. Owner: có thể ẩn/hiện tên trên đầu mình (mặc định: hiện)
 /// </summary>
 [DefaultExecutionOrder(220)]
-public class NetworkPlayerName : MonoBehaviour
+public class NetworkPlayerName : NetworkBehaviour
 {
+    /// <summary>Tên player local — set trước khi Start Host/Client.</summary>
     public static string LocalPlayerName { get; set; } = "Player";
 
+    [Networked, Capacity(64)]
+    public string NetName { get; set; }
+
+    [Header("Name Tag Settings")]
+    [Tooltip("Offset trên đầu player (Y).")]
     [SerializeField] private float nameTagHeight = 2.2f;
-    [SerializeField] private float fontSize = 4f;
+    [Tooltip("Font size tên.")]
+    [SerializeField] private float fontSize = 5f;
+    [Tooltip("Hiện tên trên đầu chính mình (owner)?")]
+    [SerializeField] private bool showOwnName = false;
 
     private GameObject _nameTagGO;
-    private TextMeshProUGUI _nameText;
+    private TextMeshPro _nameText; // TextMeshPro (World Space) thay vì TextMeshProUGUI
+    private ChangeDetector _changeDetector;
 
-    void Start()
+    public override void Spawned()
     {
-        string name = string.IsNullOrWhiteSpace(LocalPlayerName) ? "Player" : LocalPlayerName;
+        _changeDetector = GetChangeDetector(ChangeDetector.Source.SnapshotFrom);
+
+        if (HasInputAuthority)
+        {
+            // Ghi tên local vào network
+            string name = string.IsNullOrWhiteSpace(LocalPlayerName)
+                ? $"Player_{Object.InputAuthority}"
+                : LocalPlayerName;
+            NetName = name;
+            Debug.Log($"[NetworkPlayerName] Local player name set to: '{name}'");
+        }
+
+        // Tạo name tag
         CreateNameTag();
-        UpdateNameTag(name);
+        UpdateNameTag(NetName);
+
+        // Owner: ẩn/hiện tùy setting
+        if (HasInputAuthority && _nameTagGO != null)
+            _nameTagGO.SetActive(showOwnName);
+    }
+
+    public override void Despawned(NetworkRunner runner, bool hasState)
+    {
         if (_nameTagGO != null)
-            _nameTagGO.SetActive(false);
+            Destroy(_nameTagGO);
+    }
+
+    public override void Render()
+    {
+        if (_changeDetector == null) return;
+
+        foreach (var change in _changeDetector.DetectChanges(this))
+        {
+            if (change == nameof(NetName))
+            {
+                UpdateNameTag(NetName);
+                Debug.Log($"[NetworkPlayerName] Name updated: '{NetName}' (player={Object.InputAuthority})");
+            }
+        }
     }
 
     void LateUpdate()
     {
         if (_nameTagGO == null || !_nameTagGO.activeSelf) return;
+
+        // Giữ name tag trên đầu player
         _nameTagGO.transform.position = transform.position + Vector3.up * nameTagHeight;
-        if (Camera.main != null)
+
+        // Billboard: luôn quay về camera
+        var cam = Camera.main;
+        if (cam != null)
         {
             _nameTagGO.transform.rotation = Quaternion.LookRotation(
-                _nameTagGO.transform.position - Camera.main.transform.position);
+                _nameTagGO.transform.position - cam.transform.position);
         }
     }
 
+    // ──────────── Name Tag Creation ────────────
+
     void CreateNameTag()
     {
-        _nameTagGO = new GameObject("NameTag");
-        _nameTagGO.transform.SetParent(null);
+        if (_nameTagGO != null) return; // Tránh tạo trùng
 
-        var canvas = _nameTagGO.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.WorldSpace;
-        canvas.sortingOrder = 100;
+        _nameTagGO = new GameObject($"NameTag_{Object.InputAuthority}");
+        _nameTagGO.transform.SetParent(null); // World space, không follow rotation
 
-        var rt = _nameTagGO.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(300, 50);
-        rt.localScale = Vector3.one * 0.01f;
-
-        var textGO = new GameObject("Text", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
-        textGO.transform.SetParent(_nameTagGO.transform, false);
-        var textRT = textGO.GetComponent<RectTransform>();
-        textRT.anchorMin = Vector2.zero;
-        textRT.anchorMax = Vector2.one;
-        textRT.sizeDelta = Vector2.zero;
-
-        _nameText = textGO.GetComponent<TextMeshProUGUI>();
+        // TextMeshPro (World Space) — không cần Canvas
+        _nameText = _nameTagGO.AddComponent<TextMeshPro>();
         _nameText.fontSize = fontSize;
         _nameText.alignment = TextAlignmentOptions.Center;
         _nameText.color = Color.white;
-        _nameText.outlineWidth = 0.2f;
-        _nameText.outlineColor = Color.black;
+        _nameText.outlineWidth = 0.25f;
+        _nameText.outlineColor = new Color32(0, 0, 0, 200);
+        _nameText.enableAutoSizing = false;
+        _nameText.sortingOrder = 100;
+
+        // Size cho text
+        var rt = _nameTagGO.GetComponent<RectTransform>();
+        rt.sizeDelta = new Vector2(6f, 1.5f);
+
+        // Vị trí ban đầu
+        _nameTagGO.transform.position = transform.position + Vector3.up * nameTagHeight;
+
+        Debug.Log($"[NetworkPlayerName] Created name tag for player {Object.InputAuthority}");
     }
 
     void UpdateNameTag(string name)
     {
-        if (_nameText != null)
+        if (_nameText != null && !string.IsNullOrEmpty(name))
             _nameText.text = name;
     }
 

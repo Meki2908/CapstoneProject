@@ -7,9 +7,24 @@ using TMPro;
 using System;
 using Unity.Cinemachine;
 using UnityEngine.Playables;
+using Fusion;
+using Fusion.Sockets;
+using System.Linq;
 
-public class DungeonWaveManager : MonoBehaviour
+public class DungeonWaveManager : MonoBehaviour, INetworkRunnerCallbacks
 {
+    // ══════════════ NETWORKED PROPERTIES (Photon Fusion) ══════════════
+    [Networked] public int NetCurrentWave { get; set; }
+    [Networked] public int NetEnemiesAlive { get; set; }
+    [Networked] public NetworkBool NetIsWaveActive { get; set; }
+    [Networked] public NetworkBool NetIsDungeonActive { get; set; }
+    [Networked] public NetworkBool NetIsDungeonComplete { get; set; }
+    [Networked] public NetworkBool NetIsCountingDown { get; set; }
+    [Networked] public float NetCountdownTimer { get; set; }
+
+    /// <summary>Đã có owner chưa (chỉ một cái trong scene).</summary>
+    private static bool _hasAwakened = false;
+
     [Header("=== DUNGEON SETTINGS ===")]
     [Tooltip("Dungeon display name")]
     public string dungeonName = "Dungeon 1";
@@ -187,16 +202,6 @@ public class DungeonWaveManager : MonoBehaviour
     [Tooltip("Status notification text")]
     public TextMeshProUGUI statusText;
 
-    // ===== PRIVATE VARIABLES =====
-    private int currentWave = 0;
-    private int enemiesAlive = 0;
-    private bool isWaveActive = false;
-    private bool isCountingDown = false;
-    private bool isDungeonActive = false;
-    private bool isDungeonComplete = false;
-    private bool showDebugLog = true;
-    private bool isWaveCompleting = false; // Guard: tránh gọi OnWaveComplete() 2 lần
-    
     // Trackers for enemy spawn (tránh gọi GetEnemyCounts nhiều lần)
     private int currentSkeletCount = 0;
     private int currentLichCount = 0;
@@ -206,6 +211,20 @@ public class DungeonWaveManager : MonoBehaviour
     private int currentIfritCount = 0;
     private int currentDemonCount = 0;
     private int currentMonsterCount = 0;
+
+    // Guard: tránh gọi OnWaveComplete() 2 lần
+    private bool isWaveCompleting = false;
+    private bool showDebugLog = true;
+
+    // ══════════════ ALIAS — dùng field cũ nhưng gán vào Networked property ══════════════
+    public int currentWave { get => NetCurrentWave; set => NetCurrentWave = value; }
+    public int enemiesAlive { get => NetEnemiesAlive; set => NetEnemiesAlive = value; }
+    public bool isWaveActive { get => NetIsWaveActive; set => NetIsWaveActive = value; }
+    public bool isCountingDown { get => NetIsCountingDown; set => NetIsCountingDown = value; }
+    public bool isDungeonActive { get => NetIsDungeonActive; set => NetIsDungeonActive = value; }
+    public bool isDungeonComplete { get => NetIsDungeonComplete; set => NetIsDungeonComplete = value; }
+
+    private bool _wasDungeonActive = false;
 
     // Static instance for global access
     public static DungeonWaveManager Instance;
@@ -223,14 +242,29 @@ public class DungeonWaveManager : MonoBehaviour
 
     void Awake()
     {
-        // Singleton pattern
-        if (Instance == null)
+        // Singleton pattern — chỉ một DungeonWaveManager trong scene
+        if (_hasAwakened)
         {
-            Instance = this;
-        }
-        else
-        {
+            Debug.LogWarning("[DungeonWave] Second DungeonWaveManager found in scene — destroying!");
             Destroy(gameObject);
+            return;
+        }
+        _hasAwakened = true;
+        Instance = this;
+
+        // Đăng ký Fusion callbacks
+        if (MultiplayerManager.Runner != null)
+        {
+            MultiplayerManager.Runner.AddCallbacks(this);
+        }
+    }
+
+    void OnEnable()
+    {
+        // Re-register callbacks khi enabled
+        if (MultiplayerManager.Runner != null)
+        {
+            MultiplayerManager.Runner.AddCallbacks(this);
         }
     }
 
@@ -249,11 +283,29 @@ public class DungeonWaveManager : MonoBehaviour
 
         // Cleanup singleton
         if (Instance == this)
+        {
             Instance = null;
+            _hasAwakened = false;
+        }
     }
 
     void Start()
     {
+        // ─── CHỈ HOST mới khởi động dungeon ───
+        // Kiểm tra runner có phải server không
+        bool isServer = MultiplayerManager.Runner != null && MultiplayerManager.Runner.IsServer;
+
+        if (!isServer)
+        {
+            Debug.Log("[DungeonWave] CLIENT: Waiting for host to start dungeon...");
+            // Client: ẩn UI wave notification (chờ host sync)
+            HideAllUI();
+            return;
+        }
+
+        // Host: tiếp tục khởi động bình thường
+        Debug.Log("[DungeonWave] HOST: Starting dungeon...");
+
         // Tìm player TRƯỚC KHI làm gì khác
         if (player == null)
         {
@@ -1061,9 +1113,17 @@ public class DungeonWaveManager : MonoBehaviour
     /// <summary>
     /// Spawn enemy cho wave hiện tại (CÁCH A - Dùng EnemyNew + GamePlayManager)
     /// Hệ thống mới: Wave 1-3 = Skelet, Wave 4 = Skelet + Lich, Wave 5 = Boss + Demon
+    /// 
+    /// MULTIPLAYER: Chỉ server được spawn enemy.
     /// </summary>
     private void SpawnWave(int waveIndex)
     {
+        // Chỉ server mới spawn enemy
+        if (MultiplayerManager.Runner != null && !MultiplayerManager.Runner.IsServer)
+        {
+            Debug.Log("[DungeonWave] CLIENT: Not spawning enemies (only server spawns)");
+            return;
+        }
         int waveIdx = waveIndex - 1; // Array index (0-based)
 
         // Lấy số lượng enemy cho wave này (hệ thống mới)
@@ -1559,10 +1619,19 @@ public class DungeonWaveManager : MonoBehaviour
     // ===== ENEMY TRACKING =====
 
     /// <summary>
-    /// Gọi khi 1 enemy chết
+    /// Gọi khi 1 enemy chết.
+    /// MULTIPLAYER: Được gọi từ EnemyDeathBridge.RPC trên SERVER.
+    /// Client không gọi trực tiếp.
     /// </summary>
     public void OnEnemyKilled(int enemyType, int expValue)
     {
+        // Chỉ server mới xử lý enemy death
+        if (MultiplayerManager.Runner != null && !MultiplayerManager.Runner.IsServer)
+        {
+            Debug.LogWarning($"[DungeonWave] CLIENT received OnEnemyKilled — ignoring (only server handles)");
+            return;
+        }
+
         if (!isDungeonActive)
         {
             Debug.LogWarning($"[DungeonWave] OnEnemyKilled called but isDungeonActive=false! Ignoring.");
@@ -2217,6 +2286,102 @@ public class DungeonWaveManager : MonoBehaviour
             Debug.Log($"[DungeonWave] Boss health bar shown for: {es.enemyName}");
         }
     }
+
+    // ══════════════════════════════════════════════════════════════════
+    // FUSION NETWORK CALLBACKS (INetworkRunnerCallbacks)
+    // ══════════════════════════════════════════════════════════════════
+
+    public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
+    {
+        Debug.Log($"[DungeonWave] Player {player} joined session.");
+        // Client mới joined → đợi host sync wave state
+    }
+
+    public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)
+    {
+        Debug.Log($"[DungeonWave] Player {player} left.");
+        // Nếu tất cả người chơi đã chết khi có người rời → dungeon fail
+        CheckAllPlayersDead();
+    }
+
+    public void OnShutdown(NetworkRunner runner, ShutdownReason reason)
+    {
+        Debug.Log($"[DungeonWave] Runner shutdown: {reason}");
+        // Reset static state khi runner shutdown
+        _hasAwakened = false;
+    }
+
+    /// <summary>
+    /// Kiểm tra tất cả người chơi có chết không.
+    /// Nếu có → hiện dungeon fail (chỉ trên máy có NetworkWaveManager authority).
+    /// </summary>
+    private void CheckAllPlayersDead()
+    {
+        if (MultiplayerManager.Runner == null) return;
+
+        int aliveCount = 0;
+        foreach (var p in MultiplayerManager.Runner.ActivePlayers)
+        {
+            var obj = MultiplayerManager.Runner.GetPlayerObject(p);
+            if (obj == null) continue;
+            var deathMgr = obj.GetComponent<NetworkPlayerDeathManager>();
+            if (deathMgr != null && !deathMgr.NetIsDead)
+                aliveCount++;
+            else if (deathMgr == null)
+                aliveCount++; // Không có death manager → coi như sống
+        }
+
+        if (aliveCount == 0 && isDungeonActive && !isDungeonComplete)
+        {
+            Debug.Log("[DungeonWave] All players dead in multiplayer!");
+            // Host hiện fail UI (dùng phương thức public)
+            if (isDungeonActive)
+            {
+                ShowDungeonFailed();
+                OnDungeonFailed?.Invoke();
+            }
+        }
+    }
+
+    // ─── Stub implementations for INetworkRunnerCallbacks ───
+    public void OnInput(NetworkRunner runner, NetworkInput input) { }
+    public void OnInputMissing(NetworkRunner runner, PlayerRef player, NetworkInput input) { }
+    public void OnConnectedToServer(NetworkRunner runner) { }
+    public void OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason)
+    {
+        Debug.Log($"[DungeonWave] Disconnected: {reason}");
+    }
+    public void OnConnectRequest(NetworkRunner runner, NetworkRunnerCallbackArgs.ConnectRequest request, byte[] token) { request.Accept(); }
+    public void OnConnectFailed(NetworkRunner runner, NetAddress remoteAddress, NetConnectFailedReason reason)
+    {
+        Debug.LogError($"[DungeonWave] Connect failed: {reason}");
+    }
+    public void OnUserSimulationMessage(NetworkRunner runner, SimulationMessagePtr message) { }
+    public void OnSessionListUpdated(NetworkRunner runner, List<SessionInfo> sessionList) { }
+    public void OnCustomAuthenticationResponse(NetworkRunner runner, Dictionary<string, object> data) { }
+    public void OnHostMigration(NetworkRunner runner, HostMigrationToken hostMigrationToken)
+    {
+        Debug.Log("[DungeonWave] Host migration!");
+        // Sau migration → host mới sẽ tiếp tục wave
+        // Wave state đã được sync qua [Networked] properties
+    }
+    public void OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ReliableKey key, ArraySegment<byte> data) { }
+    public void OnReliableDataProgress(NetworkRunner runner, PlayerRef player, ReliableKey key, float progress) { }
+    public void OnSceneLoadStart(NetworkRunner runner)
+    {
+        Debug.Log("[DungeonWave] Scene load start.");
+    }
+    public void OnSceneLoadDone(NetworkRunner runner)
+    {
+        Debug.Log("[DungeonWave] Scene load done.");
+        // Scene mới → DungeonWaveManager cần re-register callbacks
+        if (runner != null)
+        {
+            runner.AddCallbacks(this);
+        }
+    }
+    public void OnObjectExitAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
+    public void OnObjectEnterAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
 }
 
 /// <summary>

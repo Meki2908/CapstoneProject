@@ -4,9 +4,10 @@ using UnityEngine.UI;
 using TMPro;
 
 /// <summary>
-/// Editor tool: tạo 2 panel multiplayer riêng biệt trong Canvas_Menu:
-///   Panel_CreateRoom — cho Host (nhập tên → tạo phòng → hiện mã)
-///   Panel_JoinRoom   — cho Client (nhập tên → nhập mã → tham gia)
+/// Editor tool: tạo 3 panel multiplayer trong Canvas_Menu:
+///   Panel_CreateRoom    — cho Host (nhập tên → tạo phòng → hiện mã + player list)
+///   Panel_JoinRoom      — cho Client (nhập tên → nhập mã → tham gia)
+///   Panel_ConnectedRoom — cho Client sau khi join thành công (hiện room code, chờ host)
 ///
 /// Cách dùng: Unity menu → Tools → Setup Multiplayer UI
 /// Mở prefab Canvas_Menu trước khi chạy!
@@ -25,15 +26,16 @@ public class SetupMultiplayerUI : EditorWindow
         GUILayout.Space(10);
 
         EditorGUILayout.HelpBox(
-            "Creates 2 separate panels:\n\n" +
-            "1. Panel_CreateRoom — Host: enter name → create room → show code\n" +
-            "2. Panel_JoinRoom — Client: enter name → enter code → join\n\n" +
+            "Creates 3 panels:\n\n" +
+            "1. Panel_CreateRoom — Host: enter name → create room → show code + player list\n" +
+            "2. Panel_JoinRoom — Client: enter name → enter code → join\n" +
+            "3. Panel_ConnectedRoom — Client after join: room code + status + leave\n\n" +
             "Open Canvas_Menu prefab before running!",
             MessageType.Info);
 
         GUILayout.Space(10);
 
-        if (GUILayout.Button("Build Both Panels + Auto Wire", GUILayout.Height(45)))
+        if (GUILayout.Button("Build All Panels + Auto Wire", GUILayout.Height(45)))
         {
             CreateBothPanels();
         }
@@ -60,75 +62,36 @@ public class SetupMultiplayerUI : EditorWindow
         // Xóa cũ
         DestroyChildByName(root, "Panel_CreateRoom");
         DestroyChildByName(root, "Panel_JoinRoom");
+        DestroyChildByName(root, "Panel_ConnectedRoom");
 
         // ════════════════════════════════════════════
-        //  PANEL 1: CREATE ROOM (HOST)
+        //  PANEL 1: CREATE ROOM (HOST) — Simplified
         // ════════════════════════════════════════════
         var createPanel = CreateFullPanel(root, "Panel_CreateRoom");
 
         // Title
-        var titleCreate = CreateText(createPanel.transform, "Text_Title", "CREATE ROOM", 42, TextAlignmentOptions.Center);
-        SetRect(titleCreate, 0, 1, 1, 1, 0, -30, 0, 60);
+        var titleCreate = CreateText(createPanel.transform, "Text_Title", "CREATE ROOM", 35, TextAlignmentOptions.Center);
+        SetRect(titleCreate, 0, 1, 1, 1, 0, -40, 0, 100);
 
         // Enter name
-        var labelName1 = CreateText(createPanel.transform, "Text_LabelName", "Your name:", 28, TextAlignmentOptions.Left);
-        SetRect(labelName1, 0.05f, 1, 0.95f, 1, 0, -100, 0, 40);
+        var labelName1 = CreateText(createPanel.transform, "Text_LabelName", "Your name:", 35, TextAlignmentOptions.Left);
+        SetRect(labelName1, 0.05f, 1, 0.95f, 1, 0, -160, 0, 80);
 
         var nameInput1 = CreateInputField(createPanel.transform, "InputField_PlayerName_Host", "Enter name...", 20);
-        SetRect(nameInput1, 0.05f, 1, 0.95f, 1, 0, -155, 0, 55);
-
-        // Room code after creation
-        var labelCode = CreateText(createPanel.transform, "Text_LabelCode", "Room Code:", 28, TextAlignmentOptions.Left);
-        SetRect(labelCode, 0.05f, 1, 0.95f, 1, 0, -225, 0, 40);
-
-        var joinCodeDisplay = CreateText(createPanel.transform, "Text_JoinCode", "------", 60, TextAlignmentOptions.Center);
-        SetRect(joinCodeDisplay, 0.1f, 1, 0.9f, 1, 0, -290, 0, 65);
-        joinCodeDisplay.GetComponent<TextMeshProUGUI>().color = new Color(1f, 0.84f, 0f); // Gold
-
-        // Player count
-        var playerCount = CreateText(createPanel.transform, "Text_PlayerCount", "Players: 0/4", 24, TextAlignmentOptions.Left);
-        SetRect(playerCount, 0.05f, 1, 0.95f, 1, 0, -345, 0, 35);
-        playerCount.GetComponent<TextMeshProUGUI>().color = new Color(0.7f, 0.9f, 1f);
-
-        // Player list frame (dark bg with vertical layout)
-        var listFrame = new GameObject("PlayerListFrame", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(VerticalLayoutGroup));
-        listFrame.transform.SetParent(createPanel.transform, false);
-        listFrame.layer = 5;
-        SetRect(listFrame, 0.05f, 0, 0.95f, 1, 0, -400, 0, -550);
-        listFrame.GetComponent<Image>().color = new Color(0.04f, 0.04f, 0.08f, 0.85f);
-        var vlg = listFrame.GetComponent<VerticalLayoutGroup>();
-        vlg.childAlignment = TextAnchor.UpperLeft;
-        vlg.spacing = 4;
-        vlg.padding = new RectOffset(10, 10, 8, 8);
-        vlg.childControlWidth = true;
-        vlg.childControlHeight = false;
-        vlg.childForceExpandWidth = true;
-
-        // Placeholder host entry
-        var hostEntry = CreateText(listFrame.transform, "Text_HostEntry", "  Waiting...", 26, TextAlignmentOptions.Left);
-        var hostRT = hostEntry.GetComponent<RectTransform>();
-        hostRT.sizeDelta = new Vector2(0, 40);
-        hostEntry.GetComponent<TextMeshProUGUI>().color = new Color(1f, 1f, 1f, 0.3f);
-        hostEntry.GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Italic;
+        SetRect(nameInput1, 0.05f, 1, 0.95f, 1, 0, -270, 0, 110);
 
         // Button: CREATE ROOM
         var btnCreate = CreateStyledButton(createPanel.transform, "Button_CreateRoom", "CREATE ROOM", new Color(0.2f, 0.6f, 0.3f));
-        SetRect(btnCreate, 0.15f, 0, 0.85f, 0, 0, 95, 0, 55);
+        SetRect(btnCreate, 0.1f, 0, 0.9f, 0, 0, 200, 0, 110);
 
-        // Button: ENTER GAME (hidden until room created)
-        var btnEnter = CreateStyledButton(createPanel.transform, "Button_EnterGame", "ENTER GAME", new Color(0.8f, 0.5f, 0.1f));
-        SetRect(btnEnter, 0.15f, 0, 0.85f, 0, 0, 95, 0, 55);
-        btnEnter.SetActive(false);
+        // Button: BACK (quay về tab_HostOptions)
+        var btnBackCreate = CreateStyledButton(createPanel.transform, "Button_Back", "← BACK", new Color(0.4f, 0.4f, 0.4f));
+        SetRect(btnBackCreate, 0.1f, 0, 0.9f, 0, 0, 70, 0, 90);
 
         // Status
-        var statusCreate = CreateText(createPanel.transform, "Text_Status_Create", "", 24, TextAlignmentOptions.Center);
-        SetRect(statusCreate, 0.05f, 0, 0.95f, 0, 0, 30, 0, 35);
+        var statusCreate = CreateText(createPanel.transform, "Text_Status_Create", "", 35, TextAlignmentOptions.Center);
+        SetRect(statusCreate, 0.05f, 0, 0.95f, 0, 0, -20, 0, 70);
         statusCreate.GetComponent<TextMeshProUGUI>().color = new Color(0.7f, 0.9f, 1f);
-
-        // Ping display (Host)
-        var pingCreate = CreateText(createPanel.transform, "Text_Ping_Host", "Ping: --", 20, TextAlignmentOptions.Left);
-        SetRect(pingCreate, 0.05f, 0, 0.5f, 0, 0, 5, 0, 25);
-        pingCreate.GetComponent<TextMeshProUGUI>().color = new Color(0.5f, 0.5f, 0.5f);
 
         // ════════════════════════════════════════════
         //  PANEL 2: JOIN ROOM (CLIENT)
@@ -137,36 +100,101 @@ public class SetupMultiplayerUI : EditorWindow
         joinPanel.SetActive(false); // Mặc định ẩn
 
         // Title
-        var titleJoin = CreateText(joinPanel.transform, "Text_Title", "JOIN ROOM", 42, TextAlignmentOptions.Center);
-        SetRect(titleJoin, 0, 1, 1, 1, 0, -30, 0, 60);
+        var titleJoin = CreateText(joinPanel.transform, "Text_Title", "JOIN ROOM", 35, TextAlignmentOptions.Center);
+        SetRect(titleJoin, 0, 1, 1, 1, 0, -40, 0, 100);
 
         // Nhập tên
-        var labelName2 = CreateText(joinPanel.transform, "Text_LabelName", "Your name:", 28, TextAlignmentOptions.Left);
-        SetRect(labelName2, 0.05f, 1, 0.95f, 1, 0, -100, 0, 40);
+        var labelName2 = CreateText(joinPanel.transform, "Text_LabelName", "Your name:", 35, TextAlignmentOptions.Left);
+        SetRect(labelName2, 0.05f, 1, 0.95f, 1, 0, -160, 0, 80);
 
         var nameInput2 = CreateInputField(joinPanel.transform, "InputField_PlayerName_Join", "Enter name...", 20);
-        SetRect(nameInput2, 0.05f, 1, 0.95f, 1, 0, -155, 0, 55);
+        SetRect(nameInput2, 0.05f, 1, 0.95f, 1, 0, -270, 0, 110);
 
         // Nhập mã phòng
-        var labelJoinCode = CreateText(joinPanel.transform, "Text_LabelCode", "Enter Room Code:", 28, TextAlignmentOptions.Left);
-        SetRect(labelJoinCode, 0.05f, 1, 0.95f, 1, 0, -225, 0, 40);
+        var labelJoinCode = CreateText(joinPanel.transform, "Text_LabelCode", "Enter Room Code:", 35, TextAlignmentOptions.Left);
+        SetRect(labelJoinCode, 0.05f, 1, 0.95f, 1, 0, -400, 0, 80);
 
         var joinCodeInput = CreateInputField(joinPanel.transform, "InputField_JoinCode", "Room code (e.g. A1B2C3)", 6);
-        SetRect(joinCodeInput, 0.1f, 1, 0.9f, 1, 0, -286, 0, 65);
+        SetRect(joinCodeInput, 0.05f, 1, 0.95f, 1, 0, -520, 0, 130);
 
         // Nút THAM GIA
         var btnJoin = CreateStyledButton(joinPanel.transform, "Button_JoinRoom", "JOIN", new Color(0.2f, 0.4f, 0.8f));
-        SetRect(btnJoin, 0.15f, 0, 0.85f, 0, 0, 95, 0, 55);
+        SetRect(btnJoin, 0.1f, 0, 0.9f, 0, 0, 200, 0, 110);
 
         // Status
-        var statusJoin = CreateText(joinPanel.transform, "Text_Status_Join", "", 24, TextAlignmentOptions.Center);
-        SetRect(statusJoin, 0.05f, 0, 0.95f, 0, 0, 30, 0, 35);
+        var statusJoin = CreateText(joinPanel.transform, "Text_Status_Join", "", 35, TextAlignmentOptions.Center);
+        SetRect(statusJoin, 0.05f, 0, 0.95f, 0, 0, 70, 0, 70);
         statusJoin.GetComponent<TextMeshProUGUI>().color = new Color(0.7f, 0.9f, 1f);
 
         // Ping display (Client)
-        var pingJoin = CreateText(joinPanel.transform, "Text_Ping_Client", "Ping: --", 20, TextAlignmentOptions.Left);
-        SetRect(pingJoin, 0.05f, 0, 0.5f, 0, 0, 5, 0, 25);
+        var pingJoin = CreateText(joinPanel.transform, "Text_Ping_Client", "Ping: --", 35, TextAlignmentOptions.Left);
+        SetRect(pingJoin, 0.05f, 0, 0.5f, 0, 0, 5, 0, 50);
         pingJoin.GetComponent<TextMeshProUGUI>().color = new Color(0.5f, 0.5f, 0.5f);
+
+        // Button: BACK (quay về tab_HostOptions)
+        var btnBackJoin = CreateStyledButton(joinPanel.transform, "Button_Back", "← BACK", new Color(0.4f, 0.4f, 0.4f));
+        SetRect(btnBackJoin, 0.1f, 0, 0.9f, 0, 0, 70, 0, 90);
+
+        // ════════════════════════════════════════════
+        //  PANEL 3: CONNECTED ROOM (CLIENT after join success)
+        // ════════════════════════════════════════════
+        var connectedPanel = CreateFullPanel(root, "Panel_ConnectedRoom");
+        connectedPanel.SetActive(false);
+
+        // Title
+        var titleConnected = CreateText(connectedPanel.transform, "Text_Title", "CONNECTED", 35, TextAlignmentOptions.Center);
+        SetRect(titleConnected, 0, 1, 1, 1, 0, -40, 0, 100);
+        titleConnected.GetComponent<TextMeshProUGUI>().color = new Color(0.4f, 1f, 0.5f);
+
+        // Room code
+        var labelConnCode = CreateText(connectedPanel.transform, "Text_LabelCode", "Room Code:", 35, TextAlignmentOptions.Left);
+        SetRect(labelConnCode, 0.05f, 1, 0.95f, 1, 0, -160, 0, 80);
+
+        var connRoomCode = CreateText(connectedPanel.transform, "Text_ConnectedRoomCode", "------", 50, TextAlignmentOptions.Center);
+        SetRect(connRoomCode, 0.05f, 1, 0.68f, 1, 0, -280, 0, 120);
+        connRoomCode.GetComponent<TextMeshProUGUI>().color = new Color(1f, 0.84f, 0f);
+
+        // Button: COPY room code
+        var btnCopy = CreateStyledButton(connectedPanel.transform, "Button_CopyCode", "📋 COPY", new Color(0.25f, 0.45f, 0.7f));
+        SetRect(btnCopy, 0.70f, 1, 0.95f, 1, 0, -275, 0, 100);
+
+        // Player count
+        var connPlayerCount = CreateText(connectedPanel.transform, "Text_ConnectedPlayerCount", "", 35, TextAlignmentOptions.Left);
+        SetRect(connPlayerCount, 0.05f, 1, 0.95f, 1, 0, -410, 0, 70);
+        connPlayerCount.GetComponent<TextMeshProUGUI>().color = new Color(0.7f, 0.9f, 1f);
+
+        // Player list frame
+        var connListFrame = new GameObject("ConnectedPlayerListFrame", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(VerticalLayoutGroup));
+        connListFrame.transform.SetParent(connectedPanel.transform, false);
+        connListFrame.layer = 5;
+        SetRect(connListFrame, 0.05f, 0, 0.95f, 1, 0, -500, 0, -680);
+        connListFrame.GetComponent<Image>().color = new Color(0.04f, 0.04f, 0.08f, 0.85f);
+        var connVlg = connListFrame.GetComponent<VerticalLayoutGroup>();
+        connVlg.childAlignment = TextAnchor.UpperLeft;
+        connVlg.spacing = 8;
+        connVlg.padding = new RectOffset(15, 15, 12, 12);
+        connVlg.childControlWidth = true;
+        connVlg.childControlHeight = false;
+        connVlg.childForceExpandWidth = true;
+
+        // Status
+        var connStatus = CreateText(connectedPanel.transform, "Text_Status_Connected", "Waiting for host to start game...", 35, TextAlignmentOptions.Center);
+        SetRect(connStatus, 0.05f, 0, 0.95f, 0, 0, 210, 0, 70);
+        connStatus.GetComponent<TextMeshProUGUI>().color = new Color(0.7f, 0.9f, 1f);
+
+        // Button: START GAME (chỉ host thấy, ẩn mặc định)
+        var btnStartGame = CreateStyledButton(connectedPanel.transform, "Button_StartGame", "START GAME", new Color(0.2f, 0.7f, 0.3f));
+        SetRect(btnStartGame, 0.1f, 0, 0.9f, 0, 0, 210, 0, 110);
+        btnStartGame.SetActive(false);
+
+        // Button: LEAVE ROOM
+        var btnLeave = CreateStyledButton(connectedPanel.transform, "Button_LeaveRoom", "LEAVE ROOM", new Color(0.7f, 0.2f, 0.2f));
+        SetRect(btnLeave, 0.1f, 0, 0.9f, 0, 0, 70, 0, 100);
+
+        // Ping (Client)
+        var pingConn = CreateText(connectedPanel.transform, "Text_Ping_Connected", "Ping: --", 35, TextAlignmentOptions.Left);
+        SetRect(pingConn, 0.05f, 0, 0.5f, 0, 0, 5, 0, 50);
+        pingConn.GetComponent<TextMeshProUGUI>().color = new Color(0.5f, 0.5f, 0.5f);
 
         // ════════════════════════════════════════════
         //  AUTO WIRE → MultiplayerManager
@@ -177,21 +205,27 @@ public class SetupMultiplayerUI : EditorWindow
         {
             var so = new SerializedObject(mp);
 
+            // Panel_CreateRoom fields
             SetRef(so, "joinCodeInput", joinCodeInput.GetComponent<TMP_InputField>());
-            SetRef(so, "joinCodeDisplay", joinCodeDisplay.GetComponent<TextMeshProUGUI>());
             SetRef(so, "statusText", statusCreate.GetComponent<TextMeshProUGUI>());
             SetRef(so, "playerNameInput", nameInput1.GetComponent<TMP_InputField>());
-            // Wire Join panel name input (client uses this when joining)
             SetRef(so, "playerNameInputJoin", nameInput2.GetComponent<TMP_InputField>());
-            // Wire Join panel status text
             SetRef(so, "statusTextJoin", statusJoin.GetComponent<TextMeshProUGUI>());
             SetRef(so, "createRoomButton", btnCreate);
-            SetRef(so, "enterGameButton", btnEnter);
-            SetRef(so, "playerListContainer", listFrame);
-            SetRef(so, "playerCountText", playerCount.GetComponent<TextMeshProUGUI>());
 
-            var propRelay = so.FindProperty("useRelay");
-            if (propRelay != null) propRelay.boolValue = true;
+            // Panel references (for switching)
+            SetRef(so, "panelCreateRoom", createPanel);
+            SetRef(so, "panelJoinRoom", joinPanel);
+            SetRef(so, "panelConnectedRoom", connectedPanel);
+
+            // Panel_ConnectedRoom fields
+            SetRef(so, "connectedRoomCodeText", connRoomCode.GetComponent<TextMeshProUGUI>());
+            SetRef(so, "connectedStatusText", connStatus.GetComponent<TextMeshProUGUI>());
+            SetRef(so, "connectedPlayerCountText", connPlayerCount.GetComponent<TextMeshProUGUI>());
+            SetRef(so, "connectedPlayerListContainer", connListFrame);
+            SetRef(so, "startGameButton", btnStartGame);
+            SetRef(so, "leaveRoomButton", btnLeave);
+            SetRef(so, "copyCodeButton", btnCopy);
 
             so.ApplyModifiedProperties();
             wired = true;
@@ -199,8 +233,11 @@ public class SetupMultiplayerUI : EditorWindow
             // Auto-wire button onClick events
             WireButtonOnClick(btnCreate.GetComponent<Button>(), mp, "CreateRoom");
             WireButtonOnClick(btnJoin.GetComponent<Button>(), mp, "StartClientAndLoadGame");
+            WireButtonOnClick(btnStartGame.GetComponent<Button>(), mp, "LoadGameAsHost");
+            WireButtonOnClick(btnLeave.GetComponent<Button>(), mp, "LeaveRoom");
+            WireButtonOnClick(btnCopy.GetComponent<Button>(), mp, "CopyRoomCode");
 
-            Debug.Log("[SetupMultiplayerUI] ✅ Auto-wired fields + button onClick to MultiplayerManager!");
+            Debug.Log("[SetupMultiplayerUI] ✅ Auto-wired all fields + buttons!");
         }
 
         // ════════════════════════════════════════════
@@ -208,15 +245,9 @@ public class SetupMultiplayerUI : EditorWindow
         // ════════════════════════════════════════════
         if (mp != null)
         {
-            // Add or get PingDisplay on the same GameObject
-            var pingComp = mp.GetComponent<PingDisplay>();
-            if (pingComp == null)
-                pingComp = mp.gameObject.AddComponent<PingDisplay>();
-
-            var soPing = new SerializedObject(pingComp);
-            // Wire to the Host ping text (both panels share the same PingDisplay)
-            SetRef(soPing, "pingText", pingCreate.GetComponent<TextMeshProUGUI>());
-            soPing.ApplyModifiedProperties();
+            var pingComp2 = mp.GetComponent<PingDisplay>();
+            if (pingComp2 == null)
+                pingComp2 = mp.gameObject.AddComponent<PingDisplay>();
             Debug.Log("[SetupMultiplayerUI] ✅ Wired PingDisplay component!");
         }
 
@@ -236,22 +267,31 @@ public class SetupMultiplayerUI : EditorWindow
             if (propJoin != null)
                 propJoin.objectReferenceValue = joinPanel;
 
-            // Also wire tab_HostOptions if empty
+            var propConnected = so2.FindProperty("panel_ConnectedRoom");
+            if (propConnected != null)
+                propConnected.objectReferenceValue = connectedPanel;
+
             var tabHost = so2.FindProperty("tab_HostOptions");
             if (tabHost != null && tabHost.objectReferenceValue == null)
                 tabHost.objectReferenceValue = createPanel;
 
             so2.ApplyModifiedProperties();
-            Debug.Log("[SetupMultiplayerUI] ✅ Wired panels vào GameMenuManager!");
+
+            // Wire BACK buttons → GameMenuManager.BackToHostOptions
+            WireButtonOnClick(btnBackCreate.GetComponent<Button>(), gmm, "BackToHostOptions");
+            WireButtonOnClick(btnBackJoin.GetComponent<Button>(), gmm, "BackToHostOptions");
+            Debug.Log("[SetupMultiplayerUI] ✅ Wired panels + BACK buttons vào GameMenuManager!");
         }
 
-        Debug.Log("[SetupMultiplayerUI] ✅ Done! Panel_CreateRoom + Panel_JoinRoom");
+        Debug.Log("[SetupMultiplayerUI] ✅ Done! All 3 panels created.");
         EditorUtility.DisplayDialog("Success!",
-            "Created 2 separate panels:\n\n" +
+            "Created 3 panels:\n\n" +
             "✅ Panel_CreateRoom (Host)\n" +
-            "   - Name input + Create room + Show code\n\n" +
+            "   - Name input + Create room + Show code + Player list\n\n" +
             "✅ Panel_JoinRoom (Client)\n" +
             "   - Name input + Enter code + Join\n\n" +
+            "✅ Panel_ConnectedRoom (Client after join)\n" +
+            "   - Room code + Status + Leave button\n\n" +
             (wired ? "✅ Auto-wired to MultiplayerManager!" : "⚠️ Manually wire MultiplayerManager"),
             "OK");
     }
@@ -310,8 +350,8 @@ public class SetupMultiplayerUI : EditorWindow
         go.layer = 5;
 
         var rt = go.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0.2f, 0.1f);
-        rt.anchorMax = new Vector2(0.8f, 0.9f);
+        rt.anchorMin = new Vector2(0.1f, 0.02f);
+        rt.anchorMax = new Vector2(0.9f, 0.98f);
         rt.anchoredPosition = Vector2.zero;
         rt.sizeDelta = Vector2.zero;
 
@@ -353,7 +393,7 @@ public class SetupMultiplayerUI : EditorWindow
 
         go.GetComponent<Image>().color = bgColor;
 
-        var txtGo = CreateText(go.transform, "Text", label, 28, TextAlignmentOptions.Center);
+        var txtGo = CreateText(go.transform, "Text", label, 35, TextAlignmentOptions.Center);
         var txtRt = txtGo.GetComponent<RectTransform>();
         txtRt.anchorMin = Vector2.zero;
         txtRt.anchorMax = Vector2.one;
@@ -381,14 +421,14 @@ public class SetupMultiplayerUI : EditorWindow
         taRt.offsetMax = new Vector2(-15, -5);
 
         // Placeholder
-        var phGo = CreateText(textArea.transform, "Placeholder", placeholderText, 30, TextAlignmentOptions.Center);
+        var phGo = CreateText(textArea.transform, "Placeholder", placeholderText, 35, TextAlignmentOptions.Center);
         var phRt = phGo.GetComponent<RectTransform>();
         phRt.anchorMin = Vector2.zero; phRt.anchorMax = Vector2.one; phRt.sizeDelta = Vector2.zero;
         phGo.GetComponent<TextMeshProUGUI>().color = new Color(1, 1, 1, 0.35f);
         phGo.GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Italic;
 
         // Text
-        var txtGo = CreateText(textArea.transform, "Text", "", 30, TextAlignmentOptions.Center);
+        var txtGo = CreateText(textArea.transform, "Text", "", 35, TextAlignmentOptions.Center);
         var txtRt = txtGo.GetComponent<RectTransform>();
         txtRt.anchorMin = Vector2.zero; txtRt.anchorMax = Vector2.one; txtRt.sizeDelta = Vector2.zero;
 

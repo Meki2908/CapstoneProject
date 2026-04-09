@@ -32,6 +32,8 @@ namespace Artsystack.ArtsystackGui
         [SerializeField] private GameObject panel_CreateRoom;
         [Tooltip("Panel Join Room (Client) — tạo bởi SetupMultiplayerUI tool.")]
         [SerializeField] private GameObject panel_JoinRoom;
+        [Tooltip("Panel Connected Room — sau khi kết nối thành công.")]
+        [SerializeField] private GameObject panel_ConnectedRoom;
 
         [Header("GUI_btn_Play — actions")]
         [Tooltip("Hàng Tab_Play: Play | Help (giữa) | Exit — Help mặc định mở Settings; đổi OnHelpClicked nếu có panel Help riêng.")]
@@ -110,6 +112,7 @@ namespace Artsystack.ArtsystackGui
             if (tab_HostOptions != null) tab_HostOptions.SetActive(false);
             if (panel_CreateRoom != null) panel_CreateRoom.SetActive(false);
             if (panel_JoinRoom != null) panel_JoinRoom.SetActive(false);
+            if (panel_ConnectedRoom != null) panel_ConnectedRoom.SetActive(false);
         }
 
         private void InitializeMenu()
@@ -150,6 +153,11 @@ namespace Artsystack.ArtsystackGui
             if (panel_Loading != null) panel_Loading.SetActive(false);
             if (panel_PopUpPause != null) panel_PopUpPause.SetActive(false);
             if (panel_Exit != null) panel_Exit.SetActive(false);
+
+            // Multiplayer panels — ẩn khi vào gameplay scene
+            if (panel_CreateRoom != null) panel_CreateRoom.SetActive(false);
+            if (panel_JoinRoom != null) panel_JoinRoom.SetActive(false);
+            if (panel_ConnectedRoom != null) panel_ConnectedRoom.SetActive(false);
         }
 
         #region Main Menu Events
@@ -220,6 +228,17 @@ namespace Artsystack.ArtsystackGui
                 if (mp != null) { mp.StartClientAndLoadGame(); isGameRunning = true; }
                 else Debug.LogError("[GameMenuManager] MultiplayerManager.Instance is null.");
             }
+        }
+
+        /// <summary>
+        /// BACK từ Panel_CreateRoom hoặc Panel_JoinRoom → quay về tab_HostOptions.
+        /// </summary>
+        public void BackToHostOptions()
+        {
+            if (panel_CreateRoom != null) panel_CreateRoom.SetActive(false);
+            if (panel_JoinRoom != null) panel_JoinRoom.SetActive(false);
+            if (panel_ConnectedRoom != null) panel_ConnectedRoom.SetActive(false);
+            if (tab_HostOptions != null) tab_HostOptions.SetActive(true);
         }
 
         /// <summary>
