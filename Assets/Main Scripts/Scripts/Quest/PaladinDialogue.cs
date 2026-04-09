@@ -111,7 +111,9 @@ public class PaladinDialogue : MonoBehaviour
         if (QuestManager.Instance == null) return false;
         var state = QuestManager.Instance.GetState(questID);
         int step  = QuestManager.Instance.GetStepIndex(questID);
-        return state == QuestManager.QuestState.Active && step <= stepIndex + 1;
+        // Hiện prompt khi quest Available (chưa accept) HOẶC Active ở step phù hợp
+        return state == QuestManager.QuestState.Available
+            || (state == QuestManager.QuestState.Active && step <= stepIndex + 1);
     }
 
     void OpenDialogue()
