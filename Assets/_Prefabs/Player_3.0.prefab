@@ -85095,6 +85095,7 @@ GameObject:
   - component: {fileID: 505734898532284177}
   - component: {fileID: 5395804327490155289}
   - component: {fileID: 4574784741352068433}
+  - component: {fileID: 8743291056284716390}
   m_Layer: 8
   m_Name: player
   m_TagString: Player
@@ -85514,14 +85515,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 5966522928997625730}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 716ecda890833f843b1eb238411b310b, type: 3}
+  m_Script: {fileID: 11500000, guid: a99bc8a183c750144b2800241ce1b555, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  localSource: {fileID: 8818341064173951405}
-  weaponController: {fileID: 6397847368458049832}
-  footstepVfx: {fileID: 505734898532284177}
-  fallbackWeaponType: 2
-  defaultVolume: 1
+  footstepsConductor: {fileID: 0}
+  footstepStartHandlers: []
+  footstepMiddleHandlers: []
+  footstepEndHandlers: []
 --- !u!82 &8818341064173951405
 AudioSource:
   m_ObjectHideFlags: 0
@@ -85675,6 +85675,23 @@ MonoBehaviour:
   autoDashCooldown: 3
   dashForce: 15
   dashDuration: 0.3
+--- !u!114 &8743291056284716390
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5966522928997625730}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d52643b7fc356c648878b311fb4875c7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  localSource: {fileID: 8818341064173951405}
+  weaponController: {fileID: 6397847368458049832}
+  footstepVfx: {fileID: 505734898532284177}
+  fallbackWeaponType: 1
+  defaultVolume: 1
 --- !u!1 &6046149470515190070
 GameObject:
   m_ObjectHideFlags: 0

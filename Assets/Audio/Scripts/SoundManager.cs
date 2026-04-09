@@ -4,6 +4,7 @@ using UnityEngine.SceneManagement;
 [RequireComponent(typeof(AudioSource))]
 public class SoundManager : MonoBehaviour
 {
+    [Tooltip("Asset Create → Audio → Sounds Database (class SoundsSO). Phải đúng loại ScriptableObject này — không phải clip hay asset khác.")]
     [SerializeField] private SoundsSO soundDatabase;
     [SerializeField] private bool dontDestroyOnLoad = true;
 

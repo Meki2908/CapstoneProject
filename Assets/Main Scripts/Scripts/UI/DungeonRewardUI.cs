@@ -211,6 +211,7 @@ public class DungeonRewardUI : MonoBehaviour
         // Hiện cursor
         Cursor.visible = true;
         Cursor.lockState = CursorLockMode.None;
+        GameCursorManager.TryApplyNormalCursorTextureFromScene();
     }
 
     /// <summary>
