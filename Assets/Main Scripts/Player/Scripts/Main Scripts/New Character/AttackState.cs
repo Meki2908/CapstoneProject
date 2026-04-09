@@ -262,9 +262,16 @@ public class AttackState : State
 
     public override void PhysicsUpdate()
     {
+        var cc = character.controller;
+        if (cc == null || !cc.enabled)
+        {
+            base.PhysicsUpdate();
+            return;
+        }
+
         base.PhysicsUpdate();
 
-        if (!character.controller.isGrounded)
+        if (!cc.isGrounded)
         {
             character.playerVelocity.y += character.gravityValue * Time.fixedDeltaTime;
         }
@@ -273,7 +280,7 @@ public class AttackState : State
             character.playerVelocity.y = 0f;
         }
 
-        character.controller.Move(character.playerVelocity * Time.fixedDeltaTime);
+        cc.Move(character.playerVelocity * Time.fixedDeltaTime);
     }
 
     public override void Exit()

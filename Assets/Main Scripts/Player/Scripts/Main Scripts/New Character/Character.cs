@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+[DefaultExecutionOrder(-140)]
 public class Character : MonoBehaviour
 {
     [Header("Controls")]
@@ -119,22 +120,65 @@ public class Character : MonoBehaviour
         animator = GetComponent<Animator>();
         playerInput = GetComponent<PlayerInput>();
 
-        // ─── MULTIPLAYER: chỉ owner mới điều khiển ───
-        var netObj = GetComponentInParent<Fusion.NetworkObject>();
-        if (netObj != null && !netObj.HasInputAuthority)
+        // ─── MULTIPLAYER: chờ NetworkPlayerLocalOwnership xử lý trước ───
+        // NetworkPlayerLocalOwnership.Spawned() chạy khi NetworkObject spawns (trước frame đầu tiên).
+        // → Nó set Character.enabled = true cho local player, = false cho remote player.
+        // Kiểm tra enabled thay vì HasInputAuthority (tránh race condition khi Fusion chưa ready).
+        var ownershipComponent = GetComponent<NetworkPlayerLocalOwnership>();
+        if (ownershipComponent != null)
         {
-            // Đây là player của người khác → tắt input + camera
-            if (playerInput != null) playerInput.enabled = false;
-            // Tắt các component điều khiển khác
-            enabled = false; // Tắt Character.Update/FixedUpdate
-            Debug.Log($"[Character] Remote player '{gameObject.name}' — input disabled.");
-            return; // Không cần init thêm
+            // NetworkPlayerLocalOwnership đã enable Character nếu là local → check ngay.
+            if (!enabled)
+            {
+                Debug.Log($"[Character] Remote player '{gameObject.name}' — input disabled by ownership.");
+                return;
+            }
+            // Local player — tiếp tục khởi tạo
         }
+        // else: không có NetworkObject → chế độ offline, khởi tạo bình thường.
 
+        InitCharacter();
+        
+        // Cú chốt: Ép map vĩnh viễn về Player để tránh UI cướp mất input khi load xong
+        if (playerInput != null)
+        {
+            playerInput.SwitchCurrentActionMap("Player");
+            var pm = playerInput.actions.FindActionMap("Player");
+            if (pm != null)
+            {
+                pm.Enable();
+                Debug.Log($"[Character] ActionMap 'Player' FORCED to enable. IsEnabled={pm.enabled}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Khởi tạo đầy đủ Character (gọi sau khi xác nhận là local player).
+    /// Tách riêng để có thể gọi sau coroutine.
+    /// </summary>
+    private void InitCharacter()
+    {
         // Load saved key binding overrides từ Settings
         InputRebindHelper.LoadBindingOverrides(playerInput);
         jumpActionCache = playerInput.actions["Jump"];
-        cameraTransform = Camera.main.transform;
+        if (Camera.main != null)
+        {
+            cameraTransform = Camera.main.transform;
+            if (playerInput != null) playerInput.camera = Camera.main; // Cấp quyền Camera cho InputSystem
+        }
+        else
+        {
+            Debug.LogWarning($"[Character] Camera.main is NULL during InitCharacter! Attempting fallback search.");
+            var fallbackCam = FindFirstObjectByType<Camera>();
+            if (fallbackCam != null)
+            {
+                cameraTransform = fallbackCam.transform;
+                if (playerInput != null) playerInput.camera = fallbackCam;
+            }
+            else
+                cameraTransform = this.transform; // Tránh Crash NullReferenceException
+        }
+
         cachedPlanarForward = transform.forward;
         cachedPlanarForward.y = 0f;
         if (cachedPlanarForward.sqrMagnitude < 0.0001f) cachedPlanarForward = Vector3.forward;
@@ -217,7 +261,35 @@ public class Character : MonoBehaviour
 
     private void Update()
     {
+        // Safety net: nếu bị disabled giữa chừng (do NetworkPlayerLocalOwnership), bỏ qua
         if (movementSM == null || movementSM.currentState == null) return;
+
+        // Auto-Recovery: Unity's EventSystem map bug sometimes abruptly drops map enablement when Canvases die.
+        if (playerInput != null && playerInput.currentActionMap != null)
+        {
+            if (playerInput.currentActionMap.name == "Player" && !playerInput.currentActionMap.enabled && !CursorUIPriority.IsUiOverlayActive)
+            {
+                Debug.LogWarning($"[Character] ActionMap '{playerInput.currentActionMap.name}' was found DISABLED during gameplay! Aggressively reviving it.");
+                playerInput.currentActionMap.Enable();
+            }
+        }
+
+        if (Time.frameCount % 60 == 0 && playerInput != null && Object.FindFirstObjectByType<Fusion.NetworkRunner>() != null)
+        {
+            var moveAct = playerInput.actions["Move"];
+            Debug.Log($"[InputDebug] {gameObject.name} | Map: {playerInput.currentActionMap?.name} | UI_Active: {CursorUIPriority.IsUiOverlayActive} | Move enabled: {moveAct?.enabled} | Value: {moveAct?.ReadValue<Vector2>()}");
+        }
+
+        // Nếu lúc Start() chưa tìm thấy Camera HOẶC Camera đang reference bị đem đi vứt/tắt (Offline Player bị disable)
+        if (cameraTransform == null || cameraTransform == this.transform || !cameraTransform.gameObject.activeInHierarchy)
+        {
+            if (Camera.main != null)
+            {
+                cameraTransform = Camera.main.transform;
+                if (playerInput != null) playerInput.camera = Camera.main;
+                Debug.Log($"[Character] Camera.main dynamic RECOVERY in Update for '{gameObject.name}'");
+            }
+        }
 
         UpdateGroundedAndJumpBuffer();
         movementSM.currentState.HandleInput();
@@ -239,6 +311,19 @@ public class Character : MonoBehaviour
         // Không giữ buffer trong phase bay lên (tránh spam Space tích buffer rồi chạm đất là nhảy lại ngay).
         if (controller != null && controller.velocity.y > 0.25f)
             jumpBufferRemaining = 0f;
+    }
+
+    private void HandleCameraAndMovementCalculations()
+    {
+        if (cameraTransform == null)
+        {
+            if (Camera.main != null)
+            {
+                cameraTransform = Camera.main.transform;
+                if (playerInput != null) playerInput.camera = Camera.main;
+            }
+            if (cameraTransform == null) return;
+        }
     }
 
     bool ComputeGroundedFeetRays()
@@ -308,6 +393,7 @@ public class Character : MonoBehaviour
 
     private void FixedUpdate()
     {
+        if (!enabled) return;
         if (movementSM == null || movementSM.currentState == null) return;
         movementSM.currentState.PhysicsUpdate();
     }

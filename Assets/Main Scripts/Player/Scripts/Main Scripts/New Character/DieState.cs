@@ -113,17 +113,21 @@ public class DieState : State
         if (character == null || character.controller == null) return;
         if (!character.controller.enabled || !character.controller.gameObject.activeInHierarchy) return;
 
+        var cc = character.controller;
+        if (cc == null || !cc.enabled)
+            return;
+
         // Only apply gravity - no movement allowed
         gravityVelocity.y += character.gravityValue * Time.deltaTime;
 
         // Keep player grounded
-        if (character.controller.isGrounded && gravityVelocity.y < 0)
+        if (cc.isGrounded && gravityVelocity.y < 0)
         {
             gravityVelocity.y = 0f;
         }
 
         // Only move downward due to gravity (if not grounded)
-        character.controller.Move(gravityVelocity * Time.deltaTime);
+        cc.Move(gravityVelocity * Time.deltaTime);
     }
 
     public override void Exit()

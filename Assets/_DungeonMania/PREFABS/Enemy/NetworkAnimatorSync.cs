@@ -33,9 +33,9 @@ public class NetworkAnimatorSync : NetworkBehaviour
     // ── Remote Interpolation ──
     [Header("Interpolation Settings")]
     [Tooltip("Tốc độ lerp cho speed/attackSpeed (cao = nhanh bắt kịp, thấp = mượt hơn).")]
-    [SerializeField] private float lerpSpeed = 15f;
+    [SerializeField] private float lerpSpeed = 50f; // Max tốc độ, không trễ
     [Tooltip("Tốc độ lerp cho isCrouch bool.")]
-    [SerializeField] private float lerpCrouchSpeed = 20f;
+    [SerializeField] private float lerpCrouchSpeed = 60f; // Max tốc độ
 
     // Remote interpolation state
     private float _remoteSpeed;
@@ -81,20 +81,28 @@ public class NetworkAnimatorSync : NetworkBehaviour
 
         if (HasInputAuthority)
         {
-            // ── Owner: ghi giá trị thực từ animator vào network ──
-            // Luôn ghi mỗi tick để prediction luôn đúng
+            // ── Owner: đọc giá trị thực từ animator ──
             float realSpeed = _animator.GetFloat(H_Speed);
             float realAttackSpeed = _animator.GetFloat(H_AttackSpeed);
             bool realCrouch = _animator.GetBool(H_IsCrouch);
 
-            NetSpeed = realSpeed;
-            NetAttackSpeed = realAttackSpeed;
-            NetIsCrouch = realCrouch;
-
-            // Cập nhật prediction state
+            // Cập nhật prediction state local
             _predictedSpeed = realSpeed;
             _predictedAttackSpeed = realAttackSpeed;
             _predictedCrouch = realCrouch;
+
+            if (HasStateAuthority)
+            {
+                // Host player: ghi trực tiếp (có cả InputAuthority + StateAuthority)
+                NetSpeed = realSpeed;
+                NetAttackSpeed = realAttackSpeed;
+                NetIsCrouch = realCrouch;
+            }
+            else
+            {
+                // BUG-1a fix: Client player gửi qua RPC thay vì ghi trực tiếp
+                RPC_SyncAnimatorParams(realSpeed, realAttackSpeed, realCrouch);
+            }
         }
         else
         {
@@ -103,6 +111,14 @@ public class NetworkAnimatorSync : NetworkBehaviour
             _remoteAttackSpeed = NetAttackSpeed;
             _remoteCrouch = NetIsCrouch;
         }
+    }
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    private void RPC_SyncAnimatorParams(float speed, float attackSpeed, NetworkBool isCrouch)
+    {
+        NetSpeed = speed;
+        NetAttackSpeed = attackSpeed;
+        NetIsCrouch = isCrouch;
     }
 
     public override void Render()

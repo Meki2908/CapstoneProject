@@ -119,14 +119,18 @@ public class BaseMoveState : State
     {
         base.PhysicsUpdate();
 
+        var cc = character.controller;
+        if (cc == null || !cc.enabled)
+            return;
+
         gravityVelocity.y += gravityValue * Time.deltaTime;
-        grounded = character.controller.isGrounded;
+        grounded = cc.isGrounded;
         if (grounded && gravityVelocity.y < 0) gravityVelocity.y = 0f;
 
         // NEW: đang skill -> chỉ gravity Y
         if (skillLock != null && skillLock.isPerformingSkill)
         {
-            character.controller.Move(new Vector3(0f, gravityVelocity.y, 0f) * Time.deltaTime);
+            cc.Move(new Vector3(0f, gravityVelocity.y, 0f) * Time.deltaTime);
             return;
         }
 
@@ -138,7 +142,7 @@ public class BaseMoveState : State
         {
             speedMultiplier = WeaponGemManager.Instance.GetMovementSpeedMultiplier(wc.GetCurrentWeapon().weaponType);
         }
-        character.controller.Move(currentVelocity * Time.deltaTime * (playerSpeed * speedMultiplier) + gravityVelocity * Time.deltaTime);
+        cc.Move(currentVelocity * Time.deltaTime * (playerSpeed * speedMultiplier) + gravityVelocity * Time.deltaTime);
 
         if (velocity.sqrMagnitude > 0)
         {

@@ -12,6 +12,7 @@ public class PlayerHealth : MonoBehaviour
     private Animator animator;
     private NetworkPlayerStats _networkStats;
     private NetworkPlayerDeathManager _deathManager;
+    private bool _isLocalPlayer = true; // false khi là remote player trong multiplayer
 
     [Header("UI")]
     [Tooltip("Text to display current/max HP below health bar (auto-found if not assigned)")]
@@ -42,25 +43,44 @@ public class PlayerHealth : MonoBehaviour
     void Start()
     {
         baseMaxHealth = maxHealth;
-        UpdateMaxHealthWithEquipment();
-        currentHealth = maxHealth;
         character = GetComponent<Character>();
         animator = GetComponent<Animator>();
         _networkStats = GetComponentInParent<NetworkPlayerStats>();
         _deathManager = GetComponentInParent<NetworkPlayerDeathManager>();
+
+        // ─── MULTIPLAYER: xác định local vs remote player ───
+        var ownership = GetComponentInParent<NetworkPlayerLocalOwnership>();
+        if (ownership != null)
+        {
+            // Có NetworkPlayerLocalOwnership → multiplayer mode
+            // Nếu Character bị disabled → đây là remote player
+            _isLocalPlayer = (character != null && character.enabled);
+
+            if (!_isLocalPlayer)
+            {
+                // Remote player: không dùng singleton local, HP sync qua NetworkPlayerStats
+                currentHealth = maxHealth;
+                Debug.Log($"[PlayerHealth] Remote player — skipping local singleton setup");
+                return;
+            }
+        }
+
+        // ─── LOCAL PLAYER: khởi tạo đầy đủ ───
+        UpdateMaxHealthWithEquipment();
+        currentHealth = maxHealth;
 
         if (animator == null)
         {
             Debug.LogWarning("[PlayerHealth] Animator not found!");
         }
 
-        // Subscribe to equipment changes
+        // Subscribe to equipment changes (chỉ local player)
         if (EquipmentManager.Instance != null)
         {
             EquipmentManager.Instance.OnEquipmentChanged += OnEquipmentChanged;
         }
 
-        // Auto-find health text if not assigned
+        // Auto-find health text if not assigned (chỉ local player)
         if (autoFindHealthText && healthText == null)
         {
             FindHealthText();
@@ -70,7 +90,7 @@ public class PlayerHealth : MonoBehaviour
         UpdateHealthText();
         SyncNetworkStats();
 
-        Debug.Log($"[PlayerHealth] Player initialized with {maxHealth} HP");
+        Debug.Log($"[PlayerHealth] Local player initialized with {maxHealth} HP");
     }
 
     /// <summary>
@@ -238,8 +258,9 @@ public class PlayerHealth : MonoBehaviour
 
         // === DEFENSE REDUCTION (cap ở 80%) ===
         // Player LUÔN nhận ít nhất 20% damage gốc, bất kể defense cao bao nhiêu
+        // CHỈ local player mới đọc EquipmentManager — remote player dùng HP sync qua network
         float finalDamage = damage;
-        if (EquipmentManager.Instance != null)
+        if (_isLocalPlayer && EquipmentManager.Instance != null)
         {
             float defense = EquipmentManager.Instance.GetTotalDefenseBonus();
             float maxReduction = damage * 0.8f; // Defense chặn TỐI ĐA 80% damage

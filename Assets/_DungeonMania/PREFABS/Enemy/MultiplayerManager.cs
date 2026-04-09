@@ -169,6 +169,7 @@ public class MultiplayerManager : MonoBehaviour, INetworkRunnerCallbacks
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
+        DontDestroyOnLoad(gameObject); // BUG-5 fix: persist across scene loads
 
         // Auto-attach debug overlay nếu chưa có (F3 để toggle)
         if (!TryGetComponent<MultiplayerDebugOverlay>(out _))
@@ -202,7 +203,8 @@ public class MultiplayerManager : MonoBehaviour, INetworkRunnerCallbacks
             if (btn != null)
             {
                 btn.onClick.RemoveAllListeners();
-                btn.onClick.AddListener(LoadGameAsHost);
+                // Dùng wrapper để set _canLoadGame = true trước khi LoadGameAsHost
+                btn.onClick.AddListener(() => { _canLoadGame = true; LoadGameAsHost(); });
             }
         }
 
@@ -222,6 +224,22 @@ public class MultiplayerManager : MonoBehaviour, INetworkRunnerCallbacks
     {
         if (Instance == this)
             Instance = null;
+    }
+
+    // ══════════════ ENTER GAME BUTTON CONTROL ══════════════
+
+    /// <summary>Ẩn nút ENTER GAME (dùng khi hiện Panel_CreateRoom để tránh click nhầm).</summary>
+    public void HideEnterGameButton()
+    {
+        if (enterGameButton != null)
+            enterGameButton.SetActive(false);
+    }
+
+    /// <summary>Hiện nút ENTER GAME (chỉ host thấy, sau khi vào ConnectedRoom).</summary>
+    public void ShowEnterGameButton()
+    {
+        if (enterGameButton != null && IsHost)
+            enterGameButton.SetActive(true);
     }
 
     // ───────────────────── HELPER ─────────────────────
@@ -297,14 +315,29 @@ public class MultiplayerManager : MonoBehaviour, INetworkRunnerCallbacks
             Runner = CreateRunner();
             CurrentSessionName = GenerateRoomCode();
 
-            // Không load scene ngay — giữ ở menu để chờ client
+            int sceneIndex = FindSceneBuildIndex(gameplaySceneName);
+            NetworkSceneInfo sceneInfo = default;
+            bool sceneValid = false;
+            if (sceneIndex >= 0)
+            {
+                sceneInfo = new NetworkSceneInfo();
+                sceneInfo.AddSceneRef(SceneRef.FromIndex(sceneIndex), LoadSceneMode.Single);
+                sceneValid = true;
+            }
+            else
+            {
+                Debug.LogWarning($"[MultiplayerManager] Scene '{gameplaySceneName}' not in Build Settings! Add it.");
+            }
+
+            // Host tạo room — KHÔNG truyền scene vào đây
+            // Scene sẽ được load khi host nhấn "Start Game" qua LoadGameAsHost()
+            Debug.Log($"[MultiplayerManager] Host CreateRoom: session='{CurrentSessionName}', waiting for players...");
             var startTask = Runner.StartGame(new StartGameArgs
             {
                 GameMode = GameMode.Host,
                 SessionName = CurrentSessionName,
                 PlayerCount = 4,
                 SceneManager = Runner.GetComponent<INetworkSceneManager>(),
-                // Password support via CustomPhotonAppSettings (Advanced)
             });
 
             // Timeout 15s — tránh await vô hạn
@@ -398,11 +431,21 @@ public class MultiplayerManager : MonoBehaviour, INetworkRunnerCallbacks
     /// <summary>Chặn LoadGameAsHost gọi 2 lần.</summary>
     private bool _isLoadingScene = false;
 
+    /// <summary>Chỉ cho phép load game khi người dùng thực sự nhấn nút START (chặn auto-trigger).</summary>
+    private bool _canLoadGame = false;
+
     public void LoadGameAsHost()
     {
         if (_isLoadingScene)
         {
             Debug.LogWarning("[MultiplayerManager] Already loading scene! Ignoring duplicate call.");
+            return;
+        }
+
+        // Chặn auto-trigger: chỉ load khi _canLoadGame = true (set bởi button click)
+        if (!_canLoadGame)
+        {
+            Debug.LogWarning("[MultiplayerManager] START button not explicitly clicked — ignoring auto-trigger.");
             return;
         }
 
@@ -417,6 +460,17 @@ public class MultiplayerManager : MonoBehaviour, INetworkRunnerCallbacks
             Debug.LogError("[MultiplayerManager] Only the host can load scenes!");
             return;
         }
+
+        // Kiểm tra đủ player chưa
+        int activeCount = CountActivePlayers(Runner);
+        if (activeCount < 1)
+        {
+            Debug.LogWarning($"[MultiplayerManager] Not enough players! Have {activeCount}, need at least 1.");
+            SetStatus($"Not enough players! ({activeCount}/1)");
+            return;
+        }
+
+        _canLoadGame = false; // Reset sau khi dùng
 
         int sceneIndex = FindSceneBuildIndex(gameplaySceneName);
         if (sceneIndex < 0)
@@ -574,6 +628,9 @@ public class MultiplayerManager : MonoBehaviour, INetworkRunnerCallbacks
             Runner = CreateRunner();
             CurrentSessionName = code;
 
+            // Client join room — KHÔNG truyền scene vào StartGameArgs
+            // Client sẽ tự động load scene khi host gọi LoadGameAsHost()
+            Debug.Log($"[MultiplayerManager] Client joining session: {code}");
             var startTask = Runner.StartGame(new StartGameArgs
             {
                 GameMode = GameMode.Client,
@@ -586,6 +643,7 @@ public class MultiplayerManager : MonoBehaviour, INetworkRunnerCallbacks
             if (completed != startTask)
             {
                 SetStatus("Connection timed out! Check room code and internet.");
+                Debug.LogError($"[MultiplayerManager] Client connection TIMEOUT after {CONNECTION_TIMEOUT_MS}ms. Code='{code}', scene='{gameplaySceneName}'.");
                 if (Runner != null) { await Runner.Shutdown(); Runner = null; }
                 return;
             }
@@ -695,6 +753,8 @@ public class MultiplayerManager : MonoBehaviour, INetworkRunnerCallbacks
     /// </summary>
     private void ShowConnectedPanel(string roomCode, bool isHost)
     {
+        Debug.Log($"[MultiplayerManager] ShowConnectedPanel: panelConnectedRoom={panelConnectedRoom != null}, container={connectedPlayerListContainer != null}");
+
         // Ẩn các panel cũ
         if (panelCreateRoom != null)
             panelCreateRoom.SetActive(false);
@@ -705,6 +765,9 @@ public class MultiplayerManager : MonoBehaviour, INetworkRunnerCallbacks
         if (panelConnectedRoom != null)
         {
             panelConnectedRoom.SetActive(true);
+
+            Debug.Log($"[MultiplayerManager] Panel_ConnectedRoom activated — searching for container children...");
+            TryFindConnectedPlayerListContainer();
 
             if (connectedRoomCodeText != null)
                 connectedRoomCodeText.text = roomCode;
@@ -717,9 +780,16 @@ public class MultiplayerManager : MonoBehaviour, INetworkRunnerCallbacks
             if (connectedPlayerCountText != null)
                 connectedPlayerCountText.text = "";
 
+            // Reset flag để chặn auto-trigger
+            _canLoadGame = false;
+
             // Chỉ host thấy START GAME
             if (startGameButton != null)
                 startGameButton.SetActive(isHost);
+
+            // Ẩn ENTER GAME button trong Panel_CreateRoom
+            if (enterGameButton != null)
+                enterGameButton.SetActive(false);
 
             // LEAVE hiện cho cả hai
             if (leaveRoomButton != null)
@@ -754,6 +824,9 @@ public class MultiplayerManager : MonoBehaviour, INetworkRunnerCallbacks
         if (panelConnectedRoom != null)
             panelConnectedRoom.SetActive(false);
 
+        // Reset flag để chặn auto-trigger
+        _canLoadGame = false;
+
         // Quay về panel ban đầu: host → CreateRoom, client → JoinRoom
         if (wasHost && panelCreateRoom != null)
             panelCreateRoom.SetActive(true);
@@ -765,6 +838,10 @@ public class MultiplayerManager : MonoBehaviour, INetworkRunnerCallbacks
         _connectedPlayerEntries.Clear();
         _receivedPlayerNames.Clear();
         _isLeavingRoom = false;
+
+        // Khôi phục scene player (bị disable khi online) → quay về singleplayer
+        if (LocalPlayerHandler.Instance != null)
+            LocalPlayerHandler.Instance.RestoreScenePlayer();
 
         // Reset CREATE ROOM button state
         if (createRoomButton != null) createRoomButton.SetActive(true);
@@ -808,7 +885,22 @@ public class MultiplayerManager : MonoBehaviour, INetworkRunnerCallbacks
 
     private void AddConnectedPlayerToList(string playerName, bool isHostPlayer, PlayerRef playerRef)
     {
-        if (connectedPlayerListContainer == null) return;
+        // ── Debug: kiểm tra null reference ──
+        if (connectedPlayerListContainer == null)
+        {
+            Debug.LogWarning($"[MultiplayerManager] connectedPlayerListContainer is NULL! " +
+                $"panelConnectedRoom active={panelConnectedRoom != null && panelConnectedRoom.activeInHierarchy}. " +
+                $"Search for fallback...");
+
+            TryFindConnectedPlayerListContainer();
+        }
+
+        if (connectedPlayerListContainer == null)
+        {
+            Debug.LogError($"[MultiplayerManager] FAILED to find connectedPlayerListContainer! " +
+                $"Player '{playerName}' ({playerRef}) NOT added to list.");
+            return;
+        }
 
         // Nếu player đã có entry → cập nhật tên thay vì tạo mới
         if (_connectedPlayerEntries.TryGetValue(playerRef, out var existingEntry))
@@ -818,7 +910,7 @@ public class MultiplayerManager : MonoBehaviour, INetworkRunnerCallbacks
                 var existingText = existingEntry.GetComponent<TextMeshProUGUI>();
                 if (existingText != null)
                 {
-                    string icon2 = isHostPlayer ? "\ud83d\udc51" : "\ud83c\udfae";
+                    string icon2 = isHostPlayer ? "👑" : "🎮";
                     string role2 = isHostPlayer ? " (Host)" : "";
                     existingText.text = $"  {icon2}  {playerName}{role2}";
                 }
@@ -835,15 +927,47 @@ public class MultiplayerManager : MonoBehaviour, INetworkRunnerCallbacks
         rt.sizeDelta = new Vector2(0, 80);
 
         var text = entryGO.GetComponent<TextMeshProUGUI>();
-        string icon = isHostPlayer ? "\ud83d\udc51" : "\ud83c\udfae";
+        string icon = isHostPlayer ? "👑" : "🎮";
         string role = isHostPlayer ? " (Host)" : "";
         text.text = $"  {icon}  {playerName}{role}";
         text.fontSize = 35;
         text.alignment = TextAlignmentOptions.Left;
         text.color = isHostPlayer ? new Color(1f, 0.84f, 0f) : Color.white;
 
-        // Track entry by PlayerRef
         _connectedPlayerEntries[playerRef] = entryGO;
+        Debug.Log($"[MultiplayerManager] ✅ Added '{playerName}' to list (host={isHostPlayer}, ref={playerRef}, total={_connectedPlayerEntries.Count})");
+    }
+
+    /// <summary>
+    /// Thử tìm lại connectedPlayerListContainer nếu bị mất reference (scene load, serialization issue).
+    /// Tìm child có tên chứa "ConnectedPlayerList" bên trong Panel_ConnectedRoom.
+    /// </summary>
+    private void TryFindConnectedPlayerListContainer()
+    {
+        if (panelConnectedRoom == null)
+        {
+            Debug.LogWarning("[MultiplayerManager] panelConnectedRoom also NULL — cannot find container.");
+            return;
+        }
+
+        foreach (Transform child in panelConnectedRoom.GetComponentsInChildren<Transform>(true))
+        {
+            if (child.name.Contains("ConnectedPlayerList") ||
+                child.name.Contains("PlayerList") ||
+                child.name.Contains("ListFrame") ||
+                child.name.Contains("List"))
+            {
+                var layout = child.GetComponent<UnityEngine.UI.LayoutGroup>();
+                if (layout != null || child.childCount >= 0)
+                {
+                    connectedPlayerListContainer = child;
+                    Debug.Log($"[MultiplayerManager] ✅ Found container fallback: '{child.name}' (parent={child.parent.name})");
+                    return;
+                }
+            }
+        }
+
+        Debug.LogWarning("[MultiplayerManager] Could not find player list container in Panel_ConnectedRoom children.");
     }
 
     private void UpdateConnectedPlayerCount(int count)
@@ -858,7 +982,18 @@ public class MultiplayerManager : MonoBehaviour, INetworkRunnerCallbacks
     /// </summary>
     private void RebuildConnectedPlayerList(NetworkRunner runner)
     {
-        if (connectedPlayerListContainer == null || runner == null) return;
+        if (runner == null) return;
+
+        if (connectedPlayerListContainer == null)
+        {
+            Debug.LogWarning("[MultiplayerManager] Rebuild: container null — trying fallback...");
+            TryFindConnectedPlayerListContainer();
+        }
+        if (connectedPlayerListContainer == null)
+        {
+            Debug.LogError("[MultiplayerManager] Rebuild: still no container! Skipping.");
+            return;
+        }
 
         // Clear UI nhưng giữ cached names
         ClearConnectedPlayerList();
@@ -1003,21 +1138,20 @@ public class MultiplayerManager : MonoBehaviour, INetworkRunnerCallbacks
                     }
                     else
                     {
-                        pos = PlayerSpawnConfig.GetSpawnPosition(playerIndex);
-                        rot = Quaternion.identity;
+                        Debug.LogError($"[MultiplayerManager] Late join {player} — SpawnPoint[{playerIndex}] is NULL! Add _SpawnPoints to scene.");
+                        return;
                     }
                 }
                 else
                 {
-                    pos = GetFallbackSpawnPosition(player.PlayerId);
-                    rot = Quaternion.identity;
-                    Debug.LogWarning($"[MultiplayerManager] No spawn points for late joiner! Fallback pos={pos}");
+                    Debug.LogError($"[MultiplayerManager] Cannot spawn late join {player} — no spawn points! Add _SpawnPoints to scene.");
+                    return;
                 }
 
                 var obj = runner.Spawn(playerPrefab, pos, rot, player);
                 _spawnedPlayers[player] = obj;
                 runner.SetPlayerObject(player, obj);
-                Debug.Log($"[MultiplayerManager] Spawned player prefab for {player} at {pos} (OnPlayerJoined)");
+                Debug.Log($"[MultiplayerManager] Spawned late join {player} at {pos}");
             }
 
             // Host gửi tên của mình cho client mới join
@@ -1167,6 +1301,17 @@ public class MultiplayerManager : MonoBehaviour, INetworkRunnerCallbacks
         // Đợi thêm 1 frame để scene fully instantiated
         yield return null;
 
+        // Đợi FusionSpawnPointSetter đăng ký spawn (tránh spawn trước khi PlayerSpawnConfig có điểm)
+        int waitSpawn = 0;
+        const int maxSpawnWaitFrames = 120;
+        while (PlayerSpawnConfig.SpawnPointCount == 0 && waitSpawn < maxSpawnWaitFrames)
+        {
+            waitSpawn++;
+            yield return null;
+        }
+        if (PlayerSpawnConfig.SpawnPointCount == 0)
+            Debug.LogError("[MultiplayerManager] Spawn points still empty after wait — check _SpawnPoints + FusionSpawnPointSetter in Map_Chinh.");
+
         // Đăng ký DungeonWaveManager callbacks
         RegisterDungeonWaveManager(runner);
 
@@ -1177,56 +1322,75 @@ public class MultiplayerManager : MonoBehaviour, INetworkRunnerCallbacks
         _isLoadingScene = false;
 
         // Spawn player cho server
+        // FIX: Chỉ spawn nếu host CHƯA có player object (tức scene KHÔNG có NetworkObject của player)
+        // Khi dùng scene player (scene player đã được Fusion register + spawn với InputAuthority),
+        // runner.GetPlayerObject(host) sẽ khác null → KHÔNG spawn nữa.
         if (runner.IsServer && playerPrefab != null && IsInGameplayScene())
         {
-            Debug.Log($"[MultiplayerManager] [HOST] Spawning player prefabs...");
-
-            // Clear danh sách cũ
-            _spawnedPlayers.Clear();
-
-            int spawnCount = PlayerSpawnConfig.SpawnPointCount;
-            if (spawnCount == 0)
-                Debug.LogWarning("[MultiplayerManager] No spawn points! Using fallback.");
-
-            foreach (var player in runner.ActivePlayers)
+            // Kiểm tra host đã có player object chưa (từ scene registration)
+            var existingPlayerObj = runner.GetPlayerObject(runner.LocalPlayer);
+            if (existingPlayerObj != null)
             {
-                // Kiểm tra đã spawn chưa
-                if (_spawnedPlayers.ContainsKey(player))
+                Debug.Log($"[MultiplayerManager] [HOST] Scene player already exists: '{existingPlayerObj.name}' — skipping manual spawn!");
+            }
+            else
+            {
+                // CRITICAL FIX: Disable the offline scene player BEFORE we spawn the host clone!
+                // If we don't, Unity's Input System sees two PlayerInputs and assigns the Keyboard 
+                // to the old one and a Gamepad to the new clone, locking the user out of WASD.
+                if (LocalPlayerHandler.Instance != null)
                 {
-                    Debug.Log($"[MultiplayerManager] Player {player} already spawned, skipping.");
-                    continue;
+                    Debug.Log("[MultiplayerManager] Pre-emptively disabling scene player before spawn to release keyboard/mouse...");
+                    LocalPlayerHandler.Instance.TryDisableScenePlayer();
                 }
 
-                int playerIndex = player.PlayerId - 1;
-                Vector3 pos;
-                Quaternion rot;
+                Debug.Log($"[MultiplayerManager] [HOST] No scene player found — spawning player prefabs... (SpawnPointCount={PlayerSpawnConfig.SpawnPointCount})");
 
-                if (spawnCount > 0)
+                // Clear danh sách cũ
+                _spawnedPlayers.Clear();
+
+                int spawnCount = PlayerSpawnConfig.SpawnPointCount;
+                if (spawnCount == 0)
+                    Debug.LogError("[MultiplayerManager] No spawn points in scene! Add FusionSpawnPointSetter + _SpawnPoints object!");
+
+                foreach (var player in runner.ActivePlayers)
                 {
-                    var spawnPoint = PlayerSpawnConfig.GetSpawnPoint(playerIndex);
-                    if (spawnPoint != null)
+                    if (_spawnedPlayers.ContainsKey(player))
                     {
-                        pos = spawnPoint.position;
-                        rot = spawnPoint.rotation;
+                        Debug.Log($"[MultiplayerManager] Player {player} already spawned, skipping.");
+                        continue;
+                    }
+
+                    int playerIndex = player.PlayerId - 1;
+                    Vector3 pos;
+                    Quaternion rot;
+
+                    if (spawnCount > 0)
+                    {
+                        var spawnPoint = PlayerSpawnConfig.GetSpawnPoint(playerIndex);
+                        if (spawnPoint != null)
+                        {
+                            pos = spawnPoint.position;
+                            rot = spawnPoint.rotation;
+                        }
+                        else
+                        {
+                            Debug.LogError($"[MultiplayerManager] SpawnPoint[{playerIndex}] is NULL! Check your _SpawnPoints setup.");
+                            continue;
+                        }
                     }
                     else
                     {
-                        pos = PlayerSpawnConfig.GetSpawnPosition(playerIndex);
-                        rot = Quaternion.identity;
-                        Debug.LogWarning($"[MultiplayerManager] SpawnPoint[{playerIndex}] null! Fallback: {pos}");
+                        Debug.LogError($"[MultiplayerManager] Cannot spawn {player} — no spawn points! Add _SpawnPoints object to scene.");
+                        continue;
                     }
-                }
-                else
-                {
-                    pos = GetFallbackSpawnPosition(player.PlayerId);
-                    rot = Quaternion.identity;
-                }
 
-                var obj = runner.Spawn(playerPrefab, pos, rot, player);
-                _spawnedPlayers[player] = obj;
-                runner.SetPlayerObject(player, obj);
+                    var obj = runner.Spawn(playerPrefab, pos, rot, player);
+                    _spawnedPlayers[player] = obj;
+                    runner.SetPlayerObject(player, obj);
 
-                Debug.Log($"[MultiplayerManager] ✅ Spawned {player} at {pos}");
+                    Debug.Log($"[MultiplayerManager] Spawned {player} at {pos}");
+                }
             }
         }
         else if (!runner.IsServer)
@@ -1276,6 +1440,7 @@ public class MultiplayerManager : MonoBehaviour, INetworkRunnerCallbacks
         _connectedPlayerEntries.Clear();
         _receivedPlayerNames.Clear();
         _connectedPlayerCount = 0;
+        _canLoadGame = false; // Reset flag chặn auto-trigger
 
         // ─── HOST MIGRATION: Client được promote thành host mới ───
         if (_isMigratingHost && _pendingMigrationToken != null)
@@ -1317,15 +1482,22 @@ public class MultiplayerManager : MonoBehaviour, INetworkRunnerCallbacks
             SetStatus("Connected! Waiting for host to start game...");
 
         // ─── Lưu PlayerRef của host (để phát hiện host rời) ───
-        // Host là PlayerRef with PlayerId == 1 trong hầu hết trường hợp
-        // Hoặc dùng IsHost property
-        foreach (var p in runner.ActivePlayers)
+        if (runner.IsServer)
         {
-            if (runner.IsServer && p == runner.LocalPlayer)
+            _previousHostPlayerRef = runner.LocalPlayer;
+            Debug.Log($"[MultiplayerManager] I am the host: {runner.LocalPlayer}");
+        }
+        else
+        {
+            // BUG-6 fix: Client cũng cần track host PlayerRef để phát hiện host rời
+            foreach (var p in runner.ActivePlayers)
             {
-                // Tôi là host
-                _previousHostPlayerRef = runner.LocalPlayer;
-                Debug.Log($"[MultiplayerManager] I am the host: {runner.LocalPlayer}");
+                if (p.PlayerId == 1)
+                {
+                    _previousHostPlayerRef = p;
+                    Debug.Log($"[MultiplayerManager] Host tracked: {p}");
+                    break;
+                }
             }
         }
     }
@@ -1351,6 +1523,10 @@ public class MultiplayerManager : MonoBehaviour, INetworkRunnerCallbacks
             if (panelConnectedRoom != null) panelConnectedRoom.SetActive(false);
             if (panelJoinRoom != null) panelJoinRoom.SetActive(true);
         }
+
+        // Khôi phục scene player (bị disable khi online) → quay về singleplayer
+        if (LocalPlayerHandler.Instance != null)
+            LocalPlayerHandler.Instance.RestoreScenePlayer();
     }
 
     public void OnConnectRequest(NetworkRunner runner, NetworkRunnerCallbackArgs.ConnectRequest request, byte[] token)
@@ -1376,13 +1552,13 @@ public class MultiplayerManager : MonoBehaviour, INetworkRunnerCallbacks
 
         if (runner.IsServer)
         {
-            // Server cũ rời → một trong những client sẽ nhận token này
             Debug.Log("[MultiplayerManager] Host migration: Tôi là server cũ — chuẩn bị handover");
         }
         else
         {
-            // Client: server cũ rời → sẽ nhận server role
-            Debug.Log("[MultiplayerManager] Host migration: Tôi là client — chờ được promote thành host mới");
+            // BUG-7 fix: Trực tiếp gọi ResumeAsHost vì Fusion không tự gọi method này
+            Debug.Log("[MultiplayerManager] Host migration: Tôi là client — promoting to host...");
+            ResumeAsHost(runner, hostMigrationToken);
         }
     }
 
@@ -1590,13 +1766,6 @@ public class MultiplayerManager : MonoBehaviour, INetworkRunnerCallbacks
         return Mathf.Max(1, count);
     }
 
-    /// <summary>Fallback spawn position: phân bổ theo vòng tròn quanh (0,0,0).</summary>
-    private Vector3 GetFallbackSpawnPosition(int playerId)
-    {
-        float angle = (playerId - 1) * (360f / 4f) * Mathf.Deg2Rad;
-        float radius = 3f;
-        return new Vector3(Mathf.Cos(angle) * radius, 1f, Mathf.Sin(angle) * radius);
-    }
     public void OnReliableDataProgress(NetworkRunner runner, PlayerRef player, ReliableKey key, float progress) { }
     public void OnInput(NetworkRunner runner, NetworkInput input) { }
     public void OnInputMissing(NetworkRunner runner, PlayerRef player, NetworkInput input) { }

@@ -1250,6 +1250,19 @@ namespace Artsystack.ArtsystackGui
 
                 panel_GUISettings.SetActive(true);
 
+                // Đảm bảo GraphicRaycaster trên parent Canvas bật
+                // (có thể bị tắt bởi NetworkLobbyManager.DisableAllOtherRaycasters)
+                Canvas parentCanvas = panel_GUISettings.GetComponentInParent<Canvas>();
+                if (parentCanvas != null)
+                {
+                    var gr = parentCanvas.GetComponent<UnityEngine.UI.GraphicRaycaster>();
+                    if (gr != null && !gr.enabled)
+                    {
+                        gr.enabled = true;
+                        Debug.Log($"[SettingsManager] Re-enabled GraphicRaycaster on '{parentCanvas.gameObject.name}'.");
+                    }
+                }
+
                 // Bật các children layout quan trọng (Middle, Right Side, Controller_Button...)
                 // Chúng có thể bị tắt do GameMenuManager.HideAllPanels()
                 foreach (Transform child in panel_GUISettings.transform)

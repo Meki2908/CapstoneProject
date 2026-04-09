@@ -115,12 +115,16 @@ public class DashState : State
 
     public override void PhysicsUpdate()
     {
+        var cc = character.controller;
+        if (cc == null || !cc.enabled)
+            return;
+
         base.PhysicsUpdate();
 
         // Only apply dash movement if Animation Event has activated it
         if (isDashMovementActive)
         {
-            character.controller.Move(dashDirection * character.dashSpeed * Time.deltaTime);
+            cc.Move(dashDirection * character.dashSpeed * Time.deltaTime);
         }
     }
 

@@ -138,9 +138,13 @@ namespace Artsystack.ArtsystackGui
         {
             if (isPaused) return;
             isPaused = true;
-            Time.timeScale = 0f;
+            // Dùng 0.0001f thay vì 0f để làm workaround cho lỗi liệt click của Unity New Input System khi tạm dừng hoàn toàn
+            Time.timeScale = 0.0001f;
 
             Debug.Log($"[PauseMenuManager] PauseGame() — panel_PopUpPause={(panel_PopUpPause != null ? panel_PopUpPause.name : "NULL")}");
+
+            // UI ưu tiên: đảm bảo cursor visible + unlock (CameraCursor sẽ không override)
+            CursorUIPriority.BeginUiOverlay();
 
             if (panel_PopUpPause != null)
             {
@@ -153,7 +157,18 @@ namespace Artsystack.ArtsystackGui
                 // Kiểm tra Canvas parent
                 Canvas parentCanvas = panel_PopUpPause.GetComponentInParent<Canvas>();
                 if (parentCanvas != null)
+                {
                     Debug.Log($"[PauseMenuManager] Parent Canvas: {parentCanvas.gameObject.name}, enabled={parentCanvas.enabled}, renderMode={parentCanvas.renderMode}, activeInHierarchy={parentCanvas.gameObject.activeInHierarchy}");
+
+                    // Đảm bảo GraphicRaycaster trên Canvas parent bật
+                    // (có thể bị tắt bởi NetworkLobbyManager.DisableAllOtherRaycasters)
+                    var gr = parentCanvas.GetComponent<UnityEngine.UI.GraphicRaycaster>();
+                    if (gr != null && !gr.enabled)
+                    {
+                        gr.enabled = true;
+                        Debug.Log($"[PauseMenuManager] Re-enabled GraphicRaycaster on '{parentCanvas.gameObject.name}'.");
+                    }
+                }
                 else
                     Debug.LogError("[PauseMenuManager] NO PARENT CANVAS FOUND! Panel won't render!");
             }
@@ -186,8 +201,6 @@ namespace Artsystack.ArtsystackGui
             RestoreParents();
 
             Time.timeScale = 1f;
-            Cursor.visible = false;
-            Cursor.lockState = CursorLockMode.Locked;
 
             // Bật lại PlayerInput khi resume
             SetPlayerInput(true);
@@ -195,6 +208,9 @@ namespace Artsystack.ArtsystackGui
             // Hiện lại HUD khi resume
             if (panel_HUD != null)
                 panel_HUD.SetActive(true);
+
+            // Trả cursor + CameraCursor — chỉ khi không còn UI nào trong stack
+            CursorUIPriority.EndUiOverlay();
         }
 
         private void SetPlayerInput(bool enabled)
@@ -216,6 +232,14 @@ namespace Artsystack.ArtsystackGui
                 {
                     if (enabled) skillMap.Enable();
                     else skillMap.Disable();
+                }
+
+                // LUÔN LUÔN BẬT UI action map để chắc chắn UI nhận click (đặc biệt khi pause)
+                var uiMap = character.playerInput.actions.FindActionMap("UI");
+                if (uiMap != null)
+                {
+                    uiMap.Enable();
+                    Debug.Log("[PauseMenuManager] Force-Enabled UI Action Map on PlayerInput!");
                 }
             }
         }

@@ -49,9 +49,13 @@ public class SetupPlayerPrefab : EditorWindow
 
         string[] required = new string[] {
             "NetworkObject",
-            "NetworkTransform",
             "NetworkPlayerName",
             "NetworkPlayerLocalOwnership",
+            "NetworkPlayerRootFollowBody",
+            "NetworkPlayerSpawnSnap",
+            "NetworkAnimatorSync",
+            "NetworkPlayerStats",
+            "NetworkPlayerDeathManager"
         };
 
         foreach (var name in required)
@@ -104,19 +108,17 @@ public class SetupPlayerPrefab : EditorWindow
             added++;
         }
 
-        // 2. NetworkTransform (sync position/rotation)
-        if (prefabRoot.GetComponent<NetworkTransform>() == null)
+        // Loại bỏ NetworkTransform cũ vì ta xài NetworkPlayerRootFollowBody
+        if (prefabRoot.GetComponent<NetworkTransform>() != null)
         {
-            prefabRoot.AddComponent<NetworkTransform>();
-            Debug.Log("[SetupPlayerPrefab] ✅ Added NetworkTransform");
-            added++;
+            DestroyImmediate(prefabRoot.GetComponent<NetworkTransform>(), true);
+            Debug.Log("[SetupPlayerPrefab] ❌ Removed NetworkTransform (Sử dụng RootFollowBody thay thế)");
         }
 
         // 3. NetworkPlayerName (tên trên đầu)
         if (prefabRoot.GetComponent<NetworkPlayerName>() == null)
         {
             prefabRoot.AddComponent<NetworkPlayerName>();
-            Debug.Log("[SetupPlayerPrefab] ✅ Added NetworkPlayerName");
             added++;
         }
 
@@ -124,7 +126,41 @@ public class SetupPlayerPrefab : EditorWindow
         if (prefabRoot.GetComponent<NetworkPlayerLocalOwnership>() == null)
         {
             prefabRoot.AddComponent<NetworkPlayerLocalOwnership>();
-            Debug.Log("[SetupPlayerPrefab] ✅ Added NetworkPlayerLocalOwnership");
+            added++;
+        }
+
+        // 5. NetworkPlayerRootFollowBody (Sync Toạ độ mạng custom)
+        if (prefabRoot.GetComponent<NetworkPlayerRootFollowBody>() == null)
+        {
+            prefabRoot.AddComponent<NetworkPlayerRootFollowBody>();
+            added++;
+        }
+
+        // 6. NetworkPlayerSpawnSnap (Spawn Position custom)
+        if (prefabRoot.GetComponent<NetworkPlayerSpawnSnap>() == null)
+        {
+            prefabRoot.AddComponent<NetworkPlayerSpawnSnap>();
+            added++;
+        }
+
+        // 7. NetworkAnimatorSync (Sync Animation)
+        if (prefabRoot.GetComponent<NetworkAnimatorSync>() == null)
+        {
+            prefabRoot.AddComponent<NetworkAnimatorSync>();
+            added++;
+        }
+
+        // 8. NetworkPlayerStats
+        if (prefabRoot.GetComponent<NetworkPlayerStats>() == null)
+        {
+            prefabRoot.AddComponent<NetworkPlayerStats>();
+            added++;
+        }
+
+        // 9. NetworkPlayerDeathManager
+        if (prefabRoot.GetComponent<NetworkPlayerDeathManager>() == null)
+        {
+            prefabRoot.AddComponent<NetworkPlayerDeathManager>();
             added++;
         }
 
@@ -135,10 +171,13 @@ public class SetupPlayerPrefab : EditorWindow
             EditorUtility.DisplayDialog("Setup Complete ✅",
                 $"Đã thêm {added} component(s)!\n\n" +
                 "• NetworkObject → Fusion replicate\n" +
-                "• NetworkTransform → Sync vị trí\n" +
                 "• NetworkPlayerName → Tên trên đầu\n" +
-                "• NetworkPlayerLocalOwnership → Input + Camera\n\n" +
-                "⚠️ Nhớ: Fusion → Rebuild Object Table",
+                "• NetworkPlayerLocalOwnership → Input + Camera\n" +
+                "• NetworkPlayerRootFollowBody → Đồng bộ toạ độ\n" +
+                "• NetworkPlayerSpawnSnap → Spawn snap\n" +
+                "• NetworkAnimatorSync → Đồng bộ hoạt ảnh\n" +
+                "• NetworkPlayerStats + DeathManager\n\n" +
+                "⚠️ RẤT QUAN TRỌNG: Fusion → Rebuild Object Table để nhận diện các biến [Networked]!",
                 "OK");
         }
         else

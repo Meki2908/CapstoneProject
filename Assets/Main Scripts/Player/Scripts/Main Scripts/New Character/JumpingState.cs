@@ -62,6 +62,10 @@ public class JumpingState : State
 
     public override void PhysicsUpdate()
     {
+        var cc = character.controller;
+        if (cc == null || !cc.enabled)
+            return;
+
         base.PhysicsUpdate();
         if (!grounded)
         {
@@ -76,7 +80,7 @@ public class JumpingState : State
             airVelocity = airVelocity.x * camRight + airVelocity.z * camForward;
             if (airVelocity.sqrMagnitude > 1f) airVelocity.Normalize();
             airVelocity.y = 0f;
-            character.controller.Move(gravityVelocity * Time.deltaTime + (airVelocity * character.airControl + velocity * (1 - character.airControl)) * playerSpeed * Time.deltaTime);
+            cc.Move(gravityVelocity * Time.deltaTime + (airVelocity * character.airControl + velocity * (1 - character.airControl)) * playerSpeed * Time.deltaTime);
         }
 
         gravityVelocity.y += gravityValue * Time.deltaTime;

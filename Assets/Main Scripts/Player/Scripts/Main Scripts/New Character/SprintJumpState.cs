@@ -68,6 +68,10 @@ public class SprintJumpState : State
 
     public override void PhysicsUpdate()
     {
+        var cc = character.controller;
+        if (cc == null || !cc.enabled)
+            return;
+
         base.PhysicsUpdate();
 
         Vector2 moveInput = moveAction.ReadValue<Vector2>();
@@ -81,7 +85,7 @@ public class SprintJumpState : State
             horizontalDirection.Normalize();
         }
 
-        if (character.controller.isGrounded && verticalVelocity < 0f)
+        if (cc.isGrounded && verticalVelocity < 0f)
         {
             verticalVelocity = 0f;
         }
@@ -90,7 +94,7 @@ public class SprintJumpState : State
 
         Vector3 horizontalVelocity = horizontalDirection * character.sprintSpeed;
         Vector3 movement = horizontalVelocity * Time.fixedDeltaTime + Vector3.up * (verticalVelocity * Time.fixedDeltaTime);
-        character.controller.Move(movement);
+        cc.Move(movement);
 
         if (horizontalVelocity.sqrMagnitude > 0.0001f)
         {

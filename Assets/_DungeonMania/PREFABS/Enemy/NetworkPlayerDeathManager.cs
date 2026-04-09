@@ -97,7 +97,7 @@ public class NetworkPlayerDeathManager : NetworkBehaviour
         // ─── Server: kiểm tra respawn timer ───
         if (HasStateAuthority && NetIsDead)
         {
-            _localRespawnTimer -= Time.deltaTime;
+            _localRespawnTimer -= Runner.DeltaTime; // BUG-4 fix: dùng simulation delta
             if (_localRespawnTimer <= 0f && !_respawnTriggered)
             {
                 TryAutoRespawn();
@@ -188,19 +188,26 @@ public class NetworkPlayerDeathManager : NetworkBehaviour
     // ═══════════════════════════════════════════════════
 
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    void RPC_SetSpectateState(bool isSpectating)
+    {
+        NetIsSpectating = isSpectating;
+    }
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
     void RPC_RequestDeath(RpcInfo info = default)
     {
         Debug.Log($"[DeathManager] RPC_RequestDeath from {info.Source}");
         SetDeathStateRPC(true);
     }
 
-    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    // BUG-3 fix: Chỉ chạy trên StateAuthority, state tự sync qua ChangeDetector
+    [Rpc(RpcSources.StateAuthority, RpcTargets.StateAuthority)]
     void SetDeathStateRPC(bool isDead, RpcInfo info = default)
     {
         NetIsDead = isDead;
         if (isDead)
         {
-            NetDeathTime = Time.time;
+            NetDeathTime = Runner.SimulationTime; // BUG-9 fix: dùng simulation time
             _localRespawnTimer = respawnDelay;
 
             Debug.Log($"[DeathManager] Player {info.Source} died! Respawn in {_localRespawnTimer}s");
@@ -211,6 +218,12 @@ public class NetworkPlayerDeathManager : NetworkBehaviour
     void RPC_RespawnAll(RpcInfo info = default)
     {
         Debug.Log("[DeathManager] Respawning all dead players!");
+        // BUG-2 fix: StateAuthority ghi [Networked], tất cả chỉ xử lý local visual
+        if (HasStateAuthority)
+        {
+            NetIsDead = false;
+            NetIsSpectating = false;
+        }
         DoLocalRespawn();
     }
 
@@ -220,6 +233,11 @@ public class NetworkPlayerDeathManager : NetworkBehaviour
         if (target == Runner.LocalPlayer)
         {
             Debug.Log("[DeathManager] Respawn targeted for local player!");
+            if (HasStateAuthority)
+            {
+                NetIsDead = false;
+                NetIsSpectating = false;
+            }
             DoLocalRespawn();
         }
     }
@@ -278,7 +296,11 @@ public class NetworkPlayerDeathManager : NetworkBehaviour
     private void EnterSpectateMode()
     {
         _isLocalSpectating = true;
-        NetIsSpectating = true;
+        // BUG-1c fix: Dùng RPC thay vì ghi trực tiếp [Networked]
+        if (HasStateAuthority)
+            NetIsSpectating = true;
+        else
+            RPC_SetSpectateState(true);
         _spectateTargetIndex = 0;
 
         // ─── Ẩn gameplay camera ───
@@ -306,7 +328,11 @@ public class NetworkPlayerDeathManager : NetworkBehaviour
     private void ExitSpectateMode()
     {
         _isLocalSpectating = false;
-        NetIsSpectating = false;
+        // BUG-1c fix: Dùng RPC thay vì ghi trực tiếp [Networked]
+        if (HasStateAuthority)
+            NetIsSpectating = false;
+        else
+            RPC_SetSpectateState(false);
 
         // ─── Bật lại gameplay camera ───
         if (gameplayCamera != null)
@@ -332,6 +358,13 @@ public class NetworkPlayerDeathManager : NetworkBehaviour
         {
             spectateCameraGO.SetActive(true);
             return;
+        }
+
+        // BUG-11 fix: Disable existing AudioListeners before creating new one
+        foreach (var existingAL in FindObjectsByType<AudioListener>(FindObjectsSortMode.None))
+        {
+            if (existingAL.gameObject != spectateCameraGO)
+                existingAL.enabled = false;
         }
 
         // Tạo spectate camera nếu chưa có
@@ -538,7 +571,8 @@ public class NetworkPlayerDeathManager : NetworkBehaviour
 
         foreach (var player in Runner.ActivePlayers)
         {
-            if (player == Runner.LocalPlayer) continue; // Skip chính mình
+            // BUG-8 fix: Skip chính player đang chết, không phải Runner.LocalPlayer
+            if (player == Object.InputAuthority) continue;
 
             var runnerObj = Runner.GetPlayerObject(player);
             if (runnerObj == null) continue;
@@ -555,8 +589,8 @@ public class NetworkPlayerDeathManager : NetworkBehaviour
     /// </summary>
     private void DoLocalRespawn()
     {
-        NetIsDead = false;
-        NetIsSpectating = false;
+        // BUG-2 fix: [Networked] đã được set trong RPC_RespawnAll/RPC_RespawnTarget
+        // Ở đây chỉ xử lý local visual/gameplay state
         _respawnTriggered = true;
 
         // ─── Reset HP ───

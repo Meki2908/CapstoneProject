@@ -7,7 +7,7 @@ using System.Collections.Generic;
 /// </summary>
 public static class PlayerSpawnConfig
 {
-    /// <summary>Điểm spawn chính (cho player 1 hoặc fallback).</summary>
+    /// <summary>Điểm spawn chính (SpawnPoint_1 — dùng khi index > số điểm).</summary>
     public static Transform SpawnPoint { get; set; }
 
     /// <summary>Danh sách điểm spawn cho multiplayer (theo PlayerRef index).</summary>
@@ -50,23 +50,20 @@ public static class PlayerSpawnConfig
         {
             return _spawnPoints[playerIndex];
         }
-        return SpawnPoint;
+        Debug.LogError($"[SpawnConfig] SpawnPoint[{playerIndex}] out of range! Count={_spawnPoints.Count}. Add spawn points in scene.");
+        return null;
     }
 
-    /// <summary>
-    /// Lấy vị trí spawn cho player thứ index, có fallback.
-    /// </summary>
+    /// <summary>Lấy vị trí spawn cho player thứ index (không fallback — bắt buộc setup).</summary>
     public static Vector3 GetSpawnPosition(int playerIndex)
     {
         var point = GetSpawnPoint(playerIndex);
         if (point != null)
             return point.position;
 
-        // Fallback: xếp người chơi thành vòng tròn quanh (0,0,0)
-        float angle = playerIndex * (360f / 4f);
-        float radius = 3f;
-        float rad = angle * Mathf.Deg2Rad;
-        return new Vector3(Mathf.Cos(rad) * radius, 0, Mathf.Sin(rad) * radius);
+        // KHÔNG dùng fallback vòng tròn — bắt buộc phải setup spawn point trong scene
+        Debug.LogError($"[SpawnConfig] No spawn point found for playerIndex={playerIndex}! Add spawn points in scene.");
+        return Vector3.zero;
     }
 
     /// <summary>
@@ -77,6 +74,7 @@ public static class PlayerSpawnConfig
         var point = GetSpawnPoint(playerIndex);
         if (point != null)
             return point.rotation;
+        Debug.LogError($"[SpawnConfig] No spawn point found for playerIndex={playerIndex}! Add spawn points in scene.");
         return Quaternion.identity;
     }
 

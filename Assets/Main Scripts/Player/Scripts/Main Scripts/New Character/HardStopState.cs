@@ -48,13 +48,17 @@ public class HardStopState : State
 
     public override void PhysicsUpdate()
     {
+        var cc = character.controller;
+        if (cc == null || !cc.enabled)
+            return;
+
         base.PhysicsUpdate();
 
         // Gradually reduce the player's velocity to simulate momentum
         decelerationVelocity = Vector3.Lerp(decelerationVelocity, Vector3.zero, Time.deltaTime / stopDuration);
 
         // Apply the deceleration to the player's movement
-        character.controller.Move(decelerationVelocity * Time.deltaTime);
+        cc.Move(decelerationVelocity * Time.deltaTime);
 
         // Keep the character facing the initial direction during the hard stop
         character.transform.rotation = initialFacingDirection;

@@ -43,7 +43,17 @@ public class NetworkPlayerName : NetworkBehaviour
             string name = string.IsNullOrWhiteSpace(LocalPlayerName)
                 ? $"Player_{Object.InputAuthority}"
                 : LocalPlayerName;
-            NetName = name;
+
+            if (HasStateAuthority)
+            {
+                // Host player: ghi trực tiếp
+                NetName = name;
+            }
+            else
+            {
+                // BUG-1b fix: Client player gửi qua RPC
+                RPC_SetPlayerName(name);
+            }
             Debug.Log($"[NetworkPlayerName] Local player name set to: '{name}'");
         }
 
@@ -54,6 +64,13 @@ public class NetworkPlayerName : NetworkBehaviour
         // Owner: ẩn/hiện tùy setting
         if (HasInputAuthority && _nameTagGO != null)
             _nameTagGO.SetActive(showOwnName);
+    }
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    private void RPC_SetPlayerName(string playerName)
+    {
+        NetName = playerName;
+        Debug.Log($"[NetworkPlayerName] RPC: Name set to '{playerName}' for {Object.InputAuthority}");
     }
 
     public override void Despawned(NetworkRunner runner, bool hasState)

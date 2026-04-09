@@ -102,15 +102,51 @@ namespace MovementSystem
 
         private void Update()
         {
-            // KHÔNG xử lý cursor khi inventory đang mở
-            if (IsUiOverlayBlocking()) return;
+            // KHÔNG xử lý cursor khi UI overlay đang mở (Inventory, Pause, Lobby...)
+            // NGOẠI TRỪ: vẫn cho phép Alt toggle (user muốn nhả chuột thủ công)
+            bool uiBlocking = IsUiOverlayBlocking();
 
-            // Chỉ dùng legacy Input khi KHÔNG có InputAction gán
-            if (cameraToggleInputAction == null && Input.GetKeyDown(KeyCode.LeftAlt))
+            // Legacy LeftAlt fallback — LUÔN hoạt động dù có InputAction hay không
+            bool altPressed = false;
+            try { altPressed = Input.GetKeyDown(KeyCode.LeftAlt); }
+            catch { }
+
+            // New Input System fallback
+            if (!altPressed && Keyboard.current != null)
             {
-                ToggleCursor();
+                altPressed = Keyboard.current.leftAltKey.wasPressedThisFrame;
             }
+
+            if (altPressed)
+            {
+                // Khi UI overlay đang mở: chỉ cho phép hiện cursor (không ẩn)
+                if (uiBlocking)
+                {
+                    if (Cursor.lockState == CursorLockMode.Locked || !Cursor.visible)
+                    {
+                        Cursor.visible = true;
+                        Cursor.lockState = CursorLockMode.None;
+                        SetCinemachineInput(false);
+                        isCursorHidden = false;
+                        Debug.Log("[CameraCursor] Alt pressed during UI overlay — cursor unlocked.");
+                    }
+                }
+                else
+                {
+                    if (Time.frameCount != lastToggleFrame)
+                    {
+                        ToggleCursor();
+                        lastToggleFrame = Time.frameCount;
+                    }
+                }
+                return;
+            }
+
+            // Không xử lý gì thêm khi UI overlay đang chặn
+            if (uiBlocking) return;
         }
+
+        private static int lastToggleFrame = -1;
 
         private void OnEnable()
         {
@@ -133,7 +169,11 @@ namespace MovementSystem
             // KHÔNG toggle cursor khi inventory đang mở
             if (IsUiOverlayBlocking()) return;
 
-            ToggleCursor();
+            if (Time.frameCount != lastToggleFrame)
+            {
+                ToggleCursor();
+                lastToggleFrame = Time.frameCount;
+            }
         }
 
         private void ToggleCursor()

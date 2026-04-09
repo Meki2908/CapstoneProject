@@ -86,17 +86,21 @@ public class CrouchingState : State
 
     public override void PhysicsUpdate()
     {
+        var cc = character.controller;
+        if (cc == null || !cc.enabled)
+            return;
+
         base.PhysicsUpdate();
         belowCeiling = CheckCollisionOverlap(character.transform.position + Vector3.up * character.normalColliderHeight);
         gravityVelocity.y += gravityValue * Time.deltaTime;
-        grounded = character.controller.isGrounded;
+        grounded = cc.isGrounded;
         if (grounded && gravityVelocity.y < 0)
         {
             gravityVelocity.y = 0f;
         }
         currentVelocity = Vector3.Lerp(currentVelocity, velocity, character.velocityDampTime);
 
-        character.controller.Move(currentVelocity * Time.deltaTime * playerSpeed + gravityVelocity * Time.deltaTime);
+        cc.Move(currentVelocity * Time.deltaTime * playerSpeed + gravityVelocity * Time.deltaTime);
 
         if (velocity.magnitude > 0)
         {

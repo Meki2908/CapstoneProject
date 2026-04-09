@@ -3,6 +3,7 @@ using Fusion;
 using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.EventSystems;
 using MovementSystem;
 
 /// <summary>
@@ -60,7 +61,9 @@ public class NetworkPlayerLocalOwnership : NetworkBehaviour
     void ApplyLocalOwnership(bool local, bool isDead)
     {
         foreach (var pi in GetComponentsInChildren<PlayerInput>(true))
+        {
             pi.enabled = local;
+        }
 
         foreach (var cc in GetComponentsInChildren<CharacterController>(true))
             cc.enabled = local;
@@ -73,20 +76,72 @@ public class NetworkPlayerLocalOwnership : NetworkBehaviour
 
         if (local)
         {
-            CursorUIPriority.EndAllUiOverlays();
-            Cursor.visible = false;
-            Cursor.lockState = CursorLockMode.Locked;
-            CameraCursor.ApplyGameplayCursorAfterUiClosed();
-        }
-        else if (isDead)
-        {
-            // Player đã chết → spectate mode
-            foreach (var pi in GetComponentsInChildren<PlayerInput>(true))
-                pi.enabled = false;
+            // Ưu tiên tìm đúng Camera mang tag MainCamera (tránh nhầm với Minimap Camera / UI Camera)
+            Camera mainCam = null;
+            var allCams = GetComponentsInChildren<Camera>(true);
+            foreach (var c in allCams)
+            {
+                if (c.CompareTag("MainCamera"))
+                {
+                    mainCam = c;
+                    break;
+                }
+            }
+            if (mainCam == null && allCams.Length > 0) mainCam = allCams[0]; // Fallback
 
-            Cursor.visible = true;
-            Cursor.lockState = CursorLockMode.None;
-            Debug.Log("[LocalOwnership] Player dead — spectate mode, input disabled");
+            if (mainCam != null)
+            {
+                mainCam.transform.SetParent(null);
+                mainCam.gameObject.name = "Global_MainCamera_Observer";
+                mainCam.gameObject.SetActive(true); // Kích hoạt GameObject (phòng khi user tắt trong Prefab)
+                mainCam.enabled = true;
+            }
+
+            // Lobby đang mở: không gọi EndAllUiOverlays (sẽ xóa BeginUiOverlay của NetworkLobbyManager)
+            // và không khóa chuột — để bấm START / Alt hoạt động.
+            // NetworkLobbyManager Spawned (order 0) chạy sau script này (-150): depth có thể vẫn 0
+            // trong cùng frame — kiểm tra Instance + GameStarted để khớp với EnsureLobbyUiOverlayStack.
+            var lobby = NetworkLobbyManager.Instance;
+            if (CursorUIPriority.IsUiOverlayActive ||
+                (lobby != null && lobby.IsLobbyBlockingCursor))
+            {
+                Cursor.visible = true;
+                Cursor.lockState = CursorLockMode.None;
+            }
+            else
+            {
+                CursorUIPriority.EndAllUiOverlays();
+                Cursor.visible = false;
+                Cursor.lockState = CursorLockMode.Locked;
+                CameraCursor.ApplyGameplayCursorAfterUiClosed();
+            }
+        }
+        else
+        {
+            // Là Clone máy của khách -> Phá hủy XÓA SẠCH cụm Camera (và AudioListener) trên xác nó
+            var theirCams = GetComponentsInChildren<Camera>(true);
+            foreach (var c in theirCams)
+            {
+                // Xóa Component thay vì GameObject để an toàn chống sập Prefab
+                Destroy(c);
+            }
+
+            var theirAudios = GetComponentsInChildren<AudioListener>(true);
+            foreach (var a in theirAudios)
+            {
+                Destroy(a);
+            }
+
+            if (isDead)
+            {
+                // Player đã chết → spectate mode
+                foreach (var pi in GetComponentsInChildren<PlayerInput>(true))
+                    pi.enabled = false;
+
+                Cursor.visible = true;
+                Cursor.lockState = CursorLockMode.None;
+                Debug.Log("[LocalOwnership] Player dead — spectate mode, input disabled");
+            }
         }
 
         Debug.Log($"[LocalOwnership] ApplyLocalOwnership: local={local}, isDead={isDead}, name='{gameObject.name}'");

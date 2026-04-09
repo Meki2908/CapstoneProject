@@ -99,9 +99,13 @@ public class SprintState : State
 
     public override void PhysicsUpdate()
     {
+        var cc = character.controller;
+        if (cc == null || !cc.enabled)
+            return;
+
         base.PhysicsUpdate();
         gravityVelocity.y += gravityValue * Time.deltaTime;
-        grounded = character.controller.isGrounded;
+        grounded = cc.isGrounded;
         if (grounded && gravityVelocity.y < 0)
         {
             gravityVelocity.y = 0f;
@@ -115,7 +119,7 @@ public class SprintState : State
         {
             speedMultiplier = WeaponGemManager.Instance.GetMovementSpeedMultiplier(wc.GetCurrentWeapon().weaponType);
         }
-        character.controller.Move(currentVelocity * Time.deltaTime * (playerSpeed * speedMultiplier) + gravityVelocity * Time.deltaTime);
+        cc.Move(currentVelocity * Time.deltaTime * (playerSpeed * speedMultiplier) + gravityVelocity * Time.deltaTime);
 
 
         if (velocity.sqrMagnitude > 0)

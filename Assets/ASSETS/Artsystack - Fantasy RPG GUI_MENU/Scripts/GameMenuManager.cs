@@ -80,6 +80,17 @@ namespace Artsystack.ArtsystackGui
                 if (panel_GUIGame != null)
                     panel_GUIGame.SetActive(true);
                 ResetPlayModeTabs();
+
+                // ĐẢM BẢO THỜI GIAN KHÔNG BỊ ĐÓNG BĂNG KHI VỀ TỪ PAUSE MENU
+                Time.timeScale = 1f;
+
+                // KHÔI PHỤC GRAPHIC RAYCASTER KHI VỀ CHỖ CŨ (Bị NetworkLobbyManager tắt lúc chơi)
+                var gr = GetComponent<UnityEngine.UI.GraphicRaycaster>();
+                if (gr != null) gr.enabled = true;
+
+                // CHẮC CHẮN MOUSE HIỆN LÊN ĐỂ CLICK (Bị gameplay giấu đi)
+                Cursor.visible = true;
+                Cursor.lockState = CursorLockMode.None;
             }
             else
             {
@@ -188,9 +199,14 @@ namespace Artsystack.ArtsystackGui
             if (tab_HostOptions != null) tab_HostOptions.SetActive(false);
             if (panel_JoinRoom != null) panel_JoinRoom.SetActive(false);
 
-            // Hiện Panel_CreateRoom
+            // Hiện Panel_CreateRoom — đồng thời ẩn enterGameButton (tránh click nhầm)
             if (panel_CreateRoom != null)
+            {
                 panel_CreateRoom.SetActive(true);
+                // Ẩn enterGameButton trong MultiplayerManager để tránh tự load game khi tạo room
+                var mp = MultiplayerManager.Instance;
+                if (mp != null) mp.HideEnterGameButton();
+            }
             else
             {
                 // Fallback: gọi trực tiếp nếu chưa setup panel

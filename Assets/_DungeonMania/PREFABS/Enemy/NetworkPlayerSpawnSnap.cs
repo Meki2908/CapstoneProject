@@ -27,23 +27,22 @@ public class NetworkPlayerSpawnSnap : NetworkBehaviour
     private Vector3 _targetSpawnPos;
     private Quaternion _targetSpawnRot;
     private bool _spawnConfigChecked;
-    private int _waitFrames; 
+    private int _waitFrames;
+
+    /// <summary>Thời gian (giây) cho phép resnap sau spawn. Hết thời gian → tắt resnap vĩnh viễn.</summary>
+    [Tooltip("Thời gian (giây) cho phép resnap sau khi spawn. Sau đó tắt resnap.")]
+    [SerializeField] private float resnapGracePeriod = 2f;
+    private float _resnapGraceTimer;
+    private bool _resnapDisabled;
 
     void Awake()
     {
-        // Đảm bảo tất cả component được thêm (nếu chưa có)
-        if (!TryGetComponent<NetworkPlayerRootFollowBody>(out _))
-            gameObject.AddComponent<NetworkPlayerRootFollowBody>();
-        if (!TryGetComponent<NetworkPlayerLocalOwnership>(out _))
-            gameObject.AddComponent<NetworkPlayerLocalOwnership>();
-        if (!TryGetComponent<NetworkAnimatorSync>(out _))
-            gameObject.AddComponent<NetworkAnimatorSync>();
-        if (!TryGetComponent<NetworkPlayerStats>(out _))
-            gameObject.AddComponent<NetworkPlayerStats>();
-        if (!TryGetComponent<NetworkPlayerName>(out _))
-            gameObject.AddComponent<NetworkPlayerName>();
-        if (!TryGetComponent<NetworkPlayerDeathManager>(out _))
-            gameObject.AddComponent<NetworkPlayerDeathManager>();
+        // ❌ TẤT CẢ các component mạng (NetworkPlayerRootFollowBody, NetworkAnimatorSync...)
+        // BẮT BUỘC phải được gắn sẵn vào Prefab từ Editor! KHÔNG ĐƯỢC DÙNG AddComponent TẠI ĐÂY!
+        // Vui lòng dùng Tools -> Setup Player Prefab (Multiplayer) để tự động thêm vào Prefab.
+
+        _resnapTimer = 0f;
+        _spawnConfigChecked = false;
     }
 
     public override void Spawned()
@@ -52,9 +51,15 @@ public class NetworkPlayerSpawnSnap : NetworkBehaviour
         _resnapTimer = 0f;
         _spawnConfigChecked = false;
         _waitFrames = 0;
+        _resnapDisabled = false;
+        _resnapGraceTimer = resnapGracePeriod;
 
         // Tính spawn position dựa trên PlayerId
         CalculateSpawnPosition();
+
+        // Snap NGAY tại Spawned — trước khi FixedUpdateNetwork chạy lần đầu.
+        // CC đang disabled (LocalOwnership chưa chạy), teleport trực tiếp là an toàn.
+        ApplySnapPosition();
     }
 
     private void CalculateSpawnPosition()
@@ -102,34 +107,26 @@ public class NetworkPlayerSpawnSnap : NetworkBehaviour
 
     private int GetPlayerIndex()
     {
-        if (Runner == null) return 0;
+        // Phải khớp MultiplayerManager: index = PlayerId - 1 (không dùng thứ tự foreach ActivePlayers — thứ tự đó không đảm bảo).
+        if (Runner == null || Object == null || !Object.IsValid)
+            return 0;
 
-        // Dùng PlayerId để đánh index ổn định
-        if (Object != null && Object.IsValid)
-        {
-            // Ưu tiên: duyệt ActivePlayers để tìm thứ tự
-            int idx = 0;
-            foreach (var p in Runner.ActivePlayers)
-            {
-                if (p == Object.InputAuthority)
-                    return idx;
-                idx++;
-            }
+        var auth = Object.InputAuthority;
+        if (auth != PlayerRef.None)
+            return Mathf.Max(0, auth.PlayerId - 1);
 
-            // Fallback: dùng PlayerId trừ 1 để index từ 0
-            return Object.InputAuthority.PlayerId - 1;
-        }
+        // Spawned() đôi khi chạy trước khi InputAuthority gán xong — dùng object map của LocalPlayer.
+        var localObj = Runner.GetPlayerObject(Runner.LocalPlayer);
+        if (localObj != null && localObj == Object)
+            return Mathf.Max(0, Runner.LocalPlayer.PlayerId - 1);
 
         return 0;
     }
 
     private Vector3 GetFallbackSpawnPosition(int playerIndex)
     {
-        // Xếp vòng tròn quanh origin
-        float angle = playerIndex * (360f / 4f);
-        float radius = 3f;
-        float rad = angle * Mathf.Deg2Rad;
-        return new Vector3(Mathf.Cos(rad) * radius, 1f, Mathf.Sin(rad) * radius);
+        Debug.LogError($"[SpawnSnap] SpawnPoint[{playerIndex}] fallback called — BUG! Spawn points must be set in scene.");
+        return Vector3.zero;
     }
 
     public override void FixedUpdateNetwork()
@@ -148,7 +145,7 @@ public class NetworkPlayerSpawnSnap : NetworkBehaviour
                 _waitFrames++;
                 if (_waitFrames > maxWaitFrames)
                 {
-                    Debug.LogError($"[SpawnSnap] ⏰ Waited {maxWaitFrames} frames but spawn config still empty! Using fallback.");
+                    Debug.LogError($"[SpawnSnap] ⏰ Waited {maxWaitFrames} frames but SpawnPointCount=0! Add _SpawnPoints + FusionSpawnPointSetter to scene! Spawn position will be WRONG.");
                     int idx = GetPlayerIndex();
                     _targetSpawnPos = GetFallbackSpawnPosition(idx);
                     _targetSpawnRot = Quaternion.identity;
@@ -163,18 +160,47 @@ public class NetworkPlayerSpawnSnap : NetworkBehaviour
         {
             TrySnapToSpawn();
         }
-        else
+        else if (!_resnapDisabled)
         {
-            // Resnap nếu player bị lệch khỏi target
-            Vector3 currentPos = transform.position;
-            float dist = Vector3.Distance(currentPos, _targetSpawnPos);
-            if (dist > snapDistanceThreshold)
+            // BUG-10 fix: Chỉ resnap trong grace period, sau đó tắt vĩnh viễn
+            _resnapGraceTimer -= Runner.DeltaTime;
+            if (_resnapGraceTimer <= 0f)
             {
-                _hasSnapped = false;
-                TrySnapToSpawn();
-                Debug.Log($"[SpawnSnap] 🔄 Resnapped player to {_targetSpawnPos} (was {dist:F2}m away)");
+                _resnapDisabled = true;
+                Debug.Log($"[SpawnSnap] Resnap grace period ended — movement unlocked.");
+            }
+            else
+            {
+                // Resnap nếu player bị lệch khỏi target (chỉ trong grace period)
+                Vector3 currentPos = transform.position;
+                float dist = Vector3.Distance(currentPos, _targetSpawnPos);
+                if (dist > snapDistanceThreshold)
+                {
+                    _hasSnapped = false;
+                    TrySnapToSpawn();
+                    Debug.Log($"[SpawnSnap] 🔄 Resnapped player to {_targetSpawnPos} (was {dist:F2}m away)");
+                }
             }
         }
+    }
+
+    /// <summary>Teleport không điều kiện tới spawn point. Dùng trong Spawned() và ForceSnapToSpawn().</summary>
+    private void ApplySnapPosition()
+    {
+        var cc = GetComponentInChildren<CharacterController>(true);
+        bool ccWasEnabled = cc != null && cc.enabled;
+        if (cc != null) cc.enabled = false;
+
+        transform.SetPositionAndRotation(_targetSpawnPos, _targetSpawnRot);
+
+        if (TryGetComponent<NetworkPlayerRootFollowBody>(out var rootFollow))
+            rootFollow.ForceTeleport(_targetSpawnPos, _targetSpawnRot);
+
+        if (cc != null) cc.enabled = ccWasEnabled;
+
+        // Không dùng Rigidbody (tránh MissingComponentException break code trên Unity mới)
+
+        Debug.Log($"[SpawnSnap] Teleported '{gameObject.name}' to {_targetSpawnPos}");
     }
 
     private void TrySnapToSpawn()
@@ -191,26 +217,18 @@ public class NetworkPlayerSpawnSnap : NetworkBehaviour
 
         if (distance > snapDistanceThreshold)
         {
-            // Chưa đúng vị trí → teleport
-            transform.SetPositionAndRotation(_targetSpawnPos, _targetSpawnRot);
-            Debug.Log($"[SpawnSnap] Snapped player '{gameObject.name}' to spawn: {_targetSpawnPos} (was at {currentPos}, dist={distance:F2})");
+            ApplySnapPosition();
         }
 
         _hasSnapped = true;
 
-        // Reset velocity nếu có
-        var rb = GetComponent<Rigidbody>();
-        if (rb != null)
-        {
-            rb.linearVelocity = Vector3.zero;
-            rb.angularVelocity = Vector3.zero;
-        }
+        // Không dùng Rigidbody
 
-        // Reset CharacterController velocity
-        var cc = GetComponentInChildren<CharacterController>();
-        if (cc != null)
+        // Reset CharacterController velocity (chỉ khi đang bật — tránh warning khi remote / lobby)
+        var ccMove = GetComponentInChildren<CharacterController>(true);
+        if (ccMove != null && ccMove.enabled)
         {
-            cc.Move(Vector3.zero);
+            ccMove.Move(Vector3.zero);
         }
     }
 
@@ -235,13 +253,21 @@ public class NetworkPlayerSpawnSnap : NetworkBehaviour
     {
         _targetSpawnPos = position;
         _targetSpawnRot = rotation;
+
+        // Tạm tắt CC để tránh capsule nội bộ kéo player về chỗ cũ
+        var cc = GetComponentInChildren<CharacterController>(true);
+        bool ccWasEnabled = cc != null && cc.enabled;
+        if (cc != null) cc.enabled = false;
+
         transform.SetPositionAndRotation(position, rotation);
 
-        // Reset interpolation state
         var rootFollow = GetComponent<NetworkPlayerRootFollowBody>();
         if (rootFollow != null)
             rootFollow.ForceTeleport(position, rotation);
 
+        if (cc != null) cc.enabled = ccWasEnabled;
+
+        _hasSnapped = true;
         Debug.Log($"[SpawnSnap] Teleported to: {position}");
     }
 
