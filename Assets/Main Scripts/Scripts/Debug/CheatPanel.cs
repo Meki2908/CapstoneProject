@@ -1,0 +1,154 @@
+using UnityEngine;
+
+/// <summary>
+/// Debug Cheat Panel — Toggle với F1.
+/// Tự tạo UI bằng IMGUI, không cần setup Inspector.
+/// Gắn lên bất kì GameObject DontDestroyOnLoad (VD: GameSettings).
+/// </summary>
+public class CheatPanel : MonoBehaviour
+{
+    public static CheatPanel Instance { get; private set; }
+
+    // ── Cheat Flags ──
+    public static bool NoCooldown { get; private set; }
+    public static float DamageMultiplier { get; private set; } = 1f;
+
+    private bool _show;
+    private Rect _windowRect = new Rect(Screen.width - 320, 20, 300, 380);
+
+    void Awake()
+    {
+        if (Instance != null && Instance != this) { Destroy(this); return; }
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+    }
+
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.F1))
+            _show = !_show;
+
+        // Continuously clear cooldowns when cheat is on
+        if (NoCooldown)
+            ClearAllCooldowns();
+    }
+
+    void OnGUI()
+    {
+        if (!_show) return;
+        _windowRect = GUI.Window(999, _windowRect, DrawWindow, "⚡ CHEAT PANEL (F1)");
+    }
+
+    void DrawWindow(int id)
+    {
+        GUILayout.Space(5);
+
+        // ── No Cooldown ──
+        bool newNoCd = GUILayout.Toggle(NoCooldown, "  No Cooldown Skill", GUILayout.Height(30));
+        if (newNoCd != NoCooldown)
+        {
+            NoCooldown = newNoCd;
+            Debug.Log($"[CheatPanel] No Cooldown = {NoCooldown}");
+        }
+
+        GUILayout.Space(5);
+
+        // ── x10 Damage ──
+        bool dmgOn = DamageMultiplier > 1f;
+        bool newDmg = GUILayout.Toggle(dmgOn, "  x10 Damage", GUILayout.Height(30));
+        if (newDmg != dmgOn)
+        {
+            DamageMultiplier = newDmg ? 10f : 1f;
+            Debug.Log($"[CheatPanel] Damage Multiplier = {DamageMultiplier}x");
+        }
+
+        GUILayout.Space(10);
+
+        // ── Skip Quest ──
+        GUILayout.Label("── Quest ──");
+        if (GUILayout.Button("Skip Current Quest", GUILayout.Height(35)))
+            SkipQuest();
+
+        GUILayout.Space(10);
+
+        // ── Level ──
+        GUILayout.Label("── Weapon Mastery Level ──");
+        if (GUILayout.Button("Set All Weapons → Level 30", GUILayout.Height(35)))
+            SetAllWeaponLevel(30);
+
+        GUILayout.Space(3);
+        if (GUILayout.Button("Set All Weapons → Level 60", GUILayout.Height(35)))
+            SetAllWeaponLevel(60);
+
+        GUILayout.Space(10);
+
+        // ── Info ──
+        GUI.color = Color.gray;
+        GUILayout.Label($"Cooldown: {(NoCooldown ? "OFF" : "Normal")}");
+        GUILayout.Label($"Damage: {DamageMultiplier}x");
+        if (QuestManager.Instance != null)
+        {
+            var active = QuestManager.Instance.GetActiveQuest();
+            GUILayout.Label($"Active Quest: {(active != null ? active.questTitle : "None")}");
+        }
+        GUI.color = Color.white;
+
+        GUI.DragWindow();
+    }
+
+    // ── Implementations ──
+
+    void ClearAllCooldowns()
+    {
+        var aim = FindFirstObjectByType<AbilityIconManager>();
+        if (aim == null) return;
+
+        // Clear cooldowns for all ability inputs
+        aim.TutorialClearCooldown(AbilityInput.E);
+        aim.TutorialClearCooldown(AbilityInput.R);
+        aim.TutorialClearCooldown(AbilityInput.T);
+        aim.TutorialClearCooldown(AbilityInput.Q_Ultimate);
+    }
+
+    void SkipQuest()
+    {
+        if (QuestManager.Instance == null)
+        {
+            Debug.LogWarning("[CheatPanel] QuestManager not found!");
+            return;
+        }
+
+        var activeQuest = QuestManager.Instance.GetActiveQuest();
+        if (activeQuest == null)
+        {
+            Debug.LogWarning("[CheatPanel] No active quest to skip!");
+            return;
+        }
+
+        int questID = activeQuest.questID;
+        // Advance until complete
+        for (int i = 0; i < 50; i++) // safety limit
+        {
+            if (QuestManager.Instance.GetState(questID) != QuestManager.QuestState.Active)
+                break;
+            QuestManager.Instance.AdvanceStep(questID);
+        }
+
+        Debug.Log($"[CheatPanel] Skipped quest {questID}: {activeQuest.questTitle}");
+    }
+
+    void SetAllWeaponLevel(int level)
+    {
+        if (WeaponMasteryManager.Instance == null)
+        {
+            Debug.LogWarning("[CheatPanel] WeaponMasteryManager not found!");
+            return;
+        }
+
+        WeaponMasteryManager.Instance.SetMasteryLevel(WeaponType.Sword, level);
+        WeaponMasteryManager.Instance.SetMasteryLevel(WeaponType.Axe, level);
+        WeaponMasteryManager.Instance.SetMasteryLevel(WeaponType.Mage, level);
+
+        Debug.Log($"[CheatPanel] All weapons set to level {level}");
+    }
+}
