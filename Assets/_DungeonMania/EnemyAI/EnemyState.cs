@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 public class EnemyState : MonoBehaviour{
     EnemyScript enemyScript;
     public float distance;
@@ -8,6 +9,10 @@ public class EnemyState : MonoBehaviour{
     int random;
     string anim;
     bool isAIRunning = false;
+    private float attackStartTime = 0f; // Timeout failsafe
+    private Vector3 lastSetDestination; // Cache để tránh set destination mỗi tick
+    [HideInInspector] public bool isCastingSkill = false; // Boss đang cast skill → khóa rotation
+    [HideInInspector] public Vector3 skillCastDirection; // Hướng boss lúc bắt đầu cast (cho VFX)
 
     private void Start () {
         enemyScript = GetComponent<EnemyScript> ();
@@ -25,7 +30,10 @@ public class EnemyState : MonoBehaviour{
         if(!GameController.pause){
             if( enemyScript.alive ){
                 if (!enemyScript.hit && enemyScript.target != null) {
-                    enemyScript.RotateToPlayer();
+                    // KHÔNG xoay khi đang cast skill (giữ hướng cho directional VFX)
+                    if (!isCastingSkill) {
+                        enemyScript.RotateToPlayer();
+                    }
                 }
                 if(enemyScript.cont && !isAIRunning) {
                     StartCoroutine(AI());
@@ -56,21 +64,137 @@ public class EnemyState : MonoBehaviour{
     }
     
     /// <summary>
-    /// Boss dùng skill — play animation "skill" + bắt đầu cooldown
+    /// Boss dùng skill — CHARGE SYSTEM: đứng yên, xoay mặt theo player, warning lớn dần, rồi bắn
     /// </summary>
     void UseBossSkill() {
         if (!enemyScript.attack && !enemyScript.hit) {
-            enemyScript.attack = true;
-            enemyScript.navMeshAgent.isStopped = true;
-            enemyScript.animator.SetBool("run", false);
-            enemyScript.animator.Play("skill");
-            
-            // Bắt đầu cooldown
-            enemyScript.lastSkillTime = Time.time;
-            enemyScript.skillOnCooldown = true;
-            
-            Debug.Log($"[EnemyState] Boss used SKILL! Cooldown: {enemyScript.skillCooldown}s");
+            StartCoroutine(BossSkillChargeSequence());
         }
+    }
+    
+    /// <summary>
+    /// Coroutine charge skill: boss đứng yên, warning mở rộng dần, rồi bắn skill
+    /// </summary>
+    IEnumerator BossSkillChargeSequence()
+    {
+        enemyScript.attack = true;
+        isCastingSkill = true;
+        attackStartTime = Time.time;
+        
+        // Khóa vị trí, dừng di chuyển
+        enemyScript.navMeshAgent.isStopped = true;
+        enemyScript.animator.SetBool("run", false);
+        
+        // Spawn warning tracking (theo dõi player, mở rộng dần)
+        float chargeDur = enemyScript.skillWarningDuration;
+        BossSkillWarning warning = null;
+        
+        if (enemyScript.skillVfxPrefab != null)
+        {
+            if (enemyScript.skillIsDirectional)
+            {
+                warning = BossSkillWarning.SpawnConeTracking(
+                    enemyScript.transform,
+                    enemyScript.target,
+                    enemyScript.skillVfxRadius,
+                    enemyScript.skillAngle,
+                    chargeDur
+                );
+            }
+            else
+            {
+                warning = BossSkillWarning.SpawnCircleTracking(
+                    enemyScript.transform,
+                    enemyScript.skillVfxRadius,
+                    chargeDur
+                );
+            }
+        }
+        
+        // === CHARGE PHASE: xoay mặt theo player, chờ warning đầy ===
+        float elapsed = 0f;
+        while (elapsed < chargeDur)
+        {
+            if (enemyScript == null || !enemyScript.alive)
+            {
+                if (warning != null) Destroy(warning.gameObject);
+                isCastingSkill = false;
+                enemyScript.attack = false;
+                yield break;
+            }
+            
+            // ENFORCE khóa vị trí MỖI FRAME (tránh bị override)
+            enemyScript.navMeshAgent.isStopped = true;
+            enemyScript.navMeshAgent.velocity = Vector3.zero;
+            
+            // Xoay mặt về player (nhưng KHÔNG di chuyển)
+            if (enemyScript.target != null)
+            {
+                Vector3 dir = enemyScript.target.position - enemyScript.transform.position;
+                dir.y = 0;
+                if (dir.sqrMagnitude > 0.001f)
+                {
+                    Quaternion targetRot = Quaternion.LookRotation(dir);
+                    enemyScript.transform.rotation = Quaternion.Slerp(
+                        enemyScript.transform.rotation, targetRot,
+                        Time.deltaTime * enemyScript.rotationSpeed * 2f
+                    );
+                }
+            }
+            
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+        
+        // === FIRE PHASE: khóa hướng, bắn skill ===
+        skillCastDirection = enemyScript.transform.forward;
+        
+        // Play animation
+        enemyScript.animator.Play("skill");
+        
+        // Cooldown
+        enemyScript.lastSkillTime = Time.time;
+        enemyScript.skillOnCooldown = true;
+        
+        Debug.Log($"[EnemyState] Boss SKILL FIRED after {chargeDur}s charge! dir={skillCastDirection}");
+        
+        // === CHờ skill animation xong rồi RESET tất cả ===
+        yield return new WaitForSeconds(0.15f); // Chờ animator transition
+        
+        float animWait = 0f;
+        while (animWait < 4f) // Max 4s safety
+        {
+            if (enemyScript == null || !enemyScript.alive)
+            {
+                isCastingSkill = false;
+                yield break;
+            }
+            
+            // ENFORCE khóa vị trí cả trong lúc play animation
+            enemyScript.navMeshAgent.isStopped = true;
+            
+            var animState = enemyScript.animator.GetCurrentAnimatorStateInfo(0);
+            bool isSkillPlaying = animState.IsName("Base Layer.skill") || animState.IsName("skill");
+            
+            if (isSkillPlaying && animState.normalizedTime >= 0.95f)
+                break; // Skill animation gần xong
+            
+            if (!isSkillPlaying && animWait > 0.3f)
+                break; // Đã transition sang state khác (idle)
+            
+            animWait += Time.deltaTime;
+            yield return null;
+        }
+        
+        // RESET — mở khóa hoàn toàn (LUÔN chạy dù loop exit cách nào)
+        enemyScript.attack = false;
+        enemyScript.hit = false;
+        isCastingSkill = false;
+        attackStartTime = 0f;
+        if (enemyScript.navMeshAgent != null)
+            enemyScript.navMeshAgent.isStopped = false; // Mở khóa di chuyển
+        
+        Debug.Log($"[EnemyState] Boss skill complete. All flags reset.");
     }
     
     /// <summary>
@@ -99,18 +223,13 @@ public class EnemyState : MonoBehaviour{
             
             // Nếu boss CÓ skill VFX → chỉ đánh thường ở đây (skill xử lý riêng)
             if (HasBossSkill()) {
-                // Boss có VFX skill → ở melee range chỉ đánh thường
-                // Trừ khi skill đã sẵn sàng VÀ random trúng → dùng skill
+                // Boss: LUÔN dùng charge skill nếu hết cooldown
                 if (CanUseSkill()) {
-                    // Ở melee range: 30% chance dùng skill, 70% đánh thường
-                    if (Random.Range(0, 10) <= 2) {
-                        enemyScript.lastSkillTime = Time.time;
-                        enemyScript.skillOnCooldown = true;
-                        enemyScript.animator.Play("skill");
-                        return;
-                    }
+                    UseBossSkill(); // Charge sequence
+                    return;
                 }
                 enemyScript.animator.Play("attack");
+                attackStartTime = Time.time;
                 return;
             }
             
@@ -165,38 +284,90 @@ public class EnemyState : MonoBehaviour{
                     enemyScript.Distance();
                 }
 
-                if (enemyScript.navMeshAgent != null && enemyScript.target != null && !enemyScript.navMeshAgent.isStopped) {
-                    enemyScript.navMeshAgent.destination = enemyScript.target.position;
-                }
-
                 float dist = enemyScript.enemyState.distance;
                 
-                // === BOSS SKILL SYSTEM MỚI ===
-                // Ưu tiên: Skill từ xa → Chase → Melee attack
-                if (HasBossSkill() && CanUseSkill() 
+                // Nếu đang charge skill → không xử lý AI (coroutine đang chạy)
+                if (isCastingSkill)
+                {
+                    // Không làm gì — BossSkillChargeSequence đang xử lý
+                }
+                // === RANGED KITING: lùi lại khi player tới quá gần ===
+                // Chỉ retreat nếu attackDistance > minRangedDistance (có khoảng tấn công hợp lệ)
+                // Nếu không, retreat sẽ đẩy enemy ra ngoài attack range → vòng lặp vô hạn
+                else if (enemyScript.minRangedDistance > 0 
+                    && dist < enemyScript.minRangedDistance
+                    && enemyScript.attackDistance > enemyScript.minRangedDistance)
+                {
+                    // FORCE cancel attack + retreat
+                    enemyScript.attack = false;
+                    enemyScript.hit = false;
+                    enemyScript.navMeshAgent.isStopped = false;
+                    enemyScript.navMeshAgent.stoppingDistance = 0.5f;
+                    
+                    // Thử nhiều hướng retreat (trực tiếp lùi → xéo trái → xéo phải)
+                    Vector3 awayDir = (enemyScript.transform.position - enemyScript.target.position).normalized;
+                    float retreatDist = enemyScript.minRangedDistance + 2f;
+                    Vector3[] tryDirs = new Vector3[] {
+                        awayDir,                                                    // Lùi thẳng
+                        Quaternion.Euler(0, 45, 0) * awayDir,                       // Xéo phải
+                        Quaternion.Euler(0, -45, 0) * awayDir,                      // Xéo trái
+                        Quaternion.Euler(0, 90, 0) * awayDir,                       // Ngang phải
+                        Quaternion.Euler(0, -90, 0) * awayDir                       // Ngang trái
+                    };
+                    
+                    bool found = false;
+                    for (int i = 0; i < tryDirs.Length; i++)
+                    {
+                        Vector3 tryPos = enemyScript.transform.position + tryDirs[i] * retreatDist;
+                        NavMeshHit navHit;
+                        if (NavMesh.SamplePosition(tryPos, out navHit, 4f, NavMesh.AllAreas))
+                        {
+                            // Kiểm tra vị trí mới thực sự xa player hơn
+                            float newDist = Vector3.Distance(navHit.position, enemyScript.target.position);
+                            if (newDist > dist)
+                            {
+                                enemyScript.navMeshAgent.SetDestination(navHit.position);
+                                lastSetDestination = navHit.position;
+                                enemyScript.animator.SetBool("run", true);
+                                found = true;
+                                Debug.Log($"[RETREAT] {gameObject.name} dir#{i} dist={dist:F1}<{enemyScript.minRangedDistance} → newDist={newDist:F1}");
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (!found)
+                    {
+                        Debug.LogWarning($"[RETREAT] {gameObject.name} NO valid retreat pos! dist={dist:F1} type={enemyScript.enemyType} minRange={enemyScript.minRangedDistance}");
+                    }
+                }
+                // === BOSS SKILL (from range) ===
+                else if (HasBossSkill() && CanUseSkill() 
                     && dist <= enemyScript.skillDistance 
                     && dist > enemyScript.attackDistance
                     && !enemyScript.attack && !enemyScript.hit) 
                 {
-                    // Player trong tầm skill (xa) nhưng ngoài tầm melee → DÙNG SKILL
                     UseBossSkill();
                 }
+                // === CHASE ===
                 else if(dist > enemyScript.attackDistance){
-                    // Ngoài tầm attack → CHASE
-                    // Nếu boss có skill: chase đến skillDistance (dừng xa hơn)
-                    // Nếu không: chase đến attackDistance (sát)
                     if(!enemyScript.attack && !enemyScript.hit){
                         if (enemyScript.navMeshAgent != null) {
-                            // Nếu boss có skill sẵn sàng → dừng ở skillDistance
                             if (HasBossSkill() && CanUseSkill()) {
-                                enemyScript.navMeshAgent.stoppingDistance = enemyScript.skillDistance;
+                                enemyScript.navMeshAgent.stoppingDistance = Mathf.Max(enemyScript.skillDistance - 1f, 1f);
                             } else {
-                                enemyScript.navMeshAgent.stoppingDistance = enemyScript.attackDistance;
+                                // stoppingDistance phải NHỎ HƠN attackDistance
+                                // để boss thực sự đi vào trong attack range
+                                enemyScript.navMeshAgent.stoppingDistance = Mathf.Max(enemyScript.attackDistance - 1f, 1f);
                             }
                             
                             enemyScript.navMeshAgent.isStopped = false;
                             if (enemyScript.target != null) {
-                                enemyScript.navMeshAgent.destination = enemyScript.target.position;
+                                float destDiff = Vector3.Distance(enemyScript.target.position, lastSetDestination);
+                                if (destDiff > 1f) {
+                                    enemyScript.navMeshAgent.destination = enemyScript.target.position;
+                                    lastSetDestination = enemyScript.target.position;
+                                }
                             }
                         }
                         if (enemyScript.animator != null) {
@@ -204,8 +375,8 @@ public class EnemyState : MonoBehaviour{
                         }
                     }
                 }
+                // === MELEE ATTACK ===
                 else{
-                    // Trong tầm melee → đánh thường (hoặc skill nếu ready + random trúng)
                     SelectEnemyType();
                 }
 
@@ -213,23 +384,40 @@ public class EnemyState : MonoBehaviour{
                     enemyScript.anim = enemyScript.animator.GetCurrentAnimatorStateInfo ( 0 );
                     if(enemyScript.anim.IsName("Base Layer.hit")) enemyScript.animator.SetBool("hit", false);
                     if(enemyScript.anim.IsName("Base Layer.knock")) enemyScript.animator.SetBool("knock", false);
-                    if(enemyScript.anim.IsName("Base Layer.idle")){enemyScript.attack = false; enemyScript.hit = false;}
+                    
+                    if(enemyScript.anim.IsName("Base Layer.idle")){
+                        // Đang charge skill → KHÔNG reset (coroutine quản lý)
+                        if (!isCastingSkill) {
+                            enemyScript.attack = false; enemyScript.hit = false;
+                        }
+                    }
 
                     if(enemyScript.anim.IsName("Base Layer.attack") || enemyScript.anim.IsName("attack")) {
                         if(!enemyScript.anim.loop) {
                             if(enemyScript.anim.normalizedTime >= 1.0f) {
                                 enemyScript.attack = false;
+                                isCastingSkill = false;
                             }
                         }
                     }
                     
-                    // Reset attack flag cho skill animation
                     if(enemyScript.anim.IsName("Base Layer.skill") || enemyScript.anim.IsName("skill")) {
                         if(!enemyScript.anim.loop) {
                             if(enemyScript.anim.normalizedTime >= 1.0f) {
                                 enemyScript.attack = false;
+                                isCastingSkill = false; // Skill animation xong
                             }
                         }
+                    }
+                    
+                    // === ATTACK TIMEOUT FAILSAFE ===
+                    // Tăng timeout lên 8s (charge 1.2s + skill animation ~2s + buffer)
+                    if (enemyScript.attack && !isCastingSkill && attackStartTime > 0 && Time.time - attackStartTime > 5f)
+                    {
+                        Debug.LogWarning($"[EnemyState] Attack timeout on {gameObject.name}! Force reset.");
+                        enemyScript.attack = false;
+                        enemyScript.hit = false;
+                        attackStartTime = 0f;
                     }
                 }
             }
@@ -241,8 +429,41 @@ public class EnemyState : MonoBehaviour{
                     enemyScript.animator.SetBool("run", false);
                 }
              }
-        yield return new WaitForSeconds(0.1f);
+        // Adaptive tick rate: nhanh hơn khi ở gần player
+        float tickRate = (enemyScript.enemyState != null && enemyScript.enemyState.distance <= enemyScript.attackDistance * 1.5f) ? 0.05f : 0.12f;
+        yield return new WaitForSeconds(tickRate);
         enemyScript.cont = true;
         isAIRunning = false;
+    }
+    
+    /// <summary>
+    /// Spawn warning zone tại vị trí skill sẽ đánh (AoE hoặc cone)
+    /// </summary>
+    void SpawnSkillWarningZone()
+    {
+        if (enemyScript == null || enemyScript.skillVfxPrefab == null) return;
+        
+        float warningDur = enemyScript.skillWarningDuration;
+        if (warningDur <= 0) return;
+        
+        if (enemyScript.skillIsDirectional)
+        {
+            Vector3 center = enemyScript.transform.position + enemyScript.transform.forward * 1.5f;
+            BossSkillWarning.SpawnCone(
+                center, 
+                enemyScript.transform.forward, 
+                enemyScript.skillVfxRadius,
+                enemyScript.skillAngle,
+                warningDur
+            );
+        }
+        else
+        {
+            BossSkillWarning.SpawnCircle(
+                enemyScript.transform.position,
+                enemyScript.skillVfxRadius,
+                warningDur
+            );
+        }
     }
 }

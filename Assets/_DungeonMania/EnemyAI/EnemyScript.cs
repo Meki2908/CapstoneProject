@@ -40,6 +40,14 @@ public class EnemyScript : MonoBehaviour {
     [Tooltip("Tốc độ di chuyển")]
     public float moveSpeed = 3.5f;
     
+    [Header("=== AI BEHAVIOR ===")]
+    [Tooltip("Tốc độ xoay hướng về player (cao = nhanh)")]
+    public float rotationSpeed = 8f;
+    [Tooltip("Khoảng cách tối thiểu cho ranged enemy — lùi lại nếu player tới gần")]
+    public float minRangedDistance = 0f;
+    [Tooltip("Thời gian hiển thị warning zone trước khi boss dùng skill (giây)")]
+    public float skillWarningDuration = 1.2f;
+    
     [Header("=== ENEMY TYPE ===")]
     [Tooltip("Loại enemy (phân loại chính)")]
     public bool isBoss = false;
@@ -327,6 +335,7 @@ public class EnemyScript : MonoBehaviour {
             case SpecificEnemyType.SkeletonArcher:
                 enemyType = EnemyType.archer; // Archer = ranged, KHÔNG phải skelet
                 attackDistanceOverride = 8f;   // RANGED — tấn công từ xa
+                minRangedDistance = 3f;        // Lùi lại nếu player tới gần 3m
                 break;
             case SpecificEnemyType.Orc:
             case SpecificEnemyType.Troll:
@@ -337,6 +346,7 @@ public class EnemyScript : MonoBehaviour {
             case SpecificEnemyType.Lich:
                 enemyType = EnemyType.lich;
                 attackDistanceOverride = 8f;   // RANGED — tấn công từ xa
+                minRangedDistance = 4f;        // Lùi lại nếu player tới gần 4m
                 break;
             case SpecificEnemyType.Stoneogre:
                 enemyType = EnemyType.stoneogre;
@@ -371,7 +381,7 @@ public class EnemyScript : MonoBehaviour {
         }
         attackDistance = attackDistanceOverride;
         if (navMeshAgent != null) {
-            navMeshAgent.stoppingDistance = attackDistanceOverride;
+            navMeshAgent.stoppingDistance = Mathf.Max(attackDistanceOverride - 1f, 1f);
         }
         
         Debug.Log($"[EnemyScript] Set specific type: {specificEnemyType}, category: {enemyType}, attackDistance: {attackDistanceOverride}");
@@ -495,7 +505,8 @@ public class EnemyScript : MonoBehaviour {
         direction = target.position - transform.position;
         direction.y = 0f; // Chỉ xoay ngang — tránh enemy nghiêng/ngã khi player nhảy
         if (direction.sqrMagnitude > 0.001f) {
-            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(direction), 1f);
+            Quaternion targetRotation = Quaternion.LookRotation(direction);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * rotationSpeed);
         }
     }
     public void Distance(){

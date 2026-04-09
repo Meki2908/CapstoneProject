@@ -32,7 +32,9 @@ public class EnemyDamage : MonoBehaviour{
         // Shield check — boss bất tử khi có shield
         if (enemyScript.bossMultiSkill != null && enemyScript.bossMultiSkill.ShouldBlockDamage())
         {
-            return; // Block toàn bộ damage
+            // Hiện "BLOCKED" floating text để player biết
+            FloatingCombatText.SpawnBlocked(transform.position);
+            return;
         }
         
         Hit(d);
@@ -47,9 +49,18 @@ public class EnemyDamage : MonoBehaviour{
         // === HIT STAGGER ===
         if (damage.isSpell)
         {
-            // Phép → knock cho TẤT CẢ (kể cả boss)
-            enemyScript.animator.SetBool("knock", true);
-            StartCoroutine(HitStagger(0.6f));
+            // Boss đang dùng skill/attack → SUPER ARMOR (nhận damage nhưng KHÔNG bị knock)
+            if (enemyScript.isBoss && enemyScript.attack)
+            {
+                // Chỉ nhận damage, không bị stagger — boss tiếp tục skill
+                Debug.Log("[EnemyDamage] Boss SUPER ARMOR — skill not interrupted!");
+            }
+            else
+            {
+                // Phép → knock cho enemy thường + boss KHÔNG đang attack
+                enemyScript.animator.SetBool("knock", true);
+                StartCoroutine(HitStagger(0.6f));
+            }
         }
         else if (!enemyScript.isBoss)
         {
@@ -136,6 +147,16 @@ public class EnemyDamage : MonoBehaviour{
         {
             enemyScript.navMeshAgent.isStopped = true;
             enemyScript.navMeshAgent.velocity = Vector3.zero;
+        }
+        
+        // === DISABLE COLLIDER ngay để không block path ===
+        Collider col = GetComponent<Collider>();
+        if (col != null) col.enabled = false;
+        
+        // === DISABLE NavMeshAgent để enemy không cản đường ===
+        if (enemyScript.navMeshAgent != null)
+        {
+            enemyScript.navMeshAgent.enabled = false;
         }
         
         // === CHẠY DEATH ANIMATION cho TẤT CẢ enemy ===
