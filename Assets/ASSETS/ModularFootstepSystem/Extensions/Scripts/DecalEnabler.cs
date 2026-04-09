@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 namespace ModularFootstepSystem.Extensions
 {
     using System.Collections.Generic;
@@ -106,7 +107,7 @@ namespace ModularFootstepSystem.Extensions
         {
             var serializedObject = new SerializedObject(data);
 
-            var renderFeaturesProp = serializedObject.FindProperty("m_RendererFeatures"); // Let's hope they don't change these.
+            var renderFeaturesProp = serializedObject.FindProperty("m_RendererFeatures");
             var renderFeaturesMapProp = serializedObject.FindProperty("m_RendererFeatureMap");
 
             serializedObject.Update();
@@ -132,3 +133,4 @@ namespace ModularFootstepSystem.Extensions
         }
     }
 }
+#endif
