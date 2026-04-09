@@ -96,6 +96,7 @@ public class PortalUIController : MonoBehaviour
             Cursor.lockState = CursorLockMode.None;
         }
         if (rootPanel != null) rootPanel.SetActive(true);
+        SoundManager.PlayUIOpenMenu();
     }
 
     public void ClosePortalMenu()
@@ -106,6 +107,7 @@ public class PortalUIController : MonoBehaviour
             EventSystem.current.SetSelectedGameObject(null);
         if (!overlayOnPanel)
             CursorUIPriority.EndUiOverlay();
+        SoundManager.PlayUICloseMenu();
     }
 
     private void TeleportTo(Transform destination, int portalIndex = 0)
@@ -159,7 +161,8 @@ public class PortalUIController : MonoBehaviour
     /// </summary>
     private IEnumerator TeleportSequence(Transform destination, CharacterController cc)
     {
-        // ── Bước 1: Spawn VFX tại điểm xuất phát ──
+        // ── Bước 1: Spawn VFX + SFX tại điểm xuất phát ──
+        SoundManager.PlayTeleportStart();
         SpawnEffect(currentPlayer.position, currentPlayer.rotation);
 
         // ── Bước 2: Camera pan đến điểm đích ──
@@ -208,7 +211,8 @@ public class PortalUIController : MonoBehaviour
         Physics.SyncTransforms();
         if (cc != null) cc.enabled = true;
 
-        // ── Bước 4: Spawn VFX tại điểm đích ──
+        // ── Bước 4: Spawn VFX + SFX tại điểm đích ──
+        SoundManager.PlayTeleportArrive();
         SpawnEffect(destination.position, destination.rotation);
 
         // ── Bước 5: Reset tất cả PortalNode ──────────────────────────────

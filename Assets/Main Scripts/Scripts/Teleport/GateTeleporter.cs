@@ -56,8 +56,10 @@ public class GateTeleporter : MonoBehaviour
         var cc = _player.GetComponent<CharacterController>();
         if (cc) cc.enabled = false;
 
+        SoundManager.PlayTeleportStart();
         _player.position = destination.position;
         if (_player.TryGetComponent<CharacterController>(out var cc2)) cc2.enabled = true;
+        SoundManager.PlayTeleportArrive();
 
         if (pressFCanvas) pressFCanvas.SetActive(false);
         _playerInRange = false;   // reset, OnTriggerEnter sẽ re-detect nếu cần
