@@ -94,7 +94,7 @@ public class DashState : State
         // Trigger dash animation if available
         if (character.animator)
         {
-            character.animator.SetTrigger("dash");
+            character.animator.SetTriggerNetworked("dash");
         }
     }
 

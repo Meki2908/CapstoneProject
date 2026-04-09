@@ -98,13 +98,17 @@ public class AttackState : State
         ApplyAttackSpeedToAnimator();
 
         // Start first hit
-        character.animator.SetTrigger("attack");
+        character.animator.SetTriggerNetworked("attack");
         character.playerVelocity = Vector3.zero;
         character.animator.SetFloat("speed", 0f);
 
         if (hitHandler != null && currentWeapon != null && currentWeapon.hitTimings != null && currentWeapon.hitTimings.Length > 0)
         {
             hitHandler.StartHit(hitIndex);
+            
+            // MỚI: Đồng bộ đòn chém cơ bản sang các bản sao mạng
+            var netCombat = character.GetComponent<NetworkCombatSync>();
+            if (netCombat != null) netCombat.RequestSyncBasicAttack(hitIndex);
         }
     }
 
@@ -210,7 +214,7 @@ public class AttackState : State
 
                 // Reset trigger first to ensure clean transition
                 character.animator.ResetTrigger("attack");
-                character.animator.SetTrigger("attack");
+                character.animator.SetTriggerNetworked("attack");
                 attack = false;
                 allowNewAttack = true;
                 nextAttackBuffered = false;
@@ -219,13 +223,17 @@ public class AttackState : State
                 if (hitHandler != null && currentWeapon != null && currentWeapon.hitTimings != null && currentWeapon.hitTimings.Length > 0)
                 {
                     hitHandler.StartHit(hitIndex);
+                    
+                    // MỚI: Đồng bộ liên hoàn chém tiếp theo sang Proxy
+                    var netCombat = character.GetComponent<NetworkCombatSync>();
+                    if (netCombat != null) netCombat.RequestSyncBasicAttack(hitIndex);
                 }
             }
             else
             {
                 if (hitHandler != null) hitHandler.CancelCurrentHit();
                 stateMachine.ChangeState(character.combatMove);
-                character.animator.SetTrigger("move");
+                character.animator.SetTriggerNetworked("move");
                 return;
             }
         }

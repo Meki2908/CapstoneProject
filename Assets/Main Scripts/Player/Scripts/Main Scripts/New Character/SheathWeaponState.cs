@@ -11,7 +11,7 @@ public class SheathWeaponState : State
         base.Enter();
 
         // Trigger the sheath weapon animation
-        character.animator.SetTrigger("sheathWeapon");
+        character.animator.SetTriggerNetworked("sheathWeapon");
     }
     public override void LogicUpdate()
     {
@@ -20,6 +20,7 @@ public class SheathWeaponState : State
         if (stateInfo.IsName("SheathWeapon") && stateInfo.normalizedTime >= 1.0f)
         {
             // Transition to the CombatMove state after the animation finishes
+            character.animator.SetTriggerNetworked("move");
             stateMachine.ChangeState(character.currentLocomotionState);
         }
     }

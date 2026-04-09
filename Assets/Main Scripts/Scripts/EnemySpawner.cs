@@ -80,8 +80,35 @@ public class EnemySpawner : MonoBehaviour
             return false;
         }
 
-        // Spawn enemy
-        GameObject enemy = Instantiate(prefab, spawnPos, Quaternion.identity);
+        // Spawn enemy (Với hỗ trợ Fusion Multiplayer)
+        GameObject enemy = null;
+        
+        #if FUSION_WEAVER
+        var runner = Fusion.NetworkRunner.Instances.Count > 0 ? Fusion.NetworkRunner.Instances[0] : null;
+        if (runner != null && runner.IsRunning)
+        {
+            if (runner.IsServer)
+            {
+                // Chỉ có Server (Host) mới được sinh quái mạng!
+                var netObj = runner.Spawn(prefab, spawnPos, Quaternion.identity);
+                enemy = netObj.gameObject;
+            }
+            else
+            {
+                // Là Proxy/Client, KHÔNG tạo quái vật (vì Server đã tạo và đồng bộ sang đây rồi)
+                return false;
+            }
+        }
+        else
+        {
+            // Chơi chế độ Offline
+            enemy = Instantiate(prefab, spawnPos, Quaternion.identity);
+        }
+        #else
+        enemy = Instantiate(prefab, spawnPos, Quaternion.identity);
+        #endif
+
+        if (enemy == null) return false;
 
         // Ensure enemy has required components
         if (enemy.GetComponent<NavMeshAgent>() == null)
@@ -91,7 +118,7 @@ public class EnemySpawner : MonoBehaviour
             return false;
         }
 
-        // Find and assign player reference if enemy AI needs it
+        // Find and assign player reference if enemy AI needs it (chỉ chạy Offline, vì Online Player spawn muộn)
         var enemyAI = enemy.GetComponent<BaseEnemyAI>();
         if (enemyAI != null && enemyAI.player == null)
         {

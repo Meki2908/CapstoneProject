@@ -1,10 +1,10 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Playables;
 public class AxeSkill : MonoBehaviour
 {
-    private bool IsLocalOwnerContext() => true;
+    private bool IsLocalOwnerContext() { var no = GetComponentInParent<Fusion.NetworkObject>(); return no == null || no.HasInputAuthority; }
 
     [Header("Refs")]
     [SerializeField] private EquipmentSystem equipment;     // chỉ dùng nếu KHÔNG dùng VFX-collision cho damage
@@ -54,6 +54,19 @@ public class AxeSkill : MonoBehaviour
         }
 
         RefreshActiveForCurrentWeapon(); // NEW
+    }
+
+    /// <summary>
+    /// Được gọi bởi NetworkCombatSync trên Proxy để chạy Timeline VFX.
+    /// Không tiêu tốn Cooldown, chỉ phát hình ảnh.
+    /// </summary>
+    public void ExecuteSkillNetworkedProxy()
+    {
+        if (ultimateDirector != null)
+        {
+            ultimateDirector.gameObject.SetActive(true);
+            ultimateDirector.Play();
+        }
     }
 
     private void OnWeaponChangedHandler(WeaponSO so)
@@ -140,7 +153,7 @@ public class AxeSkill : MonoBehaviour
 
         int idx = InputToIndex(input);
         animator.SetInteger(skillIndexParam, idx);
-        animator.SetTrigger(skillTriggerParam);
+        animator.SetTriggerNetworked(skillTriggerParam);
 
         // if (skillLock == null)
         // {
@@ -159,6 +172,9 @@ public class AxeSkill : MonoBehaviour
             skillLock?.BeginSkillRootMotion(animator, true);
             ultimateDirector.time = 0;
             ultimateDirector.Play();
+            
+            var netCombat = animator.GetComponentInParent<NetworkCombatSync>();
+            if (netCombat != null) netCombat.RequestSyncSkillTrigger("AxeSkill_Ultimate");
         }
     }
 
@@ -309,3 +325,4 @@ public class AxeSkill : MonoBehaviour
         skillLock?.EndSkillRootMotion(animator);
     }
 }
+

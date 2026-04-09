@@ -731,6 +731,18 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 6478788383888068105, guid: fc8b2cba9cb464b42ae9163249a17e01, type: 3}
       insertIndex: -1
       addedObject: {fileID: 278354893966160186}
+    - targetCorrespondingSourceObject: {fileID: 6478788383888068105, guid: fc8b2cba9cb464b42ae9163249a17e01, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8510979890895467390}
+    - targetCorrespondingSourceObject: {fileID: 6478788383888068105, guid: fc8b2cba9cb464b42ae9163249a17e01, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3566632466041779863}
+    - targetCorrespondingSourceObject: {fileID: 6478788383888068105, guid: fc8b2cba9cb464b42ae9163249a17e01, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6290914180389796673}
+    - targetCorrespondingSourceObject: {fileID: 6478788383888068105, guid: fc8b2cba9cb464b42ae9163249a17e01, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1727854081738937434}
   m_SourcePrefab: {fileID: 100100000, guid: fc8b2cba9cb464b42ae9163249a17e01, type: 3}
 --- !u!4 &4384166933469111249 stripped
 Transform:
@@ -828,7 +840,6 @@ MonoBehaviour:
   useHealthBar: 0
   bossName: 
   healthBarColor: {r: 1, g: 0, b: 0, a: 1}
-  expReward: 1000
 --- !u!114 &8933731316699142415
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -913,3 +924,68 @@ MonoBehaviour:
   agentHeight: 2
   agentStoppingDistance: 2.1
   rigidbodyConstraints: 80
+--- !u!114 &8510979890895467390
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4384166933469544433}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  SortKey: 1728850424
+  ObjectInterest: 1
+  Flags: 262145
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 3566632466041779863}
+  - {fileID: 6290914180389796673}
+  - {fileID: 1727854081738937434}
+  ForceRemoteRenderTimeframe: 0
+--- !u!114 &3566632466041779863
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4384166933469544433}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4f5aefab9349e2d4499c23223ea71d07, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _NetworkedHP: 0
+--- !u!114 &6290914180389796673
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4384166933469544433}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &1727854081738937434
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4384166933469544433}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a012885e7091674688dd926b20a3988, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  lerpSpeed: 50
+  lerpCrouchSpeed: 60

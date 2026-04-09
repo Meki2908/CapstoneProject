@@ -36,7 +36,11 @@ public class WeaponController : MonoBehaviour
     private GameObject currentHeldInstance;
     private GameObject currentSheathInstance;
     private Coroutine wandScaleRoutine;
-    private bool IsLocalOwnerContext() => true;
+    private bool IsLocalOwnerContext() 
+    {
+        var no = GetComponentInParent<Fusion.NetworkObject>();
+        return no == null || no.HasInputAuthority;
+    }
 
     private void Awake()
     {
@@ -131,7 +135,14 @@ public class WeaponController : MonoBehaviour
         // BẮN sự kiện cho tất cả consumer (Skills/HitRunner/UIs...)
         OnWeaponChanged?.Invoke(currentWeapon);
 
-        if (weapon != null)
+        // THÊM: Bắn lên Server để báo cho các máy con khác biết mình đổi vũ khí
+        var netWeaponSync = GetComponent<NetworkWeaponSync>();
+        if (netWeaponSync != null && currentWeapon != null)
+        {
+            netWeaponSync.CmdUpdateWeaponType(currentWeapon.weaponType);
+        }
+
+        if (weapon != null && IsLocalOwnerContext())
             WeaponSelectionPersistence.Save(weapon.weaponType);
     }
 
@@ -140,7 +151,7 @@ public class WeaponController : MonoBehaviour
     public void DrawWeaponVisual() // gọi từ Animation/State
     {
         animator.ResetTrigger(sheathTrigger);
-        animator.SetTrigger(drawTrigger);
+        animator.SetTriggerNetworked(drawTrigger);
         if (IsCurrentWand())
         {
             // Wand always under handHolder; reuse instance and toggle active
@@ -174,7 +185,7 @@ public class WeaponController : MonoBehaviour
     public void SheathWeaponVisual() // gọi từ Animation/State
     {
         animator.ResetTrigger(drawTrigger);
-        animator.SetTrigger(sheathTrigger);
+        animator.SetTriggerNetworked(sheathTrigger);
         // Tắt Aura và unbind
         var auraCtrl = GetComponent<WeaponAuraController>();
         if (auraCtrl != null) { auraCtrl.AE_AuraOff(); auraCtrl.UnbindAura(); }

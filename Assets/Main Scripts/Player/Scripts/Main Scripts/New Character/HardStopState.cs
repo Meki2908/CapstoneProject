@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 public class HardStopState : State
 {
@@ -27,7 +27,7 @@ public class HardStopState : State
         // Trigger the hard stop animation
         if (character.animator)
         {
-            character.animator.SetTrigger("hardStop");
+            character.animator.SetTriggerNetworked("hardStop");
             character.SetAnimatorLocomotionSpeed(0f);
         }
     }

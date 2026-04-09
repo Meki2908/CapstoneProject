@@ -20,7 +20,7 @@ public class SprintJumpState : State
         character.animator.applyRootMotion = false;
 
         // Play sprintJump animation
-        character.animator.SetTrigger("sprintJump");
+        character.animator.SetTriggerNetworked("sprintJump");
 
         hasLeftGround = false;
         landingTriggered = false;
@@ -55,14 +55,14 @@ public class SprintJumpState : State
         {
             if (!landingTriggered)
             {
-                character.animator.SetTrigger("land");
+                character.animator.SetTriggerNetworked("land");
                 landingTriggered = true;
             }
 
             Vector2 moveInput = moveAction.ReadValue<Vector2>();
             bool keepSprinting = sprintAction.IsPressed() && moveInput.sqrMagnitude > 0f;
             stateMachine.ChangeState(keepSprinting ? character.sprinting : character.currentLocomotionState);
-            character.animator.SetTrigger("move");
+            character.animator.SetTriggerNetworked("move");
         }
     }
 

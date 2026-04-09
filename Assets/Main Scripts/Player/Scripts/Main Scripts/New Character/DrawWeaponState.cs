@@ -11,7 +11,7 @@ public class DrawWeaponState : State
         base.Enter();
 
         // Trigger the draw weapon animation
-        character.animator.SetTrigger("drawWeapon");
+        character.animator.SetTriggerNetworked("drawWeapon");
     }
 
     public override void LogicUpdate()
@@ -23,6 +23,7 @@ public class DrawWeaponState : State
         if (stateInfo.IsName("DrawWeapon") && stateInfo.normalizedTime >= 1.0f)
         {
             // Transition to the CombatMove state after the animation finishes
+            character.animator.SetTriggerNetworked("move");
             stateMachine.ChangeState(character.currentLocomotionState);
         }
     }

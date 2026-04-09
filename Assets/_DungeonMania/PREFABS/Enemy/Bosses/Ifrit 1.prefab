@@ -482,6 +482,10 @@ GameObject:
   - component: {fileID: 1553577796009794708}
   - component: {fileID: 6234567890123045670}
   - component: {fileID: 1847362910573826492}
+  - component: {fileID: 6017370554375788541}
+  - component: {fileID: 217994569590548338}
+  - component: {fileID: 729194215693925133}
+  - component: {fileID: 3495037396937491381}
   m_Layer: 0
   m_Name: Ifrit 1
   m_TagString: Untagged
@@ -646,6 +650,71 @@ MonoBehaviour:
   excludeBossEnemyFromGlobalLock: 1
   shutdownPortalClipWhenCutsceneEnds: 1
   portalClipBinders: []
+--- !u!114 &6017370554375788541
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7236032731702054578}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  SortKey: 986095140
+  ObjectInterest: 1
+  Flags: 262145
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 217994569590548338}
+  - {fileID: 729194215693925133}
+  - {fileID: 3495037396937491381}
+  ForceRemoteRenderTimeframe: 0
+--- !u!114 &217994569590548338
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7236032731702054578}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4f5aefab9349e2d4499c23223ea71d07, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _NetworkedHP: 0
+--- !u!114 &729194215693925133
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7236032731702054578}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &3495037396937491381
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7236032731702054578}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a012885e7091674688dd926b20a3988, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  lerpSpeed: 50
+  lerpCrouchSpeed: 60
 --- !u!1 &7624128153095808132
 GameObject:
   m_ObjectHideFlags: 0

@@ -50392,6 +50392,8 @@ GameObject:
   - component: {fileID: 5564390190093060083}
   - component: {fileID: 2761359572735143557}
   - component: {fileID: 2759439553886200130}
+  - component: {fileID: 8490959176093431187}
+  - component: {fileID: 4352832136628107702}
   m_Layer: 8
   m_Name: Player_3.0
   m_TagString: Player
@@ -50441,6 +50443,8 @@ MonoBehaviour:
   - {fileID: 5564390190093060083}
   - {fileID: 2761359572735143557}
   - {fileID: 2759439553886200130}
+  - {fileID: 8490959176093431187}
+  - {fileID: 4352832136628107702}
   ForceRemoteRenderTimeframe: 0
 --- !u!114 &1217203111446829160
 MonoBehaviour:
@@ -50578,6 +50582,31 @@ MonoBehaviour:
   spectateStatusText: {fileID: 0}
   respawnCountdownText: {fileID: 0}
   spectateUI: {fileID: 0}
+--- !u!114 &8490959176093431187
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3698074488449676619}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a17c4fac1c5a55b45a147155a752f961, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &4352832136628107702
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3698074488449676619}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2732d532d5049264d952bb27429ed16e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _NetworkedWeaponType: 0
 --- !u!1 &3762816990167538178
 GameObject:
   m_ObjectHideFlags: 0

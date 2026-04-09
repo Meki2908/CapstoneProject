@@ -1,5 +1,6 @@
 namespace ModularFootstepSystem.Extensions
 {
+#if UNITY_EDITOR
     using System.Collections.Generic;
     using System.Reflection;
     using UnityEditor;
@@ -131,4 +132,5 @@ namespace ModularFootstepSystem.Extensions
             serializedObject.ApplyModifiedProperties();
         }
     }
+#endif
 }

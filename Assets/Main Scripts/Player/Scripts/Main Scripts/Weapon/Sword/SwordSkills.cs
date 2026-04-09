@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.InputSystem;
 using System.Collections.Generic;
 using UnityEngine.Playables;
@@ -6,7 +6,7 @@ using System.Collections;
 [RequireComponent(typeof(Animator))]
 public class SwordSkills : MonoBehaviour
 {
-    private bool IsLocalOwnerContext() => true;
+    private bool IsLocalOwnerContext() { var no = GetComponentInParent<Fusion.NetworkObject>(); return no == null || no.HasInputAuthority; }
 
     [Header("Refs")]
     public EquipmentSystem equipment;
@@ -159,7 +159,7 @@ public class SwordSkills : MonoBehaviour
 
         int idx = input switch { AbilityInput.E => 0, AbilityInput.R => 1, AbilityInput.T => 2, AbilityInput.Q_Ultimate => 3, _ => 0 };
         animator.SetInteger(skillIndexParam, idx);
-        animator.SetTrigger(skillTriggerParam);
+        animator.SetTriggerNetworked(skillTriggerParam);
 
         // Cooldown will be triggered by Animation Event in the skill animation
 
@@ -170,6 +170,8 @@ public class SwordSkills : MonoBehaviour
         {
             ultimateDirector.time = 0;
             ultimateDirector.Play();
+            var netCombat = animator.GetComponentInParent<NetworkCombatSync>();
+            if (netCombat != null) netCombat.RequestSyncSkillTrigger("SwordSkill_Ultimate");
         }
     }
 
@@ -254,5 +256,19 @@ public class SwordSkills : MonoBehaviour
         if (forwardAnchor != null) { Vector3 f = forwardAnchor.forward; f.y = 0f; return f.sqrMagnitude > 0.0001f ? f.normalized : Vector3.forward; }
         if (!useInputDirection) { Vector3 f = (character != null ? character.transform.forward : transform.forward); f.y = 0f; return f.sqrMagnitude > 0.0001f ? f.normalized : Vector3.forward; }
         var cam = Camera.main ? Camera.main.transform : null; Vector3 fwd = cam ? cam.forward : (character ? character.transform.forward : transform.forward); fwd.y = 0f; return fwd.normalized;
+    } 
+
+    /// <summary>
+    /// �u?c g?i b?i NetworkCombatSync tr�n Proxy d? ch?y Timeline VFX.
+    /// Kh�ng ti�u t?n Cooldown, ch? ph�t h�nh ?nh.
+    /// </summary>
+    public void ExecuteSkillNetworkedProxy()
+    {
+        if (ultimateDirector != null)
+        {
+            ultimateDirector.gameObject.SetActive(true);
+            ultimateDirector.Play();
+        }
     }
 }
+

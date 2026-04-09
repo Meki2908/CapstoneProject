@@ -145,7 +145,7 @@ public class EnemyDamage : MonoBehaviour{
             enemyScript.animator.SetBool("knock", false);
             enemyScript.animator.SetBool("run", false);
             enemyScript.animator.SetBool("attack", false);
-            enemyScript.animator.SetTrigger("dead");
+            enemyScript.animator.SetTriggerNetworked("dead");
         }
         
         // === DEATH SOUND ===

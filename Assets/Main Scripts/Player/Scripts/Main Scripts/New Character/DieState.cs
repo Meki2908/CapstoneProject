@@ -46,7 +46,7 @@ public class DieState : State
             {
                 // Weapon is drawn - ensure weapon layer can play animation
                 // The animation should play on the active weapon layer
-                character.animator.SetTrigger("die");
+                character.animator.SetTriggerNetworked("die");
             }
             else
             {
@@ -54,7 +54,7 @@ public class DieState : State
                 DisableWeaponLayersForBaseDie();
 
                 // Trigger die - will play on base layer since weapon layers are disabled
-                character.animator.SetTrigger("die");
+                character.animator.SetTriggerNetworked("die");
             }
         }
 

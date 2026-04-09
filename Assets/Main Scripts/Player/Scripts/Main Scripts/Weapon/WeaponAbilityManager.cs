@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public class WeaponAbilityManager : MonoBehaviour
 {
@@ -112,3 +112,4 @@ public class WeaponAbilityManager : MonoBehaviour
         Debug.Log($"[WeaponAbilityManager] Set {abilities?.Length ?? 0} abilities");
     }
 }
+

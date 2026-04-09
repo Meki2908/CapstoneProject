@@ -54,7 +54,7 @@ public class StandingState : BaseMoveState
             character.currentLocomotionState = character.combatMove;
 
             // Set the drawWeapon trigger and reset sheathWeapon
-            character.animator.SetTrigger("drawWeapon");
+            character.animator.SetTriggerNetworked("drawWeapon");
             character.animator.ResetTrigger("sheathWeapon");
 
             // Change to CombatMoveState

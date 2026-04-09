@@ -129,6 +129,13 @@ public class MultiplayerManager : MonoBehaviour, INetworkRunnerCallbacks
     /// <summary>Cache received player names from ReliableData (host side, trước scene load).</summary>
     private Dictionary<PlayerRef, string> _receivedPlayerNames = new();
 
+    public string GetPlayerName(PlayerRef player)
+    {
+        if (player == Runner?.LocalPlayer) return LocalPlayerName;
+        if (_receivedPlayerNames.TryGetValue(player, out var pName)) return pName;
+        return $"Player {player.PlayerId}";
+    }
+
     /// <summary>ReliableKey for player name sharing before scene load.</summary>
     private static readonly ReliableKey PLAYER_NAME_KEY = ReliableKey.FromInts(1, 0, 0, 0);
 
@@ -1396,6 +1403,12 @@ public class MultiplayerManager : MonoBehaviour, INetworkRunnerCallbacks
         else if (!runner.IsServer)
         {
             Debug.Log($"[MultiplayerManager] [CLIENT] Scene loaded — waiting for host spawn.");
+            
+            if (LocalPlayerHandler.Instance != null && IsInGameplayScene())
+            {
+                Debug.Log("[MultiplayerManager] [CLIENT] Disabling offline scene player to prevent duplicates.");
+                LocalPlayerHandler.Instance.TryDisableScenePlayer();
+            }
         }
         else if (playerPrefab == null)
         {
@@ -1654,6 +1667,15 @@ public class MultiplayerManager : MonoBehaviour, INetworkRunnerCallbacks
     public void OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ReliableKey key, ArraySegment<byte> data)
     {
         if (data.Count == 0) return;
+
+        // Route Dungeon Lobby Invites
+        if (key.Equals(ReliableKey.FromInts(99, 100)) || key.Equals(ReliableKey.FromInts(99, 101)) || key.Equals(ReliableKey.FromInts(99, 102)))
+        {
+            byte[] rawData = new byte[data.Count];
+            System.Buffer.BlockCopy(data.Array, data.Offset, rawData, 0, data.Count);
+            DungeonLobbyInviteNetwork.HandleReliableData(runner, player, key, rawData);
+            return;
+        }
 
         // ─── PLAYER_NAME_KEY: tên trực tiếp (client→host hoặc host→client) ───
         if (key.Equals(PLAYER_NAME_KEY))

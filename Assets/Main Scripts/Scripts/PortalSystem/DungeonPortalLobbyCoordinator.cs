@@ -13,13 +13,26 @@ public class DungeonPortalLobbyCoordinator : MonoBehaviour
 
     [Header("Panels (auto-find theo tên nếu để trống)")]
     [Tooltip("Object tên \"Button\" chứa Easy/Normal/Hard — ẩn sau khi chọn độ khó.")]
-    [SerializeField] GameObject difficultyButtonsRoot;
-    [SerializeField] GameObject numberOfPlayersPanel;
-    [SerializeField] GameObject preparationPanel;
+    [SerializeField] public GameObject difficultyButtonsRoot;
+    [SerializeField] public GameObject numberOfPlayersPanel;
+    [SerializeField] public GameObject preparationPanel;
 
     [Header("TMP (auto-find trong Preparation panel)")]
-    [SerializeField] TMP_Text countdownText;
-    [SerializeField] TMP_Text joinedExpectedText;
+    [SerializeField] public TMP_Text countdownText;
+    [SerializeField] public TMP_Text joinedExpectedText;
+
+    [Header("UI Mời Nhóm (Auto-generated)")]
+    [SerializeField] public GameObject inviteNotificationPanel;
+    [SerializeField] public TMP_Text inviteMessageText;
+    [SerializeField] public Button inviteYesButton;
+    [SerializeField] public Button inviteNoButton;
+    [SerializeField] public Button startNowButton;
+
+    [Header("UI Phòng Chờ/Ready Room (Auto-generated)")]
+    [SerializeField] public GameObject partyReadyRoomPanel;
+    [SerializeField] public TMP_Text partyMemberListText;
+    [SerializeField] public Button partyReadyButton;
+    [SerializeField] public Button partyExitButton;
 
     [Header("Solo / fallback")]
     [SerializeField] float localFinalCountdownSeconds = 3f;
@@ -125,6 +138,8 @@ public class DungeonPortalLobbyCoordinator : MonoBehaviour
             numberOfPlayersPanel.SetActive(false);
         if (preparationPanel != null)
             preparationPanel.SetActive(false);
+        if (partyReadyRoomPanel != null)
+            partyReadyRoomPanel.SetActive(false);
         if (countdownText != null)
             countdownText.text = string.Empty;
     }
@@ -227,12 +242,36 @@ public class DungeonPortalLobbyCoordinator : MonoBehaviour
 
         if (_localCountdownRoutine != null)
             StopCoroutine(_localCountdownRoutine);
-        _localCountdownRoutine = StartCoroutine(LocalSoloCountdownRoutine(maxPlayers));
+
+        if (maxPlayers == 1)
+        {
+            if (preparationPanel != null) preparationPanel.SetActive(true);
+            _localCountdownRoutine = StartCoroutine(LocalSoloCountdownRoutine(maxPlayers));
+        }
+        else
+        {
+            // Multiplayer - gửi lời mời tới tất cả!
+            if (MultiplayerManager.Instance != null && MultiplayerManager.Runner != null && MultiplayerManager.Runner.IsServer)
+            {
+                if (partyReadyRoomPanel != null) partyReadyRoomPanel.SetActive(true);
+                
+                // Wait for players to join (handled by DungeonLobbyInviteNetwork)
+                DungeonLobbyInviteNetwork.ServerStartLobbyWaiting(this, maxPlayers);
+                DungeonLobbyInviteNetwork.ServerSendInviteToAllClients(_pendingSceneName, DungeonConfig.SelectedDifficulty, DungeonConfig.SelectedMapType);
+            }
+            else
+            {
+                // Client cannot start a multiplayer lobby
+                Debug.LogWarning("Only Host can create a multiplayer dungeon lobby.");
+                if (numberOfPlayersPanel != null) numberOfPlayersPanel.SetActive(true);
+            }
+        }
     }
 
     IEnumerator LocalSoloCountdownRoutine(int maxPlayers)
     {
         SetJoinedExpected(1, maxPlayers);
+        if (startNowButton != null) startNowButton.gameObject.SetActive(false);
         yield return StartCoroutine(RunFinalCountdownSeconds(localFinalCountdownSeconds));
         ExecuteTeleport();
     }

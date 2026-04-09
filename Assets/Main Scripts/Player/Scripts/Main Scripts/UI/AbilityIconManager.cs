@@ -58,7 +58,7 @@ public class AbilityIconManager : MonoBehaviour
     private void Awake()
     {
         if (weaponController == null)
-            weaponController = FindFirstObjectByType<WeaponController>();
+            weaponController = FindLocalOwnerWeaponController();
 
         // Initialize with default icons
         SetDefaultIcons();
@@ -412,4 +412,19 @@ public class AbilityIconManager : MonoBehaviour
         }
     }
 
+    // Helper to find true local owner logic
+    private WeaponController FindLocalOwnerWeaponController()
+    {
+        var all = FindObjectsByType<WeaponController>(FindObjectsSortMode.None);
+        for (int i = 0; i < all.Length; i++)
+        {
+            var wc = all[i];
+            if (wc != null)
+            {
+                var no = wc.GetComponentInParent<Fusion.NetworkObject>();
+                if (no == null || no.HasInputAuthority) return wc;
+            }
+        }
+        return null;
+    }
 }

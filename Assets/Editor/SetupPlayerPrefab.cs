@@ -164,6 +164,20 @@ public class SetupPlayerPrefab : EditorWindow
             added++;
         }
 
+        // 10. NetworkCombatSync (Sync VFX & Sound Combat)
+        if (prefabRoot.GetComponent<NetworkCombatSync>() == null)
+        {
+            prefabRoot.AddComponent<NetworkCombatSync>();
+            added++;
+        }
+
+        // 11. NetworkWeaponSync (Sync Weapon Type)
+        if (prefabRoot.GetComponent<NetworkWeaponSync>() == null)
+        {
+            prefabRoot.AddComponent<NetworkWeaponSync>();
+            added++;
+        }
+
         if (added > 0)
         {
             PrefabUtility.SaveAsPrefabAsset(prefabRoot, prefabPath);

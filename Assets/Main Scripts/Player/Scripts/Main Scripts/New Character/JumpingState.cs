@@ -30,7 +30,7 @@ public class JumpingState : State
         gravityVelocity.y = 0;
 
         character.animator.SetFloat("speed", 0);
-        character.animator.SetTrigger("jump");
+        character.animator.SetTriggerNetworked("jump");
         character.NotifyJumpImpulseStarted();
         Jump();
     }
@@ -51,7 +51,7 @@ public class JumpingState : State
             if (!landTriggered)
             {
                 // Base Layer Jumping Up -> LightLanding uses the "land" trigger.
-                character.animator.SetTrigger("land");
+                character.animator.SetTriggerNetworked("land");
                 landTriggered = true;
             }
             // Return to the active locomotion context (combat/standing) instead of forcing standing.

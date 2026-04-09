@@ -505,9 +505,27 @@ public class TakeDamageTest : MonoBehaviour
             Debug.Log($"[TakeDamageTest] {gameObject.name} taking SKILL damage: {damage} from {weaponType} (crit: {isCrit})");
         }
 
-        // Apply damage
-        currentHealth -= damage;
-        currentHealth = Mathf.Max(0f, currentHealth);
+        // Apply damage via Network OR Local
+        var netHealth = GetComponent<NetworkEnemyHealth>();
+        if (netHealth != null && netHealth.Object != null && netHealth.Object.IsValid)
+        {
+            // MẠNG: Gửi RPC cho Host xử lý trừ máu
+            netHealth.RPC_TakeDamage(damage, 0, transform.position);
+            
+            // Xử lý VFX/Text lập tức cho có cảm giác 'đã trúng'
+            SpawnDamageVFX(damage, weaponType, isCrit);
+            
+            // Dừng tại đây, việc Die() và Anim(GetHit) sẽ do OnHealthChanged của NetworkEnemyHealth lo!
+            return;
+        }
+        else
+        {
+            // BẢN TRUYỀN THỐNG (Offline)
+            currentHealth -= damage;
+            currentHealth = Mathf.Max(0f, currentHealth);
+            
+            SpawnDamageVFX(damage, weaponType, isCrit);
+        }
 
         // Visual feedback
         if (hitEffect != null)
@@ -550,6 +568,34 @@ public class TakeDamageTest : MonoBehaviour
         else if (showDebugInfo)
         {
             Debug.Log($"[TakeDamageTest] {gameObject.name} took {damage} damage (weapon: {weaponType}, crit: {isCrit}). HP: {currentHealth}/{maxHealth}");
+        }
+    }
+
+    private void SpawnDamageVFX(float damage, WeaponType weaponType, bool isCrit)
+    {
+        // Visual feedback
+        if (hitEffect != null)
+        {
+            var hit = Instantiate(hitEffect, transform.position + Vector3.up * 1.2f, Quaternion.identity);
+            Destroy(hit, hitEffectLifetime);
+        }
+
+        // Spawn damage number using DamageTextManager
+        if (DamageTextManager.Instance != null)
+        {
+            DamageTextManager.Instance.SpawnDamageText(transform.position, damage, weaponType, isCrit);
+        }
+        else if (damageNumberPrefab != null)
+        {
+            // Fallback to old system if DamageTextManager not available
+            Vector3 spawnPosition = transform.position + Vector3.up * 2f;
+            var damageNumber = damageNumberPrefab.Spawn(spawnPosition, damage);
+            damageNumber.SetColor(isCrit ? Color.yellow : Color.red);
+            damageNumber.SetScale(isCrit ? 1.5f : 1.2f);
+        }
+        else
+        {
+            Debug.LogWarning("[TakeDamageTest] Cannot spawn damage number - no DamageTextManager or prefab assigned!");
         }
     }
 

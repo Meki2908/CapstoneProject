@@ -52,7 +52,11 @@ public class WeaponSwapper : MonoBehaviour
         for (int i = 0; i < all.Length; i++)
         {
             var wc = all[i];
-            if (wc != null) return wc;
+            if (wc != null)
+            {
+                var no = wc.GetComponentInParent<Fusion.NetworkObject>();
+                if (no == null || no.HasInputAuthority) return wc;
+            }
         }
         return null;
     }

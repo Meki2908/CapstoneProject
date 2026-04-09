@@ -4,7 +4,11 @@ using UnityEngine.InputSystem;
 using UnityEngine.Playables;
 public class MageSkills : MonoBehaviour
 {
-    private bool IsLocalOwnerContext() => true;
+    private bool IsLocalOwnerContext() 
+    {
+        var no = GetComponentInParent<Fusion.NetworkObject>();
+        return no == null || no.HasInputAuthority;
+    }
 
     [Header("Refs")]
     [SerializeField] private EquipmentSystem equipment;
@@ -151,7 +155,7 @@ public class MageSkills : MonoBehaviour
 
         int idx = input switch { AbilityInput.E => 0, AbilityInput.R => 1, AbilityInput.T => 2, AbilityInput.Q_Ultimate => 3, _ => 0 };
         animator.SetInteger(skillIndexParam, idx);
-        animator.SetTrigger(skillTriggerParam);
+        animator.SetTriggerNetworked(skillTriggerParam);
 
         if (input == AbilityInput.Q_Ultimate && ultimateDirector != null)
         {
@@ -160,6 +164,9 @@ public class MageSkills : MonoBehaviour
             skillLock?.BeginSkillRootMotion(animator, true);
             ultimateDirector.time = 0;
             ultimateDirector.Play();
+            
+            var netCombat = animator.GetComponentInParent<NetworkCombatSync>();
+            if (netCombat != null) netCombat.RequestSyncSkillTrigger("MageSkill_Ultimate");
         }
     }
     // Mage giờ dùng logic VFX như Sword/Axe - loại bỏ projectile methods thừa
@@ -544,5 +551,18 @@ public class MageSkills : MonoBehaviour
 
         instance.SetActive(false);
         pool.Enqueue(instance);
+    }
+
+    /// <summary>
+    /// Được gọi bởi NetworkCombatSync trên Proxy để chạy Timeline VFX.
+    /// Không tiêu tốn Cooldown, chỉ phát hình ảnh.
+    /// </summary>
+    public void ExecuteSkillNetworkedProxy()
+    {
+        if (ultimateDirector != null)
+        {
+            ultimateDirector.gameObject.SetActive(true);
+            ultimateDirector.Play();
+        }
     }
 }

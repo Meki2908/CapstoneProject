@@ -54,7 +54,7 @@ public class GetHitState : State
             {
                 // Weapon is drawn - ensure weapon layer can play animation
                 // The animation should play on the active weapon layer
-                character.animator.SetTrigger("gethit");
+                character.animator.SetTriggerNetworked("gethit");
             }
             else
             {
@@ -62,7 +62,7 @@ public class GetHitState : State
                 DisableWeaponLayersForBaseHit();
 
                 // Trigger gethit - will play on base layer since weapon layers are disabled
-                character.animator.SetTrigger("gethit");
+                character.animator.SetTriggerNetworked("gethit");
             }
         }
 

@@ -215,13 +215,40 @@ public class WaveSpawner : MonoBehaviour
             return;
         }
 
-        // Spawn enemy
-        GameObject enemy = Instantiate(prefab, spawnPos, Quaternion.identity);
+        // Spawn enemy (Với hỗ trợ Fusion Multiplayer)
+        GameObject enemy = null;
+        
+        #if FUSION_WEAVER
+        var runner = Fusion.NetworkRunner.Instances.Count > 0 ? Fusion.NetworkRunner.Instances[0] : null;
+        if (runner != null && runner.IsRunning)
+        {
+            if (runner.IsServer)
+            {
+                // Server spawn quái mạng!
+                var netObj = runner.Spawn(prefab, spawnPos, Quaternion.identity);
+                enemy = netObj.gameObject;
+            }
+            else
+            {
+                // Client không tự tạo quái offline
+                return;
+            }
+        }
+        else
+        {
+            // Offline
+            enemy = Instantiate(prefab, spawnPos, Quaternion.identity);
+        }
+        #else
+        enemy = Instantiate(prefab, spawnPos, Quaternion.identity);
+        #endif
+
+        if (enemy == null) return;
 
         // Ensure enemy has required components
         if (enemy.GetComponent<UnityEngine.AI.NavMeshAgent>() == null)
         {
-            Debug.LogError("[WaveSpawner] Enemy prefab missing NavMeshAgent component!");
+            Debug.LogError($"[WaveSpawner] {prefab.name} prefab missing NavMeshAgent component!");
             Destroy(enemy);
             return;
         }

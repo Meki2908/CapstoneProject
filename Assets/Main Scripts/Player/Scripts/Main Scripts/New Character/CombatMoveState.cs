@@ -1,5 +1,4 @@
-using UnityEditor.Timeline.Actions;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class CombatMoveState : BaseMoveState
 {
@@ -7,7 +6,7 @@ public class CombatMoveState : BaseMoveState
     private float lastToggleTime = 0;
     bool attack;
 
-    // NEW: tránh CombatMoveState can thiệp trong lúc đang dùng skill
+    // NEW: trÃ¡nh CombatMoveState can thiá»‡p trong lÃºc Ä‘ang dÃ¹ng skill
     private SkillLock skillLock;
 
     public CombatMoveState(Character _character, StateMachine _stateMachine) : base(_character, _stateMachine)
@@ -29,7 +28,7 @@ public class CombatMoveState : BaseMoveState
     {
         base.HandleInput();
 
-        // NEW: khi đang skill, không đọc/tiêu thụ input để tránh can thiệp
+        // NEW: khi Ä‘ang skill, khÃ´ng Ä‘á»c/tiÃªu thá»¥ input Ä‘á»ƒ trÃ¡nh can thiá»‡p
         if (skillLock != null && skillLock.isPerformingSkill)
             return;
 
@@ -40,11 +39,11 @@ public class CombatMoveState : BaseMoveState
     {
         base.LogicUpdate();
 
-        // NEW: khi đang skill, không xét sheath/attack/đổi state
+        // NEW: khi Ä‘ang skill, khÃ´ng xÃ©t sheath/attack/Ä‘á»•i state
         if (skillLock != null && skillLock.isPerformingSkill)
             return;
 
-        // Kiểm tra cooldown trước khi xử lý toggle vũ khí
+        // Kiá»ƒm tra cooldown trÆ°á»›c khi xá»­ lÃ½ toggle vÅ© khÃ­
         if (Time.time - lastToggleTime < toggleCooldown)
         {
             return;
@@ -54,30 +53,30 @@ public class CombatMoveState : BaseMoveState
         {
             lastToggleTime = Time.time;
 
-            // reset cờ để không loop
+            // reset cá» Ä‘á»ƒ khÃ´ng loop
             sheathWeapon = false;
             character.isWeaponDrawn = false;
             character.currentLocomotionState = character.standing;
 
-            // Gọi đúng trigger và tránh double ChangeState
+            // Gá»i Ä‘Ãºng trigger vÃ  trÃ¡nh double ChangeState
             character.animator.ResetTrigger("drawWeapon");
-            character.animator.SetTrigger("sheathWeapon");
+            character.animator.SetTriggerNetworked("sheathWeapon");
 
             stateMachine.ChangeState(character.currentLocomotionState);
             return;
         }
 
-        // Nếu nhấn nút tấn công, chuyển sang AttackState
+        // Náº¿u nháº¥n nÃºt táº¥n cÃ´ng, chuyá»ƒn sang AttackState
         if (attack && stateMachine.currentState != character.attacking)
         {
-            character.animator.SetTrigger("attack");
+            character.animator.SetTriggerNetworked("attack");
             stateMachine.ChangeState(character.attacking);
         }
     }
 
     public override void PhysicsUpdate()
     {
-        // NEW: để BaseMoveState xử lý lock (đứng yên khi skill)
+        // NEW: Ä‘á»ƒ BaseMoveState xá»­ lÃ½ lock (Ä‘á»©ng yÃªn khi skill)
         base.PhysicsUpdate();
     }
 
@@ -85,6 +84,7 @@ public class CombatMoveState : BaseMoveState
     {
         base.Exit();
         // Don't reset speed here - let BaseMoveState handle it for smooth blending
-        character.animator.ResetTrigger("attack"); // Đặt lại trigger để tránh dư thừa
+        character.animator.ResetTrigger("attack"); // Äáº·t láº¡i trigger Ä‘á»ƒ trÃ¡nh dÆ° thá»«a
     }
 }
+
