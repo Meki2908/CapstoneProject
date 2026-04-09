@@ -113,6 +113,10 @@ public class SprintState : State
     public override void PhysicsUpdate()
     {
         base.PhysicsUpdate();
+
+        // Guard: skip nếu CharacterController bị disable (vd: đang teleport)
+        if (character.controller == null || !character.controller.enabled) return;
+
         gravityVelocity.y += gravityValue * Time.deltaTime;
         grounded = character.controller.isGrounded;
         if (grounded && gravityVelocity.y < 0)

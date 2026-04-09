@@ -893,11 +893,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5ec810f7cdeb4254cabae37f14f73d5b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MinimapCameraFollow
-  player: {fileID: 0}
+  player: {fileID: 298530814}
   offset: {x: 0, y: 50, z: 0}
   cameraTransform: {fileID: 0}
   playerIcon: {fileID: 0}
   minimapUIRoot: {fileID: 0}
+  brightenMinimap: 1
+  minimapAmbientIntensity: 1.5
 --- !u!114 &600511387
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2877,19 +2879,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bce20b9f99c9e17479aa4b9e041cb8ae, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  playerTransform: {fileID: 298530814}
   circleRadius: 0.7
-  circleWidth: 0.06
+  circleThickness: 0.04
   circleSegments: 32
-  arrowBodyLength: 0.4
-  arrowBodyWidth: 0.15
-  arrowHeadWidth: 0.35
-  arrowHeadLength: 0.25
+  arrowSize: 0.4
   arrowBaseDistance: 1
   arrowMoveAmount: 0.25
   arrowMoveSpeed: 1.5
   groundOffset: 0.08
   color: {r: 1, g: 1, b: 0, a: 1}
-  pulseSpeed: 2
   hideDistance: 3
   searchInterval: 1
 --- !u!1001 &784878257390201426
