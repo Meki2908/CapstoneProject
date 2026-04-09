@@ -18,7 +18,8 @@ namespace Artsystack.ArtsystackGui
         [SerializeField] private GameObject panel_Exit;
 
         [Header("Main Menu Buttons")]
-        [SerializeField] private UnityEngine.UI.Button btn_Play;
+        [SerializeField] private UnityEngine.UI.Button btn_NewGame;
+        [SerializeField] private UnityEngine.UI.Button btn_Continue;
         [SerializeField] private UnityEngine.UI.Button btn_Help;
         [SerializeField] private UnityEngine.UI.Button btn_Settings;
         [SerializeField] private UnityEngine.UI.Button btn_Exit;
@@ -57,8 +58,15 @@ namespace Artsystack.ArtsystackGui
                 panel_GUIGame.SetActive(true);
 
             // Thiết lập event listeners cho main menu
-            if (btn_Play != null)
-                btn_Play.onClick.AddListener(OnPlayClicked);
+            if (btn_NewGame != null)
+                btn_NewGame.onClick.AddListener(OnNewGameClicked);
+
+            if (btn_Continue != null)
+            {
+                btn_Continue.onClick.AddListener(OnContinueClicked_MainMenu);
+                // Ẩn hoàn toàn nếu chưa có save
+                btn_Continue.gameObject.SetActive(HasSaveData());
+            }
             
             if (btn_Settings != null)
                 btn_Settings.onClick.AddListener(OnSettingsClicked);
@@ -86,6 +94,23 @@ namespace Artsystack.ArtsystackGui
         /// Khi bấm nút Play - Bắt đầu game mới hoặc tiếp tục
         /// </summary>
         public void OnPlayClicked()
+        {
+            StartCoroutine(LoadGameScene());
+        }
+
+        /// <summary>
+        /// New Game — xóa tất cả save data rồi bắt đầu mới
+        /// </summary>
+        public void OnNewGameClicked()
+        {
+            DeleteAllSaveData();
+            StartCoroutine(LoadGameScene());
+        }
+
+        /// <summary>
+        /// Continue — load game với save hiện có
+        /// </summary>
+        public void OnContinueClicked_MainMenu()
         {
             StartCoroutine(LoadGameScene());
         }
@@ -285,6 +310,67 @@ namespace Artsystack.ArtsystackGui
         public GameObject Panel_Loading => panel_Loading;
         public GameObject Panel_PopUpPause => panel_PopUpPause;
         public GameObject Panel_Exit => panel_Exit;
+
+        #endregion
+
+        #region Save Data
+
+        private static readonly string[] saveFileNames = {
+            "inventory.json",
+            "equipment.json",
+            "weapon_gems.json",
+            "weapon_selection.json",
+            "weapon_mastery.json",
+            "map_chinh_player_position.json"
+        };
+
+        private static readonly string[] prefsKeys = {
+            "Dungeon_SaMac_MaxCleared",
+            "Dungeon_DamLay_MaxCleared",
+            "QUEST_COUNT",
+            "QUEST_1", "QUEST_1_STEP",
+            "QUEST_2", "QUEST_2_STEP",
+            "QUEST_3", "QUEST_3_STEP",
+            "QUEST_4", "QUEST_4_STEP",
+            "QUEST_5", "QUEST_5_STEP"
+        };
+
+        bool HasSaveData()
+        {
+            string dir = Application.persistentDataPath;
+            foreach (var f in saveFileNames)
+            {
+                if (System.IO.File.Exists(System.IO.Path.Combine(dir, f)))
+                    return true;
+            }
+            if (PlayerPrefs.HasKey("QUEST_COUNT")) return true;
+            if (PlayerPrefs.HasKey("Dungeon_SaMac_MaxCleared")) return true;
+            return false;
+        }
+
+        void DeleteAllSaveData()
+        {
+            string dir = Application.persistentDataPath;
+            foreach (var f in saveFileNames)
+            {
+                string path = System.IO.Path.Combine(dir, f);
+                if (System.IO.File.Exists(path))
+                {
+                    System.IO.File.Delete(path);
+                    Debug.Log($"[NewGame] Deleted: {f}");
+                }
+            }
+            foreach (var key in prefsKeys)
+            {
+                if (PlayerPrefs.HasKey(key))
+                {
+                    PlayerPrefs.DeleteKey(key);
+                    Debug.Log($"[NewGame] Deleted PlayerPrefs: {key}");
+                }
+            }
+            PlayerPrefs.Save();
+            Debug.Log("[NewGame] All save data deleted!");
+        }
 
         #endregion
     }
