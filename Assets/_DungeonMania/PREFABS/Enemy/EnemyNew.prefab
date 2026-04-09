@@ -34050,6 +34050,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1976825276289276082}
     m_Modifications:
+    - target: {fileID: 279319102203594972, guid: b7e0655ac6ffc92418e550a06001dd34, type: 3}
+      propertyPath: m_Constraints
+      value: 112
+      objectReference: {fileID: 0}
     - target: {fileID: 1105744175949853711, guid: b7e0655ac6ffc92418e550a06001dd34, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -34093,6 +34097,10 @@ PrefabInstance:
     - target: {fileID: 1105744175950014511, guid: b7e0655ac6ffc92418e550a06001dd34, type: 3}
       propertyPath: m_Name
       value: Skeleton@Skin
+      objectReference: {fileID: 0}
+    - target: {fileID: 1105744175950014511, guid: b7e0655ac6ffc92418e550a06001dd34, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -34450,7 +34458,7 @@ MonoBehaviour:
   delay: 0
   wait: 0
   alive: 0
-  enemyName: Enemy
+  enemyName: Varkoth
   attackDamage: 10
   armorValue: 5
   magicValue: 0
@@ -34460,6 +34468,9 @@ MonoBehaviour:
   scoreReward: 100
   attackDistanceOverride: 3
   moveSpeed: 3.5
+  rotationSpeed: 8
+  minRangedDistance: 0
+  skillWarningDuration: 1.2
   isBoss: 1
   enemyType: 8
   specificEnemyType: 8
@@ -34474,8 +34485,10 @@ MonoBehaviour:
   skillIsDirectional: 1
   skillAngle: 60
   skillDistance: 5
-  skillCooldown: 8
+  skillCooldown: 12
   skillDamageMultiplier: 2
+  skillRepeatCount: 1
+  skillRepeatDelay: 1
   spawnVfxPrefab: {fileID: 6531319713837899222, guid: e042af9235c347e4bab1092407f29d60, type: 3}
   spawnVfxDuration: 1
   lastSkillTime: -999
@@ -34554,6 +34567,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   distance: 0
   isStop: 0
+  isCastingSkill: 0
+  skillCastDirection: {x: 0, y: 0, z: 0}
 --- !u!114 &6833920111012319328
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -34636,7 +34651,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 16
+  m_Constraints: 112
   m_CollisionDetection: 0
 --- !u!4 &1981453737284931403 stripped
 Transform:
@@ -35386,6 +35401,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   distance: 0
   isStop: 0
+  isCastingSkill: 0
+  skillCastDirection: {x: 0, y: 0, z: 0}
 --- !u!114 &1981453737562574188
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -35403,7 +35420,7 @@ MonoBehaviour:
   delay: 0
   wait: 0
   alive: 0
-  enemyName: Varkoth
+  enemyName: Grondar
   attackDamage: 10
   armorValue: 5
   magicValue: 0
@@ -35413,6 +35430,9 @@ MonoBehaviour:
   scoreReward: 100
   attackDistanceOverride: 3.5
   moveSpeed: 3.5
+  rotationSpeed: 8
+  minRangedDistance: 0
+  skillWarningDuration: 1.2
   isBoss: 1
   enemyType: 6
   specificEnemyType: 6
@@ -35427,8 +35447,10 @@ MonoBehaviour:
   skillIsDirectional: 0
   skillAngle: 90
   skillDistance: 6
-  skillCooldown: 8
+  skillCooldown: 12
   skillDamageMultiplier: 2
+  skillRepeatCount: 1
+  skillRepeatDelay: 1
   spawnVfxPrefab: {fileID: 6531319713837899222, guid: e042af9235c347e4bab1092407f29d60, type: 3}
   spawnVfxDuration: 1
   lastSkillTime: -999
@@ -35513,7 +35535,7 @@ MonoBehaviour:
   damagePerHit: 1
   damageInterval: 2
   enableRaycastDamage: 0
-  maxHealth: 100
+  maxHealth: 100000
   currentHealth: 0
   isAlive: 1
   useHealthBar: 0
@@ -35563,7 +35585,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 16
+  m_Constraints: 112
   m_CollisionDetection: 0
 --- !u!4 &1981453737562969666 stripped
 Transform:
@@ -35927,6 +35949,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   distance: 0
   isStop: 0
+  isCastingSkill: 0
+  skillCastDirection: {x: 0, y: 0, z: 0}
 --- !u!195 &1981453737392230780
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -35976,6 +36000,9 @@ MonoBehaviour:
   scoreReward: 100
   attackDistanceOverride: 8
   moveSpeed: 5
+  rotationSpeed: 8
+  minRangedDistance: 4
+  skillWarningDuration: 1.2
   isBoss: 0
   enemyType: 0
   specificEnemyType: 1
@@ -35997,6 +36024,8 @@ MonoBehaviour:
   skillDistance: 8
   skillCooldown: 8
   skillDamageMultiplier: 2
+  skillRepeatCount: 1
+  skillRepeatDelay: 1
   spawnVfxPrefab: {fileID: 6531319713837899222, guid: c9cfbafb518c957478f1521c7395fa53, type: 3}
   spawnVfxDuration: 1
   lastSkillTime: -999
@@ -36109,7 +36138,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 80
+  m_Constraints: 112
   m_CollisionDetection: 0
 --- !u!4 &1981453737633623545 stripped
 Transform:
@@ -38299,6 +38328,9 @@ MonoBehaviour:
   scoreReward: 100
   attackDistanceOverride: 2
   moveSpeed: 3.5
+  rotationSpeed: 8
+  minRangedDistance: 0
+  skillWarningDuration: 1.2
   isBoss: 0
   enemyType: 2
   specificEnemyType: 4
@@ -38315,6 +38347,8 @@ MonoBehaviour:
   skillDistance: 8
   skillCooldown: 8
   skillDamageMultiplier: 2
+  skillRepeatCount: 1
+  skillRepeatDelay: 1
   spawnVfxPrefab: {fileID: 6531319713837899222, guid: c9cfbafb518c957478f1521c7395fa53, type: 3}
   spawnVfxDuration: 1
   lastSkillTime: -999
@@ -38393,6 +38427,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   distance: 0
   isStop: 0
+  isCastingSkill: 0
+  skillCastDirection: {x: 0, y: 0, z: 0}
 --- !u!114 &1926857875272125556
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -38475,7 +38511,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 16
+  m_Constraints: 112
   m_CollisionDetection: 0
 --- !u!1001 &1981453738804752548
 PrefabInstance:
@@ -38819,6 +38855,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   distance: 0
   isStop: 0
+  isCastingSkill: 0
+  skillCastDirection: {x: 0, y: 0, z: 0}
 --- !u!114 &1981453737678826682
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -38846,6 +38884,9 @@ MonoBehaviour:
   scoreReward: 100
   attackDistanceOverride: 3
   moveSpeed: 3.5
+  rotationSpeed: 8
+  minRangedDistance: 0
+  skillWarningDuration: 1.2
   isBoss: 1
   enemyType: 7
   specificEnemyType: 7
@@ -38856,12 +38897,14 @@ MonoBehaviour:
   - {fileID: 0}
   skillScript: {fileID: 0}
   skillVfxPrefab: {fileID: 6426699771996326788, guid: d2bf7f11edac4e8459d42fb4ce84890b, type: 3}
-  skillVfxRadius: 5
+  skillVfxRadius: 8
   skillIsDirectional: 1
   skillAngle: 60
   skillDistance: 5
-  skillCooldown: 8
+  skillCooldown: 12
   skillDamageMultiplier: 2
+  skillRepeatCount: 1
+  skillRepeatDelay: 1
   spawnVfxPrefab: {fileID: 6531319713837899222, guid: e042af9235c347e4bab1092407f29d60, type: 3}
   spawnVfxDuration: 1
   lastSkillTime: -999
@@ -38996,7 +39039,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 16
+  m_Constraints: 112
   m_CollisionDetection: 0
 --- !u!4 &1981453738804882032 stripped
 Transform:
@@ -40641,6 +40684,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   distance: 0
   isStop: 0
+  isCastingSkill: 0
+  skillCastDirection: {x: 0, y: 0, z: 0}
 --- !u!195 &1981453738227535338
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -40702,6 +40747,9 @@ MonoBehaviour:
   scoreReward: 100
   attackDistanceOverride: 2
   moveSpeed: 3.5
+  rotationSpeed: 8
+  minRangedDistance: 0
+  skillWarningDuration: 1.2
   isBoss: 0
   enemyType: 2
   specificEnemyType: 2
@@ -40718,6 +40766,8 @@ MonoBehaviour:
   skillDistance: 8
   skillCooldown: 8
   skillDamageMultiplier: 2
+  skillRepeatCount: 1
+  skillRepeatDelay: 1
   spawnVfxPrefab: {fileID: 6531319713837899222, guid: c9cfbafb518c957478f1521c7395fa53, type: 3}
   spawnVfxDuration: 1
   lastSkillTime: -999
@@ -40830,7 +40880,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 20
+  m_Constraints: 112
   m_CollisionDetection: 0
 --- !u!4 &1981453738820728046 stripped
 Transform:
@@ -43278,6 +43328,9 @@ MonoBehaviour:
   scoreReward: 100
   attackDistanceOverride: 2
   moveSpeed: 3.5
+  rotationSpeed: 8
+  minRangedDistance: 0
+  skillWarningDuration: 1.2
   isBoss: 0
   enemyType: 2
   specificEnemyType: 3
@@ -43294,6 +43347,8 @@ MonoBehaviour:
   skillDistance: 8
   skillCooldown: 8
   skillDamageMultiplier: 2
+  skillRepeatCount: 1
+  skillRepeatDelay: 1
   spawnVfxPrefab: {fileID: 6531319713837899222, guid: c9cfbafb518c957478f1521c7395fa53, type: 3}
   spawnVfxDuration: 1
   lastSkillTime: -999
@@ -43338,6 +43393,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   distance: 0
   isStop: 0
+  isCastingSkill: 0
+  skillCastDirection: {x: 0, y: 0, z: 0}
 --- !u!114 &1335145691378686894
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -43420,7 +43477,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 16
+  m_Constraints: 112
   m_CollisionDetection: 0
 --- !u!4 &1981453739210166758 stripped
 Transform:
@@ -43516,6 +43573,30 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1976825276289276082}
     m_Modifications:
+    - target: {fileID: 337231325157497022, guid: f1873437b2d97fe41aa955087047982f, type: 3}
+      propertyPath: skillCooldown
+      value: 12
+      objectReference: {fileID: 0}
+    - target: {fileID: 337231325157497022, guid: f1873437b2d97fe41aa955087047982f, type: 3}
+      propertyPath: skillVfxPrefab
+      value: 
+      objectReference: {fileID: 5971203435228136222, guid: f0b2a41c3f8adb84f8753145e83bafe7, type: 3}
+    - target: {fileID: 337231325157497022, guid: f1873437b2d97fe41aa955087047982f, type: 3}
+      propertyPath: skillVfxRadius
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 337231325157497022, guid: f1873437b2d97fe41aa955087047982f, type: 3}
+      propertyPath: skillRepeatCount
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 337231325157497022, guid: f1873437b2d97fe41aa955087047982f, type: 3}
+      propertyPath: skillRepeatDelay
+      value: 0.1
+      objectReference: {fileID: 0}
+    - target: {fileID: 337231325157497022, guid: f1873437b2d97fe41aa955087047982f, type: 3}
+      propertyPath: skillIsDirectional
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 409497873877021662, guid: f1873437b2d97fe41aa955087047982f, type: 3}
       propertyPath: m_Name
       value: Demon
@@ -43564,6 +43645,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7176807525231004095, guid: f1873437b2d97fe41aa955087047982f, type: 3}
+      propertyPath: m_Constraints
+      value: 112
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -43591,10 +43676,30 @@ PrefabInstance:
       propertyPath: m_Name
       value: Lich
       objectReference: {fileID: 0}
+    - target: {fileID: 135780119244973861, guid: 29e3d8521a2be704ca92cfc9151717f5, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1154441978264960392, guid: 29e3d8521a2be704ca92cfc9151717f5, type: 3}
+      propertyPath: canSummon
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 1154441978264960392, guid: 29e3d8521a2be704ca92cfc9151717f5, type: 3}
       propertyPath: enemyNewPrefab
       value: 
       objectReference: {fileID: 1979783443647161850}
+    - target: {fileID: 1154441978264960392, guid: 29e3d8521a2be704ca92cfc9151717f5, type: 3}
+      propertyPath: summonSkeletCount
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 4397696924408593742, guid: 29e3d8521a2be704ca92cfc9151717f5, type: 3}
+      propertyPath: maxHealth
+      value: 1000000
+      objectReference: {fileID: 0}
+    - target: {fileID: 5748555227496620702, guid: 29e3d8521a2be704ca92cfc9151717f5, type: 3}
+      propertyPath: m_Constraints
+      value: 112
+      objectReference: {fileID: 0}
     - target: {fileID: 6089846374273038610, guid: 29e3d8521a2be704ca92cfc9151717f5, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -43634,6 +43739,26 @@ PrefabInstance:
     - target: {fileID: 6089846374273038610, guid: 29e3d8521a2be704ca92cfc9151717f5, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6596514106888298922, guid: 29e3d8521a2be704ca92cfc9151717f5, type: 3}
+      propertyPath: enemyName
+      value: Malachar
+      objectReference: {fileID: 0}
+    - target: {fileID: 6596514106888298922, guid: 29e3d8521a2be704ca92cfc9151717f5, type: 3}
+      propertyPath: skillCooldown
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 6596514106888298922, guid: 29e3d8521a2be704ca92cfc9151717f5, type: 3}
+      propertyPath: skillVfxRadius
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 6596514106888298922, guid: 29e3d8521a2be704ca92cfc9151717f5, type: 3}
+      propertyPath: minRangedDistance
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 6596514106888298922, guid: 29e3d8521a2be704ca92cfc9151717f5, type: 3}
+      propertyPath: attackDistanceOverride
+      value: 8
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -45175,9 +45300,29 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6924084111294333547, guid: 83c30fc4cf94ceb4783c197f2c122d3b, type: 3}
+      propertyPath: m_Constraints
+      value: 112
+      objectReference: {fileID: 0}
     - target: {fileID: 7236032731702054578, guid: 83c30fc4cf94ceb4783c197f2c122d3b, type: 3}
       propertyPath: m_Name
       value: Ifrit
+      objectReference: {fileID: 0}
+    - target: {fileID: 7236032731702054578, guid: 83c30fc4cf94ceb4783c197f2c122d3b, type: 3}
+      propertyPath: m_TagString
+      value: Boss
+      objectReference: {fileID: 0}
+    - target: {fileID: 8447469562839768371, guid: 83c30fc4cf94ceb4783c197f2c122d3b, type: 3}
+      propertyPath: enemyName
+      value: Ignazar
+      objectReference: {fileID: 0}
+    - target: {fileID: 8447469562839768371, guid: 83c30fc4cf94ceb4783c197f2c122d3b, type: 3}
+      propertyPath: skillCooldown
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 8447469562839768371, guid: 83c30fc4cf94ceb4783c197f2c122d3b, type: 3}
+      propertyPath: skillVfxRadius
+      value: 8
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
