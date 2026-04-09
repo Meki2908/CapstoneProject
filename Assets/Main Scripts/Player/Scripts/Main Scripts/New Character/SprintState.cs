@@ -68,6 +68,19 @@ public class SprintState : State
         {
             dash = true;
         }
+
+        if (TutorialInputGate.IsActive)
+        {
+            var m = TutorialInputGate.EffectiveMask;
+            if ((m & TutorialInputMask.Move) == 0)
+            {
+                input = Vector2.zero;
+                velocity = Vector3.zero;
+            }
+            if ((m & TutorialInputMask.Jump) == 0) sprintJump = false;
+            if ((m & TutorialInputMask.Dash) == 0) dash = false;
+            if ((m & TutorialInputMask.Sprint) == 0) sprint = false;
+        }
     }
 
     public override void LogicUpdate()
@@ -104,6 +117,10 @@ public class SprintState : State
             return;
 
         base.PhysicsUpdate();
+
+        // Guard: skip nếu CharacterController bị disable (vd: đang teleport)
+        if (character.controller == null || !character.controller.enabled) return;
+
         gravityVelocity.y += gravityValue * Time.deltaTime;
         grounded = cc.isGrounded;
         if (grounded && gravityVelocity.y < 0)

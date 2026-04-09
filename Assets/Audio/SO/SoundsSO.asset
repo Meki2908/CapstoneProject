@@ -9,7 +9,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c9afd3923e6b4374fa6fb847aa293a77, type: 3}
+  m_Script: {fileID: 11500000, guid: 407a46c2dd407374e904231972cae10a, type: 3}
   m_Name: SoundsSO
   m_EditorClassIdentifier: 
   sounds:
@@ -454,6 +454,70 @@ MonoBehaviour:
     mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
     sounds:
     - {fileID: 8300000, guid: 096fe679b00684d5486937c92a18cef9, type: 3}
+    changePitch: 0
+    pitchMin: 0
+    pitchMax: 0
+  - name: Teleport_Start
+    volume: 0.8
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: 7ceaaf4f9a0b96b49be0322389ad0dbb, type: 3}
+    changePitch: 0
+    pitchMin: 0
+    pitchMax: 0
+  - name: Teleport_Arrive
+    volume: 0.8
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: b25838831f3794349ba5a32f1d64c04e, type: 3}
+    changePitch: 0
+    pitchMin: 0
+    pitchMax: 0
+  - name: UI_ButtonClick
+    volume: 0.7
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: 7e2257a6fa3bacc4b992a3db521cb285, type: 3}
+    changePitch: 0
+    pitchMin: 0
+    pitchMax: 0
+  - name: UI_ButtonHover
+    volume: 0.3
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: 4f4d95dd7f9da5b4a8d5e000bd36d275, type: 3}
+    changePitch: 0
+    pitchMin: 0
+    pitchMax: 0
+  - name: UI_OpenMenu
+    volume: 0.6
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: 734f4de94294a9d4c939103fb2de82b2, type: 3}
+    changePitch: 0
+    pitchMin: 0
+    pitchMax: 0
+  - name: UI_CloseMenu
+    volume: 0.6
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: 71f82d0d1840d59439c35aa36c72c7d9, type: 3}
+    changePitch: 0
+    pitchMin: 0
+    pitchMax: 0
+  - name: Dungeon_Victory
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: e14b1f58fe23f854caa364b91eddcf68, type: 3}
+    changePitch: 0
+    pitchMin: 0
+    pitchMax: 0
+  - name: Dungeon_Defeat
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: fd8151eb564e13b4582bcdce0e6d7702, type: 3}
     changePitch: 0
     pitchMin: 0
     pitchMax: 0

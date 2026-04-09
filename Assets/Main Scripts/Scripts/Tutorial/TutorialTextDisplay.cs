@@ -29,6 +29,8 @@ using UnityEngine.InputSystem;
 /// </summary>
 public class TutorialTextDisplay : MonoBehaviour
 {
+    public static TutorialTextDisplay Instance { get; private set; }
+
     [Header("UI")]
     public TMP_Text tutorialText;
     public GameObject completionCanvas;
@@ -118,15 +120,23 @@ public class TutorialTextDisplay : MonoBehaviour
     int  _waveKills     = 0;
     bool _inWave2       = false;   // true khi đang ở wave kill lần 2
     bool _weaponChanged = false;   // true sau khi player đã đổi vũ khí ở step 13
+    bool _tutorialMasteryRestored;
 
     // ─────────────────────────────────────────────────────────────────────────
     //  Lifecycle
     // ─────────────────────────────────────────────────────────────────────────
 
+    void Awake()
+    {
+        Instance = this;
+    }
+
     void Start()
     {
         if (completionCanvas != null) completionCanvas.SetActive(false);
         HideAllStepCanvases();
+        if (WeaponMasteryManager.Instance != null)
+            WeaponMasteryManager.Instance.BeginTutorialMasterySession();
         SetAllMasteryLevels(1);
 
         // ── Auto-wire WeaponSwapper event ─────────────────────────────────
@@ -151,15 +161,73 @@ public class TutorialTextDisplay : MonoBehaviour
             Debug.LogWarning("[Tutorial] WeaponSwapper not found – OnWeaponChanged must be wired in Inspector!");
         }
 
+        RefreshInputGate();
         StartCoroutine(ShowDelayed(0));
     }
 
     void OnDestroy()
     {
+        RestoreTutorialMasteryOnce();
+        if (Instance == this) Instance = null;
+        TutorialInputGate.Clear();
         if (_weaponController != null)
         {
             _weaponController.OnWeaponChanged -= OnWeaponChangedFromController;
         }
+    }
+
+    void RestoreTutorialMasteryOnce()
+    {
+        if (_tutorialMasteryRestored) return;
+        _tutorialMasteryRestored = true;
+        if (WeaponMasteryManager.Instance != null)
+            WeaponMasteryManager.Instance.EndTutorialMasterySession();
+    }
+
+    /// <summary>
+    /// Gọi từ SwordSkills / AxeSkill / MageSkills sau khi skill thật sự kích hoạt (SetTrigger).
+    /// Không dùng phím trong Update — tránh Advance trước khi TryUse chạy.
+    /// </summary>
+    public static void NotifySkillActivatedFromGameplay(AbilityInput input)
+    {
+        if (Instance == null || Instance._completed || Instance._waiting) return;
+        int s = Instance._step;
+        bool match = (s == STEP_SKILL_E && input == AbilityInput.E)
+            || (s == STEP_SKILL_R && input == AbilityInput.R)
+            || (s == STEP_SKILL_T && input == AbilityInput.T)
+            || (s == STEP_ULT && input == AbilityInput.Q_Ultimate);
+        if (match) Instance.Advance();
+    }
+
+    /// <summary>Gọi từ <see cref="DashState"/> khi roll/dash thật sự bắt đầu (sau khi qua CD và SetTrigger).</summary>
+    public static void NotifyDashStartedFromGameplay()
+    {
+        if (Instance == null || Instance._completed || Instance._waiting) return;
+        if (Instance._step != STEP_ROLL) return;
+        Instance.Advance();
+    }
+
+    void RefreshInputGate()
+    {
+        TutorialInputGate.SetState(true, _step, _waiting, _completed);
+    }
+
+    void TutorialTryClearCooldownLeavingSkillStep(int stepJustLeft)
+    {
+        var aim = FindFirstObjectByType<AbilityIconManager>();
+        if (aim == null) return;
+        switch (stepJustLeft)
+        {
+            case STEP_SKILL_E: aim.TutorialClearCooldown(AbilityInput.E); break;
+            case STEP_SKILL_R: aim.TutorialClearCooldown(AbilityInput.R); break;
+            case STEP_SKILL_T: aim.TutorialClearCooldown(AbilityInput.T); break;
+            case STEP_ULT:     aim.TutorialClearCooldown(AbilityInput.Q_Ultimate); break;
+        }
+    }
+
+    void TutorialPrimeSkillCooldownsForStep(int step)
+    {
+        TutorialTryClearCooldownLeavingSkillStep(step);
     }
 
     void OnWeaponChangedFromController(WeaponSO weapon)
@@ -175,12 +243,9 @@ public class TutorialTextDisplay : MonoBehaviour
         {
             case STEP_SPACE:      if (IsKeyDown(KeyCode.Space, "space")) Advance(); break;
             case STEP_TAB_DRAW:   if (IsKeyDown(KeyCode.Tab,   "tab"))   Advance(); break;
-            case STEP_ROLL:       if (IsMouseDown(1))                    Advance(); break;
+            // STEP_ROLL: chỉ Advance khi DashState.Enter thành công (NotifyDashStartedFromGameplay)
             case STEP_ATTACK:     if (IsMouseDown(0))                    Advance(); break;
-            case STEP_SKILL_E:    if (IsKeyDown(KeyCode.E, "e"))         Advance(); break;
-            case STEP_SKILL_R:    if (IsKeyDown(KeyCode.R, "r"))         Advance(); break;
-            case STEP_SKILL_T:    if (IsKeyDown(KeyCode.T, "t"))         Advance(); break;
-            case STEP_ULT:        if (IsKeyDown(KeyCode.Q, "q"))         Advance(); break;
+            // STEP_SKILL_E / R / T / ULT: chỉ Advance khi NotifySkillActivatedFromGameplay (skill đã chạy)
             case STEP_TAB_SHEATH: if (IsKeyDown(KeyCode.Tab, "tab"))     Advance(); break;
             case STEP_OPEN_INV:   if (IsKeyDown(KeyCode.I, "i"))         Advance(); break;
             // STEP_CHANGE_WP: đợi weapon changed event → sau đó đợi I press
@@ -228,8 +293,13 @@ public class TutorialTextDisplay : MonoBehaviour
 
     void Advance()
     {
+        int prevStep = _step;
         _step++;
+        RefreshInputGate();
+        TutorialTryClearCooldownLeavingSkillStep(prevStep);
+
         OnEnterStep(_step);
+        TutorialPrimeSkillCooldownsForStep(_step);
 
         if (_step >= _texts.Length) return;
 
@@ -279,11 +349,13 @@ public class TutorialTextDisplay : MonoBehaviour
     IEnumerator DelayedWaveSpawn()
     {
         _waiting = true;
+        RefreshInputGate();
         if (tutorialText != null) tutorialText.text = "Excellent! Prepare yourself...";
         yield return new WaitForSeconds(postUltDelay);
         SpawnWave();
         ShowNow(STEP_WAVE);
         _waiting = false;
+        RefreshInputGate();
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -293,12 +365,14 @@ public class TutorialTextDisplay : MonoBehaviour
     IEnumerator ShowDelayed(int step)
     {
         _waiting = true;
+        RefreshInputGate();
         if (tutorialText != null) tutorialText.text = "";
         yield return new WaitForSeconds(textDelay);
         ShowCanvas(step);
         if (tutorialText != null && step < _texts.Length)
             tutorialText.text = _texts[step];
         _waiting = false;
+        RefreshInputGate();
     }
 
     void ShowNow(int step)
@@ -331,10 +405,21 @@ public class TutorialTextDisplay : MonoBehaviour
     //  Enemy Spawning
     // ─────────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Dungeon prefabs (e.g. Skeleton@Skin) are often saved with root inactive so RandomEnemy can enable them.
+    /// Direct Instantiate keeps that state — must activate or nothing appears in Tutorial.
+    /// </summary>
+    static void EnsureSpawnedEnemyActive(GameObject go)
+    {
+        if (go != null && !go.activeSelf)
+            go.SetActive(true);
+    }
+
     void SpawnEnemy1()
     {
         if (enemyPrefab1 == null || spawnPoint1 == null) { Advance(); return; }
         var go = Instantiate(enemyPrefab1, spawnPoint1.position, spawnPoint1.rotation);
+        EnsureSpawnedEnemyActive(go);
         if (!HookDeath(go, OnEnemy1Died)) Advance();
     }
 
@@ -342,6 +427,7 @@ public class TutorialTextDisplay : MonoBehaviour
     {
         if (enemyPrefab2 == null || spawnPoint2 == null) { Advance(); return; }
         var go = Instantiate(enemyPrefab2, spawnPoint2.position, spawnPoint2.rotation);
+        EnsureSpawnedEnemyActive(go);
         if (!HookDeath(go, OnEnemy2Died)) Advance();
     }
 
@@ -357,6 +443,7 @@ public class TutorialTextDisplay : MonoBehaviour
         {
             if (waveSpawnPoints[i] == null) continue;
             var go = Instantiate(wavePrefab, waveSpawnPoints[i].position, waveSpawnPoints[i].rotation);
+            EnsureSpawnedEnemyActive(go);
             HookDeath(go, OnWaveKill);
         }
     }
@@ -374,6 +461,7 @@ public class TutorialTextDisplay : MonoBehaviour
         {
             if (waveSpawnPoints[i] == null) continue;
             var go = Instantiate(wavePrefab, waveSpawnPoints[i].position, waveSpawnPoints[i].rotation);
+            EnsureSpawnedEnemyActive(go);
             HookDeath(go, OnWaveKill);
         }
     }
@@ -419,11 +507,11 @@ public class TutorialTextDisplay : MonoBehaviour
 
     void TriggerCompletion()
     {
+        RestoreTutorialMasteryOnce();
         _completed = true;
+        RefreshInputGate();
         if (tutorialText != null) tutorialText.text = "";
 
-        // Reset level ngay lúc chúc mừng
-        SetAllMasteryLevels(1);
         if (HeroInformation.player != null)
             HeroInformation.player.playerLevel = playerLevelOnReturn;
 
@@ -442,7 +530,7 @@ public class TutorialTextDisplay : MonoBehaviour
 
     IEnumerator FinishAndReturn()
     {
-        SetAllMasteryLevels(1);  // Reset mastery về level 1
+        // Mastery đã khôi phục từ save trong RestoreTutorialMasteryOnce (TriggerCompletion)
 
         // Ghi PlayerPrefs để Map scene reset player level sau khi load
         // (HeroInformation.player có thể null trong Tutorial scene)

@@ -82,7 +82,7 @@ public class EnemyDeathBridge : NetworkBehaviour
             var navAgent = enemyScript.GetComponent<UnityEngine.AI.NavMeshAgent>();
             if (navAgent != null)
             {
-                navAgent.isStopped = true;
+                if (navAgent.isOnNavMesh) navAgent.isStopped = true;
                 navAgent.enabled = false;
             }
             

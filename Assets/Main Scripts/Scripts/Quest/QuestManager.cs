@@ -70,6 +70,12 @@ public class QuestManager : MonoBehaviour
             return;
         }
 
+        ForceRefreshFromPrefs();
+    }
+
+    /// <summary>Bỏ qua guard, buộc đọc lại toàn bộ từ PlayerPrefs (dùng cho New Game).</summary>
+    public void ForceRefreshFromPrefs()
+    {
         _states.Clear();
         _stepIndex.Clear();
 
@@ -241,10 +247,13 @@ public class QuestManager : MonoBehaviour
             Debug.Log($"[QuestManager] Quest {questID} hoàn thành! +{qd.rewardGold} gold, +{qd.rewardExp} EXP");
         }
 
-        // Mở khóa quest tiếp theo nếu có
+        // Tự động ACTIVE quest tiếp theo nếu có (không chỉ Available)
         int nextID = questID + 1;
-        if (_states.ContainsKey(nextID) && _states[nextID] == QuestState.Locked)
-            _states[nextID] = QuestState.Available;
+        if (_states.ContainsKey(nextID) && _states[nextID] != QuestState.Completed)
+        {
+            AcceptQuest(nextID);
+            Debug.Log($"[QuestManager] Quest {nextID} tự động ACTIVE sau khi hoàn thành Quest {questID}!");
+        }
 
         OnQuestCompleted?.Invoke(questID);
     }

@@ -46,12 +46,17 @@ public class PostProcessingSettings : MonoBehaviour
         ApplySettings();
         GameSettings.OnSettingsChanged += ApplySettings;
         SceneManager.sceneLoaded += OnSceneLoaded;
+        SceneManager.activeSceneChanged += OnActiveSceneChanged;
     }
 
     private void OnDestroy()
     {
         GameSettings.OnSettingsChanged -= ApplySettings;
         SceneManager.sceneLoaded -= OnSceneLoaded;
+        SceneManager.activeSceneChanged -= OnActiveSceneChanged;
+
+        // Reset render scale khi destroy — tránh CopyTexture null
+        ResetUpscaling();
 
         // Cleanup runtime profile
         if (_settingsProfile != null)
@@ -61,10 +66,40 @@ public class PostProcessingSettings : MonoBehaviour
             Instance = null;
     }
 
+    /// <summary>
+    /// Khi scene đang chuyển → tạm reset renderScale=1 để URP không dùng CopyTexture
+    /// </summary>
+    private void OnActiveSceneChanged(Scene oldScene, Scene newScene)
+    {
+        ResetUpscaling();
+    }
+
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         // Re-apply settings khi chuyển scene (đảm bảo Volume vẫn hoạt động)
+        // Delay 1 frame để scene setup xong
+        StartCoroutine(DelayedApply());
+    }
+
+    private System.Collections.IEnumerator DelayedApply()
+    {
+        yield return null; // Chờ 1 frame
+        yield return null; // Chờ thêm 1 frame (đảm bảo render targets đã tạo xong)
         ApplySettings();
+    }
+
+    /// <summary>
+    /// Reset upscaling về mặc định — gọi trước khi scene unload
+    /// để tránh FSR/CopyTexture null error
+    /// </summary>
+    private void ResetUpscaling()
+    {
+        var urpAsset = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
+        if (urpAsset != null)
+        {
+            urpAsset.renderScale = 1.0f;
+            urpAsset.upscalingFilter = UpscalingFilterSelection.Auto;
+        }
     }
 
     // ==================== SETUP ====================
@@ -164,7 +199,9 @@ public class PostProcessingSettings : MonoBehaviour
         if (gs.sharpeningEnabled)
         {
             urpAsset.renderScale = 0.95f;
-            urpAsset.upscalingFilter = UpscalingFilterSelection.FSR;
+            // KHÔNG dùng FSR — FSR gọi CopyTexture nội bộ, gây lỗi null khi chuyển scene
+            // Dùng Linear thay thế — an toàn hơn, vẫn tạo hiệu ứng sắc nét nhẹ
+            urpAsset.upscalingFilter = UpscalingFilterSelection.Linear;
         }
         else
         {

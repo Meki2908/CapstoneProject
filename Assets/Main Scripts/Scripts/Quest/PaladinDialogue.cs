@@ -103,6 +103,7 @@ public class PaladinDialogue : MonoBehaviour
         if (!other.CompareTag(playerTag)) return;
         _playerNear = false;
         if (promptPanel) promptPanel.SetActive(false);
+        if (_isOpen) CloseDialogue();
     }
 
     bool ShouldShowPrompt()
@@ -110,7 +111,9 @@ public class PaladinDialogue : MonoBehaviour
         if (QuestManager.Instance == null) return false;
         var state = QuestManager.Instance.GetState(questID);
         int step  = QuestManager.Instance.GetStepIndex(questID);
-        return state == QuestManager.QuestState.Active && step <= stepIndex + 1;
+        // Hiện prompt khi quest Available (chưa accept) HOẶC Active ở step phù hợp
+        return state == QuestManager.QuestState.Available
+            || (state == QuestManager.QuestState.Active && step <= stepIndex + 1);
     }
 
     void OpenDialogue()
@@ -129,6 +132,7 @@ public class PaladinDialogue : MonoBehaviour
 
         Cursor.visible   = true;
         Cursor.lockState = CursorLockMode.None;
+        DialogueNextButton.Register(OnNextClicked);
         ShowLine(0);
     }
 
@@ -156,6 +160,7 @@ public class PaladinDialogue : MonoBehaviour
 
     public void OnNextClicked()
     {
+        if (!_isOpen || _activeLines == null) return;
         if (_isTyping)
         {
             StopAllCoroutines(); _isTyping = false;
@@ -182,6 +187,7 @@ public class PaladinDialogue : MonoBehaviour
     void CloseDialogue()
     {
         _isOpen = false;
+        DialogueNextButton.Unregister();
         if (dialoguePanel)  dialoguePanel.SetActive(false);
         if (dialogueCanvas) dialogueCanvas.gameObject.SetActive(false);
         Cursor.lockState = CursorLockMode.Locked;

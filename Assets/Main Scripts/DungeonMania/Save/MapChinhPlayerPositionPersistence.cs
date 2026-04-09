@@ -21,6 +21,27 @@ public static class MapChinhPlayerPositionStore
 
     public static string FilePath => Path.Combine(Application.persistentDataPath, FileName);
 
+    /// <summary>Xóa file lưu vị trí (ví dụ player rơi khỏi map / JSON lưu tọa độ hỏng). Đường dẫn: <see cref="FilePath"/>.</summary>
+    public static bool TryDeleteSaveFile()
+    {
+        try
+        {
+            if (!File.Exists(FilePath))
+            {
+                Debug.Log($"[MapChinhPlayerPositionStore] Không có file để xóa: {FilePath}");
+                return false;
+            }
+            File.Delete(FilePath);
+            Debug.Log($"[MapChinhPlayerPositionStore] Đã xóa file lưu vị trí: {FilePath}");
+            return true;
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning($"[MapChinhPlayerPositionStore] Xóa file thất bại: {e.Message} (path: {FilePath})");
+            return false;
+        }
+    }
+
     public static void SaveTransform(Transform t, string sceneName)
     {
         if (t == null || string.IsNullOrEmpty(sceneName)) return;
@@ -79,6 +100,12 @@ public static class MapChinhPlayerPositionStore
 public class MapChinhPlayerPositionPersistence : MonoBehaviour
 {
     [SerializeField] string sceneName = "Map_Chinh";
+
+    [ContextMenu("Clear saved Map_Chinh position (delete JSON)")]
+    void ClearSavedPositionContextMenu()
+    {
+        MapChinhPlayerPositionStore.TryDeleteSaveFile();
+    }
 
     void Awake()
     {

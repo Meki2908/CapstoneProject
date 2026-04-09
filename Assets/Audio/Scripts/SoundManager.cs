@@ -4,11 +4,13 @@ using UnityEngine.SceneManagement;
 [RequireComponent(typeof(AudioSource))]
 public class SoundManager : MonoBehaviour
 {
+    [Tooltip("Asset Create → Audio → Sounds Database (class SoundsSO). Phải đúng loại ScriptableObject này — không phải clip hay asset khác.")]
     [SerializeField] private SoundsSO soundDatabase;
     [SerializeField] private bool dontDestroyOnLoad = true;
 
     private static SoundManager instance;
     private AudioSource audioSource;
+    private AudioSource resultMusicSource; // Dedicated source cho nhạc thắng/thua (dừng được)
 
     public static SoundManager Instance => instance;
 
@@ -23,6 +25,21 @@ public class SoundManager : MonoBehaviour
 
         instance = this;
         audioSource = GetComponent<AudioSource>();
+
+        // Tạo AudioSource riêng cho nhạc kết quả dungeon (dừng được)
+        resultMusicSource = gameObject.AddComponent<AudioSource>();
+        resultMusicSource.playOnAwake = false;
+        resultMusicSource.loop = false;
+        resultMusicSource.ignoreListenerPause = true; // Phát được khi Time.timeScale = 0
+
+        // Tự động tạo UIClickSoundGlobal nếu chưa có
+        if (GetComponent<UIClickSoundGlobal>() == null)
+        {
+            var uiSound = gameObject.AddComponent<UIClickSoundGlobal>();
+            uiSound.playHoverSound = true;
+            uiSound.clickVolume = 0.8f;
+            uiSound.hoverVolume = 0.4f;
+        }
 
         if (dontDestroyOnLoad)
         {
@@ -275,5 +292,63 @@ public class SoundManager : MonoBehaviour
             AbilityInput.Q_Ultimate => SoundType.Axe_Skill_Q,
             _ => SoundType.Axe_Skill_E
         };
+    }
+
+    // === TELEPORT SOUNDS ===
+    public static void PlayTeleportStart(AudioSource source = null, float volume = 1f)
+        => PlaySound(SoundType.Teleport_Start, source, volume);
+    public static void PlayTeleportArrive(AudioSource source = null, float volume = 1f)
+        => PlaySound(SoundType.Teleport_Arrive, source, volume);
+
+    // === UI SOUNDS ===
+    public static void PlayUIClick(AudioSource source = null, float volume = 1f)
+        => PlaySound(SoundType.UI_ButtonClick, source, volume);
+    public static void PlayUIHover(AudioSource source = null, float volume = 1f)
+        => PlaySound(SoundType.UI_ButtonHover, source, volume);
+    public static void PlayUIOpenMenu(AudioSource source = null, float volume = 1f)
+        => PlaySound(SoundType.UI_OpenMenu, source, volume);
+    public static void PlayUICloseMenu(AudioSource source = null, float volume = 1f)
+        => PlaySound(SoundType.UI_CloseMenu, source, volume);
+
+    // === DUNGEON RESULT SOUNDS (dùng AudioSource riêng, dừng được) ===
+    public static void PlayDungeonVictory(float volume = 1f)
+        => PlayResultMusic(SoundType.Dungeon_Victory, volume);
+    public static void PlayDungeonDefeat(float volume = 1f)
+        => PlayResultMusic(SoundType.Dungeon_Defeat, volume);
+
+    /// <summary>
+    /// Dừng nhạc thắng/thua ngay lập tức (gọi khi rời màn hình kết quả)
+    /// </summary>
+    public static void StopDungeonResultMusic()
+    {
+        if (instance != null && instance.resultMusicSource != null)
+        {
+            instance.resultMusicSource.Stop();
+            instance.resultMusicSource.clip = null;
+        }
+    }
+
+    /// <summary>
+    /// Phát nhạc kết quả trên AudioSource riêng (có thể Stop)
+    /// </summary>
+    private static void PlayResultMusic(SoundType sound, float volume = 1f)
+    {
+        if (instance == null || instance.soundDatabase == null) return;
+        if (instance.resultMusicSource == null) return;
+
+        SoundList soundList = instance.soundDatabase.GetSound(sound);
+        if (!soundList.IsValid()) return;
+
+        AudioClip clip = soundList.GetRandomClip();
+        if (clip == null) return;
+
+        float settingsSfxVol = GameSettings.Instance != null ? GameSettings.Instance.sfxVolume : 1f;
+        float finalVolume = Mathf.Clamp01(volume) * Mathf.Clamp01(soundList.volume) * settingsSfxVol;
+
+        instance.resultMusicSource.Stop();
+        instance.resultMusicSource.clip = clip;
+        instance.resultMusicSource.volume = finalVolume;
+        instance.resultMusicSource.outputAudioMixerGroup = soundList.mixer;
+        instance.resultMusicSource.Play();
     }
 }

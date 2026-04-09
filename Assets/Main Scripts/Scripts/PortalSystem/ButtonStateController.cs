@@ -7,11 +7,11 @@ public class ButtonStateController : MonoBehaviour
 {
     private Button targetButton;
     private TextMeshProUGUI buttonText;
+    private string _originalText;
 
     [Header("Settings")]
-    public string activeText = "Available";
-    public string disabledText = "Locked";
-    public bool hideTextWhenDisabled = true; // Thêm option này
+    public string disabledText = "\ud83d\udd12";
+    public bool hideTextWhenDisabled = true;
     
     [SerializeField] private bool disableOnStart = false;
 
@@ -19,6 +19,7 @@ public class ButtonStateController : MonoBehaviour
     {
         targetButton = GetComponent<Button>();
         buttonText = GetComponentInChildren<TextMeshProUGUI>();
+        if (buttonText != null) _originalText = buttonText.text;
     }
 
     private void Start()
@@ -62,8 +63,8 @@ public class ButtonStateController : MonoBehaviour
 
         if (buttonText != null)
         {
-            buttonText.gameObject.SetActive(true); // Hiện lại object chữ
-            buttonText.text = activeText;
+            buttonText.gameObject.SetActive(true);
+            buttonText.text = _originalText; // Khôi phục text gốc
         }
 
         Debug.Log($"[ButtonState] {gameObject.name} đã được Enable.");

@@ -21,6 +21,7 @@ namespace ModularFootstepSystem
 
         protected virtual void OnEnable() 
         {
+            if (footstepsConductor == null) return;
             footstepsConductor.onFootstepStart += OnFootstepStart;
             footstepsConductor.onFootstepMiddle += OnFootstepMiddle;
             footstepsConductor.onFootstepEnd += OnFootstepEnd;
@@ -28,6 +29,7 @@ namespace ModularFootstepSystem
 
         protected virtual void OnDisable()
         {
+            if (footstepsConductor == null) return;
             footstepsConductor.onFootstepStart -= OnFootstepStart;
             footstepsConductor.onFootstepMiddle -= OnFootstepMiddle;
             footstepsConductor.onFootstepEnd -= OnFootstepEnd;

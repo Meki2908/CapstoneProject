@@ -10,6 +10,7 @@ public class BossProjectile : MonoBehaviour
 {
     [HideInInspector] public int damage = 20;
     [HideInInspector] public int magicDamage = 5;
+    [HideInInspector] public int elementalType = 1; // Default fire, set bởi BossMultiSkill
     [HideInInspector] public bool collisionOnly = false; // ProjectileVfx quản lý di chuyển
     
     // Self-move fields
@@ -111,7 +112,7 @@ public class BossProjectile : MonoBehaviour
             dmg.damageElemental = magicDamage;
             dmg.crit = 0;
             dmg.isBow = false;
-            dmg.elementalType = 1; // fire
+            dmg.elementalType = elementalType; // Dùng giá trị từ BossMultiSkill
             cachedBridge.PlayerDamage(dmg, 1);
             Debug.Log($"[BossProjectile] COLLISION HIT! Player took {damage}+{magicDamage} damage!");
         }

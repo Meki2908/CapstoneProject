@@ -96,6 +96,8 @@ public class DashState : State
         {
             character.animator.SetTriggerNetworked("dash");
         }
+
+        TutorialTextDisplay.NotifyDashStartedFromGameplay();
     }
 
     public override void LogicUpdate()

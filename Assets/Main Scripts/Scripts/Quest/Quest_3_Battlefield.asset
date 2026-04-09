@@ -14,28 +14,24 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   questID: 3
   questTitle: "The New Battlefield"
-  questDescription: "Maria has pushed forward to a new front line. The Paladin says
-    she needs backup — use the teleport and head out to support her."
+  questDescription: "The Paladin has news — Maria pushed forward to a new front.
+    Teleport to the Battlefields portal, find Maria, and clear the Swamp Dungeon."
   steps:
   - stepTitle: "Talk with the Paladin"
-    instruction: "Speak with the Paladin at the City Gate. He knows where Maria went."
+    instruction: "Speak with the Paladin. He knows where Maria went."
     targetTag: NPC_Paladin
     targetSceneName: 
-  - stepTitle: "Find the teleport point"
-    instruction: "Head to the nearby teleport to reach the new battlefield."
+  - stepTitle: "Teleport to Battlefields"
+    instruction: "Use the Battlefields portal to reach Maria's position."
     targetTag: TeleportPoint_Battlefield
     targetSceneName: 
-  - stepTitle: "Use the teleport"
-    instruction: "Step into the teleport — it will take you to the new battlefield."
-    targetTag: TeleportPoint_Battlefield
+  - stepTitle: "Talk with Maria"
+    instruction: "Find and speak with Maria at the battlefield."
+    targetTag: NPC_Maria2
     targetSceneName: 
-  - stepTitle: "Find and talk with Leona"
-    instruction: "Locate Leona at the new battlefield and speak with her."
-    targetTag: NPC_Leona
-    targetSceneName: 
-  - stepTitle: "Enter the dungeon gate"
-    instruction: "Enter the dungeon gate Leona is guarding. The battle awaits inside."
-    targetTag: DungeonGate2
+  - stepTitle: "Enter the Swamp Dungeon"
+    instruction: "Enter the Swamp Dungeon gate and begin the fight."
+    targetTag: DungeonGate_Swamp
     targetSceneName: 
   rewardGold: 200
   rewardExp: 500

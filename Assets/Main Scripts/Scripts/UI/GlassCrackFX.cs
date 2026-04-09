@@ -2,52 +2,43 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Gắn lên UI Image (overlay trong suốt) phía trên background.
-/// Click chuột → tạo vết nứt kính tại vị trí click.
-/// Sử dụng shader UI/GlassCrack.
+/// Gắn lên UI Image (overlay) phía trên background. Cần shader UI/GlassCrack.
+/// Nếu shader thiếu (strip build / mất asset), tự ẩn Image để tránh màn trắng.
 /// </summary>
 public class GlassCrackFX : MonoBehaviour
 {
     [Header("=== CẤU HÌNH ===")]
-    [Tooltip("Số vết nứt tối đa (mỗi click = 1 vết)")]
     [SerializeField] private int maxCracks = 10;
-    [Tooltip("Bán kính vết nứt (normalized 0-1, so với UI element)")]
     [SerializeField] private float crackRadius = 0.15f;
-    [Tooltip("Tốc độ lan vết nứt (giây)")]
     [SerializeField] private float crackExpandSpeed = 0.3f;
-    [Tooltip("Thời gian vết nứt tồn tại trước khi biến mất (giây)")]
     [SerializeField] private float crackFadeTime = 1.5f;
-    [Tooltip("Cường độ vết nứt")]
     [SerializeField] private float crackIntensity = 1f;
 
     [Header("=== SCREEN SHAKE ===")]
-    [Tooltip("Rung màn hình khi click")]
     [SerializeField] private bool enableShake = true;
-    [Tooltip("Biên độ rung (pixels)")]
     [SerializeField] private float shakeAmount = 10f;
-    [Tooltip("Thời gian rung (giây)")]
     [SerializeField] private float shakeDuration = 0.3f;
 
     [Header("=== ÂM THANH ===")]
-    [Tooltip("Kéo AudioClip tiếng vỡ kính vào đây (tùy chọn)")]
     [SerializeField] private AudioClip crackSound;
     [SerializeField] [Range(0f, 1f)] private float soundVolume = 0.8f;
 
-    // Internal
+    [Header("=== BUILD SAFETY ===")]
+    [Tooltip("Nếu không tìm thấy shader UI/GlassCrack, tự ẩn overlay để tránh màn trắng.")]
+    [SerializeField] private bool hideOverlayIfShaderMissing = true;
+
     private Material crackMaterial;
     private Image crackImage;
     private RectTransform rectTransform;
     private Canvas parentCanvas;
     private Vector4[] crackPoints;
     private float[] crackStartTimes;
-    private int crackCount = 0;
+    private int crackCount;
 
-    // Shake
     private RectTransform shakeTarget;
     private Vector2 shakeOrigin;
     private float shakeTimer;
 
-    // Audio
     private AudioSource audioSource;
 
     void Awake()
@@ -62,20 +53,24 @@ public class GlassCrackFX : MonoBehaviour
             crackImage.color = Color.white;
         }
 
-        // Tạo material từ shader
         var shader = Shader.Find("UI/GlassCrack");
         if (shader == null)
         {
-            Debug.LogError("[GlassCrackFX] Không tìm thấy shader 'UI/GlassCrack'!");
+            Debug.LogError("[GlassCrackFX] Không tìm thấy shader 'UI/GlassCrack'. Thêm vào Always Included Shaders nếu cần build.");
+            if (hideOverlayIfShaderMissing && crackImage != null)
+            {
+                crackImage.enabled = false;
+                crackImage.color = new Color(1f, 1f, 1f, 0f);
+                Debug.LogWarning("[GlassCrackFX] Đã ẩn overlay (thiếu shader) để tránh màn trắng.");
+            }
             enabled = false;
             return;
         }
 
         crackMaterial = new Material(shader);
         crackImage.material = crackMaterial;
-        crackImage.raycastTarget = false; // Không chặn click các nút menu
+        crackImage.raycastTarget = false;
 
-        // Sprite mặc định (trắng) — shader sẽ vẽ crack trên đó
         if (crackImage.sprite == null)
         {
             var tex = new Texture2D(4, 4);
@@ -86,16 +81,13 @@ public class GlassCrackFX : MonoBehaviour
             crackImage.sprite = Sprite.Create(tex, new Rect(0, 0, 4, 4), Vector2.one * 0.5f);
         }
 
-        // Init arrays
         crackPoints = new Vector4[maxCracks];
         crackStartTimes = new float[maxCracks];
 
-        // Shake target = parent (thường là background image)
         shakeTarget = transform.parent as RectTransform;
         if (shakeTarget != null)
             shakeOrigin = shakeTarget.anchoredPosition;
 
-        // Audio
         audioSource = GetComponent<AudioSource>();
         if (audioSource == null && crackSound != null)
         {
@@ -106,7 +98,8 @@ public class GlassCrackFX : MonoBehaviour
 
     void Update()
     {
-        // Detect click không qua raycast → không chặn nút menu
+        if (crackMaterial == null) return;
+
         if (Input.GetMouseButtonDown(0))
         {
             Vector2 localPoint;
@@ -116,7 +109,6 @@ public class GlassCrackFX : MonoBehaviour
                     ? parentCanvas.worldCamera : null,
                 out localPoint);
 
-            // Kiểm tra click nằm trong rect
             if (rectTransform.rect.Contains(localPoint))
             {
                 Vector2 uv = new Vector2(
@@ -135,7 +127,6 @@ public class GlassCrackFX : MonoBehaviour
     {
         if (crackCount >= maxCracks)
         {
-            // Xoay vòng — xóa vết cũ nhất
             for (int i = 0; i < maxCracks - 1; i++)
             {
                 crackPoints[i] = crackPoints[i + 1];
@@ -148,11 +139,9 @@ public class GlassCrackFX : MonoBehaviour
         crackStartTimes[crackCount] = Time.time;
         crackCount++;
 
-        // Shake
         if (enableShake)
             shakeTimer = shakeDuration;
 
-        // Sound
         if (crackSound != null && audioSource != null)
             audioSource.PlayOneShot(crackSound, soundVolume);
     }
@@ -163,13 +152,11 @@ public class GlassCrackFX : MonoBehaviour
 
         float totalTime = crackExpandSpeed + crackFadeTime;
 
-        // Xóa vết nứt hết hạn (duyệt ngược)
         for (int i = crackCount - 1; i >= 0; i--)
         {
             float elapsed = Time.time - crackStartTimes[i];
             if (elapsed > totalTime)
             {
-                // Xóa bằng cách dồn mảng
                 for (int j = i; j < crackCount - 1; j++)
                 {
                     crackPoints[j] = crackPoints[j + 1];
@@ -179,17 +166,12 @@ public class GlassCrackFX : MonoBehaviour
             }
         }
 
-        // Cập nhật animation
         for (int i = 0; i < crackCount; i++)
         {
             float elapsed = Time.time - crackStartTimes[i];
-
-            // Giai đoạn 1: Lan nhanh (0 → crackExpandSpeed)
             float expandProgress = Mathf.Clamp01(elapsed / crackExpandSpeed);
             float easedExpand = 1f - Mathf.Pow(1f - expandProgress, 3f);
             float radius = crackRadius * easedExpand;
-
-            // Giai đoạn 2: Fade out (crackExpandSpeed → totalTime)
             float fadeProgress = Mathf.Clamp01((elapsed - crackExpandSpeed) / crackFadeTime);
             float intensity = crackIntensity * (1f - fadeProgress);
 
@@ -222,9 +204,6 @@ public class GlassCrackFX : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Xóa hết vết nứt (gọi từ code hoặc button)
-    /// </summary>
     public void ClearAllCracks()
     {
         crackCount = 0;

@@ -101,7 +101,7 @@ public class DamageDealer : MonoBehaviour
         var dmgable = targetTransform.GetComponentInParent<IDamageable>();
         if (dmgable != null)
         {
-            int intDamage = Mathf.RoundToInt(weaponDamage);
+            int intDamage = Mathf.RoundToInt(weaponDamage * CheatPanel.DamageMultiplier);
             if (debugDamage) Debug.Log($"[DamageDealer] Found IDamageable on {dmgable.GetTransform().name}, applying {intDamage} damage");
             dmgable.TakeDamage(intDamage, hitPoint);
             hasDealtDamage.Add(rootGo);
@@ -136,7 +136,7 @@ public class DamageDealer : MonoBehaviour
                 float dmgMult = WeaponGemManager.Instance.GetDamageMultiplier(wc.GetCurrentWeapon().weaponType);
                 finalDamage *= dmgMult;
             }
-
+            finalDamage *= CheatPanel.DamageMultiplier;
             // Crit calculation
             bool isCrit = false;
             const float BASE_CRIT_MULTIPLIER = 1.5f;
@@ -159,6 +159,7 @@ public class DamageDealer : MonoBehaviour
             var wc2 = GetComponentInParent<WeaponController>();
             if (wc2 != null && wc2.GetCurrentWeapon() != null) currentWeaponType = wc2.GetCurrentWeapon().weaponType;
 
+            finalDamage *= CheatPanel.DamageMultiplier;
             enemy.TakeDamage(finalDamage, currentWeaponType, isCrit);
             TryPlayWeaponHitSfx(currentWeaponType);
             hasDealtDamage.Add(rootGo);

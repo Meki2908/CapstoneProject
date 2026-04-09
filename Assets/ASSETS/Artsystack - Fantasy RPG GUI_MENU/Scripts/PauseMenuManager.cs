@@ -36,8 +36,14 @@ namespace Artsystack.ArtsystackGui
         [SerializeField] private string mainMenuSceneName = "MainMenu";
         [SerializeField] private bool cursorVisibleOnPause = true;
 
+        [Tooltip("Chặn TogglePause bị gọi 2 lần cùng frame (Input System + Legacy, hoặc script khác) → Esc một lần mở pause ngay.")]
+        [SerializeField] private float togglePauseDebounceSeconds = 0.2f;
+
         private static PauseMenuManager instance;
         private bool isPaused = false;
+        private float _lastTogglePauseUnscaledTime = -999f;
+        private int _lastTogglePauseFrame = -1;
+        private PlayerInput _cachedPlayerInput;
 
         public static PauseMenuManager Instance
         {
@@ -65,6 +71,18 @@ namespace Artsystack.ArtsystackGui
 
             if (panel_PopUpPause != null)
                 panel_PopUpPause.SetActive(false);
+
+            SceneManager.sceneLoaded += OnSceneLoaded_ClearPlayerInputCache;
+        }
+
+        private void OnDestroy()
+        {
+            SceneManager.sceneLoaded -= OnSceneLoaded_ClearPlayerInputCache;
+        }
+
+        private void OnSceneLoaded_ClearPlayerInputCache(Scene scene, LoadSceneMode mode)
+        {
+            _cachedPlayerInput = null;
         }
 
 
@@ -95,13 +113,20 @@ namespace Artsystack.ArtsystackGui
 
             bool escPressed = false;
 
-            // Check New Input System
-            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            // Ưu tiên action Player/OpenMenu (cùng binding với Esc) — một nguồn, tránh lệch frame giữa Input System và Legacy.
+            // Khi đang pause, SetPlayerInput tắt map Player → dùng Keyboard/Legacy bên dưới để đóng pause.
+            if (_cachedPlayerInput == null)
+                _cachedPlayerInput = FindFirstObjectByType<PlayerInput>();
+            if (_cachedPlayerInput != null && _cachedPlayerInput.actions != null)
             {
-                escPressed = true;
+                var openMenu = _cachedPlayerInput.actions.FindAction("OpenMenu", false);
+                if (openMenu != null && openMenu.enabled && openMenu.WasPressedThisFrame())
+                    escPressed = true;
             }
 
-            // Fallback: Legacy Input
+            if (!escPressed && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+                escPressed = true;
+
             if (!escPressed)
             {
                 try
@@ -114,6 +139,9 @@ namespace Artsystack.ArtsystackGui
 
             if (escPressed)
             {
+                if (Time.unscaledTime - _lastTogglePauseUnscaledTime < togglePauseDebounceSeconds)
+                    return;
+                _lastTogglePauseUnscaledTime = Time.unscaledTime;
                 Debug.Log($"[PauseMenuManager] ESC detected! isPaused={isPaused}, enabled={enabled}");
                 TogglePause();
             }
@@ -138,13 +166,9 @@ namespace Artsystack.ArtsystackGui
         {
             if (isPaused) return;
             isPaused = true;
-            // Dùng 0.0001f thay vì 0f để làm workaround cho lỗi liệt click của Unity New Input System khi tạm dừng hoàn toàn
-            Time.timeScale = 0.0001f;
+            Time.timeScale = 0f;
 
             Debug.Log($"[PauseMenuManager] PauseGame() — panel_PopUpPause={(panel_PopUpPause != null ? panel_PopUpPause.name : "NULL")}");
-
-            // UI ưu tiên: đảm bảo cursor visible + unlock (CameraCursor sẽ không override)
-            CursorUIPriority.BeginUiOverlay();
 
             if (panel_PopUpPause != null)
             {
@@ -152,23 +176,13 @@ namespace Artsystack.ArtsystackGui
                 // (parent có thể bị ẩn bởi GameMenuManager.HideAllPanels)
                 EnsureParentsActive(panel_PopUpPause.transform);
                 panel_PopUpPause.SetActive(true);
+                SoundManager.PlayUIOpenMenu();
                 Debug.Log($"[PauseMenuManager] panel_PopUpPause SET ACTIVE = true, activeSelf={panel_PopUpPause.activeSelf}, activeInHierarchy={panel_PopUpPause.activeInHierarchy}");
                 
                 // Kiểm tra Canvas parent
                 Canvas parentCanvas = panel_PopUpPause.GetComponentInParent<Canvas>();
                 if (parentCanvas != null)
-                {
                     Debug.Log($"[PauseMenuManager] Parent Canvas: {parentCanvas.gameObject.name}, enabled={parentCanvas.enabled}, renderMode={parentCanvas.renderMode}, activeInHierarchy={parentCanvas.gameObject.activeInHierarchy}");
-
-                    // Đảm bảo GraphicRaycaster trên Canvas parent bật
-                    // (có thể bị tắt bởi NetworkLobbyManager.DisableAllOtherRaycasters)
-                    var gr = parentCanvas.GetComponent<UnityEngine.UI.GraphicRaycaster>();
-                    if (gr != null && !gr.enabled)
-                    {
-                        gr.enabled = true;
-                        Debug.Log($"[PauseMenuManager] Re-enabled GraphicRaycaster on '{parentCanvas.gameObject.name}'.");
-                    }
-                }
                 else
                     Debug.LogError("[PauseMenuManager] NO PARENT CANVAS FOUND! Panel won't render!");
             }
@@ -188,64 +202,89 @@ namespace Artsystack.ArtsystackGui
             {
                 Cursor.visible = true;
                 Cursor.lockState = CursorLockMode.None;
+                GameCursorManager.TryApplyNormalCursorTextureFromScene();
             }
+
+            // Đồng bộ với CameraCursor / UI — tránh trạng thái cursor/input lệch
+            CursorUIPriority.BeginUiOverlay();
+
+            // Giống Alt “mở chuột”: dừng retry ép lock sau load scene (MouseLockManager), tránh đè cùng frame với pause.
+            if (MouseLockManager.Instance != null)
+                MouseLockManager.Instance.ClearGameplayLockRetries();
         }
 
         public void ResumeGame()
         {
-            if (!isPaused) return;
+            // Cho phép resume khi panel vẫn bật nhưng isPaused bị lệch (Continue / script khác đã đụng UI).
+            bool panelVisible = panel_PopUpPause != null && panel_PopUpPause.activeSelf;
+            if (!isPaused && !panelVisible)
+                return;
+
             isPaused = false;
+            SoundManager.PlayUICloseMenu();
             HideAllPanels();
 
             // Tắt lại các parent đã bật khi pause
             RestoreParents();
 
             Time.timeScale = 1f;
+            if (MouseLockManager.Instance != null)
+                MouseLockManager.Instance.SetGameplayCursorLocked(true);
+            else
+            {
+                Cursor.visible = false;
+                Cursor.lockState = CursorLockMode.Locked;
+            }
 
             // Bật lại PlayerInput khi resume
             SetPlayerInput(true);
 
+            CursorUIPriority.EndUiOverlay();
+
             // Hiện lại HUD khi resume
             if (panel_HUD != null)
                 panel_HUD.SetActive(true);
-
-            // Trả cursor + CameraCursor — chỉ khi không còn UI nào trong stack
-            CursorUIPriority.EndUiOverlay();
         }
 
         private void SetPlayerInput(bool enabled)
         {
-            var character = FindFirstObjectByType<Character>();
-            if (character != null && character.playerInput != null && character.playerInput.actions != null)
+            var characters = FindObjectsByType<Character>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            for (int i = 0; i < characters.Length; i++)
             {
-                // Tắt/bật Player action map (movement, combat, attack...)
-                var playerMap = character.playerInput.actions.FindActionMap("Player");
+                var character = characters[i];
+                if (character == null || !character.isActiveAndEnabled)
+                    continue;
+
+                var pi = character.playerInput != null ? character.playerInput : character.GetComponent<PlayerInput>();
+                if (pi == null || pi.actions == null)
+                    continue;
+
+                if (enabled)
+                    pi.enabled = true;
+
+                var playerMap = pi.actions.FindActionMap("Player");
                 if (playerMap != null)
                 {
                     if (enabled) playerMap.Enable();
                     else playerMap.Disable();
                 }
 
-                // Tắt/bật Skill action map
-                var skillMap = character.playerInput.actions.FindActionMap("Skill");
+                var skillMap = pi.actions.FindActionMap("Skill");
                 if (skillMap != null)
                 {
                     if (enabled) skillMap.Enable();
                     else skillMap.Disable();
-                }
-
-                // LUÔN LUÔN BẬT UI action map để chắc chắn UI nhận click (đặc biệt khi pause)
-                var uiMap = character.playerInput.actions.FindActionMap("UI");
-                if (uiMap != null)
-                {
-                    uiMap.Enable();
-                    Debug.Log("[PauseMenuManager] Force-Enabled UI Action Map on PlayerInput!");
                 }
             }
         }
 
         public void TogglePause()
         {
+            // Chặn mọi nguồn gọi TogglePause 2 lần trong cùng frame (tránh mở rồi đóng ngay).
+            if (Time.frameCount == _lastTogglePauseFrame)
+                return;
+            _lastTogglePauseFrame = Time.frameCount;
+
             if (isPaused) ResumeGame();
             else PauseGame();
         }
@@ -265,6 +304,7 @@ namespace Artsystack.ArtsystackGui
             if (settingsManager != null)
             {
                 settingsManager.OpenSettings();
+                SoundManager.PlayUIOpenMenu();
             }
             else if (panel_GUISettings != null)
             {
@@ -276,6 +316,7 @@ namespace Artsystack.ArtsystackGui
         {
             if (panel_GUISettings != null)
                 panel_GUISettings.SetActive(false);
+            SoundManager.PlayUICloseMenu();
             if (panel_PopUpPause != null)
                 panel_PopUpPause.SetActive(true);
         }
@@ -285,6 +326,7 @@ namespace Artsystack.ArtsystackGui
             Time.timeScale = 1f;
             Cursor.visible = true;
             Cursor.lockState = CursorLockMode.None;
+            GameCursorManager.TryApplyNormalCursorTextureFromScene();
             isPaused = false;
             HideAllPanels();
 

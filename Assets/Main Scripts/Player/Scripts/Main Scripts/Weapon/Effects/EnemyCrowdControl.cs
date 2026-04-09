@@ -11,6 +11,8 @@ public class EnemyCrowdControl : MonoBehaviour
     private NavMeshAgent navMeshAgent;
     private EnemyScript enemyScript;
     private Rigidbody enemyRigidbody;
+    private EnemyState enemyState;
+    private BossMultiSkill bossMultiSkill;
 
     private Coroutine activeControlRoutine;
     private bool agentWasStopped;
@@ -22,6 +24,10 @@ public class EnemyCrowdControl : MonoBehaviour
         navMeshAgent = GetComponent<NavMeshAgent>();
         enemyScript = GetComponent<EnemyScript>();
         enemyRigidbody = GetComponent<Rigidbody>();
+        enemyState = GetComponent<EnemyState>();
+        if (enemyState == null) enemyState = GetComponentInParent<EnemyState>();
+        bossMultiSkill = GetComponent<BossMultiSkill>();
+        if (bossMultiSkill == null) bossMultiSkill = GetComponentInParent<BossMultiSkill>();
     }
 
     public void PlayKnockback(Vector3 sourcePosition, float horizontalDistance, float duration, float peakHeight = 0f)
@@ -37,6 +43,7 @@ public class EnemyCrowdControl : MonoBehaviour
 
         Vector3 end = start + planarDir.normalized * Mathf.Max(0f, horizontalDistance);
         end.y = start.y;
+        if (IsBossSuperArmor()) return; // Super Armor
         StartControlledMove(start, end, duration, peakHeight);
     }
 
@@ -55,6 +62,7 @@ public class EnemyCrowdControl : MonoBehaviour
         end.y = start.y;
 
         int token = BeginControl();
+        if (token < 0) return; // Super Armor
         activeControlRoutine = StartCoroutine(KnockupRoutine(
             token,
             start,
@@ -77,12 +85,14 @@ public class EnemyCrowdControl : MonoBehaviour
         float moveDistance = Mathf.Clamp(pullDistance, 0f, distanceToTarget);
         Vector3 end = start + planarDir.normalized * moveDistance;
         end.y = start.y;
+        if (IsBossSuperArmor()) return; // Super Armor
         StartControlledMove(start, end, duration, peakHeight);
     }
 
     public void PlayTornado(Vector3 center, float radius, float totalRotationDegrees, float duration, float maxHeight)
     {
         int token = BeginControl();
+        if (token < 0) return; // Super Armor
         activeControlRoutine = StartCoroutine(TornadoRoutine(token, center, Mathf.Max(0.1f, radius), totalRotationDegrees, duration, Mathf.Max(0f, maxHeight)));
     }
 
@@ -92,8 +102,33 @@ public class EnemyCrowdControl : MonoBehaviour
         activeControlRoutine = StartCoroutine(MoveRoutine(token, start, end, duration, peakHeight));
     }
 
+    /// <summary>
+    /// Kiểm tra boss có đang được bảo vệ Super Armor không
+    /// CHỈ protect khi: đang cast skill HOẶC đang bật shield
+    /// Boss đánh thường VẪN bị CC bình thường
+    /// </summary>
+    private bool IsBossSuperArmor()
+    {
+        if (enemyScript == null || !enemyScript.isBoss) return false;
+        
+        // Boss đang charge/cast skill
+        if (enemyState != null && enemyState.isCastingSkill) return true;
+        
+        // Boss đang bật shield
+        if (bossMultiSkill != null && bossMultiSkill.isShielded) return true;
+        
+        return false;
+    }
+    
     private int BeginControl()
     {
+        // === SUPER ARMOR: Boss đang skill/shield → KHÔNG bị CC ===
+        if (IsBossSuperArmor())
+        {
+            Debug.Log($"[EnemyCrowdControl] {gameObject.name} SUPER ARMOR — CC refused!");
+            return -1; // Token đặc biệt = bị từ chối
+        }
+        
         controlToken++;
         if (activeControlRoutine != null)
         {

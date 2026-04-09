@@ -495,6 +495,8 @@ public class TakeDamageTest : MonoBehaviour
         if (bossSkill == null) bossSkill = GetComponentInParent<BossMultiSkill>();
         if (bossSkill != null && bossSkill.ShouldBlockDamage())
         {
+            // Hiện "BLOCKED" floating text
+            FloatingCombatText.SpawnBlocked(transform.position);
             if (showDebugInfo) Debug.Log($"[TakeDamageTest] {gameObject.name} SHIELD BLOCKED {damage} damage!");
             return;
         }
@@ -767,6 +769,22 @@ public class TakeDamageTest : MonoBehaviour
         bool isBossType = enemyScript.isBoss;
         if (isBossType && !isSkill)
             return; // Boss không bị choáng bởi đánh thường
+        
+        // === SUPER ARMOR: Boss đang cast skill/shield/attack → KHÔNG bị knock/stagger ===
+        if (isBossType)
+        {
+            var enemyState = enemyScript.GetComponent<EnemyState>();
+            if (enemyState == null) enemyState = enemyScript.GetComponentInParent<EnemyState>();
+            var bms = enemyScript.GetComponent<BossMultiSkill>();
+            if (bms == null) bms = enemyScript.GetComponentInParent<BossMultiSkill>();
+            bool isCasting = (enemyState != null && enemyState.isCastingSkill);
+            bool isShielded = (bms != null && bms.isShielded);
+            if (isCasting || isShielded)
+            {
+                Debug.Log($"[TakeDamageTest] Boss SUPER ARMOR — cast={isCasting} shield={isShielded} atk={enemyScript.attack}");
+                return;
+            }
+        }
         
         // Hit animation
         enemyScript.animator.SetBool("hit", true);

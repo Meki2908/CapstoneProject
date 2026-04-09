@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 68827f32ed027fe47807f9dafdc8ba2b, type: 3}
+  m_Name: Quest_4_FinalGate
+  m_EditorClassIdentifier: 
+  questID: 4
+  questTitle: "The Final Gate"
+  questDescription: "Maria says the final gate is at the mountain top. She will
+    guard the battlefield — head to the summit and close the gate for good."
+  steps:
+  - stepTitle: "Talk with Maria"
+    instruction: "Speak with Maria at the battlefield. She has new intel."
+    targetTag: NPC_Maria2
+    targetSceneName: 
+  - stepTitle: "Go to the Mountain Top"
+    instruction: "Head to the mountain summit where the final gate awaits."
+    targetTag: MountainTop_Gate
+    targetSceneName: 
+  rewardGold: 500
+  rewardExp: 1000

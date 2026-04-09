@@ -38,10 +38,7 @@ namespace MovementSystem
 
         private void Awake()
         {
-            if (cameraToggleInputAction != null)
-            {
-                cameraToggleInputAction.action.started += OnCameraCursorToggled;
-            }
+            // Alt toggle giờ được xử lý thống nhất trong Update() qua legacy Input
 
             if (startHidden)
             {
@@ -95,58 +92,29 @@ namespace MovementSystem
             if (IsUiOverlayBlocking()) return;
 
             isCursorHidden = true;
-            Cursor.visible = false;
-            Cursor.lockState = CursorLockMode.Locked;
+            if (MouseLockManager.Instance != null)
+            {
+                MouseLockManager.Instance.SetGameplayCursorLocked(true);
+            }
+            else
+            {
+                Cursor.visible = false;
+                Cursor.lockState = CursorLockMode.Locked;
+            }
             SetCinemachineInput(true);
         }
 
         private void Update()
         {
-            // KHÔNG xử lý cursor khi UI overlay đang mở (Inventory, Pause, Lobby...)
-            // NGOẠI TRỪ: vẫn cho phép Alt toggle (user muốn nhả chuột thủ công)
-            bool uiBlocking = IsUiOverlayBlocking();
+            // KHÔNG xử lý cursor khi inventory đang mở
+            if (IsUiOverlayBlocking()) return;
 
-            // Legacy LeftAlt fallback — LUÔN hoạt động dù có InputAction hay không
-            bool altPressed = false;
-            try { altPressed = Input.GetKeyDown(KeyCode.LeftAlt); }
-            catch { }
-
-            // New Input System fallback
-            if (!altPressed && Keyboard.current != null)
+            // Luôn check Alt qua legacy Input (fallback khi InputAction không fire)
+            if (Input.GetKeyDown(KeyCode.LeftAlt))
             {
-                altPressed = Keyboard.current.leftAltKey.wasPressedThisFrame;
+                ToggleCursor();
             }
-
-            if (altPressed)
-            {
-                // Khi UI overlay đang mở: chỉ cho phép hiện cursor (không ẩn)
-                if (uiBlocking)
-                {
-                    if (Cursor.lockState == CursorLockMode.Locked || !Cursor.visible)
-                    {
-                        Cursor.visible = true;
-                        Cursor.lockState = CursorLockMode.None;
-                        SetCinemachineInput(false);
-                        isCursorHidden = false;
-                        Debug.Log("[CameraCursor] Alt pressed during UI overlay — cursor unlocked.");
-                    }
-                }
-                else
-                {
-                    if (Time.frameCount != lastToggleFrame)
-                    {
-                        ToggleCursor();
-                        lastToggleFrame = Time.frameCount;
-                    }
-                }
-                return;
-            }
-
-            // Không xử lý gì thêm khi UI overlay đang chặn
-            if (uiBlocking) return;
         }
-
-        private static int lastToggleFrame = -1;
 
         private void OnEnable()
         {
@@ -169,19 +137,27 @@ namespace MovementSystem
             // KHÔNG toggle cursor khi inventory đang mở
             if (IsUiOverlayBlocking()) return;
 
-            if (Time.frameCount != lastToggleFrame)
-            {
-                ToggleCursor();
-                lastToggleFrame = Time.frameCount;
-            }
+            ToggleCursor();
         }
 
         private void ToggleCursor()
         {
-            // Đồng bộ theo trạng thái THỰC tế trước khi toggle để tránh lệch cờ nội bộ
-            // (case vào scene bị script khác override Cursor.visible/lockState -> phải bấm Alt 2 lần).
-            bool actualHiddenNow = Cursor.lockState == CursorLockMode.Locked && !Cursor.visible;
-            isCursorHidden = !actualHiddenNow;
+            if (MouseLockManager.Instance != null)
+            {
+                // wasFree: cursor is unlocked (gameplay NOT locked)
+                bool wasFree = !MouseLockManager.Instance.IsGameplayCursorLocked;
+                // Toggle: if was free → lock, if was locked → free
+                bool shouldLock = wasFree;
+                MouseLockManager.Instance.SetGameplayCursorLocked(shouldLock, fromUserToggleFromFreeCursor: wasFree && shouldLock);
+                if (!shouldLock)
+                    MouseLockManager.Instance.ClearGameplayLockRetries();
+                isCursorHidden = shouldLock;
+                SetCinemachineInput(shouldLock);
+                return;
+            }
+
+            // Legacy: không có MouseLockManager — dựa Cursor.visible
+            isCursorHidden = !Cursor.visible;
 
             if (isCursorHidden)
             {
@@ -193,6 +169,7 @@ namespace MovementSystem
             {
                 Cursor.visible = true;
                 Cursor.lockState = CursorLockMode.None;
+                GameCursorManager.TryApplyNormalCursorTextureFromScene();
                 SetCinemachineInput(false);
             }
         }
@@ -303,8 +280,13 @@ namespace MovementSystem
         private void ApplyGameplayCursorInternal()
         {
             isCursorHidden = true;
-            Cursor.visible = false;
-            Cursor.lockState = CursorLockMode.Locked;
+            if (MouseLockManager.Instance != null)
+                MouseLockManager.Instance.SetGameplayCursorLocked(true);
+            else
+            {
+                Cursor.visible = false;
+                Cursor.lockState = CursorLockMode.Locked;
+            }
             SetCinemachineInput(true);
         }
 

@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 using System.Collections.Generic;
 using TMPro;
 
@@ -69,15 +70,29 @@ public class AbilityIconManager : MonoBehaviour
         {
             WeaponGemManager.Instance.OnGemsChanged += OnGemsChanged;
         }
+
+        SceneManager.sceneLoaded += OnSceneLoaded;
     }
 
     private void OnDestroy()
     {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+
         // Unsubscribe from gem changes
         if (WeaponGemManager.Instance != null)
         {
             WeaponGemManager.Instance.OnGemsChanged -= OnGemsChanged;
         }
+    }
+
+    /// <summary>
+    /// Khi đổi scene, player mặc định sheath — reset UI skill giống animation sheath (icon mặc định, không overlay CD theo vũ khí).
+    /// </summary>
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        // WeaponController trên player mới — không giữ reference prefab/scene cũ
+        weaponController = FindFirstObjectByType<WeaponController>();
+        AE_ClearAbilityIcons();
     }
 
     private void OnGemsChanged(WeaponType weaponType)
@@ -313,6 +328,8 @@ public class AbilityIconManager : MonoBehaviour
     // Animation Event: Clear ability icons when weapon is sheathed
     public void AE_ClearAbilityIcons()
     {
+        currentAbilities = null;
+        SetCurrentWeaponType(WeaponType.None);
         SetDefaultIcons();
         InitializeCooldownUI();
         // DON'T clear cooldownEndTimes to prevent cheat when sheath -> draw
@@ -347,6 +364,12 @@ public class AbilityIconManager : MonoBehaviour
         float endTime = Time.time + duration;
         cooldownEndTimes[key] = endTime;
         Debug.Log($"[AbilityIconManager] Triggered cooldown for {weaponType} {input}: {duration}s (ends at {endTime:F2})");
+
+        if (TutorialInputGate.ShouldSuppressCooldownForSkillTutorial(input))
+        {
+            cooldownEndTimes.Remove(key);
+            Debug.Log($"[AbilityIconManager] Tutorial: suppressed cooldown for {input} (skill step)");
+        }
     }
 
     // Check if ability is on cooldown for current weapon
@@ -356,6 +379,20 @@ public class AbilityIconManager : MonoBehaviour
         var key = (currentWeaponType, input);
         if (!cooldownEndTimes.TryGetValue(key, out float endTime)) return false;
         return Time.time < endTime;
+    }
+
+    /// <summary>
+    /// Tutorial only: xóa hồi chiêu ngay (sau khi dùng skill trong bước hướng dẫn).
+    /// </summary>
+    public void TutorialClearCooldown(AbilityInput input)
+    {
+        WeaponType weaponType = currentWeaponType;
+        if (weaponType == WeaponType.None && weaponController != null && weaponController.GetCurrentWeapon() != null)
+            weaponType = weaponController.GetCurrentWeapon().weaponType;
+        if (weaponType == WeaponType.None) return;
+        var key = (weaponType, input);
+        if (cooldownEndTimes.Remove(key))
+            Debug.Log($"[AbilityIconManager] TutorialClearCooldown removed active CD for {weaponType} {input}");
     }
 
     // Get remaining cooldown time for current weapon

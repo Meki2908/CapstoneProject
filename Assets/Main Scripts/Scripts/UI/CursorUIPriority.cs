@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Ưu tiên UI: khi có bất kỳ panel/menu nào mở, toàn quyền hiện/ẩn cursor thuộc về UI.
@@ -7,6 +8,22 @@ using UnityEngine;
 public static class CursorUIPriority
 {
     private static int _depth;
+
+    /// <summary>
+    /// LoadScene(Single) có thể hủy menu trước khi EndUiOverlay chạy → _depth kẹt.
+    /// Gọi trước MouseLockManager.ApplyCursorForScene (thứ tự sceneLoaded không đảm bảo).
+    /// </summary>
+    public static void ClearStaleUiOverlayDepthIfSingle(LoadSceneMode mode)
+    {
+        if (mode != LoadSceneMode.Single)
+            return;
+        _depth = 0;
+    }
+
+    private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        ClearStaleUiOverlayDepthIfSingle(mode);
+    }
 
     /// <summary>True khi có ít nhất một UI đang giữ quyền ưu tiên.</summary>
     public static bool IsUiOverlayActive => _depth > 0;
@@ -28,10 +45,17 @@ public static class CursorUIPriority
         if (_depth != 0)
             return;
 
-        // Luôn về gameplay: không giữ trạng thái Alt (chuột tự do) sau khi đóng UI
-        Cursor.visible = false;
-        Cursor.lockState = CursorLockMode.Locked;
+        // Cinemachine / camera look — luôn gọi trước
         MovementSystem.CameraCursor.ApplyGameplayCursorAfterUiClosed();
+
+        // Chuột: menu scene = tự do, gameplay = lock (MouseLockManager nếu có)
+        if (MouseLockManager.Instance != null)
+            MouseLockManager.Instance.RefreshAfterUiOverlayClosed();
+        else
+        {
+            Cursor.visible = false;
+            Cursor.lockState = CursorLockMode.Locked;
+        }
     }
 
     /// <summary>
@@ -40,16 +64,21 @@ public static class CursorUIPriority
     public static void EndAllUiOverlays()
     {
         _depth = 0;
-        Cursor.visible = false;
-        Cursor.lockState = CursorLockMode.Locked;
         MovementSystem.CameraCursor.ApplyGameplayCursorAfterUiClosed();
+        if (MouseLockManager.Instance != null)
+            MouseLockManager.Instance.RefreshAfterUiOverlayClosed();
+        else
+        {
+            Cursor.visible = false;
+            Cursor.lockState = CursorLockMode.Locked;
+        }
     }
 
-#if UNITY_EDITOR
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics()
     {
         _depth = 0;
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+        SceneManager.sceneLoaded += OnSceneLoaded;
     }
-#endif
 }

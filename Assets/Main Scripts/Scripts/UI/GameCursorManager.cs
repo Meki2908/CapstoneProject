@@ -2,11 +2,17 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 
 /// <summary>
 /// Manages system cursor textures and swaps cursor by hover target.
 /// Use Player Settings cursor as default, then override with Cursor.SetCursor at runtime.
+/// Gameplay: một cú click trái (không qua UI) chuyển từ chuột trong suốt (soft) sang ẩn hẳn — xem MouseLockManager.
+/// Một instance mỗi scene (không DontDestroyOnLoad) — cấu hình texture theo từng scene trong Inspector.
 /// </summary>
+[DefaultExecutionOrder(-45)]
 public class GameCursorManager : MonoBehaviour
 {
     public static GameCursorManager Instance { get; private set; }
@@ -38,6 +44,10 @@ public class GameCursorManager : MonoBehaviour
     [Tooltip("If true, manager keeps applying cursor every frame while active.")]
     [SerializeField] private bool keepRefreshingCursor = false;
 
+    [Header("Gameplay — soft → ẩn hẳn")]
+    [Tooltip("Nếu true: click trái khi chưa qua UI mới commit ẩn hẳn. False = mọi click trái đều commit (có thể ăn click vào nút).")]
+    [SerializeField] private bool commitFullHideOnlyWhenNotOverUi = true;
+
     private readonly List<RaycastResult> _raycastResults = new List<RaycastResult>(16);
     private CursorState _currentState = (CursorState)(-1);
     private CursorState? _forcedState;
@@ -47,11 +57,10 @@ public class GameCursorManager : MonoBehaviour
     {
         if (Instance != null && Instance != this)
         {
-            Destroy(gameObject);
+            Destroy(this);
             return;
         }
         Instance = this;
-        DontDestroyOnLoad(gameObject);
         ApplyCursor(CursorState.Normal, true);
     }
 
@@ -65,6 +74,46 @@ public class GameCursorManager : MonoBehaviour
     private void OnDisable()
     {
         RestoreDefaultCursor();
+    }
+
+    private void Update()
+    {
+        if (MouseLockManager.Instance == null)
+            return;
+        if (!MouseLockManager.Instance.IsGameplaySoftCursorAwaitingFirstClick)
+            return;
+        if (MouseLockManager.Instance.IsActiveSceneMenuScene())
+            return;
+        if (CursorUIPriority.IsUiOverlayActive)
+            return;
+        if (commitFullHideOnlyWhenNotOverUi && IsPointerOverUiBlockingFirstClick())
+            return;
+        if (!WasLeftMouseButtonPressedThisFrame())
+            return;
+        MouseLockManager.Instance.CommitGameplayCursorFullHideAfterFirstClick();
+    }
+
+    static bool WasLeftMouseButtonPressedThisFrame()
+    {
+#if ENABLE_INPUT_SYSTEM
+        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+            return true;
+#endif
+        try
+        {
+            return Input.GetMouseButtonDown(0);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    bool IsPointerOverUiBlockingFirstClick()
+    {
+        if (EventSystem.current == null)
+            return false;
+        return EventSystem.current.IsPointerOverGameObject();
     }
 
     private void LateUpdate()
@@ -131,6 +180,11 @@ public class GameCursorManager : MonoBehaviour
     private bool ShouldApplyCursorOverrides()
     {
         if (!syncVisibilityWithCursorLock) return true;
+        // FPS (chuột khóa gameplay): không ép visible / hover — kể cả khi tắt UseTransparentDefaultCursorGameplay
+        if (MouseLockManager.Instance != null &&
+            MouseLockManager.Instance.IsGameplayCursorLocked &&
+            Cursor.lockState == CursorLockMode.Locked)
+            return false;
         return Cursor.lockState != CursorLockMode.Locked || Cursor.visible;
     }
 
@@ -200,6 +254,32 @@ public class GameCursorManager : MonoBehaviour
     {
         Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
         _currentState = (CursorState)(-1);
+    }
+
+    /// <summary>Chuột tự do (Alt, menu): dùng Normal Cursor texture trong Inspector — không dùng Player Settings transparent.</summary>
+    public void ApplyNormalCursorTexture()
+    {
+        _forcedState = null;
+        ApplyCursor(CursorState.Normal, true);
+    }
+
+    /// <summary>Áp Normal texture: Instance hoặc object đầu tiên trong scene (dungeon prefab vừa load có thể chưa gán Instance).</summary>
+    public static void TryApplyNormalCursorTextureFromScene()
+    {
+        if (Instance != null)
+        {
+            Instance.ApplyNormalCursorTexture();
+            return;
+        }
+
+        var found = FindObjectsByType<GameCursorManager>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        if (found != null && found.Length > 0)
+        {
+            found[0].ApplyNormalCursorTexture();
+            return;
+        }
+
+        Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
     }
 
     /// <summary>Call from other scripts to force a cursor state (e.g. drag).</summary>
