@@ -187,6 +187,7 @@ public class InventoryController : MonoBehaviour
         // Show inventory
         inventory.SetActive(true);
         isInventoryOpen = true;
+        SoundManager.PlayUIOpenMenu();
 
         // Unlock cursor SAU CÙNG (đảm bảo không bị script khác override)
         Cursor.visible = true;
@@ -221,6 +222,7 @@ public class InventoryController : MonoBehaviour
         // Hide inventory
         inventory.SetActive(false);
         isInventoryOpen = false;
+        SoundManager.PlayUICloseMenu();
 
         // Trả cursor + CameraCursor về trạng thái trước khi mở UI đầu tiên (stack UI)
         CursorUIPriority.EndUiOverlay();

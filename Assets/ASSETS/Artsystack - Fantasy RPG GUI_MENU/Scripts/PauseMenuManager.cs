@@ -148,6 +148,7 @@ namespace Artsystack.ArtsystackGui
                 // (parent có thể bị ẩn bởi GameMenuManager.HideAllPanels)
                 EnsureParentsActive(panel_PopUpPause.transform);
                 panel_PopUpPause.SetActive(true);
+                SoundManager.PlayUIOpenMenu();
                 Debug.Log($"[PauseMenuManager] panel_PopUpPause SET ACTIVE = true, activeSelf={panel_PopUpPause.activeSelf}, activeInHierarchy={panel_PopUpPause.activeInHierarchy}");
                 
                 // Kiểm tra Canvas parent
@@ -180,6 +181,7 @@ namespace Artsystack.ArtsystackGui
         {
             if (!isPaused) return;
             isPaused = false;
+            SoundManager.PlayUICloseMenu();
             HideAllPanels();
 
             // Tắt lại các parent đã bật khi pause
@@ -241,6 +243,7 @@ namespace Artsystack.ArtsystackGui
             if (settingsManager != null)
             {
                 settingsManager.OpenSettings();
+                SoundManager.PlayUIOpenMenu();
             }
             else if (panel_GUISettings != null)
             {
@@ -252,6 +255,7 @@ namespace Artsystack.ArtsystackGui
         {
             if (panel_GUISettings != null)
                 panel_GUISettings.SetActive(false);
+            SoundManager.PlayUICloseMenu();
             if (panel_PopUpPause != null)
                 panel_PopUpPause.SetActive(true);
         }

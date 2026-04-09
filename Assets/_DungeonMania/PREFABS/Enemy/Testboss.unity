@@ -293,6 +293,70 @@ MonoBehaviour:
   m_MinRegionArea: 2
   m_NavMeshData: {fileID: 23800000, guid: 82580d358ffdc4140aa2a9594532d5c1, type: 2}
   m_BuildHeightMesh: 0
+--- !u!1 &644437146
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 644437148}
+  - component: {fileID: 644437147}
+  - component: {fileID: 644437149}
+  m_Layer: 0
+  m_Name: BossHealthBarUI
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &644437147
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 644437146}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c9f2e8bf9769f642b6529136f3335af, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  healthBarPrefab: {fileID: 1571064345891557536, guid: 6de4a4fcd6dcaad4b8094ccc1adb0d4f, type: 3}
+  smoothSpeed: 6
+  trailDelay: 0.5
+  trailSpeed: 2.5
+  flashDuration: 0.12
+--- !u!4 &644437148
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 644437146}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -3.2071083, y: 0.13955975, z: 13.135274}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &644437149
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 644437146}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6132cf1c08fec4f4aab2080e0fe09900, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  fakeBossName: TEST BOSS
+  fakeMaxHP: 10000
 --- !u!1001 &714640498
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -345,14 +409,14 @@ PrefabInstance:
       propertyPath: m_Name
       value: EnemyNew
       objectReference: {fileID: 0}
+    - target: {fileID: 1981453737562475106, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 3221569457328950027, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
       propertyPath: m_SceneBindings.Array.data[0].value
       value: 
       objectReference: {fileID: 1159661246}
-    - target: {fileID: 4690055088006949649, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
-      propertyPath: m_IsActive
-      value: 0
-      objectReference: {fileID: 0}
     - target: {fileID: 6599097534500112717, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
       propertyPath: m_SceneBindings.Array.data[0].value
       value: 
@@ -818,7 +882,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1683077617}
-  - component: {fileID: 1683077618}
   - component: {fileID: 1683077619}
   m_Layer: 0
   m_Name: GameObject
@@ -842,18 +905,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1683077618
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1683077616}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ede1546d775090c41a341fa188819c89, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &1683077619
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -937,3 +988,4 @@ SceneRoots:
   - {fileID: 1962929080}
   - {fileID: 1683077617}
   - {fileID: 714640498}
+  - {fileID: 644437148}

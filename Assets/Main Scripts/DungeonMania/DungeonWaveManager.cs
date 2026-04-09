@@ -1816,6 +1816,9 @@ public class DungeonWaveManager : MonoBehaviour
     {
         CursorUIPriority.BeginUiOverlay();
 
+        // FREEZE GAME — quái dừng tấn công, animation dừng
+        Time.timeScale = 0f;
+
         // Unlock cursor để player click button trên UI
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
@@ -1827,6 +1830,7 @@ public class DungeonWaveManager : MonoBehaviour
         {
             EnsureParentActive(dungeonCompleteUI);
             dungeonCompleteUI.SetActive(true);
+            SoundManager.PlayDungeonVictory();
             
             // Đảm bảo Canvas có GraphicRaycaster để button click được
             EnsureGraphicRaycaster(dungeonCompleteUI);
@@ -1849,6 +1853,9 @@ public class DungeonWaveManager : MonoBehaviour
     {
         CursorUIPriority.BeginUiOverlay();
 
+        // FREEZE GAME — quái dừng tấn công, animation dừng
+        Time.timeScale = 0f;
+
         // Unlock cursor để player click button trên UI
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
@@ -1861,6 +1868,7 @@ public class DungeonWaveManager : MonoBehaviour
             // Đảm bảo parent chain active
             EnsureParentActive(dungeonFailedUI);
             dungeonFailedUI.SetActive(true);
+            SoundManager.PlayDungeonDefeat();
 
             // Đảm bảo Canvas có GraphicRaycaster để button click được
             EnsureGraphicRaycaster(dungeonFailedUI);
@@ -1895,6 +1903,7 @@ public class DungeonWaveManager : MonoBehaviour
     {
         Debug.Log($"[DungeonWave] Đang quay về {mainMapSceneName}...");
 
+        SoundManager.StopDungeonResultMusic();
         CursorUIPriority.EndAllUiOverlays();
         
         // Cleanup: ẩn reward panel nếu đang mở
@@ -1931,6 +1940,7 @@ public class DungeonWaveManager : MonoBehaviour
         // Lần vào dungeon sau reload: không ẩn HUD trong lúc pre-enter timeline (PreEnterDungeonCutsceneController).
         DungeonPreEnterSession.SkipHudHideOnNextPreEnterTimeline = true;
 
+        SoundManager.StopDungeonResultMusic();
         CursorUIPriority.EndAllUiOverlays();
 
         // Cleanup reward UI

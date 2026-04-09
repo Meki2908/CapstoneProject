@@ -92,5 +92,19 @@ public enum SoundType
     Boss_Demon_FireBlast,       // Xoay chém kiếm, sóng lửa về phía trước
 
     // === BOSS DEATH ===
-    Boss_Die                    // Boss chết — âm riêng khác Enemy_Die
+    Boss_Die,                   // Boss chết — âm riêng khác Enemy_Die
+
+    // === TELEPORT ===
+    Teleport_Start,             // Bắt đầu dịch chuyển (hiệu ứng biến mất)
+    Teleport_Arrive,            // Đến nơi (hiệu ứng xuất hiện)
+
+    // === UI INTERACTION ===
+    UI_ButtonClick,             // Click button thông thường
+    UI_ButtonHover,             // Hover button (optional)
+    UI_OpenMenu,                // Mở menu/panel
+    UI_CloseMenu,               // Đóng menu/panel
+
+    // === DUNGEON RESULT ===
+    Dungeon_Victory,            // Jingle thắng dungeon
+    Dungeon_Defeat              // Jingle thua dungeon
 }
