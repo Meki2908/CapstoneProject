@@ -190,6 +190,10 @@ public class DungeonWaveManager : MonoBehaviour
     [Tooltip("Status notification text")]
     public TextMeshProUGUI statusText;
 
+    [Header("=== WAVE FRAME PANEL ===")]
+    [Tooltip("Panel chứa khung trang trí wave (hiện khi có wave notification / countdown / status)")]
+    public GameObject waveFramePanel;
+
     // ===== PRIVATE VARIABLES =====
     private int currentWave = 0;
     private int enemiesAlive = 0;
@@ -795,11 +799,13 @@ public class DungeonWaveManager : MonoBehaviour
             statusText.text = "Final wave cleared! Collecting loot...";
             statusText.gameObject.SetActive(true);
         }
+        if (waveFramePanel) { EnsureParentActive(waveFramePanel); waveFramePanel.SetActive(true); }
 
         yield return new WaitForSeconds(lastWaveLootDelay);
 
         if (statusText != null)
             statusText.gameObject.SetActive(false);
+        if (waveFramePanel) waveFramePanel.SetActive(false);
 
         CompleteDungeon();
     }
@@ -813,8 +819,10 @@ public class DungeonWaveManager : MonoBehaviour
         {
             statusText.text = $"Wave {currentWave} cleared! Preparing wave {currentWave + 1}...";
             statusText.gameObject.SetActive(true);
+            if (waveFramePanel) { EnsureParentActive(waveFramePanel); waveFramePanel.SetActive(true); }
             yield return new WaitForSeconds(waveDelayTime);
             statusText.gameObject.SetActive(false);
+            if (waveFramePanel) waveFramePanel.SetActive(false);
         }
         else if (waveDelayTime > 0)
         {
@@ -1671,10 +1679,14 @@ public class DungeonWaveManager : MonoBehaviour
         if (dungeonCompleteUI) dungeonCompleteUI.SetActive(false);
         if (dungeonFailedUI) dungeonFailedUI.SetActive(false);
         if (statusText) statusText.gameObject.SetActive(false);
+        if (waveFramePanel) waveFramePanel.SetActive(false);
     }
 
     private void ShowWaveNotification(int wave)
     {
+        // Hiện wave frame panel
+        if (waveFramePanel) { EnsureParentActive(waveFramePanel); waveFramePanel.SetActive(true); }
+
         if (waveNotificationUI)
         {
             // Đảm bảo parent chain active
@@ -1717,6 +1729,9 @@ public class DungeonWaveManager : MonoBehaviour
 
     private void ShowCountdown(float time)
     {
+        // Hiện wave frame panel
+        if (waveFramePanel) { EnsureParentActive(waveFramePanel); waveFramePanel.SetActive(true); }
+
         if (countdownUI)
         {
             // Đảm bảo parent chain active
@@ -1810,6 +1825,7 @@ public class DungeonWaveManager : MonoBehaviour
     private void HideCountdown()
     {
         if (countdownUI) countdownUI.SetActive(false);
+        if (waveFramePanel) waveFramePanel.SetActive(false);
     }
 
     private void ShowDungeonComplete()
@@ -1843,6 +1859,7 @@ public class DungeonWaveManager : MonoBehaviour
         // Ẩn các UI có thể chặn click
         if (waveNotificationUI) waveNotificationUI.SetActive(false);
         if (countdownUI) countdownUI.SetActive(false);
+        if (waveFramePanel) waveFramePanel.SetActive(false);
     }
 
     private void ShowDungeonFailed()
@@ -1874,6 +1891,7 @@ public class DungeonWaveManager : MonoBehaviour
         // Ẩn các UI có thể chặn click
         if (waveNotificationUI) waveNotificationUI.SetActive(false);
         if (countdownUI) countdownUI.SetActive(false);
+        if (waveFramePanel) waveFramePanel.SetActive(false);
     }
     
     /// <summary>
