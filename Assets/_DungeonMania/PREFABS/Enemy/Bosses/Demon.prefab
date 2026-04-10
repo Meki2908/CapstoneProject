@@ -14,6 +14,10 @@ GameObject:
   - component: {fileID: 4120424694413853872}
   - component: {fileID: 4762266920349989829}
   - component: {fileID: 9126157298012937166}
+  - component: {fileID: 521509076209365711}
+  - component: {fileID: 8557640415136066741}
+  - component: {fileID: 7117394211114359118}
+  - component: {fileID: 3423507593793105093}
   m_Layer: 0
   m_Name: Demon
   m_TagString: Boss
@@ -285,6 +289,71 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &521509076209365711
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 409497873877021662}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  SortKey: 478993193
+  ObjectInterest: 1
+  Flags: 262145
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 8557640415136066741}
+  - {fileID: 7117394211114359118}
+  - {fileID: 3423507593793105093}
+  ForceRemoteRenderTimeframe: 0
+--- !u!114 &8557640415136066741
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 409497873877021662}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4f5aefab9349e2d4499c23223ea71d07, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _NetworkedHP: 0
+--- !u!114 &7117394211114359118
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 409497873877021662}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &3423507593793105093
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 409497873877021662}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a012885e7091674688dd926b20a3988, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  lerpSpeed: 50
+  lerpCrouchSpeed: 60
 --- !u!1 &3446125516086027954
 GameObject:
   m_ObjectHideFlags: 0
@@ -2651,6 +2720,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   distance: 0
   isStop: 0
+  isCastingSkill: 0
+  skillCastDirection: {x: 0, y: 0, z: 0}
 --- !u!114 &337231325157497022
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2678,6 +2749,9 @@ MonoBehaviour:
   scoreReward: 100
   attackDistanceOverride: 3
   moveSpeed: 3.5
+  rotationSpeed: 8
+  minRangedDistance: 0
+  skillWarningDuration: 1.2
   isBoss: 1
   enemyType: 4
   specificEnemyType: 10
@@ -2694,6 +2768,8 @@ MonoBehaviour:
   skillDistance: 6
   skillCooldown: 8
   skillDamageMultiplier: 2
+  skillRepeatCount: 1
+  skillRepeatDelay: 1
   spawnVfxPrefab: {fileID: 0}
   spawnVfxDuration: 1
   lastSkillTime: -999

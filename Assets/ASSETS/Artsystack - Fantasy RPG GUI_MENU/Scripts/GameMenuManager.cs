@@ -18,13 +18,31 @@ namespace Artsystack.ArtsystackGui
         [SerializeField] private GameObject panel_Exit;
 
         [Header("Main Menu Buttons")]
+        [SerializeField] private UnityEngine.UI.Button btn_Play;
         [SerializeField] private UnityEngine.UI.Button btn_NewGame;
-        [SerializeField] private UnityEngine.UI.Button btn_Continue;
         [SerializeField] private UnityEngine.UI.Button btn_Help;
         [SerializeField] private UnityEngine.UI.Button btn_Settings;
         [SerializeField] private UnityEngine.UI.Button btn_Exit;
 
-        [Header("Scene Recognition")]
+        [Header("GUI_btn_Play — tabs (Multiplayer)")]
+        [SerializeField] private GameObject tab_TabPlay;
+        [SerializeField] private GameObject tab_MultiplayerMode;
+        [SerializeField] private GameObject tab_HostOptions;
+        
+        [Header("GUI_btn_Play — Multiplayer Panels")]
+        [SerializeField] private GameObject panel_CreateRoom;
+        [SerializeField] private GameObject panel_JoinRoom;
+        [SerializeField] private GameObject panel_ConnectedRoom;
+
+        [Header("Multiplayer Mode Tab Buttons")]
+        [SerializeField] private UnityEngine.UI.Button btn_SinglePlayer;
+        [SerializeField] private UnityEngine.UI.Button btn_Multiplayer;
+        [SerializeField] private UnityEngine.UI.Button btn_BackToPlay;
+
+        [Header("Host Options Tab Buttons")]
+        [SerializeField] private UnityEngine.UI.Button btn_HostCreate;
+        [SerializeField] private UnityEngine.UI.Button btn_HostJoin;
+        [SerializeField] private UnityEngine.UI.Button btn_BackFromHost;        [Header("Scene Recognition")]
         [Tooltip("Danh sách các scene được xem là Main Menu (Lobby). Nếu không ở các scene này, GameMenuManager sẽ bị vô hiệu hóa.")]
         [SerializeField] private List<string> mainMenuSceneNames = new List<string> { "DemoSceneSettings", "Menu_Game", "UI_Game" };
 
@@ -58,21 +76,35 @@ namespace Artsystack.ArtsystackGui
                 panel_GUIGame.SetActive(true);
 
             // Thiết lập event listeners cho main menu
+            if (btn_Play != null)
+                btn_Play.onClick.AddListener(ClickPlayMultiplayer);
+
             if (btn_NewGame != null)
                 btn_NewGame.onClick.AddListener(OnNewGameClicked);
-
-            if (btn_Continue != null)
-            {
-                btn_Continue.onClick.AddListener(OnContinueClicked_MainMenu);
-                // Ẩn hoàn toàn nếu chưa có save
-                btn_Continue.gameObject.SetActive(HasSaveData());
-            }
             
             if (btn_Settings != null)
                 btn_Settings.onClick.AddListener(OnSettingsClicked);
             
+            if (btn_Help != null)
+                btn_Help.onClick.AddListener(OnSettingsClicked);
+
             if (btn_Exit != null)
                 btn_Exit.onClick.AddListener(OnExitClicked);
+
+            // Gắn event cho các Tab con (Multiplayer Mode & Host Options)
+            if (btn_SinglePlayer != null)
+                btn_SinglePlayer.onClick.AddListener(OnSinglePlayerClicked);
+            if (btn_Multiplayer != null)
+                btn_Multiplayer.onClick.AddListener(ClickHostGame);
+            if (btn_BackToPlay != null)
+                btn_BackToPlay.onClick.AddListener(BackToPlayTab);
+
+            if (btn_HostCreate != null)
+                btn_HostCreate.onClick.AddListener(OnHostCreateClicked);
+            if (btn_HostJoin != null)
+                btn_HostJoin.onClick.AddListener(OnJoinHostClicked);
+            if (btn_BackFromHost != null)
+                btn_BackFromHost.onClick.AddListener(BackToMultiplayerMode);
 
             // Cursor settings
             Cursor.visible = true;
@@ -91,20 +123,107 @@ namespace Artsystack.ArtsystackGui
         #region Main Menu Events
 
         /// <summary>
-        /// Khi bấm nút Play - Bắt đầu game mới hoặc tiếp tục
+        /// Khi bấm nút Play - Mở tab Multiplayer Mode thay vì load game ngay rụp!
         /// </summary>
         public void OnPlayClicked()
+        {
+            ClickPlayMultiplayer();
+        }
+
+        /// <summary>
+        /// New Game — xóa tất cả save data rồi bắt đầu mới (hiện tại chuyển sang Multiplayer Mode)
+        /// </summary>
+        public void OnNewGameClicked()
+        {
+            // DeleteAllSaveData();
+            // StartCoroutine(LoadGameScene());
+            ClickPlayMultiplayer();
+        }
+
+        public void OnSinglePlayerClicked()
         {
             StartCoroutine(LoadGameScene());
         }
 
-        /// <summary>
-        /// New Game — xóa tất cả save data rồi bắt đầu mới
-        /// </summary>
-        public void OnNewGameClicked()
+        private void ResetPlayModeTabs()
         {
-            DeleteAllSaveData();
-            StartCoroutine(LoadGameScene());
+            if (tab_TabPlay != null) tab_TabPlay.SetActive(true);
+            if (tab_MultiplayerMode != null) tab_MultiplayerMode.SetActive(false);
+            if (tab_HostOptions != null) tab_HostOptions.SetActive(false);
+            if (panel_CreateRoom != null) panel_CreateRoom.SetActive(false);
+            if (panel_JoinRoom != null) panel_JoinRoom.SetActive(false);
+            if (panel_ConnectedRoom != null) panel_ConnectedRoom.SetActive(false);
+        }
+
+        public void ClickPlayMultiplayer()
+        {
+            if (tab_TabPlay != null) tab_TabPlay.SetActive(false);
+            if (tab_MultiplayerMode != null) tab_MultiplayerMode.SetActive(true);
+        }
+        public void BackToPlayTab()
+        {
+            ResetPlayModeTabs();
+        }
+        public void ClickHostGame()
+        {
+            if (tab_MultiplayerMode != null) tab_MultiplayerMode.SetActive(false);
+            if (tab_HostOptions != null) tab_HostOptions.SetActive(true);
+        }
+        public void BackToMultiplayerMode()
+        {
+            if (tab_HostOptions != null) tab_HostOptions.SetActive(false);
+            if (tab_MultiplayerMode != null) tab_MultiplayerMode.SetActive(true);
+        }
+        public void BackToHostOptions()
+        {
+            if (panel_CreateRoom != null) panel_CreateRoom.SetActive(false);
+            if (panel_JoinRoom != null) panel_JoinRoom.SetActive(false);
+            if (tab_HostOptions != null) tab_HostOptions.SetActive(true);
+        }
+
+        public void OnHostCreateClicked()
+        {
+            Debug.Log("[GameMenuManager] Bấm nút Create Host!");
+            
+            if (tab_MultiplayerMode != null) tab_MultiplayerMode.SetActive(false);
+            if (tab_HostOptions != null) tab_HostOptions.SetActive(false);
+            if (panel_JoinRoom != null) panel_JoinRoom.SetActive(false);
+            
+            if (panel_CreateRoom != null)
+            {
+                Debug.Log("[GameMenuManager] Panel_CreateRoom đã được gán -> Tiến hành BẬT Panel lên!");
+                panel_CreateRoom.SetActive(true);
+                var mp = MultiplayerManager.Instance;
+                if (mp != null) mp.HideEnterGameButton();
+            }
+            else
+            {
+                Debug.LogWarning("[GameMenuManager] LỖI: Chưa kéo Panel_CreateRoom vào Inspector! Bắt đầu tạo Room ngay lập tức!");
+                var mp = MultiplayerManager.Instance;
+                if (mp != null) { mp.StartHostAndLoadGame(); isGameRunning = true; }
+                else StartCoroutine(LoadGameScene());
+            }
+        }
+
+        public void OnJoinHostClicked()
+        {
+            Debug.Log("[GameMenuManager] Bấm nút Join Host!");
+
+            if (tab_MultiplayerMode != null) tab_MultiplayerMode.SetActive(false);
+            if (tab_HostOptions != null) tab_HostOptions.SetActive(false);
+            if (panel_CreateRoom != null) panel_CreateRoom.SetActive(false);
+
+            if (panel_JoinRoom != null)
+            {
+                Debug.Log("[GameMenuManager] Panel_JoinRoom đã được gán -> Tiến hành BẬT Panel lên!");
+                panel_JoinRoom.SetActive(true);
+            }
+            else
+            {
+                Debug.LogWarning("[GameMenuManager] LỖI: Chưa kéo Panel_JoinRoom vào Inspector! Bắt đầu vào game ngay lập tức!");
+                var mp = MultiplayerManager.Instance;
+                if (mp != null) { mp.StartClientAndLoadGame(); isGameRunning = true; }
+            }
         }
 
         /// <summary>
