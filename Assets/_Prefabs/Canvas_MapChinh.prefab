@@ -164,9 +164,10 @@ GameObject:
   - component: {fileID: 5708743938106826025}
   - component: {fileID: 8863751609580572938}
   - component: {fileID: 1209988777666555443}
+  - component: {fileID: 8684603217361592983}
   m_Layer: 0
-  m_Name: PortalRoundCanvas
-  m_TagString: Untagged
+  m_Name: TeleportCanvas
+  m_TagString: HUD
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -274,6 +275,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   manageCursorVisibility: 1
+--- !u!114 &8684603217361592983
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 407498576676944590}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2d3f4e51a2938475968697a8b9c0d1e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  suppressDuringEarlySceneFrames: 1
+  earlyFramesAfterSceneLoad: 2
 --- !u!1 &515100525450756058
 GameObject:
   m_ObjectHideFlags: 0
@@ -1759,9 +1774,10 @@ GameObject:
   - component: {fileID: 6912546319379235184}
   - component: {fileID: 5130183605413343313}
   - component: {fileID: 4904470004076062600}
+  - component: {fileID: 606938328729766639}
   m_Layer: 0
   m_Name: Dialogue UI Canvas
-  m_TagString: Untagged
+  m_TagString: HUD
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -1850,6 +1866,20 @@ MonoBehaviour:
   m_BlockingMask:
     serializedVersion: 2
     m_Bits: 4294967295
+--- !u!114 &606938328729766639
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1191365690833144822}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2d3f4e51a2938475968697a8b9c0d1e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  suppressDuringEarlySceneFrames: 1
+  earlyFramesAfterSceneLoad: 2
 --- !u!1 &1333632637578065080
 GameObject:
   m_ObjectHideFlags: 0
@@ -11949,7 +11979,7 @@ GameObject:
   - component: {fileID: 8062228597478252791}
   m_Layer: 5
   m_Name: Canvas_MapChinh
-  m_TagString: Untagged
+  m_TagString: HUD
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0

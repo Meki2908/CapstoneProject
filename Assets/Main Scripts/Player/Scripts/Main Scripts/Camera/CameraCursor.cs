@@ -277,6 +277,54 @@ namespace MovementSystem
                 cc.ApplyGameplayCursorInternal();
         }
 
+        /// <summary>
+        /// Canvas tag HUD vừa được bật (blacksmith, menu dungeon, ...) — chuột tự do + Normal texture, đồng bộ Cinemachine.
+        /// </summary>
+        public static void ApplyFreeCursorForHudCanvasActivated()
+        {
+            var cc = FindFirstObjectByType<CameraCursor>();
+            if (cc != null)
+                cc.ApplyFreeCursorForHudCanvasActivatedInternal();
+            else
+                ApplyFreeCursorForHudCanvasActivatedWithoutCameraCursor();
+        }
+
+        private static void ApplyFreeCursorForHudCanvasActivatedWithoutCameraCursor()
+        {
+            if (CursorUIPriority.IsUiOverlayActive)
+                return;
+            if (MouseLockManager.Instance != null)
+            {
+                MouseLockManager.Instance.SetGameplayCursorLocked(false);
+                MouseLockManager.Instance.ClearGameplayLockRetries();
+            }
+            else
+            {
+                Cursor.visible = true;
+                Cursor.lockState = CursorLockMode.None;
+            }
+            GameCursorManager.TryApplyNormalCursorTextureFromScene();
+        }
+
+        private void ApplyFreeCursorForHudCanvasActivatedInternal()
+        {
+            if (IsUiOverlayBlocking())
+                return;
+            isCursorHidden = false;
+            if (MouseLockManager.Instance != null)
+            {
+                MouseLockManager.Instance.SetGameplayCursorLocked(false);
+                MouseLockManager.Instance.ClearGameplayLockRetries();
+            }
+            else
+            {
+                Cursor.visible = true;
+                Cursor.lockState = CursorLockMode.None;
+            }
+            GameCursorManager.TryApplyNormalCursorTextureFromScene();
+            SetCinemachineInput(false);
+        }
+
         private void ApplyGameplayCursorInternal()
         {
             isCursorHidden = true;

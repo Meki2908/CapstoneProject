@@ -58,6 +58,8 @@ public class IntroCutsceneController : MonoBehaviour
             foreach (var go in objs)
             {
                 if (go == null) continue;
+                if (HudSceneTagUtilities.IsDungeonHudUiRoot(go))
+                    continue;
                 if (!go.activeSelf) go.SetActive(true);
             }
         }
