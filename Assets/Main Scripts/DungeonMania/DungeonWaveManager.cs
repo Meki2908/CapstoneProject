@@ -586,6 +586,9 @@ public class DungeonWaveManager : MonoBehaviour
         // === CHỜ TIMELINE INTRO (Pre-enter desert) — chỉ wave 1, trước thông báo + countdown ===
         yield return WaitForPreEnterDungeonTimelineIfNeeded();
 
+        if (SceneTransitionManager.Instance != null)
+            SceneTransitionManager.Instance.HideLoadingPanelIfAny();
+
         // === HIỂN THỊ THÔNG BÁO WAVE ===
         ShowWaveNotification(currentWave);
         
@@ -1904,10 +1907,10 @@ public class DungeonWaveManager : MonoBehaviour
         EnableCameraInput();
         Time.timeScale = 1f;
 
-        // Dùng SceneTransitionManager (có loading screen)
+        // Dùng SceneTransitionManager (có loading screen). interruptIfTransitioning: tránh kẹt cờ từ transition vào dungeon chưa hoàn tất.
         if (SceneTransitionManager.Instance != null)
         {
-            SceneTransitionManager.Instance.GoToScene(mainMapSceneName, "Đang quay về bản đồ...");
+            SceneTransitionManager.Instance.GoToScene(mainMapSceneName, "Đang quay về bản đồ...", interruptIfTransitioning: true);
         }
         else
         {
@@ -1921,9 +1924,6 @@ public class DungeonWaveManager : MonoBehaviour
     public void RestartDungeon()
     {
         Debug.Log("[DungeonWave] Restart dungeon...");
-
-        // Lần vào dungeon sau reload: không ẩn HUD trong lúc pre-enter timeline (PreEnterDungeonCutsceneController).
-        DungeonPreEnterSession.SkipHudHideOnNextPreEnterTimeline = true;
 
         SoundManager.StopDungeonResultMusic();
         CursorUIPriority.EndAllUiOverlays();
@@ -1944,7 +1944,7 @@ public class DungeonWaveManager : MonoBehaviour
         string currentScene = SceneManager.GetActiveScene().name;
         if (SceneTransitionManager.Instance != null)
         {
-            SceneTransitionManager.Instance.GoToScene(currentScene, "Đang khởi động lại dungeon...");
+            SceneTransitionManager.Instance.GoToScene(currentScene, "Đang khởi động lại dungeon...", interruptIfTransitioning: true);
         }
         else
         {

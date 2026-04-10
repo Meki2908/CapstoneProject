@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
@@ -83,6 +84,9 @@ public class SceneTransitionManager : MonoBehaviour
 
     private bool isTransitioning = false;
 
+    /// <summary>Panel loading đã bật ở bước 1 transition gần nhất — luôn ép tắt trong <see cref="HideLoadingPanelIfAny"/> (quét scene có thể không thấy DDOL).</summary>
+    private GameObject _loadingPanelShownThisTransition;
+
     private void Awake()
     {
         if (Instance == null)
@@ -100,45 +104,197 @@ public class SceneTransitionManager : MonoBehaviour
         }
     }
 
-    // ===== TÌM PANEL TRONG SCENE HIỆN TẠI =====
+    // ===== TÌM PANEL =====
+
+    private static readonly string[] LoadingPanelNames = { "Panel_GUILoading", "Panel_Loading", "LoadingPanel" };
 
     /// <summary>
-    /// Tìm Panel_GUILoading trong scene hiện tại (không di chuyển, không thay đổi gì).
-    /// Trả về null nếu không tìm thấy.
+    /// Lúc <b>bắt đầu</b> chuyển scene: chỉ panel có thể thật sự vẽ (Canvas_Menu / panel đang active).
+    /// Không quét inactive trong scene — có thể chọn panel dưới canvas tắt → không hiện loading.
     /// </summary>
-    private GameObject FindLoadingPanel()
+    private GameObject FindLoadingPanelForShowDuringTransition()
     {
-        string[] panelNames = { "Panel_GUILoading", "Panel_Loading", "LoadingPanel" };
-
-        // Cách 1: Tìm trong Canvas_Menu (ưu tiên)
         GameObject canvasMenu = GameObject.Find("Canvas_Menu");
         if (canvasMenu != null)
         {
-            foreach (string name in panelNames)
+            foreach (string name in LoadingPanelNames)
             {
                 Transform t = FindDeep(canvasMenu.transform, name);
                 if (t != null) return t.gameObject;
             }
         }
 
-        // Cách 2: Tìm toàn scene (active)
-        foreach (string name in panelNames)
+        foreach (string name in LoadingPanelNames)
         {
             GameObject go = GameObject.Find(name);
             if (go != null) return go;
         }
 
-        // Cách 3: Tìm cả inactive objects
-        foreach (GameObject root in SceneManager.GetActiveScene().GetRootGameObjects())
+        return null;
+    }
+
+    /// <summary>
+    /// Chỉ quét scene Unity <c>DontDestroyOnLoad</c> — tránh chọn nhầm bản trùng trong scene gameplay.
+    /// </summary>
+    private GameObject FindLoadingPanelInDontDestroySceneOnly()
+    {
+        for (int si = 0; si < SceneManager.sceneCount; si++)
         {
-            foreach (string name in panelNames)
+            Scene scene = SceneManager.GetSceneAt(si);
+            if (!scene.isLoaded || scene.name != "DontDestroyOnLoad") continue;
+            foreach (GameObject root in scene.GetRootGameObjects())
             {
-                Transform t = FindDeep(root.transform, name);
-                if (t != null) return t.gameObject;
+                if (root == null) continue;
+                var trs = root.GetComponentsInChildren<Transform>(true);
+                for (int i = 0; i < trs.Length; i++)
+                {
+                    Transform t = trs[i];
+                    if (t == null) continue;
+                    for (int n = 0; n < LoadingPanelNames.Length; n++)
+                    {
+                        if (t.name == LoadingPanelNames[n])
+                            return t.gameObject;
+                    }
+                }
             }
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Sau khi load / khi dọn sót: tìm kể cả <b>inactive</b> và mọi scene (DontDestroyOnLoad),
+    /// vì intro dungeon thường tắt Canvas_Menu nên <see cref="GameObject.Find"/> không thấy.
+    /// Ưu tiên panel trong scene <b>DontDestroyOnLoad</b>, rồi mới Canvas_Menu đang active + quét scene.
+    /// </summary>
+    private GameObject FindLoadingPanelForFadeOrCleanup()
+    {
+        GameObject ddolPanel = FindLoadingPanelInDontDestroySceneOnly();
+        if (ddolPanel != null) return ddolPanel;
+
+        GameObject canvasMenu = FindBestCanvasMenuInLoadedScenes();
+        if (canvasMenu != null)
+        {
+            foreach (string name in LoadingPanelNames)
+            {
+                Transform t = FindDeep(canvasMenu.transform, name);
+                if (t != null) return t.gameObject;
+            }
+        }
+
+        for (int si = 0; si < SceneManager.sceneCount; si++)
+        {
+            Scene scene = SceneManager.GetSceneAt(si);
+            if (!scene.isLoaded) continue;
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                if (root == null) continue;
+                foreach (string name in LoadingPanelNames)
+                {
+                    Transform t = FindDeep(root.transform, name);
+                    if (t != null) return t.gameObject;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>Chọn Canvas_Menu ưu tiên đang hiển thị trong hierarchy.</summary>
+    private GameObject FindBestCanvasMenuInLoadedScenes()
+    {
+        GameObject bestInactive = null;
+        for (int si = 0; si < SceneManager.sceneCount; si++)
+        {
+            Scene scene = SceneManager.GetSceneAt(si);
+            if (!scene.isLoaded) continue;
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                if (root == null) continue;
+                if (root.name == "Canvas_Menu")
+                {
+                    if (root.activeInHierarchy) return root;
+                    if (bestInactive == null) bestInactive = root;
+                }
+                else
+                {
+                    Transform t = FindDeep(root.transform, "Canvas_Menu");
+                    if (t != null)
+                    {
+                        GameObject go = t.gameObject;
+                        if (go.activeInHierarchy) return go;
+                        if (bestInactive == null) bestInactive = go;
+                    }
+                }
+            }
+        }
+
+        return bestInactive;
+    }
+
+    /// <summary>
+    /// Thu thập mọi panel loading khớp tên trên mọi scene đã load.
+    /// Dùng <see cref="Component.GetComponentsInChildren{T}(bool)"/> (includeInactive) để không sót object inactive.
+    /// </summary>
+    private void CollectAllLoadingPanels(List<GameObject> list, HashSet<int> seen)
+    {
+        for (int si = 0; si < SceneManager.sceneCount; si++)
+        {
+            Scene scene = SceneManager.GetSceneAt(si);
+            if (!scene.isLoaded) continue;
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                if (root == null) continue;
+                var trs = root.GetComponentsInChildren<Transform>(true);
+                for (int i = 0; i < trs.Length; i++)
+                {
+                    Transform t = trs[i];
+                    if (t == null) continue;
+                    for (int n = 0; n < LoadingPanelNames.Length; n++)
+                    {
+                        if (t.name != LoadingPanelNames[n]) continue;
+                        GameObject go = t.gameObject;
+                        if (seen.Add(go.GetInstanceID()))
+                            list.Add(go);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Ép tắt mọi panel loading khớp tên trên <b>mọi</b> scene đã load (gồm DDOL + bản trùng trong scene dungeon).
+    /// </summary>
+    public void HideLoadingPanelIfAny()
+    {
+        var list = new List<GameObject>();
+        var seen = new HashSet<int>();
+
+        // Ưu tiên đúng instance đã bật khi transition (thường DDOL) — CollectAllLoadingPanels có thể không thấy.
+        if (_loadingPanelShownThisTransition != null)
+        {
+            GameObject cached = _loadingPanelShownThisTransition;
+            if (cached != null && seen.Add(cached.GetInstanceID()))
+                list.Add(cached);
+        }
+
+        CollectAllLoadingPanels(list, seen);
+
+        for (int i = 0; i < list.Count; i++)
+        {
+            GameObject panel = list[i];
+            GetPanelComponents(panel, out _, out _, out CanvasGroup cg);
+            if (cg != null) cg.alpha = 0f;
+            panel.SetActive(false);
+        }
+
+        if (_loadingPanelShownThisTransition != null)
+        {
+            GameObject c = _loadingPanelShownThisTransition;
+            if (c == null || !c.activeSelf)
+                _loadingPanelShownThisTransition = null;
+        }
     }
 
     /// <summary>
@@ -172,12 +328,24 @@ public class SceneTransitionManager : MonoBehaviour
 
     // ===== PUBLIC API =====
 
-    public void GoToScene(string sceneName, string message = null)
+    /// <param name="interruptIfTransitioning">
+    /// Nếu true: dừng coroutine transition đang treo (ví dụ vào dungeon chưa kết thúc hẳn) rồi chuyển scene.
+    /// Dùng khi thoát/Retry dungeon — tránh GoToScene bị bỏ qua vì <see cref="isTransitioning"/> vẫn true.
+    /// </param>
+    public void GoToScene(string sceneName, string message = null, bool interruptIfTransitioning = false)
     {
         if (isTransitioning)
         {
-            Debug.LogWarning($"[SceneTransition] Đang chuyển scene rồi, bỏ qua yêu cầu: {sceneName}");
-            return;
+            if (!interruptIfTransitioning)
+            {
+                Debug.LogWarning($"[SceneTransition] Đang chuyển scene rồi, bỏ qua yêu cầu: {sceneName}");
+                return;
+            }
+
+            StopAllCoroutines();
+            isTransitioning = false;
+            Time.timeScale = 1f;
+            HideLoadingPanelIfAny();
         }
 
         StartCoroutine(TransitionRoutine(sceneName));
@@ -217,7 +385,8 @@ public class SceneTransitionManager : MonoBehaviour
         string tip = GetRandomTip();
 
         // === BƯỚC 1: Tìm và bật panel NGAY LẬP TỨC trong scene HIỆN TẠI ===
-        GameObject panel = FindLoadingPanel();
+        GameObject panel = FindLoadingPanelForShowDuringTransition();
+        _loadingPanelShownThisTransition = panel;
         Slider slider = null;
         TextMeshProUGUI text = null;
         CanvasGroup cg = null;
@@ -242,7 +411,11 @@ public class SceneTransitionManager : MonoBehaviour
         }
 
         // === BƯỚC 2: Load scene async ===
-        AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(sceneName);
+        // Reload cùng scene (Retry dungeon): dùng buildIndex — tên scene đôi khi không reload đúng ổn định.
+        Scene active = SceneManager.GetActiveScene();
+        AsyncOperation asyncLoad = active.isLoaded && active.name == sceneName
+            ? SceneManager.LoadSceneAsync(active.buildIndex)
+            : SceneManager.LoadSceneAsync(sceneName);
         if (asyncLoad == null)
         {
             Debug.LogError($"[SceneTransition] Không thể load scene: {sceneName}. Kiểm tra Build Settings!");
@@ -276,8 +449,12 @@ public class SceneTransitionManager : MonoBehaviour
         yield return null;
         yield return null;
 
-        // === BƯỚC 4: Tìm panel trong scene MỚI và fade out ===
-        panel = FindLoadingPanel();
+        // === BƯỚC 4: Fade/tắt đúng panel đã bật ở bước 1 (thường DDOL) ===
+        // Giữ reference `panel` từ bước 1. Nếu luôn FindLoadingPanelForFadeOrCleanup(), có thể trúng bản
+        // Panel_GUILoading trùng tên/path trong scene mới trong khi màn hình vẫn dùng instance bước 1.
+        if (panel == null)
+            panel = FindLoadingPanelForFadeOrCleanup();
+
         if (panel != null)
         {
             GetPanelComponents(panel, out slider, out text, out cg);
@@ -303,6 +480,9 @@ public class SceneTransitionManager : MonoBehaviour
             // Tắt panel
             panel.SetActive(false);
         }
+
+        // Quét thêm mọi bản Panel_* trùng tên (DDOL + scene) — tránh sót sau bước 4.
+        HideLoadingPanelIfAny();
 
         if (restoreCursorAfterLoad)
         {
