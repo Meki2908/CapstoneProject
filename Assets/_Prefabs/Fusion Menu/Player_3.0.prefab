@@ -84906,6 +84906,7 @@ GameObject:
   - component: {fileID: 505734898532284177}
   - component: {fileID: 5395804327490155289}
   - component: {fileID: 4574784741352068433}
+  - component: {fileID: 8280549573864489824}
   m_Layer: 8
   m_Name: player
   m_TagString: Player
@@ -85568,6 +85569,22 @@ MonoBehaviour:
   autoDashCooldown: 3
   dashForce: 15
   dashDuration: 0.3
+--- !u!114 &8280549573864489824
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5966522928997625730}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a99bc8a183c750144b2800241ce1b555, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  footstepsConductor: {fileID: 0}
+  footstepStartHandlers: []
+  footstepMiddleHandlers: []
+  footstepEndHandlers: []
 --- !u!1 &6046149470515190070
 GameObject:
   m_ObjectHideFlags: 0
@@ -115102,31 +115119,31 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 305570467512528469, guid: 50c9a2b5a9cead0479948894e1c4b6cd, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.6240574
+      value: -1.6435845
       objectReference: {fileID: 0}
     - target: {fileID: 305570467512528469, guid: 50c9a2b5a9cead0479948894e1c4b6cd, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.4495873
+      value: -2.5034595
       objectReference: {fileID: 0}
     - target: {fileID: 305570467512528469, guid: 50c9a2b5a9cead0479948894e1c4b6cd, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -8.978279
+      value: -7.9327564
       objectReference: {fileID: 0}
     - target: {fileID: 305570467512528469, guid: 50c9a2b5a9cead0479948894e1c4b6cd, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.99939555
+      value: 0.96971124
       objectReference: {fileID: 0}
     - target: {fileID: 305570467512528469, guid: 50c9a2b5a9cead0479948894e1c4b6cd, type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0.0018828545
+      value: -0.22195002
       objectReference: {fileID: 0}
     - target: {fileID: 305570467512528469, guid: 50c9a2b5a9cead0479948894e1c4b6cd, type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0.034713734
+      value: 0.099401444
       objectReference: {fileID: 0}
     - target: {fileID: 305570467512528469, guid: 50c9a2b5a9cead0479948894e1c4b6cd, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.00006540044
+      value: 0.02275126
       objectReference: {fileID: 0}
     - target: {fileID: 305570467512528469, guid: 50c9a2b5a9cead0479948894e1c4b6cd, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -115139,6 +115156,14 @@ PrefabInstance:
     - target: {fileID: 305570467512528469, guid: 50c9a2b5a9cead0479948894e1c4b6cd, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3444760798254247384, guid: 50c9a2b5a9cead0479948894e1c4b6cd, type: 3}
+      propertyPath: PanAxis.Value
+      value: 11.705468
+      objectReference: {fileID: 0}
+    - target: {fileID: 3444760798254247384, guid: 50c9a2b5a9cead0479948894e1c4b6cd, type: 3}
+      propertyPath: TiltAxis.Value
+      value: -25.823898
       objectReference: {fileID: 0}
     - target: {fileID: 4571248498258553574, guid: 50c9a2b5a9cead0479948894e1c4b6cd, type: 3}
       propertyPath: Target.LookAtTarget
