@@ -57,6 +57,7 @@ public class StandingState : BaseMoveState
 
             character.isWeaponDrawn = true;
             character.currentLocomotionState = character.combatMove;
+            TutorialTextDisplay.NotifyWeaponDrawnFromGameplay();
 
             // Set the drawWeapon trigger and reset sheathWeapon
             character.animator.SetTrigger("drawWeapon");
