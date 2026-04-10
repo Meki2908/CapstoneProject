@@ -1763,9 +1763,11 @@ GameObject:
   - component: {fileID: 6274178401700903171}
   - component: {fileID: 4026283707404825071}
   - component: {fileID: 2332656090443565183}
+  - component: {fileID: 8716209443704825072}
+  - component: {fileID: 8877665544332211006}
   m_Layer: 0
   m_Name: GUI_Dungeon
-  m_TagString: Untagged
+  m_TagString: HUD
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -1888,6 +1890,43 @@ MonoBehaviour:
   m_BlockingMask:
     serializedVersion: 2
     m_Bits: 4294967295
+--- !u!114 &8716209443704825072
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4250913773273599965}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9182a37d5c99eca48ab121ddc52b0390, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  normalCursorTexture: {fileID: 2800000, guid: a5f9cc9a5efbe894eb85de4851711ba8, type: 3}
+  buttonHoverCursorTexture: {fileID: 2800000, guid: 0f45821c9378469498c0044ff9068ea2, type: 3}
+  itemHoverCursorTexture: {fileID: 2800000, guid: 486d9c27e3b5dd047967d6c94bbd7fae, type: 3}
+  settingsHoverCursorTexture: {fileID: 0}
+  normalHotspot: {x: 0, y: 0}
+  buttonHotspot: {x: 0, y: 0}
+  itemHotspot: {x: 0, y: 0}
+  settingsHotspot: {x: 0, y: 0}
+  syncVisibilityWithCursorLock: 1
+  keepRefreshingCursor: 0
+  commitFullHideOnlyWhenNotOverUi: 1
+--- !u!114 &8877665544332211006
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4250913773273599965}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2d3f4e51a2938475968697a8b9c0d1e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  suppressDuringEarlySceneFrames: 1
+  earlyFramesAfterSceneLoad: 2
 --- !u!1 &4839251584381899263
 GameObject:
   m_ObjectHideFlags: 0

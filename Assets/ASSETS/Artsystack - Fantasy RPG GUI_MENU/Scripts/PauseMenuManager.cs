@@ -42,6 +42,8 @@ namespace Artsystack.ArtsystackGui
         private static PauseMenuManager instance;
         private bool isPaused = false;
         private float _lastTogglePauseUnscaledTime = -999f;
+        private int _lastTogglePauseFrame = -1;
+        private PlayerInput _cachedPlayerInput;
 
         public static PauseMenuManager Instance
         {
@@ -69,6 +71,18 @@ namespace Artsystack.ArtsystackGui
 
             if (panel_PopUpPause != null)
                 panel_PopUpPause.SetActive(false);
+
+            SceneManager.sceneLoaded += OnSceneLoaded_ClearPlayerInputCache;
+        }
+
+        private void OnDestroy()
+        {
+            SceneManager.sceneLoaded -= OnSceneLoaded_ClearPlayerInputCache;
+        }
+
+        private void OnSceneLoaded_ClearPlayerInputCache(Scene scene, LoadSceneMode mode)
+        {
+            _cachedPlayerInput = null;
         }
 
 
@@ -99,13 +113,20 @@ namespace Artsystack.ArtsystackGui
 
             bool escPressed = false;
 
-            // Check New Input System
-            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            // Ưu tiên action Player/OpenMenu (cùng binding với Esc) — một nguồn, tránh lệch frame giữa Input System và Legacy.
+            // Khi đang pause, SetPlayerInput tắt map Player → dùng Keyboard/Legacy bên dưới để đóng pause.
+            if (_cachedPlayerInput == null)
+                _cachedPlayerInput = FindFirstObjectByType<PlayerInput>();
+            if (_cachedPlayerInput != null && _cachedPlayerInput.actions != null)
             {
-                escPressed = true;
+                var openMenu = _cachedPlayerInput.actions.FindAction("OpenMenu", false);
+                if (openMenu != null && openMenu.enabled && openMenu.WasPressedThisFrame())
+                    escPressed = true;
             }
 
-            // Fallback: Legacy Input
+            if (!escPressed && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+                escPressed = true;
+
             if (!escPressed)
             {
                 try
@@ -259,6 +280,11 @@ namespace Artsystack.ArtsystackGui
 
         public void TogglePause()
         {
+            // Chặn mọi nguồn gọi TogglePause 2 lần trong cùng frame (tránh mở rồi đóng ngay).
+            if (Time.frameCount == _lastTogglePauseFrame)
+                return;
+            _lastTogglePauseFrame = Time.frameCount;
+
             if (isPaused) ResumeGame();
             else PauseGame();
         }

@@ -81,7 +81,9 @@ public class RenderDistanceController : MonoBehaviour
         distances[13] = vfx;    // VFX
 
         cam.layerCullDistances = distances;
-        cam.layerCullSpherical = true;
+        // layerCullSpherical chỉ hỗ trợ built-in renderer, không dùng với URP
+        if (UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline == null)
+            cam.layerCullSpherical = true;
 
         int label = GameSettings.renderDistanceOptions[index];
         Debug.Log($"[RenderDistance] Applied: {label}x → Enemy={enemy}, VFX={vfx}");

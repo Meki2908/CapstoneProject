@@ -57,7 +57,7 @@ public class GameCursorManager : MonoBehaviour
     {
         if (Instance != null && Instance != this)
         {
-            Destroy(gameObject);
+            Destroy(this);
             return;
         }
         Instance = this;
@@ -171,9 +171,8 @@ public class GameCursorManager : MonoBehaviour
     private bool ShouldApplyCursorOverrides()
     {
         if (!syncVisibilityWithCursorLock) return true;
-        // FPS + soft (trong suốt) hoặc đã ẩn hẳn: không ghi đè hover lên Cursor
+        // FPS (chuột khóa gameplay): không ép visible / hover — kể cả khi tắt UseTransparentDefaultCursorGameplay
         if (MouseLockManager.Instance != null &&
-            MouseLockManager.Instance.UseTransparentDefaultCursorGameplay &&
             MouseLockManager.Instance.IsGameplayCursorLocked &&
             Cursor.lockState == CursorLockMode.Locked)
             return false;
@@ -255,13 +254,23 @@ public class GameCursorManager : MonoBehaviour
         ApplyCursor(CursorState.Normal, true);
     }
 
-    /// <summary>Khi không có instance (scene không gắn GameCursorManager), fallback SetCursor(null).</summary>
+    /// <summary>Áp Normal texture: Instance hoặc object đầu tiên trong scene (dungeon prefab vừa load có thể chưa gán Instance).</summary>
     public static void TryApplyNormalCursorTextureFromScene()
     {
         if (Instance != null)
+        {
             Instance.ApplyNormalCursorTexture();
-        else
-            Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
+            return;
+        }
+
+        var found = FindObjectsByType<GameCursorManager>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        if (found != null && found.Length > 0)
+        {
+            found[0].ApplyNormalCursorTexture();
+            return;
+        }
+
+        Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
     }
 
     /// <summary>Call from other scripts to force a cursor state (e.g. drag).</summary>

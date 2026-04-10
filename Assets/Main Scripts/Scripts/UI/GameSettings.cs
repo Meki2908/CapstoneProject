@@ -156,7 +156,10 @@ public class GameSettings : MonoBehaviour
         brightness = PlayerPrefs.GetFloat(KEY_BRIGHTNESS, 0.5f);
         saturationEnabled = PlayerPrefs.GetInt(KEY_SATURATION, 1) == 1;
         contrast = PlayerPrefs.GetFloat(KEY_CONTRAST, 0.5f);
-        screenResolutionIndex = PlayerPrefs.GetInt(KEY_SCREEN_RESOLUTION, 0);
+        screenResolutionIndex = PlayerPrefs.GetInt(KEY_SCREEN_RESOLUTION, -1);
+        // Mặc định 1920x1080 nếu chưa có setting
+        if (screenResolutionIndex < 0)
+            screenResolutionIndex = FindResolutionIndex(1920, 1080);
         displayModeIndex = PlayerPrefs.GetInt(KEY_DISPLAY_MODE, 0);
         frameRate = PlayerPrefs.GetInt(KEY_FRAME_RATE, 60);
         chromaticAberrationEnabled = PlayerPrefs.GetInt(KEY_CHROMATIC_ABERRATION, 0) == 1;
@@ -460,5 +463,20 @@ public class GameSettings : MonoBehaviour
         miniMapEnabled = true;
 
         ApplyAndSave();
+    }
+
+    /// <summary>
+    /// Tìm index của resolution gần nhất với target (mặc định 1920x1080)
+    /// </summary>
+    int FindResolutionIndex(int targetW, int targetH)
+    {
+        var resolutions = Screen.resolutions;
+        for (int i = 0; i < resolutions.Length; i++)
+        {
+            if (resolutions[i].width == targetW && resolutions[i].height == targetH)
+                return i;
+        }
+        // Fallback: lấy resolution cao nhất
+        return Mathf.Max(0, resolutions.Length - 1);
     }
 }

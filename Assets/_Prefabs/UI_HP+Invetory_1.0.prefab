@@ -522,9 +522,10 @@ GameObject:
   - component: {fileID: 6749187944176516594}
   - component: {fileID: 2118812312364619155}
   - component: {fileID: 6148388450172418777}
+  - component: {fileID: 6727968621774784167}
   m_Layer: 0
   m_Name: Inventory Board
-  m_TagString: Untagged
+  m_TagString: HUD
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -632,6 +633,21 @@ MonoBehaviour:
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &6727968621774784167
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 286900128904705985}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2d3f4e51a2938475968697a8b9c0d1e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  requiredTag: 
+  suppressDuringEarlySceneFrames: 1
+  earlyFramesAfterSceneLoad: 2
 --- !u!1 &298953098387692405
 GameObject:
   m_ObjectHideFlags: 0

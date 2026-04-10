@@ -965,6 +965,8 @@ public class DungeonWaveManager : MonoBehaviour
             DungeonRewardUI.BringWinButtonsAboveReward(dungeonCompleteUI);
         }
 
+        GameCursorManager.TryApplyNormalCursorTextureFromScene();
+
         OnDungeonCompleted?.Invoke();
     }
 
@@ -1801,6 +1803,7 @@ public class DungeonWaveManager : MonoBehaviour
         // Unlock cursor để player click button trên UI
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
+        GameCursorManager.TryApplyNormalCursorTextureFromScene();
 
         // Tắt toàn bộ camera — đứng yên khi GUI hiện
         DisableCameraFull();
@@ -1839,6 +1842,7 @@ public class DungeonWaveManager : MonoBehaviour
         // Unlock cursor để player click button trên UI
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
+        GameCursorManager.TryApplyNormalCursorTextureFromScene();
 
         // Tắt toàn bộ camera — đứng yên khi GUI hiện
         DisableCameraFull();

@@ -13,24 +13,25 @@ public class WeaponAbilityManager : MonoBehaviour
 
     private void Awake()
     {
-        // Find icon manager if not assigned
+        EnsureIconManager();
+    }
+
+    private void EnsureIconManager()
+    {
         if (iconManager == null)
         {
             iconManager = FindFirstObjectByType<AbilityIconManager>();
             if (iconManager != null)
-            {
                 Debug.Log("[WeaponAbilityManager] Auto-found AbilityIconManager");
-            }
             else
-            {
-                Debug.LogWarning("[WeaponAbilityManager] No AbilityIconManager found in scene! Ability icons will not work.");
-            }
+                Debug.LogWarning("[WeaponAbilityManager] No AbilityIconManager found in scene!");
         }
     }
 
     // Animation Event: Set ability icons when weapon is drawn
     public void AE_SetWeaponAbilities()
     {
+        EnsureIconManager();
         Debug.Log($"[WeaponAbilityManager] AE_SetWeaponAbilities called - iconManager: {iconManager != null}, abilities: {weaponAbilities?.Length ?? 0}");
 
         if (iconManager != null && weaponAbilities != null)
@@ -62,6 +63,7 @@ public class WeaponAbilityManager : MonoBehaviour
     // Animation Event: Clear ability icons when weapon is sheathed
     public void AE_ClearWeaponAbilities()
     {
+        EnsureIconManager();
         if (iconManager != null)
         {
             iconManager.AE_ClearAbilityIcons();

@@ -38,10 +38,7 @@ namespace MovementSystem
 
         private void Awake()
         {
-            if (cameraToggleInputAction != null)
-            {
-                cameraToggleInputAction.action.started += OnCameraCursorToggled;
-            }
+            // Alt toggle giờ được xử lý thống nhất trong Update() qua legacy Input
 
             if (startHidden)
             {
@@ -112,8 +109,8 @@ namespace MovementSystem
             // KHÔNG xử lý cursor khi inventory đang mở
             if (IsUiOverlayBlocking()) return;
 
-            // Chỉ dùng legacy Input khi KHÔNG có InputAction gán
-            if (cameraToggleInputAction == null && Input.GetKeyDown(KeyCode.LeftAlt))
+            // Luôn check Alt qua legacy Input (fallback khi InputAction không fire)
+            if (Input.GetKeyDown(KeyCode.LeftAlt))
             {
                 ToggleCursor();
             }
@@ -147,13 +144,15 @@ namespace MovementSystem
         {
             if (MouseLockManager.Instance != null)
             {
+                // wasFree: cursor is unlocked (gameplay NOT locked)
                 bool wasFree = !MouseLockManager.Instance.IsGameplayCursorLocked;
-                bool nextGameplay = !MouseLockManager.Instance.IsGameplayCursorLocked;
-                MouseLockManager.Instance.SetGameplayCursorLocked(nextGameplay, fromUserToggleFromFreeCursor: wasFree && nextGameplay);
-                if (!nextGameplay)
+                // Toggle: if was free → lock, if was locked → free
+                bool shouldLock = wasFree;
+                MouseLockManager.Instance.SetGameplayCursorLocked(shouldLock, fromUserToggleFromFreeCursor: wasFree && shouldLock);
+                if (!shouldLock)
                     MouseLockManager.Instance.ClearGameplayLockRetries();
-                isCursorHidden = nextGameplay;
-                SetCinemachineInput(nextGameplay);
+                isCursorHidden = shouldLock;
+                SetCinemachineInput(shouldLock);
                 return;
             }
 
@@ -276,6 +275,54 @@ namespace MovementSystem
             var cc = FindFirstObjectByType<CameraCursor>();
             if (cc != null)
                 cc.ApplyGameplayCursorInternal();
+        }
+
+        /// <summary>
+        /// Canvas tag HUD vừa được bật (blacksmith, menu dungeon, ...) — chuột tự do + Normal texture, đồng bộ Cinemachine.
+        /// </summary>
+        public static void ApplyFreeCursorForHudCanvasActivated()
+        {
+            var cc = FindFirstObjectByType<CameraCursor>();
+            if (cc != null)
+                cc.ApplyFreeCursorForHudCanvasActivatedInternal();
+            else
+                ApplyFreeCursorForHudCanvasActivatedWithoutCameraCursor();
+        }
+
+        private static void ApplyFreeCursorForHudCanvasActivatedWithoutCameraCursor()
+        {
+            if (CursorUIPriority.IsUiOverlayActive)
+                return;
+            if (MouseLockManager.Instance != null)
+            {
+                MouseLockManager.Instance.SetGameplayCursorLocked(false);
+                MouseLockManager.Instance.ClearGameplayLockRetries();
+            }
+            else
+            {
+                Cursor.visible = true;
+                Cursor.lockState = CursorLockMode.None;
+            }
+            GameCursorManager.TryApplyNormalCursorTextureFromScene();
+        }
+
+        private void ApplyFreeCursorForHudCanvasActivatedInternal()
+        {
+            if (IsUiOverlayBlocking())
+                return;
+            isCursorHidden = false;
+            if (MouseLockManager.Instance != null)
+            {
+                MouseLockManager.Instance.SetGameplayCursorLocked(false);
+                MouseLockManager.Instance.ClearGameplayLockRetries();
+            }
+            else
+            {
+                Cursor.visible = true;
+                Cursor.lockState = CursorLockMode.None;
+            }
+            GameCursorManager.TryApplyNormalCursorTextureFromScene();
+            SetCinemachineInput(false);
         }
 
         private void ApplyGameplayCursorInternal()

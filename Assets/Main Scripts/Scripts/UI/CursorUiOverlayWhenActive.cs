@@ -18,6 +18,12 @@ public class CursorUiOverlayWhenActive : MonoBehaviour
         {
             Cursor.visible = true;
             Cursor.lockState = CursorLockMode.None;
+            if (MouseLockManager.Instance != null)
+            {
+                MouseLockManager.Instance.SetGameplayCursorLocked(false);
+                MouseLockManager.Instance.ClearGameplayLockRetries();
+            }
+            GameCursorManager.TryApplyNormalCursorTextureFromScene();
         }
     }
 

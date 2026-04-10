@@ -226,6 +226,12 @@ public class InventoryController : MonoBehaviour
         // Unlock cursor SAU CÙNG (đảm bảo không bị script khác override)
         Cursor.visible = true;
         Cursor.lockState = CursorLockMode.None;
+        if (MouseLockManager.Instance != null)
+        {
+            MouseLockManager.Instance.SetGameplayCursorLocked(false);
+            MouseLockManager.Instance.ClearGameplayLockRetries();
+        }
+        GameCursorManager.TryApplyNormalCursorTextureFromScene();
 
         Debug.Log($"[InventoryController] Inventory opened - timeScale={Time.timeScale}, cursor locked={Cursor.lockState}");
     }

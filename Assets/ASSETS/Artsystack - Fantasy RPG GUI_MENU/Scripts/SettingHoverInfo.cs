@@ -24,133 +24,244 @@ namespace Artsystack.ArtsystackGui
             // ===== GRAPHICS =====
             { "Tab_ScreenResolution", (
                 "Screen Resolution",
-                "Thay đổi độ phân giải màn hình. Độ phân giải cao hơn cho hình ảnh sắc nét hơn nhưng yêu cầu phần cứng mạnh hơn."
+                "Change the display resolution. Higher resolution provides sharper visuals but requires more powerful hardware."
             )},
             { "Tab_FrameRate", (
                 "Frame Rate",
-                "Giới hạn tốc độ khung hình (FPS). FPS cao hơn cho trải nghiệm mượt mà hơn. Chọn 60 FPS cho cân bằng, 120+ cho gaming."
-            )},
-            { "Tab_DisplayMode", (
-                "Display Mode",
-                "Chế độ hiển thị: Fullscreen (toàn màn hình), Windowed (cửa sổ), Borderless (toàn màn hình không viền)."
-            )},
-            { "Tab_ChromaticAberration", (
-                "Chromatic Aberration",
-                "Hiệu ứng quang sai màu sắc ở rìa màn hình, tạo cảm giác điện ảnh. Tắt để có hình ảnh rõ ràng hơn."
-            )},
-            { "Tab_Sharpening", (
-                "Sharpening",
-                "Tăng độ sắc nét cho hình ảnh. Bật để chi tiết rõ hơn, tắt nếu thấy hình ảnh bị nhiễu."
-            )},
-            { "Tab_Brightness", (
-                "Brightness",
-                "Điều chỉnh độ sáng tổng thể của game. Tăng nếu hình ảnh quá tối, giảm nếu quá sáng gây chói mắt."
-            )},
-            { "Tab_Contrast", (
-                "Contrast",
-                "Điều chỉnh độ tương phản giữa vùng sáng và tối. Tăng để hình ảnh rõ nét, giảm để mềm mại hơn."
-            )},
-            { "Tab_Saturation", (
-                "Saturation",
-                "Bật/tắt độ bão hòa màu sắc. Bật để màu sắc rực rỡ sinh động, tắt để hình ảnh tự nhiên hơn."
+                "Set the maximum frame rate (FPS). Higher FPS results in smoother gameplay. Choose 60 FPS for balance, 120+ for competitive gaming."
             )},
             { "Tab_RenderDistance", (
                 "Render Distance",
-                "Giới hạn tầm nhìn trong game. Giảm để tăng hiệu suất (FPS) đáng kể, tăng để nhìn xa hơn nhưng tốn tài nguyên hơn. Tương tự tính năng trong Genshin Impact."
+                "Controls how far objects are rendered in the game world. Lower values significantly improve performance, higher values allow you to see further."
+            )},
+            { "Tab_DisplayMode", (
+                "Display Mode",
+                "Choose display mode: Fullscreen (full screen), Windowed (resizable window), or Borderless (fullscreen without borders)."
+            )},
+            { "Tab_ChromaticAberration", (
+                "Chromatic Aberration",
+                "Adds a cinematic color fringing effect at the edges of the screen. Disable for a cleaner, sharper image."
+            )},
+            { "Tab_ShadowQuality", (
+                "Shadow Quality",
+                "Controls the quality of shadows in the game. Higher quality produces softer, more detailed shadows but costs more performance. Set to Off for maximum FPS."
+            )},
+            { "Tab_GraphicQuality", (
+                "Graphic Quality",
+                "Overall graphics quality preset. Adjusts texture filtering, LOD, anti-aliasing (MSAA), and lighting. Ultra provides the best visuals, Low gives the best performance."
+            )},
+            { "Tab_Sharpening", (
+                "Sharpening",
+                "Enhances image sharpness and clarity. Enable for crisper details, disable if the image looks too noisy or harsh."
+            )},
+            { "Tab_Brightness", (
+                "Brightness",
+                "Adjust the overall brightness of the game. Increase if the image is too dark, decrease if it feels too bright or washed out."
+            )},
+            { "Tab_Contrast", (
+                "Contrast",
+                "Adjust the contrast between bright and dark areas. Increase for a more vivid image, decrease for a softer look."
+            )},
+            { "Tab_Saturation", (
+                "Saturation",
+                "Toggle color saturation. Enable for vibrant, colorful visuals. Disable for a more natural, muted color palette."
             )},
 
             // ===== AUDIO =====
             { "Tab_MasterVolume", (
                 "Master Volume",
-                "Âm lượng tổng của toàn bộ game. Điều chỉnh này ảnh hưởng đến tất cả âm thanh bao gồm nhạc, hiệu ứng và giọng nói."
+                "Controls the overall volume of all game audio, including music, sound effects, and voice."
             )},
             { "Tab_MusicVolume", (
                 "Music Volume",
-                "Âm lượng nhạc nền. Điều chỉnh riêng nhạc nền mà không ảnh hưởng đến hiệu ứng âm thanh."
+                "Adjust the background music volume independently without affecting sound effects."
             )},
             { "Tab_SFXVolume", (
                 "SFX Volume",
-                "Âm lượng hiệu ứng âm thanh: tiếng bước chân, tiếng kiếm, va chạm, và các âm thanh hành động trong game."
+                "Adjust the volume of sound effects: footsteps, sword swings, impacts, and other in-game action sounds."
             )},
             { "Tab_VoiceLanguage", (
                 "Language",
-                "Ngôn ngữ hiển thị trong game. Có thể chọn: English, Vietnamese, Japanese, Korean, Chinese."
+                "Select the display language for the game. Available options: English, Vietnamese, Japanese, Korean, Chinese."
             )},
             { "Tab_BackgroundSound", (
                 "Background Sound",
-                "Âm thanh nền môi trường: tiếng gió, tiếng chim, tiếng nước chảy. Bật để tăng sự sống động cho thế giới game."
+                "Toggle ambient environmental sounds: wind, birds, flowing water. Enable for a more immersive game world."
             )},
 
             // ===== CONTROLLER - KEY BINDINGS =====
             { "Tab_KeyBind_Dodge", (
                 "Dodge",
-                "Phím né tránh đòn tấn công. Sử dụng đúng thời điểm để tránh sát thương và tạo cơ hội phản công."
+                "Key for dodging enemy attacks. Use at the right moment to avoid damage and create counterattack opportunities."
             )},
             { "Tab_KeyBind_Sprint", (
                 "Sprint",
-                "Phím chạy nhanh. Giữ phím để di chuyển với tốc độ cao hơn, tiêu hao stamina khi sử dụng."
+                "Key for sprinting. Hold to move at higher speed, consumes stamina while active."
             )},
             { "Tab_KeyBind_SneakCrouch", (
                 "Sneak / Crouch",
-                "Phím lẻn/ngồi xuống. Giảm tiếng ồn khi di chuyển, giúp tránh bị kẻ địch phát hiện."
+                "Key for sneaking or crouching. Reduces movement noise, helping you avoid enemy detection."
             )},
             { "Tab_KeyBind_Jump", (
                 "Jump",
-                "Phím nhảy. Dùng để vượt qua chướng ngại vật, nhảy lên cao hoặc tránh đòn tấn công tầm thấp."
+                "Key for jumping. Use to leap over obstacles, reach higher ground, or dodge low attacks."
             )},
             { "Tab_KeyBind_MoveForward", (
                 "Move Forward",
-                "Phím di chuyển tiến về phía trước theo hướng nhìn của camera."
+                "Key to move forward in the direction the camera is facing."
             )},
             { "Tab_KeyBind_MoveBackward", (
                 "Move Backward",
-                "Phím di chuyển lùi về phía sau. Hữu ích khi cần giữ khoảng cách với kẻ địch."
+                "Key to move backward. Useful for maintaining distance from enemies."
             )},
             { "Tab_KeyBind_MoveLeft", (
                 "Move Left",
-                "Phím di chuyển sang trái. Kết hợp với các phím khác để di chuyển chéo."
+                "Key to strafe left. Combine with other keys for diagonal movement."
             )},
             { "Tab_KeyBind_MoveRight", (
                 "Move Right",
-                "Phím di chuyển sang phải. Kết hợp với các phím khác để di chuyển chéo."
+                "Key to strafe right. Combine with other keys for diagonal movement."
             )},
             { "Tab_KeyBind_Heal", (
                 "Heal",
-                "Phím sử dụng vật phẩm hồi máu. Hồi phục HP của nhân vật, có thời gian hồi giữa các lần sử dụng."
+                "Key to use healing items. Restores your character's HP. Has a cooldown between uses."
             )},
             { "Tab_KeyBind_Menu", (
                 "Menu",
-                "Phím mở menu game. Truy cập túi đồ, bản đồ, nhiệm vụ, và các tùy chọn khác."
+                "Key to open the game menu. Access inventory, map, quests, and other options."
             )},
             { "Tab_KeyBind_Attack", (
                 "Attack",
-                "Phím tấn công cơ bản. Nhấn để tấn công kẻ địch, giữ hoặc nhấn liên tục để thực hiện combo."
+                "Key for basic attacks. Press to strike enemies, press repeatedly or hold for combo attacks."
             )},
             { "Tab_KeyBind_Interact", (
                 "Interact",
-                "Phím tương tác với NPC, vật phẩm, cửa, rương kho báu và các đối tượng trong thế giới game."
+                "Key to interact with NPCs, items, doors, treasure chests, and other objects in the game world."
             )},
             { "Tab_KeyBind_WeaponItemWheel", (
                 "Weapon / Item Wheel",
-                "Phím mở vòng tròn chọn vũ khí và vật phẩm nhanh. Giữ phím và di chuột để chọn."
+                "Key to open the quick-select wheel for weapons and items. Hold and move the mouse to select."
             )},
 
             // ===== GAMEPLAY =====
             { "Tab_MiniMap", (
                 "Mini Map",
-                "Bật/tắt bản đồ nhỏ góc màn hình. Hiển thị vị trí nhân vật, kẻ địch gần và điểm đánh dấu nhiệm vụ."
+                "Toggle the minimap in the corner of the screen. Displays your position, nearby enemies, and quest markers."
             )},
             { "Tab_CameraMouseSpeed", (
                 "Camera Move Speed",
-                "Tốc độ di chuyển camera bằng chuột. Tăng để camera phản hồi nhanh hơn, giảm nếu cảm thấy quá nhạy."
+                "Adjust camera rotation speed with the mouse. Increase for faster response, decrease if it feels too sensitive."
+            )},
+            // Alias — actual Unity name
+            { "Tab_CameraMoveSpeed", (
+                "Camera Move Speed",
+                "Adjust camera rotation speed with the mouse. Increase for faster response, decrease if it feels too sensitive."
             )},
             { "Tab_CameraZoomSpeedGameplay", (
                 "Camera Zoom Speed",
-                "Tốc độ zoom camera khi cuộn chuột. Tăng để zoom nhanh hơn, giảm để zoom mượt mà và chính xác hơn."
+                "Adjust camera zoom speed when scrolling. Increase for faster zoom, decrease for smoother, more precise control."
+            )},
+            // Alias — actual Unity name
+            { "Tab_CameraZoomSpeed", (
+                "Camera Zoom Speed",
+                "Adjust camera zoom speed when scrolling. Increase for faster zoom, decrease for smoother, more precise control."
             )},
             { "Tab_HDRMode", (
                 "HDR Mode",
-                "Bật/tắt chế độ HDR (High Dynamic Range). HDR cho dải màu rộng hơn, hình ảnh sống động và chân thực hơn. Yêu cầu màn hình hỗ trợ HDR."
+                "Toggle HDR (High Dynamic Range) mode. HDR provides a wider color range with more vivid and lifelike visuals. Requires an HDR-capable display."
+            )},
+            // Alias — actual Unity name
+            { "Tab_Language", (
+                "Language",
+                "Select the display language for the game. Available options: English, Vietnamese, Japanese, Korean, Chinese."
+            )},
+
+            // ===== ALIAS KEYS — matching actual GameObject names =====
+            { "Tab_GraphicsQuality", (
+                "Graphics Quality",
+                "Overall graphics quality preset. Adjusts texture filtering, LOD, anti-aliasing (MSAA), and lighting. Ultra provides the best visuals, Low gives the best performance."
+            )},
+            { "Tab_Sharening", (
+                "Sharpening",
+                "Enhances image sharpness and clarity. Enable for crisper details, disable if the image looks too noisy or harsh."
+            )},
+
+            // ===== DIRECT NAME KEYS (Controller tab) =====
+            { "Dodge", (
+                "Dodge",
+                "Key for dodging enemy attacks. Use at the right moment to avoid damage and create counterattack opportunities."
+            )},
+            { "Sprint", (
+                "Sprint",
+                "Key for sprinting. Hold to move at higher speed, consumes stamina while active."
+            )},
+            { "Sneak/Crouch", (
+                "Sneak / Crouch",
+                "Key for sneaking or crouching. Reduces movement noise, helping you avoid enemy detection."
+            )},
+            { "SneakCrouch", (
+                "Sneak / Crouch",
+                "Key for sneaking or crouching. Reduces movement noise, helping you avoid enemy detection."
+            )},
+            { "Jump", (
+                "Jump",
+                "Key for jumping. Use to leap over obstacles, reach higher ground, or dodge low attacks."
+            )},
+            { "Move Forward", (
+                "Move Forward",
+                "Key to move forward in the direction the camera is facing."
+            )},
+            { "MoveForward", (
+                "Move Forward",
+                "Key to move forward in the direction the camera is facing."
+            )},
+            { "Move Backward", (
+                "Move Backward",
+                "Key to move backward. Useful for maintaining distance from enemies."
+            )},
+            { "MoveBackward", (
+                "Move Backward",
+                "Key to move backward. Useful for maintaining distance from enemies."
+            )},
+            { "Move Right", (
+                "Move Right",
+                "Key to strafe right. Combine with other keys for diagonal movement."
+            )},
+            { "MoveRight", (
+                "Move Right",
+                "Key to strafe right. Combine with other keys for diagonal movement."
+            )},
+            { "Move Left", (
+                "Move Left",
+                "Key to strafe left. Combine with other keys for diagonal movement."
+            )},
+            { "MoveLeft", (
+                "Move Left",
+                "Key to strafe left. Combine with other keys for diagonal movement."
+            )},
+            { "Heal", (
+                "Heal",
+                "Key to use healing items. Restores your character's HP. Has a cooldown between uses."
+            )},
+            { "Menu", (
+                "Menu",
+                "Key to open the game menu. Access inventory, map, quests, and other options."
+            )},
+            { "Attack", (
+                "Attack",
+                "Key for basic attacks. Press to strike enemies, press repeatedly or hold for combo attacks."
+            )},
+            { "Interact", (
+                "Interact",
+                "Key to interact with NPCs, items, doors, treasure chests, and other objects in the game world."
+            )},
+            { "Weapon / Item Wheel", (
+                "Weapon / Item Wheel",
+                "Key to open the quick-select wheel for weapons and items. Hold and move the mouse to select."
+            )},
+            { "WeaponItemWheel", (
+                "Weapon / Item Wheel",
+                "Key to open the quick-select wheel for weapons and items. Hold and move the mouse to select."
             )},
         };
 
@@ -181,18 +292,18 @@ namespace Artsystack.ArtsystackGui
         {
             foreach (Transform child in parent)
             {
-                // Tìm child có tên bắt đầu bằng "Tab_"
-                if (child.name.StartsWith("Tab_"))
-                {
-                    // Tìm Bg child
-                    Transform bg = child.Find("Bg");
+                string n = child.name;
+                bool isSettingItem = n.StartsWith("Tab_") || n.StartsWith("KeyBind_") || settingData.ContainsKey(n);
 
-                    // Thêm EventTrigger
-                    SetupHoverEvent(child.gameObject, bg, child.name);
+                if (isSettingItem)
+                {
+                    Transform bg = child.Find("Bg");
+                    // Use direct name first, then try normalized
+                    string key = settingData.ContainsKey(n) ? n : (n.StartsWith("Tab_") ? n : "Tab_" + n);
+                    SetupHoverEvent(child.gameObject, bg, key);
                 }
 
-                // Đệ quy tìm sâu hơn (ScrollRect > ViewPort > Content)
-                if (child.childCount > 0 && !child.name.StartsWith("Tab_"))
+                if (child.childCount > 0 && !isSettingItem)
                 {
                     ScanAndSetup(child);
                 }
@@ -216,6 +327,8 @@ namespace Artsystack.ArtsystackGui
             enterEntry.callback.AddListener((data) =>
             {
                 if (bg != null) bg.gameObject.SetActive(true);
+
+                Debug.Log($"[HoverInfo] Item='{itemName}', Found={settingData.ContainsKey(itemName)}, DescRef={infoDescription != null}");
 
                 if (settingData.TryGetValue(itemName, out var info))
                 {
