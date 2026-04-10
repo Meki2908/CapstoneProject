@@ -46,6 +46,12 @@ public class DungeonDifficultyManager : MonoBehaviour
 
     void OnEnable()
     {
+        StartCoroutine(RefreshNextFrame());
+    }
+
+    System.Collections.IEnumerator RefreshNextFrame()
+    {
+        yield return null;
         RefreshButtons();
     }
 
