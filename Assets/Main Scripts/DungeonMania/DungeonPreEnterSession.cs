@@ -1,5 +1,5 @@
 /// <summary>
-/// Trạng thái phiên giữa lần load scene dungeon (vd. Restart → không ẩn HUD khi chạy pre-enter timeline).
+/// Cờ tùy chọn để bỏ qua ẩn HUD một lần trong <see cref="PreEnterDungeonCutsceneController"/> (nếu cần tương lai).
 /// </summary>
 public static class DungeonPreEnterSession
 {

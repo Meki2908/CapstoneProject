@@ -30,6 +30,9 @@ namespace MovementSystem
         [SerializeField]
         private InputActionReference zoomInputAction;
 
+        // Tránh 2+ CameraCursor trong scene cùng bắt Alt một frame → toggle triệt tiêu (ẩn không được).
+        private static int s_lastAltToggleFrame = int.MinValue;
+
         // Track cursor state internally to avoid conflicts
         private bool isCursorHidden = false;
         private PlayerInput cachedPlayerInput;
@@ -142,6 +145,11 @@ namespace MovementSystem
 
         private void ToggleCursor()
         {
+            int f = Time.frameCount;
+            if (s_lastAltToggleFrame == f)
+                return;
+            s_lastAltToggleFrame = f;
+
             if (MouseLockManager.Instance != null)
             {
                 // wasFree: cursor is unlocked (gameplay NOT locked)
