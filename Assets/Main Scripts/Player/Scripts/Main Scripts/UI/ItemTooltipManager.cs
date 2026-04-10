@@ -408,8 +408,36 @@ public class ItemTooltipManager : MonoBehaviour
 
         // Item name and rarity (dùng runtime rarity)
         string rarityColor = GetRarityColor(rarity);
-        sb.AppendLine($"<color={rarityColor}><b>{item.itemName}</b></color>");
-        sb.AppendLine($"<color=#888888>{rarity}</color>");
+        
+        string levelStr = "";
+        if (item.itemType == ItemType.Equipment && EquipmentManager.Instance != null)
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                Item eqItem = EquipmentManager.Instance.GetEquippedItemByIndex(i);
+                Rarity eqRarity = EquipmentManager.Instance.GetEquippedRarity(i);
+                if (eqItem != null && eqItem.id == item.id && eqRarity == rarity)
+                {
+                    int level = EquipmentManager.Instance.GetEnhancementLevel(i);
+                    if (level > 0)
+                    {
+                        levelStr = $" (+{level})";
+                    }
+                    break;
+                }
+            }
+        }
+        
+        sb.AppendLine($"<color={rarityColor}><b>{item.itemName}{levelStr}</b></color>");
+        
+        if (item.itemType == ItemType.Material && item.refinementTier > 0)
+        {
+            sb.AppendLine($"<color=#888888>Tier {item.refinementTier}</color>");
+        }
+        else
+        {
+            sb.AppendLine($"<color=#888888>{rarity}</color>");
+        }
         sb.AppendLine();
 
         // Description
@@ -446,7 +474,29 @@ public class ItemTooltipManager : MonoBehaviour
     {
         if (item == null) return string.Empty;
         string rarityColor = GetRarityColor(rarity);
-        return $"<color={rarityColor}><b>{item.itemName}</b></color>";
+        
+        string levelStr = "";
+        if (item.itemType == ItemType.Equipment && EquipmentManager.Instance != null)
+        {
+            // Check if this specific item is currently equipped
+            for (int i = 0; i < 4; i++)
+            {
+                Item eqItem = EquipmentManager.Instance.GetEquippedItemByIndex(i);
+                Rarity eqRarity = EquipmentManager.Instance.GetEquippedRarity(i);
+                // Simple match: if same ID and Rarity, assume it's the equipped one
+                if (eqItem != null && eqItem.id == item.id && eqRarity == rarity)
+                {
+                    int level = EquipmentManager.Instance.GetEnhancementLevel(i);
+                    if (level > 0)
+                    {
+                        levelStr = $" (+{level})";
+                    }
+                    break;
+                }
+            }
+        }
+        
+        return $"<color={rarityColor}><b>{item.itemName}{levelStr}</b></color>";
     }
 
     private string GetTooltipBodyText(Item item, Rarity rarity)
@@ -454,7 +504,15 @@ public class ItemTooltipManager : MonoBehaviour
         if (item == null) return string.Empty;
 
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
-        sb.AppendLine($"<color=#{Hex(colorRarity)}>{rarity}</color>");
+
+        if (item.itemType == ItemType.Material && item.refinementTier > 0)
+        {
+            sb.AppendLine($"<color=#{Hex(colorRarity)}>Tier {item.refinementTier}</color>");
+        }
+        else
+        {
+            sb.AppendLine($"<color=#{Hex(colorRarity)}>{rarity}</color>");
+        }
         sb.AppendLine();
 
         if (!string.IsNullOrEmpty(item.description))
@@ -500,35 +558,68 @@ public class ItemTooltipManager : MonoBehaviour
         sb.AppendLine();
 
         bool hasStats = false;
+        
+        // --- Calculate roll and enhancement multiplier ---
+        float rollMultiplier = -1f;
+        int level = 0;
+        
+        if (EquipmentManager.Instance != null && InventoryManager.Instance != null)
+        {
+            bool isEquipped = false;
+            for (int i = 0; i < 4; i++)
+            {
+                Item eqItem = EquipmentManager.Instance.GetEquippedItemByIndex(i);
+                Rarity eqRarity = EquipmentManager.Instance.GetEquippedRarity(i);
+                if (eqItem != null && eqItem.id == item.id && eqRarity == rarity)
+                {
+                    rollMultiplier = EquipmentManager.Instance.GetEquipStatRoll(i);
+                    level = EquipmentManager.Instance.GetEnhancementLevel(i);
+                    isEquipped = true;
+                    break;
+                }
+            }
+            if (!isEquipped && item.HasRandomStats)
+            {
+                float inventoryRoll = InventoryManager.Instance.PeekNextRoll(item.id, rarity);
+                if (inventoryRoll >= 0f) rollMultiplier = inventoryRoll;
+            }
+        }
+        
+        if (rollMultiplier >= 0f)
+        {
+            sb.AppendLine($"<color=#{Hex(colorPassiveDesc)}>⚡ Stat Roll: {rollMultiplier*100f:F0}%</color>");
+        }
+        
+        float finalMultiplier = (rollMultiplier >= 0f ? rollMultiplier : 1f) * (1.0f + level * 0.03f);
 
         if (item.ScaledHPBonus(rarity) > 0f)
         {
-            sb.AppendLine($"<color=#{Hex(colorHP)}>HP: +{item.ScaledHPBonus(rarity):F0}</color> <color=#{hRar}>(max {item.ScaledHPBonus(rarity):F0})</color>");
+            sb.AppendLine($"<color=#{Hex(colorHP)}>HP: +{item.ScaledHPBonus(rarity)*finalMultiplier:F0}</color> <color=#{hRar}>(max {item.ScaledHPBonus(rarity):F0})</color>");
             hasStats = true;
         }
         if (item.ScaledDefenseBonus(rarity) > 0f)
         {
-            sb.AppendLine($"<color=#{Hex(colorDefense)}>Defense: +{item.ScaledDefenseBonus(rarity):F0}</color> <color=#{hRar}>(max {item.ScaledDefenseBonus(rarity):F0})</color>");
+            sb.AppendLine($"<color=#{Hex(colorDefense)}>Defense: +{item.ScaledDefenseBonus(rarity)*finalMultiplier:F0}</color> <color=#{hRar}>(max {item.ScaledDefenseBonus(rarity):F0})</color>");
             hasStats = true;
         }
         if (item.ScaledCritRateBonus(rarity) > 0f)
         {
-            sb.AppendLine($"<color=#{Hex(colorCrit)}>Crit Rate: +{item.ScaledCritRateBonus(rarity) * 100f:F1}%</color> <color=#{hRar}>(max {item.ScaledCritRateBonus(rarity) * 100f:F1}%)</color>");
+            sb.AppendLine($"<color=#{Hex(colorCrit)}>Crit Rate: +{item.ScaledCritRateBonus(rarity)*finalMultiplier * 100f:F1}%</color> <color=#{hRar}>(max {item.ScaledCritRateBonus(rarity) * 100f:F1}%)</color>");
             hasStats = true;
         }
         if (item.ScaledCritDamageMultiplier(rarity) > 1f)
         {
-            sb.AppendLine($"<color=#{Hex(colorCrit)}>Crit Damage: +{(item.ScaledCritDamageMultiplier(rarity) - 1f) * 100f:F1}%</color> <color=#{hRar}>(max {(item.ScaledCritDamageMultiplier(rarity) - 1f) * 100f:F1}%)</color>");
+            sb.AppendLine($"<color=#{Hex(colorCrit)}>Crit Damage: +{(item.ScaledCritDamageMultiplier(rarity) - 1f)*finalMultiplier * 100f:F1}%</color> <color=#{hRar}>(max {(item.ScaledCritDamageMultiplier(rarity) - 1f) * 100f:F1}%)</color>");
             hasStats = true;
         }
         if (item.ScaledMovementSpeedBonus(rarity) > 0f)
         {
-            sb.AppendLine($"<color=#{Hex(colorMoveSpeed)}>Movement Speed: +{item.ScaledMovementSpeedBonus(rarity) * 100f:F1}%</color> <color=#{hRar}>(max {item.ScaledMovementSpeedBonus(rarity) * 100f:F1}%)</color>");
+            sb.AppendLine($"<color=#{Hex(colorMoveSpeed)}>Movement Speed: +{item.ScaledMovementSpeedBonus(rarity)*finalMultiplier * 100f:F1}%</color> <color=#{hRar}>(max {item.ScaledMovementSpeedBonus(rarity) * 100f:F1}%)</color>");
             hasStats = true;
         }
         if (item.ScaledAttackSpeedBonus(rarity) > 0f)
         {
-            sb.AppendLine($"<color=#{Hex(colorAtkSpeed)}>Attack Speed: +{item.ScaledAttackSpeedBonus(rarity) * 100f:F1}%</color> <color=#{hRar}>(max {item.ScaledAttackSpeedBonus(rarity) * 100f:F1}%)</color>");
+            sb.AppendLine($"<color=#{Hex(colorAtkSpeed)}>Attack Speed: +{item.ScaledAttackSpeedBonus(rarity)*finalMultiplier * 100f:F1}%</color> <color=#{hRar}>(max {item.ScaledAttackSpeedBonus(rarity) * 100f:F1}%)</color>");
             hasStats = true;
         }
 
