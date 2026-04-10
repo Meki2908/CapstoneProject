@@ -2105,6 +2105,8 @@ public class BlacksmithUI : MonoBehaviour
         // Flash everything white for a moment
         yield return new WaitForSecondsRealtime(0.15f);
 
+        int oldLevel = selectedRefineSlot >= 0 && selectedRefineSlot < 4 ? EquipmentManager.Instance.GetEnhancementLevel(selectedRefineSlot) : 0;
+
         // Execute refinement
         RefinementResult result = RefinementManager.Instance.TryRefine(selectedRefineSlot, selectedRefineMaterial);
 
@@ -2206,9 +2208,12 @@ public class BlacksmithUI : MonoBehaviour
             string stoneName = selectedRefineMaterial != null ? selectedRefineMaterial.itemName : "Stone";
             if (resultPanel && resultText)
             {
+                int newLevel = selectedRefineSlot >= 0 && selectedRefineSlot < 4 ? EquipmentManager.Instance.GetEnhancementLevel(selectedRefineSlot) : 0;
+                string levelLossTxt = (newLevel < oldLevel) ? $"\nDropped +{oldLevel} >> +{newLevel}" : "";
+
                 resultPanel.SetActive(true);
                 ConfigureResultText();
-                resultText.text = $"REFINE FAILED!\nLost {stoneName}";
+                resultText.text = $"REFINE FAILED!\nLost {stoneName}{levelLossTxt}";
                 resultText.color = new Color(0.9f, 0.2f, 0.2f);
                 StopCoroutine(nameof(HideResultCoroutine));
                 StartCoroutine(HideResultCoroutine());

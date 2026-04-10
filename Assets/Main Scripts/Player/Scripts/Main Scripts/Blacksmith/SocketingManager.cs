@@ -58,12 +58,12 @@ public class SocketingManager : MonoBehaviour
     private static readonly float[,] SuccessRateTable = new float[6, 6]
     {
         // Crystal:      Common  Uncommon  Rare   Epic   Legend  Mythic
-        /* Common    */ { 1.00f,  1.00f,  1.00f,  1.00f,  1.00f,  1.00f },
-        /* Uncommon  */ { 0.70f,  0.90f,  1.00f,  1.00f,  1.00f,  1.00f },
-        /* Rare      */ { 0.40f,  0.60f,  0.80f,  0.95f,  1.00f,  1.00f },
-        /* Epic      */ { 0.20f,  0.35f,  0.55f,  0.75f,  0.90f,  1.00f },
-        /* Legendary */ { 0.05f,  0.15f,  0.30f,  0.50f,  0.70f,  0.90f },
-        /* Mythic    */ { 0.00f,  0.05f,  0.15f,  0.30f,  0.50f,  0.75f },
+        /* Common    */ { 0.80f,  0.95f,  1.00f,  1.00f,  1.00f,  1.00f },
+        /* Uncommon  */ { 0.50f,  0.75f,  0.95f,  1.00f,  1.00f,  1.00f },
+        /* Rare      */ { 0.25f,  0.45f,  0.70f,  0.90f,  1.00f,  1.00f },
+        /* Epic      */ { 0.10f,  0.25f,  0.45f,  0.65f,  0.85f,  0.95f },
+        /* Legendary */ { 0.05f,  0.10f,  0.20f,  0.40f,  0.65f,  0.85f },
+        /* Mythic    */ { 0.01f,  0.03f,  0.10f,  0.20f,  0.40f,  0.60f },
     };
 
     /// <summary>

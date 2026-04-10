@@ -136,11 +136,18 @@ public class EquipmentManager : MonoBehaviour
         }
     }
 
+    // === Helper ===
+    private int MapSlotTypeToIndex(EquipmentSlotType slotType)
+    {
+        if (slotType == EquipmentSlotType.None) return -1;
+        return (int)slotType - 1;
+    }
+
     // === GET EQUIPPED ITEM ===
 
     public Item GetEquippedItem(EquipmentSlotType slotType)
     {
-        return GetEquippedItemByIndex((int)slotType);
+        return GetEquippedItemByIndex(MapSlotTypeToIndex(slotType));
     }
 
     public Item GetEquippedItemByIndex(int slotIndex)
@@ -162,14 +169,14 @@ public class EquipmentManager : MonoBehaviour
 
     public Rarity GetEquippedRarity(EquipmentSlotType slotType)
     {
-        return GetEquippedRarity((int)slotType);
+        return GetEquippedRarity(MapSlotTypeToIndex(slotType));
     }
 
     // === EQUIP / UNEQUIP ===
 
     public bool EquipItem(EquipmentSlotType slotType, Item equipmentItem)
     {
-        return EquipItemByIndex((int)slotType, equipmentItem);
+        return EquipItemByIndex(MapSlotTypeToIndex(slotType), equipmentItem);
     }
 
     /// <summary>
@@ -226,7 +233,7 @@ public class EquipmentManager : MonoBehaviour
 
     public bool RemoveItem(EquipmentSlotType slotType)
     {
-        return RemoveItemByIndex((int)slotType);
+        return RemoveItemByIndex(MapSlotTypeToIndex(slotType));
     }
 
     public bool RemoveItemByIndex(int slotIndex)
