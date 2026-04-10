@@ -86,7 +86,9 @@ public class EquipmentManager : MonoBehaviour
         {
             var data = new EquipmentSave { slots = equipmentSlots };
             string json = JsonUtility.ToJson(data, true);
-            File.WriteAllText(GetSavePath(), json);
+            string path = GetSavePath();
+            File.WriteAllText(path, json);
+            Debug.Log($"[EquipmentManager] Đã lưu thành công. Đường dẫn: {path}");
         }
         catch (Exception e)
         {

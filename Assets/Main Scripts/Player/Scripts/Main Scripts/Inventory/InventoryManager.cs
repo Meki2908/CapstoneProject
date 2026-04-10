@@ -673,7 +673,7 @@ public class InventoryManager : MonoBehaviour
 
     #region Save/Load
 
-    private void SaveInventory()
+    public void SaveInventory()
     {
         InventorySaveData saveData = new InventorySaveData();
 
@@ -696,6 +696,7 @@ public class InventoryManager : MonoBehaviour
         try
         {
             File.WriteAllText(filePath, json);
+            Debug.Log($"[InventoryManager] Đã lưu thành công. Đường dẫn: {filePath}");
         }
         catch (Exception e)
         {
@@ -722,7 +723,7 @@ public class InventoryManager : MonoBehaviour
 
         if (!File.Exists(filePath))
         {
-            Debug.Log($"[InventoryManager] No save file found, starting empty");
+            Debug.Log($"[InventoryManager] No save file found at {filePath}, starting empty");
             return;
         }
 

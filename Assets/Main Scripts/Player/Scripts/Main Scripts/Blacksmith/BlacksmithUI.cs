@@ -137,6 +137,9 @@ public class BlacksmithUI : MonoBehaviour
     // Cached default sprites for empty silhouettes
     private Sprite[] defaultEquipmentSilhouettes = new Sprite[4];
     private Sprite[] defaultRefineSilhouettes = new Sprite[4];
+    private Sprite defaultRefineMaterialSilhouette;
+    private Sprite defaultFusionSourceSilhouette;
+    private Sprite defaultFusionResultSilhouette;
 
     void Start()
     {
@@ -149,6 +152,10 @@ public class BlacksmithUI : MonoBehaviour
             if (i < refineEquipSlotIcons.Length && refineEquipSlotIcons[i] != null)
                 defaultRefineSilhouettes[i] = refineEquipSlotIcons[i].sprite;
         }
+        
+        if (refineMaterialIcon != null) defaultRefineMaterialSilhouette = refineMaterialIcon.sprite;
+        if (fusionSourceIcon != null) defaultFusionSourceSilhouette = fusionSourceIcon.sprite;
+        if (fusionResultIcon != null) defaultFusionResultSilhouette = fusionResultIcon.sprite;
 
         // ── Ensure SocketingManager exists ──
         if (SocketingManager.Instance == null)
@@ -1571,35 +1578,44 @@ public class BlacksmithUI : MonoBehaviour
         // Always apply grid config when UI is open (live tweaking in play mode)
         if (mainPanel != null && mainPanel.activeSelf)
             ApplyGridConfig();
-        // Follow mouse when tooltip is showing, flip upward near screen bottom
+            
+        // Follow mouse when tooltip is showing, perfectly constrained to screen
         if (bsTooltipPanel != null && bsTooltipPanel.activeSelf && bsTooltipRect != null)
         {
-            Vector2 localPos;
             var parentCanvas = mainPanel.GetComponentInParent<Canvas>();
             if (parentCanvas != null)
             {
                 Camera cam = parentCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : parentCanvas.worldCamera;
-                float tooltipH = bsTooltipRect.sizeDelta.y;
-                float mouseY = Input.mousePosition.y;
-
-                // If tooltip would go below screen bottom → flip upward
-                Vector3 offset;
-                if (mouseY - tooltipH - 45f < 0f)
-                {
-                    // Show above cursor
-                    offset = new Vector3(45, tooltipH + 45f, 0);
-                }
-                else
-                {
-                    // Show below cursor (default)
-                    offset = new Vector3(45, -45, 0);
-                }
-
+                
+                // Convert mouse position to Canvas local coordinates first
+                Vector2 localMousePos;
                 RectTransformUtility.ScreenPointToLocalPointInRectangle(
                     parentCanvas.GetComponent<RectTransform>(),
-                    Input.mousePosition + offset,
-                    cam, out localPos);
-                bsTooltipRect.localPosition = localPos;
+                    Input.mousePosition,
+                    cam, out localMousePos);
+                
+                float tooltipH = bsTooltipRect.sizeDelta.y;
+                float tooltipW = bsTooltipRect.sizeDelta.x;
+                
+                Rect parentRect = parentCanvas.GetComponent<RectTransform>().rect;
+                
+                // Default offset: slightly bottom-right of cursor
+                Vector2 offset = new Vector2(45f, -45f);
+                
+                // If tooltip would go below screen bottom -> flip upwards
+                if (localMousePos.y + offset.y - tooltipH < parentRect.yMin)
+                {
+                    offset.y = 45f + tooltipH; // Push it up above cursor
+                }
+                
+                // If tooltip would go beyond right edge -> flip leftwards
+                if (localMousePos.x + offset.x + tooltipW > parentRect.xMax)
+                {
+                    offset.x = -45f - tooltipW; // Push it left of cursor
+                }
+                
+                // Apply final position using purely Canvas coordinates
+                bsTooltipRect.localPosition = localMousePos + offset;
             }
         }
     }
@@ -1784,8 +1800,11 @@ public class BlacksmithUI : MonoBehaviour
                 else
                 {
                     refineEquipSlotIcons[i].sprite = defaultRefineSilhouettes[i];
-                    refineEquipSlotIcons[i].enabled = (defaultRefineSilhouettes[i] != null);
-                    refineEquipSlotIcons[i].color = new Color(0.4f, 0.4f, 0.4f, 0.7f);
+                    refineEquipSlotIcons[i].enabled = true;
+                    if (defaultRefineSilhouettes[i] == null)
+                        refineEquipSlotIcons[i].color = new Color(0.18f, 0.18f, 0.25f, 0.8f);
+                    else
+                        refineEquipSlotIcons[i].color = new Color(0.4f, 0.4f, 0.4f, 0.7f);
                 }
                 
                 SetDropSlotTooltip(refineEquipSlotIcons[i], item, $"Empty {slotNames[i]} slot\n<color=#888888>Equip an item first to refine it</color>");
@@ -1848,7 +1867,15 @@ public class BlacksmithUI : MonoBehaviour
                 }
                 else
                 {
-                    if (refineMaterialIcon) { refineMaterialIcon.enabled = false; }
+                    if (refineMaterialIcon) 
+                    { 
+                        refineMaterialIcon.sprite = defaultRefineMaterialSilhouette;
+                        refineMaterialIcon.enabled = true; 
+                        if (defaultRefineMaterialSilhouette == null)
+                            refineMaterialIcon.color = new Color(0.18f, 0.18f, 0.25f, 0.8f);
+                        else
+                            refineMaterialIcon.color = new Color(0.4f, 0.4f, 0.4f, 0.7f); 
+                    }
                     if (refineMaterialText) refineMaterialText.text = "Select Refinement Stone";
                     if (refineSuccessBar) refineSuccessBar.fillAmount = 0f;
                     if (refineSuccessText) refineSuccessText.text = "Success Rate: 0%";
@@ -1879,7 +1906,15 @@ public class BlacksmithUI : MonoBehaviour
         if (refineEquipNameText) refineEquipNameText.text = "Select equipment to refine";
         if (refineLevelText) refineLevelText.text = "";
         if (refineStatsText) refineStatsText.text = "";
-        if (refineMaterialIcon) refineMaterialIcon.enabled = false;
+        if (refineMaterialIcon) 
+        { 
+            refineMaterialIcon.sprite = defaultRefineMaterialSilhouette;
+            refineMaterialIcon.enabled = true; 
+            if (defaultRefineMaterialSilhouette == null)
+                refineMaterialIcon.color = new Color(0.18f, 0.18f, 0.25f, 0.8f);
+            else
+                refineMaterialIcon.color = new Color(0.4f, 0.4f, 0.4f, 0.7f);
+        }
         if (refineMaterialText) refineMaterialText.text = "Select Refinement Stone";
         if (refineSuccessBar) refineSuccessBar.fillAmount = 0f;
         if (refineSuccessText) refineSuccessText.text = "Success Rate: 0%";
@@ -2217,7 +2252,15 @@ public class BlacksmithUI : MonoBehaviour
             }
             else
             {
-                if (fusionResultIcon) fusionResultIcon.enabled = false;
+                if (fusionResultIcon) 
+                { 
+                    fusionResultIcon.sprite = defaultFusionResultSilhouette;
+                    fusionResultIcon.enabled = true; 
+                    if (defaultFusionResultSilhouette == null)
+                        fusionResultIcon.color = new Color(0.18f, 0.18f, 0.25f, 0.8f);
+                    else
+                        fusionResultIcon.color = new Color(0.4f, 0.4f, 0.4f, 0.7f); 
+                }
                 if (fusionInfoText) fusionInfoText.text = "";
                 if (fusionButton) fusionButton.interactable = false;
             }
@@ -2225,8 +2268,24 @@ public class BlacksmithUI : MonoBehaviour
         else
         {
             // Clear fusion display
-            if (fusionSourceIcon) fusionSourceIcon.enabled = false;
-            if (fusionResultIcon) fusionResultIcon.enabled = false;
+            if (fusionSourceIcon) 
+            { 
+                fusionSourceIcon.sprite = defaultFusionSourceSilhouette;
+                fusionSourceIcon.enabled = true; 
+                if (defaultFusionSourceSilhouette == null)
+                    fusionSourceIcon.color = new Color(0.18f, 0.18f, 0.25f, 0.8f);
+                else
+                    fusionSourceIcon.color = new Color(0.4f, 0.4f, 0.4f, 0.7f); 
+            }
+            if (fusionResultIcon) 
+            { 
+                fusionResultIcon.sprite = defaultFusionResultSilhouette;
+                fusionResultIcon.enabled = true; 
+                if (defaultFusionResultSilhouette == null)
+                    fusionResultIcon.color = new Color(0.18f, 0.18f, 0.25f, 0.8f);
+                else
+                    fusionResultIcon.color = new Color(0.4f, 0.4f, 0.4f, 0.7f); 
+            }
             if (fusionInfoText) fusionInfoText.text = "Select stone to fuse";
             if (fusionButton) fusionButton.interactable = false;
         }
