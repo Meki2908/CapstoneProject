@@ -35,6 +35,15 @@ public class BlacksmithNPC : MonoBehaviour
             promptCanvas = CreatePromptCanvas();
             Debug.Log("[BlacksmithNPC] Auto-created 'Press F' prompt");
         }
+        else
+        {
+            // Auto resize if an existing prompt is too small for English text
+            var rt = promptCanvas.GetComponent<RectTransform>();
+            if (rt != null && rt.sizeDelta.x < 300)
+            {
+                rt.sizeDelta = new Vector2(350, rt.sizeDelta.y);
+            }
+        }
         promptCanvas.SetActive(false);
 
         // ─── Auto-add BoxCollider trigger if missing ─────────────
@@ -87,7 +96,7 @@ public class BlacksmithNPC : MonoBehaviour
         canvasGO.AddComponent<GraphicRaycaster>();
 
         var rt = canvasGO.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(200, 60);
+        rt.sizeDelta = new Vector2(350, 60);
 
         // Background panel
         GameObject bgGO = new GameObject("BG", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
@@ -113,7 +122,7 @@ public class BlacksmithNPC : MonoBehaviour
         textRT.offsetMax = Vector2.zero;
 
         var tmp = textGO.AddComponent<TextMeshProUGUI>();
-        tmp.text = "Nhấn <color=#FFD700><b>F</b></color> để mở Thợ Rèn";
+        tmp.text = "Press <color=#FFD700><b>F</b></color> to open Blacksmith";
         tmp.fontSize = 22;
         tmp.color = Color.white;
         tmp.alignment = TextAlignmentOptions.Center;
