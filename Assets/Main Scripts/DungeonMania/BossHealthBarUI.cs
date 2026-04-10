@@ -59,6 +59,7 @@ public class BossHealthBarUI : MonoBehaviour
         public float flashAlpha;
         public float fillMaskMaxX;   // anchorMax.x ban đầu của FillArea
         public float fillMaskMinX;   // anchorMin.x ban đầu của FillArea
+        public bool isFadingOut;     // Prevent duplicate FadeOutAndRemove coroutines
     }
     
     private List<BossEntry> activeBosses = new List<BossEntry>();
@@ -145,8 +146,9 @@ public class BossHealthBarUI : MonoBehaviour
             }
             
             // === AUTO HIDE khi chết ===
-            if (!entry.hpScript.IsAlive() || currentHP <= 0)
+            if (!entry.isFadingOut && (!entry.hpScript.IsAlive() || currentHP <= 0))
             {
+                entry.isFadingOut = true;
                 StartCoroutine(FadeOutAndRemove(i));
             }
         }
@@ -172,12 +174,17 @@ public class BossHealthBarUI : MonoBehaviour
         float t = 0;
         while (t < 0.5f)
         {
+            // Guard: panelGO or CanvasGroup may have been destroyed externally
+            if (entry.panelGO == null || cg == null) yield break;
             t += Time.deltaTime;
             cg.alpha = 1f - (t / 0.5f);
             yield return null;
         }
         
-        RemoveBossEntry(index);
+        // Re-find index because list may have shifted during the fade
+        int currentIndex = activeBosses.IndexOf(entry);
+        if (currentIndex >= 0)
+            RemoveBossEntry(currentIndex);
     }
     
     // ==================== PUBLIC API ====================
