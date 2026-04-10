@@ -74,10 +74,15 @@ public class CheatPanel : MonoBehaviour
     {
         if (!_show) return;
 
-        // Initialize rect on first use (Screen.width not reliable in field initializer)
+        // Phóng to toàn bộ UI gấp 1.6 lần
+        float uiScale = 1.6f;
+        GUI.matrix = Matrix4x4.Scale(new Vector3(uiScale, uiScale, 1f));
+
+        // Initialize rect on first use (Screen.width will be affected by scale)
         if (!_rectInitialized)
         {
-            _windowRect = new Rect(Screen.width - 320, 20, 300, 380);
+            float scaledWidth = Screen.width / uiScale;
+            _windowRect = new Rect(scaledWidth - 320, 20, 300, 400);
             _rectInitialized = true;
         }
 

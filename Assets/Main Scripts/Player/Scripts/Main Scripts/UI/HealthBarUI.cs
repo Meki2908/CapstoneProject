@@ -369,6 +369,15 @@ public class HealthBarUI : MonoBehaviour
             {
                 delayedDamageBar.fillAmount = currentDelayedFill;
             }
+            // Guard: cannot start coroutine on inactive GameObject
+            if (!isActiveAndEnabled || !gameObject.activeInHierarchy)
+            {
+                // Snap delayed bar to target immediately instead of animating
+                currentDelayedFill = targetHealthFill;
+                if (delayedDamageBar != null)
+                    delayedDamageBar.fillAmount = currentDelayedFill;
+                return;
+            }
             delayedDamageCoroutine = StartCoroutine(DelayedDamageCoroutine());
         }
         else
