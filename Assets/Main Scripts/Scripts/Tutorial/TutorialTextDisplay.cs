@@ -1,6 +1,7 @@
 using UnityEngine;
 using TMPro;
 using System.Collections;
+using UnityEngine.AI;
 
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -34,7 +35,7 @@ public class TutorialTextDisplay : MonoBehaviour
     [Header("UI")]
     public TMP_Text tutorialText;
     public GameObject completionCanvas;
-    public TMP_Text  completionMessageText;
+    public TMP_Text completionMessageText;
 
     [Header("Step Canvases (tùy chọn)")]
     [Tooltip("Kéo Canvas của từng step vào đây (index = step number). Để trống nếu không dùng canvas riêng.")]
@@ -48,46 +49,46 @@ public class TutorialTextDisplay : MonoBehaviour
     public int playerLevelOnReturn = 1;
 
     [Header("Timing")]
-    public float textDelay    = 1f;    // 1s between steps
+    public float textDelay = 1f;    // 1s between steps
     public float postUltDelay = 5f;    // Pause after Q before wave spawns
 
     [Header("Enemy Spawning")]
-    public GameObject  enemyPrefab1;
-    public Transform   spawnPoint1;
-    public GameObject  enemyPrefab2;
-    public Transform   spawnPoint2;
-    public GameObject  wavePrefab;
+    public GameObject enemyPrefab1;
+    public Transform spawnPoint1;
+    public GameObject enemyPrefab2;
+    public Transform spawnPoint2;
+    public GameObject wavePrefab;
     public Transform[] waveSpawnPoints;
 
     // ─────────────────────────────────────────────────────────────────────────
     //  Auto-wired references (found at runtime)
     // ─────────────────────────────────────────────────────────────────────────
-    WeaponSwapper     _weaponSwapper;
-    EnemyDetection    _enemyDetection;
-    Character         _character;
-    WeaponController  _weaponController;
+    WeaponSwapper _weaponSwapper;
+    EnemyDetection _enemyDetection;
+    Character _character;
+    WeaponController _weaponController;
 
     // ─────────────────────────────────────────────────────────────────────────
     //  Step Constants
     // ─────────────────────────────────────────────────────────────────────────
-    const int STEP_SPACE      = 0;
-    const int STEP_TAB_DRAW   = 1;
-    const int STEP_ROLL       = 2;
-    const int STEP_ATTACK     = 3;
-    const int STEP_SKILL_E    = 4;
-    const int STEP_SKILL_R    = 5;
-    const int STEP_KILL1      = 6;
-    const int STEP_SKILL_T    = 7;
-    const int STEP_KILL2      = 8;
-    const int STEP_ULT         = 9;
-    const int STEP_WAVE        = 10;  // After 5s pause
-    const int STEP_TAB_SHEATH  = 11;
-    const int STEP_OPEN_INV    = 12;
-    const int STEP_CHANGE_WP   = 13;  // Đổi vũ khí + Ấn I để tắt (gộp 1 step)
-    const int STEP_TAB_DRAW2   = 14;  // Rút vũ khí mới
-    const int STEP_KILL_WAVE2  = 15;  // Wave 2
-    const int STEP_PRESS_F     = 16;  // Ấn F để về map
-    const int WAVE_COUNT       = 10;
+    const int STEP_SPACE = 0;
+    const int STEP_TAB_DRAW = 1;
+    const int STEP_ROLL = 2;
+    const int STEP_ATTACK = 3;
+    const int STEP_SKILL_E = 4;
+    const int STEP_SKILL_R = 5;
+    const int STEP_KILL1 = 6;
+    const int STEP_SKILL_T = 7;
+    const int STEP_KILL2 = 8;
+    const int STEP_ULT = 9;
+    const int STEP_WAVE = 10;  // After 5s pause
+    const int STEP_TAB_SHEATH = 11;
+    const int STEP_OPEN_INV = 12;
+    const int STEP_CHANGE_WP = 13;  // Đổi vũ khí + Ấn I để tắt (gộp 1 step)
+    const int STEP_TAB_DRAW2 = 14;  // Rút vũ khí mới
+    const int STEP_KILL_WAVE2 = 15;  // Wave 2
+    const int STEP_PRESS_F = 16;  // Ấn F để về map
+    const int WAVE_COUNT = 10;
 
     readonly string[] _texts =
     {
@@ -114,11 +115,11 @@ public class TutorialTextDisplay : MonoBehaviour
     // ─────────────────────────────────────────────────────────────────────────
     //  State
     // ─────────────────────────────────────────────────────────────────────────
-    int  _step          = 0;
-    bool _waiting       = false;
-    bool _completed     = false;
-    int  _waveKills     = 0;
-    bool _inWave2       = false;   // true khi đang ở wave kill lần 2
+    int _step = 0;
+    bool _waiting = false;
+    bool _completed = false;
+    int _waveKills = 0;
+    bool _inWave2 = false;   // true khi đang ở wave kill lần 2
     bool _weaponChanged = false;   // true sau khi player đã đổi vũ khí ở step 13
     bool _tutorialMasteryRestored;
 
@@ -140,9 +141,9 @@ public class TutorialTextDisplay : MonoBehaviour
         SetAllMasteryLevels(1);
 
         // ── Auto-wire WeaponSwapper event ─────────────────────────────────
-        _weaponSwapper  = FindFirstObjectByType<WeaponSwapper>(FindObjectsInactive.Include);
+        _weaponSwapper = FindFirstObjectByType<WeaponSwapper>(FindObjectsInactive.Include);
         _enemyDetection = FindFirstObjectByType<EnemyDetection>(FindObjectsInactive.Include);
-        _character      = FindFirstObjectByType<Character>(FindObjectsInactive.Include);
+        _character = FindFirstObjectByType<Character>(FindObjectsInactive.Include);
         _weaponController = FindFirstObjectByType<WeaponController>(FindObjectsInactive.Include);
 
         if (_weaponController != null)
@@ -207,6 +208,54 @@ public class TutorialTextDisplay : MonoBehaviour
         Instance.Advance();
     }
 
+    /// <summary>Gọi từ gameplay khi jump thật sự bắt đầu (vào JumpingState).</summary>
+    public static void NotifyJumpStartedFromGameplay()
+    {
+        if (Instance == null || Instance._completed || Instance._waiting) return;
+        if (Instance._step != STEP_SPACE) return;
+        Instance.Advance();
+    }
+
+    /// <summary>Gọi từ gameplay khi rút vũ khí thật sự thành công.</summary>
+    public static void NotifyWeaponDrawnFromGameplay()
+    {
+        if (Instance == null || Instance._completed || Instance._waiting) return;
+        if (Instance._step == STEP_TAB_DRAW || Instance._step == STEP_TAB_DRAW2)
+            Instance.Advance();
+    }
+
+    /// <summary>Gọi từ gameplay khi cất vũ khí thật sự thành công.</summary>
+    public static void NotifyWeaponSheathedFromGameplay()
+    {
+        if (Instance == null || Instance._completed || Instance._waiting) return;
+        if (Instance._step != STEP_TAB_SHEATH) return;
+        Instance.Advance();
+    }
+
+    /// <summary>Gọi từ gameplay khi đòn đánh thường thật sự bắt đầu (vào AttackState thành công).</summary>
+    public static void NotifyNormalAttackStartedFromGameplay()
+    {
+        if (Instance == null || Instance._completed || Instance._waiting) return;
+        if (Instance._step != STEP_ATTACK) return;
+        Instance.Advance();
+    }
+
+    /// <summary>Gọi từ gameplay khi inventory thật sự mở.</summary>
+    public static void NotifyInventoryOpenedFromGameplay()
+    {
+        if (Instance == null || Instance._completed || Instance._waiting) return;
+        if (Instance._step != STEP_OPEN_INV) return;
+        Instance.Advance();
+    }
+
+    /// <summary>Gọi từ gameplay khi inventory thật sự đóng.</summary>
+    public static void NotifyInventoryClosedFromGameplay()
+    {
+        if (Instance == null || Instance._completed || Instance._waiting) return;
+        if (Instance._step == STEP_CHANGE_WP && Instance._weaponChanged)
+            Instance.Advance();
+    }
+
     void RefreshInputGate()
     {
         TutorialInputGate.SetState(true, _step, _waiting, _completed);
@@ -221,7 +270,7 @@ public class TutorialTextDisplay : MonoBehaviour
             case STEP_SKILL_E: aim.TutorialClearCooldown(AbilityInput.E); break;
             case STEP_SKILL_R: aim.TutorialClearCooldown(AbilityInput.R); break;
             case STEP_SKILL_T: aim.TutorialClearCooldown(AbilityInput.T); break;
-            case STEP_ULT:     aim.TutorialClearCooldown(AbilityInput.Q_Ultimate); break;
+            case STEP_ULT: aim.TutorialClearCooldown(AbilityInput.Q_Ultimate); break;
         }
     }
 
@@ -241,19 +290,17 @@ public class TutorialTextDisplay : MonoBehaviour
 
         switch (_step)
         {
-            case STEP_SPACE:      if (IsKeyDown(KeyCode.Space, "space")) Advance(); break;
-            case STEP_TAB_DRAW:   if (IsKeyDown(KeyCode.Tab,   "tab"))   Advance(); break;
+            // STEP_SPACE: chỉ Advance khi JumpingState.Enter chạy thật (NotifyJumpStartedFromGameplay)
+            // STEP_TAB_DRAW: chỉ Advance khi gameplay rút vũ khí thật sự (NotifyWeaponDrawnFromGameplay)
             // STEP_ROLL: chỉ Advance khi DashState.Enter thành công (NotifyDashStartedFromGameplay)
-            case STEP_ATTACK:     if (IsMouseDown(0))                    Advance(); break;
+            // STEP_ATTACK: chỉ Advance khi gameplay bắt đầu đánh thật sự (NotifyNormalAttackStartedFromGameplay)
             // STEP_SKILL_E / R / T / ULT: chỉ Advance khi NotifySkillActivatedFromGameplay (skill đã chạy)
-            case STEP_TAB_SHEATH: if (IsKeyDown(KeyCode.Tab, "tab"))     Advance(); break;
-            case STEP_OPEN_INV:   if (IsKeyDown(KeyCode.I, "i"))         Advance(); break;
-            // STEP_CHANGE_WP: đợi weapon changed event → sau đó đợi I press
-            case STEP_CHANGE_WP:
-                if (_weaponChanged && IsKeyDown(KeyCode.I, "i"))          Advance(); break;
-            case STEP_TAB_DRAW2:  if (IsKeyDown(KeyCode.Tab, "tab"))     Advance(); break;
-            case STEP_PRESS_F:    if (IsKeyDown(KeyCode.F, "f"))         TriggerCompletion(); break;
-            // STEP_KILL1, STEP_KILL2, STEP_WAVE, STEP_KILL_WAVE2 → event-driven
+            // STEP_TAB_SHEATH: chỉ Advance khi gameplay cất vũ khí thật sự (NotifyWeaponSheathedFromGameplay)
+            // STEP_OPEN_INV: chỉ Advance khi inventory thật sự mở (NotifyInventoryOpenedFromGameplay)
+            // STEP_CHANGE_WP: đợi weapon changed event + inventory đóng thật sự (NotifyInventoryClosedFromGameplay)
+            // STEP_TAB_DRAW2: chỉ Advance khi gameplay rút vũ khí thật sự (NotifyWeaponDrawnFromGameplay)
+            case STEP_PRESS_F: if (IsKeyDown(KeyCode.F, "f")) TriggerCompletion(); break;
+                // STEP_KILL1, STEP_KILL2, STEP_WAVE, STEP_KILL_WAVE2 → event-driven
         }
     }
 
@@ -274,19 +321,6 @@ public class TutorialTextDisplay : MonoBehaviour
         return Input.GetKeyDown(legacy);
     }
 
-    bool IsMouseDown(int button)
-    {
-#if ENABLE_INPUT_SYSTEM
-        var mouse = Mouse.current;
-        if (mouse != null)
-        {
-            if (button == 0 && mouse.leftButton.wasPressedThisFrame)  return true;
-            if (button == 1 && mouse.rightButton.wasPressedThisFrame) return true;
-        }
-#endif
-        return Input.GetMouseButtonDown(button);
-    }
-
     // ─────────────────────────────────────────────────────────────────────────
     //  Step Progression
     // ─────────────────────────────────────────────────────────────────────────
@@ -305,25 +339,25 @@ public class TutorialTextDisplay : MonoBehaviour
 
         // STEP_WAVE & STEP_KILL_WAVE2: text shown by spawn coroutines after delay, not here
         bool skipText = (_step == STEP_WAVE || _step == STEP_KILL_WAVE2);
-        bool instant  = (_step == STEP_KILL1 || _step == STEP_KILL2 || _step == STEP_CHANGE_WP);
-        if      (skipText) { /* text handled by spawner */ }
-        else if (instant)  ShowNow(_step);
-        else               StartCoroutine(ShowDelayed(_step));
+        bool instant = (_step == STEP_KILL1 || _step == STEP_KILL2 || _step == STEP_CHANGE_WP);
+        if (skipText) { /* text handled by spawner */ }
+        else if (instant) ShowNow(_step);
+        else StartCoroutine(ShowDelayed(_step));
     }
 
     void OnEnterStep(int step)
     {
         switch (step)
         {
-            case STEP_KILL1:       SpawnEnemy1();              break;
-            case STEP_SKILL_T:     SetAllMasteryLevels(30);    break;
-            case STEP_KILL2:       SpawnEnemy2();              break;
-            case STEP_ULT:         SetAllMasteryLevels(60);    break;
-            case STEP_WAVE:        StartCoroutine(DelayedWaveSpawn()); break;
-            case STEP_CHANGE_WP:   PrepareForWeaponChange();   break;
-            case STEP_TAB_DRAW2:   ShowNow(STEP_TAB_DRAW2);   break;  // Show text ngay
-            case STEP_KILL_WAVE2:  SpawnWave2();               break;
-            case STEP_PRESS_F:     ShowNow(STEP_PRESS_F);      break;  // Show text ngay
+            case STEP_KILL1: SpawnEnemy1(); break;
+            case STEP_SKILL_T: SetAllMasteryLevels(30); break;
+            case STEP_KILL2: SpawnEnemy2(); break;
+            case STEP_ULT: SetAllMasteryLevels(60); break;
+            case STEP_WAVE: StartCoroutine(DelayedWaveSpawn()); break;
+            case STEP_CHANGE_WP: PrepareForWeaponChange(); break;
+            case STEP_TAB_DRAW2: ShowNow(STEP_TAB_DRAW2); break;  // Show text ngay
+            case STEP_KILL_WAVE2: SpawnWave2(); break;
+            case STEP_PRESS_F: ShowNow(STEP_PRESS_F); break;  // Show text ngay
         }
     }
 
@@ -415,6 +449,7 @@ public class TutorialTextDisplay : MonoBehaviour
             go.SetActive(true);
     }
 
+
     void SpawnEnemy1()
     {
         if (enemyPrefab1 == null || spawnPoint1 == null) { Advance(); return; }
@@ -436,7 +471,7 @@ public class TutorialTextDisplay : MonoBehaviour
         if (wavePrefab == null || waveSpawnPoints == null || waveSpawnPoints.Length == 0)
         { TriggerCompletion(); return; }
 
-        _inWave2   = false;
+        _inWave2 = false;
         _waveKills = 0;
         int count = Mathf.Min(WAVE_COUNT, waveSpawnPoints.Length);
         for (int i = 0; i < count; i++)
@@ -453,7 +488,7 @@ public class TutorialTextDisplay : MonoBehaviour
         if (wavePrefab == null || waveSpawnPoints == null || waveSpawnPoints.Length == 0)
         { TriggerCompletion(); return; }
 
-        _inWave2   = true;
+        _inWave2 = true;
         _waveKills = 0;
         ShowNow(STEP_KILL_WAVE2);
         int count = Mathf.Min(WAVE_COUNT, waveSpawnPoints.Length);
@@ -555,8 +590,8 @@ public class TutorialTextDisplay : MonoBehaviour
     {
         if (WeaponMasteryManager.Instance == null) return;
         WeaponMasteryManager.Instance.SetMasteryLevel(WeaponType.Sword, lv);
-        WeaponMasteryManager.Instance.SetMasteryLevel(WeaponType.Axe,   lv);
-        WeaponMasteryManager.Instance.SetMasteryLevel(WeaponType.Mage,  lv);
+        WeaponMasteryManager.Instance.SetMasteryLevel(WeaponType.Axe, lv);
+        WeaponMasteryManager.Instance.SetMasteryLevel(WeaponType.Mage, lv);
         Debug.Log($"[Tutorial] Mastery level set to {lv}");
     }
 

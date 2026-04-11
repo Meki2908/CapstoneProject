@@ -400,6 +400,15 @@ public class EnemyState : MonoBehaviour{
                 else if(dist > enemyScript.attackDistance){
                     if(!enemyScript.attack && !enemyScript.hit){
                         if (enemyScript.navMeshAgent != null) {
+                            #region agent log
+                            AgentDebugLogger.Log(
+                                "pre-fix-1",
+                                "H2",
+                                "EnemyState.cs:AI:chaseBranch:beforeSetDestination",
+                                "Enemy entering chase branch",
+                                "{\"enemy\":\"" + gameObject.name + "\",\"dist\":" + dist.ToString("F3") + ",\"attackDistance\":" + enemyScript.attackDistance.ToString("F3") + ",\"isStopped\":" + (enemyScript.navMeshAgent.isStopped ? "true" : "false") + ",\"isOnNavMesh\":" + (enemyScript.navMeshAgent.isOnNavMesh ? "true" : "false") + ",\"hasPath\":" + (enemyScript.navMeshAgent.hasPath ? "true" : "false") + "}");
+                            #endregion
+
                             if (HasBossSkill() && CanUseSkill()) {
                                 enemyScript.navMeshAgent.stoppingDistance = Mathf.Max(enemyScript.skillDistance - 1f, 1f);
                             } else {
@@ -412,8 +421,56 @@ public class EnemyState : MonoBehaviour{
                             if (enemyScript.target != null) {
                                 float destDiff = Vector3.Distance(enemyScript.target.position, lastSetDestination);
                                 if (destDiff > 1f) {
-                                    enemyScript.navMeshAgent.destination = enemyScript.target.position;
-                                    lastSetDestination = enemyScript.target.position;
+                                    Vector3 rawTargetPos = enemyScript.target.position;
+                                    Vector3 navTargetPos = rawTargetPos;
+                                    bool sampled = false;
+
+                                    // Fallback 1: sample trực tiếp quanh target.
+                                    if (NavMesh.SamplePosition(rawTargetPos, out NavMeshHit targetHitDirect, 8f, NavMesh.AllAreas))
+                                    {
+                                        navTargetPos = targetHitDirect.position;
+                                        sampled = true;
+                                    }
+
+                                    // Fallback 2: project cùng XZ nhưng dùng Y của enemy để tránh chênh cao root/player.
+                                    if (!sampled)
+                                    {
+                                        Vector3 xzProjected = new Vector3(rawTargetPos.x, enemyScript.transform.position.y, rawTargetPos.z);
+                                        if (NavMesh.SamplePosition(xzProjected, out NavMeshHit targetHitProjected, 35f, NavMesh.AllAreas))
+                                        {
+                                            navTargetPos = targetHitProjected.position;
+                                            sampled = true;
+                                        }
+                                    }
+
+                                    // Fallback 3: đi theo hướng tới player một đoạn rồi sample (đảm bảo luôn có điểm chase hợp lệ).
+                                    if (!sampled)
+                                    {
+                                        Vector3 toward = rawTargetPos - enemyScript.transform.position;
+                                        toward.y = 0f;
+                                        if (toward.sqrMagnitude > 0.0001f)
+                                        {
+                                            toward.Normalize();
+                                            Vector3 forwardProbe = enemyScript.transform.position + toward * 6f;
+                                            if (NavMesh.SamplePosition(forwardProbe, out NavMeshHit targetHitForward, 20f, NavMesh.AllAreas))
+                                            {
+                                                navTargetPos = targetHitForward.position;
+                                                sampled = true;
+                                            }
+                                        }
+                                    }
+
+                                    bool setOk = enemyScript.navMeshAgent.SetDestination(navTargetPos);
+                                    lastSetDestination = navTargetPos;
+
+                                    #region agent log
+                                    AgentDebugLogger.Log(
+                                        "post-fix-1",
+                                        "H6",
+                                        "EnemyState.cs:AI:chaseBranch:afterSetDestination",
+                                        "SetDestination applied",
+                                        "{\"enemy\":\"" + gameObject.name + "\",\"rawDestY\":" + rawTargetPos.y.ToString("F3") + ",\"sampled\":" + (sampled ? "true" : "false") + ",\"setOk\":" + (setOk ? "true" : "false") + ",\"destX\":" + navTargetPos.x.ToString("F3") + ",\"destY\":" + navTargetPos.y.ToString("F3") + ",\"destZ\":" + navTargetPos.z.ToString("F3") + ",\"pathStatus\":" + (int)enemyScript.navMeshAgent.pathStatus + ",\"remainingDistance\":" + enemyScript.navMeshAgent.remainingDistance.ToString("F3") + ",\"velocityMag\":" + enemyScript.navMeshAgent.velocity.magnitude.ToString("F3") + "}");
+                                    #endregion
                                 }
                             }
                         }

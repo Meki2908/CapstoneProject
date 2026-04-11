@@ -406,6 +406,15 @@ namespace Artsystack.ArtsystackGui
             {
                 if (isGameRunning)
                 {
+                    string sn = SceneManager.GetActiveScene().name;
+                    // Canvas_Menu DDOL: Start() chạy ở lobby nên GameMenuManager vẫn enabled ở Map_Chinh.
+                    // PauseMenuManager xử lý Esc ở map — nếu không bỏ qua ở đây, cùng một Esc sẽ PauseGame rồi ResumeGame (ẩn panel, lệch input).
+                    if (!mainMenuSceneNames.Contains(sn))
+                    {
+                        if (PauseMenuManager.Instance != null && PauseMenuManager.Instance.enabled)
+                            return;
+                    }
+
                     if (panel_PopUpPause != null && panel_PopUpPause.activeSelf)
                     {
                         ResumeGame();

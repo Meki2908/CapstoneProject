@@ -134,8 +134,29 @@ public class BlacksmithUI : MonoBehaviour
 
     // ─── Lifecycle ───────────────────────────────────────────────
 
+    // Cached default sprites for empty silhouettes
+    private Sprite[] defaultEquipmentSilhouettes = new Sprite[4];
+    private Sprite[] defaultRefineSilhouettes = new Sprite[4];
+    private Sprite defaultRefineMaterialSilhouette;
+    private Sprite defaultFusionSourceSilhouette;
+    private Sprite defaultFusionResultSilhouette;
+
     void Start()
     {
+        // Cache original silhouettes
+        for (int i = 0; i < 4; i++)
+        {
+            if (i < equipmentSlotIcons.Length && equipmentSlotIcons[i] != null)
+                defaultEquipmentSilhouettes[i] = equipmentSlotIcons[i].sprite;
+
+            if (i < refineEquipSlotIcons.Length && refineEquipSlotIcons[i] != null)
+                defaultRefineSilhouettes[i] = refineEquipSlotIcons[i].sprite;
+        }
+        
+        if (refineMaterialIcon != null) defaultRefineMaterialSilhouette = refineMaterialIcon.sprite;
+        if (fusionSourceIcon != null) defaultFusionSourceSilhouette = fusionSourceIcon.sprite;
+        if (fusionResultIcon != null) defaultFusionResultSilhouette = fusionResultIcon.sprite;
+
         // ── Ensure SocketingManager exists ──
         if (SocketingManager.Instance == null)
         {
@@ -881,9 +902,13 @@ public class BlacksmithUI : MonoBehaviour
                 }
                 else
                 {
+                    equipmentSlotIcons[i].sprite = defaultEquipmentSilhouettes[i];
                     equipmentSlotIcons[i].enabled = true;
-                    equipmentSlotIcons[i].color = new Color(0.3f, 0.3f, 0.3f, 0.5f);
+                    equipmentSlotIcons[i].color = new Color(0.4f, 0.4f, 0.4f, 0.7f);
                 }
+                
+                string[] slotHintNames = { "Head", "Body", "Legs", "Accessory" };
+                SetDropSlotTooltip(equipmentSlotIcons[i], item, $"Empty {slotHintNames[i]} slot\n<color=#888888>Select equipment from inventory to equip</color>");
             }
 
             // Highlight selected slot
@@ -1553,35 +1578,44 @@ public class BlacksmithUI : MonoBehaviour
         // Always apply grid config when UI is open (live tweaking in play mode)
         if (mainPanel != null && mainPanel.activeSelf)
             ApplyGridConfig();
-        // Follow mouse when tooltip is showing, flip upward near screen bottom
+            
+        // Follow mouse when tooltip is showing, perfectly constrained to screen
         if (bsTooltipPanel != null && bsTooltipPanel.activeSelf && bsTooltipRect != null)
         {
-            Vector2 localPos;
             var parentCanvas = mainPanel.GetComponentInParent<Canvas>();
             if (parentCanvas != null)
             {
                 Camera cam = parentCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : parentCanvas.worldCamera;
-                float tooltipH = bsTooltipRect.sizeDelta.y;
-                float mouseY = Input.mousePosition.y;
-
-                // If tooltip would go below screen bottom → flip upward
-                Vector3 offset;
-                if (mouseY - tooltipH - 45f < 0f)
-                {
-                    // Show above cursor
-                    offset = new Vector3(45, tooltipH + 45f, 0);
-                }
-                else
-                {
-                    // Show below cursor (default)
-                    offset = new Vector3(45, -45, 0);
-                }
-
+                
+                // Convert mouse position to Canvas local coordinates first
+                Vector2 localMousePos;
                 RectTransformUtility.ScreenPointToLocalPointInRectangle(
                     parentCanvas.GetComponent<RectTransform>(),
-                    Input.mousePosition + offset,
-                    cam, out localPos);
-                bsTooltipRect.localPosition = localPos;
+                    Input.mousePosition,
+                    cam, out localMousePos);
+                
+                float tooltipH = bsTooltipRect.sizeDelta.y;
+                float tooltipW = bsTooltipRect.sizeDelta.x;
+                
+                Rect parentRect = parentCanvas.GetComponent<RectTransform>().rect;
+                
+                // Default offset: slightly bottom-right of cursor
+                Vector2 offset = new Vector2(45f, -45f);
+                
+                // If tooltip would go below screen bottom -> flip upwards
+                if (localMousePos.y + offset.y - tooltipH < parentRect.yMin)
+                {
+                    offset.y = 45f + tooltipH; // Push it up above cursor
+                }
+                
+                // If tooltip would go beyond right edge -> flip leftwards
+                if (localMousePos.x + offset.x + tooltipW > parentRect.xMax)
+                {
+                    offset.x = -45f - tooltipW; // Push it left of cursor
+                }
+                
+                // Apply final position using purely Canvas coordinates
+                bsTooltipRect.localPosition = localMousePos + offset;
             }
         }
     }
@@ -1590,8 +1624,36 @@ public class BlacksmithUI : MonoBehaviour
     {
         var sb = new System.Text.StringBuilder();
         string rarityColor = Item.GetRarityColorHex(rarity);
-        sb.AppendLine($"<color={rarityColor}><b>{item.itemName}</b></color>");
-        sb.AppendLine($"<color=#888888>{rarity}</color>");
+        
+        string levelStr = "";
+        if (item.itemType == ItemType.Equipment && EquipmentManager.Instance != null)
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                Item eqItem = EquipmentManager.Instance.GetEquippedItemByIndex(i);
+                Rarity eqRarity = EquipmentManager.Instance.GetEquippedRarity(i);
+                if (eqItem != null && eqItem.id == item.id && eqRarity == rarity)
+                {
+                    int level = EquipmentManager.Instance.GetEnhancementLevel(i);
+                    if (level > 0)
+                    {
+                        levelStr = $" (+{level})";
+                    }
+                    break;
+                }
+            }
+        }
+        
+        sb.AppendLine($"<color={rarityColor}><b>{item.itemName}{levelStr}</b></color>");
+        
+        if (item.itemType == ItemType.Material && item.refinementTier > 0)
+        {
+            sb.AppendLine($"<color=#888888>Tier {item.refinementTier}</color>");
+        }
+        else
+        {
+            sb.AppendLine($"<color=#888888>{rarity}</color>");
+        }
         sb.AppendLine();
 
         switch (item.itemType)
@@ -1737,9 +1799,15 @@ public class BlacksmithUI : MonoBehaviour
                 }
                 else
                 {
-                    refineEquipSlotIcons[i].sprite = null;
-                    refineEquipSlotIcons[i].color = new Color(0.18f, 0.18f, 0.25f, 0.8f);
+                    refineEquipSlotIcons[i].sprite = defaultRefineSilhouettes[i];
+                    refineEquipSlotIcons[i].enabled = true;
+                    if (defaultRefineSilhouettes[i] == null)
+                        refineEquipSlotIcons[i].color = new Color(0.18f, 0.18f, 0.25f, 0.8f);
+                    else
+                        refineEquipSlotIcons[i].color = new Color(0.4f, 0.4f, 0.4f, 0.7f);
                 }
+                
+                SetDropSlotTooltip(refineEquipSlotIcons[i], item, $"Empty {slotNames[i]} slot\n<color=#888888>Equip an item first to refine it</color>");
             }
             // Highlight selected slot
             if (i < refineEquipSlotButtons.Length && refineEquipSlotButtons[i] != null)
@@ -1799,11 +1867,21 @@ public class BlacksmithUI : MonoBehaviour
                 }
                 else
                 {
-                    if (refineMaterialIcon) { refineMaterialIcon.enabled = false; }
+                    if (refineMaterialIcon) 
+                    { 
+                        refineMaterialIcon.sprite = defaultRefineMaterialSilhouette;
+                        refineMaterialIcon.enabled = true; 
+                        if (defaultRefineMaterialSilhouette == null)
+                            refineMaterialIcon.color = new Color(0.18f, 0.18f, 0.25f, 0.8f);
+                        else
+                            refineMaterialIcon.color = new Color(0.4f, 0.4f, 0.4f, 0.7f); 
+                    }
                     if (refineMaterialText) refineMaterialText.text = "Select Refinement Stone";
                     if (refineSuccessBar) refineSuccessBar.fillAmount = 0f;
                     if (refineSuccessText) refineSuccessText.text = "Success Rate: 0%";
                 }
+                
+                SetDropSlotTooltip(refineMaterialIcon, selectedRefineMaterial, "Empty Refinement Material Slot\n<color=#888888>Select a Refinement Stone from the inventory</color>");
 
                 // Enable/disable refine button
                 bool canRefine = selectedRefineMaterial != null && level < EquipmentManager.MAX_ENHANCEMENT_LEVEL && !isRefining;
@@ -1828,7 +1906,15 @@ public class BlacksmithUI : MonoBehaviour
         if (refineEquipNameText) refineEquipNameText.text = "Select equipment to refine";
         if (refineLevelText) refineLevelText.text = "";
         if (refineStatsText) refineStatsText.text = "";
-        if (refineMaterialIcon) refineMaterialIcon.enabled = false;
+        if (refineMaterialIcon) 
+        { 
+            refineMaterialIcon.sprite = defaultRefineMaterialSilhouette;
+            refineMaterialIcon.enabled = true; 
+            if (defaultRefineMaterialSilhouette == null)
+                refineMaterialIcon.color = new Color(0.18f, 0.18f, 0.25f, 0.8f);
+            else
+                refineMaterialIcon.color = new Color(0.4f, 0.4f, 0.4f, 0.7f);
+        }
         if (refineMaterialText) refineMaterialText.text = "Select Refinement Stone";
         if (refineSuccessBar) refineSuccessBar.fillAmount = 0f;
         if (refineSuccessText) refineSuccessText.text = "Success Rate: 0%";
@@ -2019,6 +2105,8 @@ public class BlacksmithUI : MonoBehaviour
         // Flash everything white for a moment
         yield return new WaitForSecondsRealtime(0.15f);
 
+        int oldLevel = selectedRefineSlot >= 0 && selectedRefineSlot < 4 ? EquipmentManager.Instance.GetEnhancementLevel(selectedRefineSlot) : 0;
+
         // Execute refinement
         RefinementResult result = RefinementManager.Instance.TryRefine(selectedRefineSlot, selectedRefineMaterial);
 
@@ -2120,9 +2208,12 @@ public class BlacksmithUI : MonoBehaviour
             string stoneName = selectedRefineMaterial != null ? selectedRefineMaterial.itemName : "Stone";
             if (resultPanel && resultText)
             {
+                int newLevel = selectedRefineSlot >= 0 && selectedRefineSlot < 4 ? EquipmentManager.Instance.GetEnhancementLevel(selectedRefineSlot) : 0;
+                string levelLossTxt = (newLevel < oldLevel) ? $"\nDropped +{oldLevel} >> +{newLevel}" : "";
+
                 resultPanel.SetActive(true);
                 ConfigureResultText();
-                resultText.text = $"REFINE FAILED!\nLost {stoneName}";
+                resultText.text = $"REFINE FAILED!\nLost {stoneName}{levelLossTxt}";
                 resultText.color = new Color(0.9f, 0.2f, 0.2f);
                 StopCoroutine(nameof(HideResultCoroutine));
                 StartCoroutine(HideResultCoroutine());
@@ -2166,7 +2257,15 @@ public class BlacksmithUI : MonoBehaviour
             }
             else
             {
-                if (fusionResultIcon) fusionResultIcon.enabled = false;
+                if (fusionResultIcon) 
+                { 
+                    fusionResultIcon.sprite = defaultFusionResultSilhouette;
+                    fusionResultIcon.enabled = true; 
+                    if (defaultFusionResultSilhouette == null)
+                        fusionResultIcon.color = new Color(0.18f, 0.18f, 0.25f, 0.8f);
+                    else
+                        fusionResultIcon.color = new Color(0.4f, 0.4f, 0.4f, 0.7f); 
+                }
                 if (fusionInfoText) fusionInfoText.text = "";
                 if (fusionButton) fusionButton.interactable = false;
             }
@@ -2174,11 +2273,29 @@ public class BlacksmithUI : MonoBehaviour
         else
         {
             // Clear fusion display
-            if (fusionSourceIcon) fusionSourceIcon.enabled = false;
-            if (fusionResultIcon) fusionResultIcon.enabled = false;
+            if (fusionSourceIcon) 
+            { 
+                fusionSourceIcon.sprite = defaultFusionSourceSilhouette;
+                fusionSourceIcon.enabled = true; 
+                if (defaultFusionSourceSilhouette == null)
+                    fusionSourceIcon.color = new Color(0.18f, 0.18f, 0.25f, 0.8f);
+                else
+                    fusionSourceIcon.color = new Color(0.4f, 0.4f, 0.4f, 0.7f); 
+            }
+            if (fusionResultIcon) 
+            { 
+                fusionResultIcon.sprite = defaultFusionResultSilhouette;
+                fusionResultIcon.enabled = true; 
+                if (defaultFusionResultSilhouette == null)
+                    fusionResultIcon.color = new Color(0.18f, 0.18f, 0.25f, 0.8f);
+                else
+                    fusionResultIcon.color = new Color(0.4f, 0.4f, 0.4f, 0.7f); 
+            }
             if (fusionInfoText) fusionInfoText.text = "Select stone to fuse";
             if (fusionButton) fusionButton.interactable = false;
         }
+
+        SetDropSlotTooltip(fusionSourceIcon, null, "Empty Fusion Source Slot\n<color=#888888>Select a Refinement Stone to fuse</color>");
     }
 
     void OnFusionButtonClicked()

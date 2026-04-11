@@ -153,25 +153,14 @@ public class EnemyScript : MonoBehaviour {
     public delegate void WinAudio(int i);
     public static event WinAudio WinAudioEvent;
     Vector3 direction;
+    float _nextDistanceLogTime;
     public void RunWinAudio(int i){
         WinAudioEvent?.Invoke(i);
     }
     private void Awake () {
         enemy = new EnemyClass((int)enemyType);
 
-        // ƯU TIÊN tìm player thật bằng tag "Player" (có DungeonManiaPlayerBridge)
-        // Fallback: tìm bằng tên "player" (child object)
-        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
-        if (playerObj == null) {
-            playerObj = GameObject.Find("player");
-        }
-        
-        if (playerObj != null) {
-            target = playerObj.transform;
-            Debug.Log($"[EnemyScript] Found player target: {playerObj.name} (tag: {playerObj.tag})");
-        } else {
-            Debug.LogWarning("[EnemyScript] Player not found by tag or name!");
-        }
+        target = FindBestPlayerTarget();
 
         // Setup bow scripts
         if(bow != null && bow.Length != 0){
@@ -400,13 +389,7 @@ public class EnemyScript : MonoBehaviour {
         // Re-find player nếu target bị null
         if (target == null)
         {
-            GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
-            if (playerObj == null) {
-                playerObj = GameObject.Find("player");
-            }
-            if (playerObj != null) {
-                target = playerObj.transform;
-            }
+            target = FindBestPlayerTarget();
             SetupPlayerManagerReference();
         }
         
@@ -515,7 +498,78 @@ public class EnemyScript : MonoBehaviour {
     }
     public void Distance(){
         if (target == null || enemyState == null) return;
-        enemyState.distance = Vector3.Distance(target.position, transform.position);
+        // NOTE: dùng khoảng cách phẳng XZ cho AI chase/attack, tránh lệch độ cao làm enemy "đuổi mãi".
+        Vector3 toTarget = target.position - transform.position;
+        toTarget.y = 0f;
+        enemyState.distance = toTarget.magnitude;
+
+        if (Time.time >= _nextDistanceLogTime)
+        {
+            _nextDistanceLogTime = Time.time + 0.5f;
+            #region agent log
+            AgentDebugLogger.Log(
+                "post-fix-3",
+                "H8",
+                "EnemyScript.cs:Distance",
+                "Computed planar distance for AI",
+                "{\"enemy\":\"" + gameObject.name + "\",\"target\":\"" + target.name + "\",\"planarDist\":" + enemyState.distance.ToString("F3") + ",\"rawDist\":" + Vector3.Distance(target.position, transform.position).ToString("F3") + ",\"dy\":" + (target.position.y - transform.position.y).ToString("F3") + "}");
+            #endregion
+        }
+    }
+
+    Transform FindBestPlayerTarget()
+    {
+        Character character = FindFirstObjectByType<Character>(FindObjectsInactive.Include);
+        if (character != null)
+        {
+            #region agent log
+            AgentDebugLogger.Log(
+                "post-fix-3",
+                "H8",
+                "EnemyScript.cs:FindBestPlayerTarget",
+                "Target resolved via Character",
+                "{\"enemy\":\"" + gameObject.name + "\",\"target\":\"" + character.name + "\"}");
+            #endregion
+            return character.transform;
+        }
+
+        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+        if (playerObj != null)
+        {
+            #region agent log
+            AgentDebugLogger.Log(
+                "post-fix-3",
+                "H8",
+                "EnemyScript.cs:FindBestPlayerTarget",
+                "Target resolved via tag Player",
+                "{\"enemy\":\"" + gameObject.name + "\",\"target\":\"" + playerObj.name + "\"}");
+            #endregion
+            return playerObj.transform;
+        }
+
+        playerObj = GameObject.Find("player");
+        if (playerObj != null)
+        {
+            #region agent log
+            AgentDebugLogger.Log(
+                "post-fix-3",
+                "H8",
+                "EnemyScript.cs:FindBestPlayerTarget",
+                "Target resolved via object name",
+                "{\"enemy\":\"" + gameObject.name + "\",\"target\":\"" + playerObj.name + "\"}");
+            #endregion
+            return playerObj.transform;
+        }
+
+        #region agent log
+        AgentDebugLogger.Log(
+            "post-fix-3",
+            "H8",
+            "EnemyScript.cs:FindBestPlayerTarget",
+            "Failed to resolve player target",
+            "{\"enemy\":\"" + gameObject.name + "\"}");
+        #endregion
+        return null;
     }
 
     /// <summary>
@@ -580,6 +634,15 @@ public class EnemyScript : MonoBehaviour {
             navAgent.speed = moveSpeed;
             // stoppingDistance = attackDistance để ranged enemies dừng đúng tầm bắn
             navAgent.stoppingDistance = enemy.distance;
+
+            #region agent log
+            AgentDebugLogger.Log(
+                "pre-fix-1",
+                "H3",
+                "EnemyScript.cs:ApplyInspectorValues",
+                "Applied NavMeshAgent movement values",
+                "{\"enemy\":\"" + gameObject.name + "\",\"moveSpeed\":" + moveSpeed.ToString("F3") + ",\"agentSpeed\":" + navAgent.speed.ToString("F3") + ",\"stoppingDistance\":" + navAgent.stoppingDistance.ToString("F3") + ",\"attackDistance\":" + enemy.distance.ToString("F3") + "}");
+            #endregion
         }
     }
 

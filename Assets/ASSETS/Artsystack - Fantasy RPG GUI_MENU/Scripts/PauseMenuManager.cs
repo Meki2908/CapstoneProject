@@ -173,18 +173,30 @@ namespace Artsystack.ArtsystackGui
             if (panel_PopUpPause != null)
             {
                 // CRITICAL: Kích hoạt tất cả parent trước khi bật panel
-                // (parent có thể bị ẩn bởi GameMenuManager.HideAllPanels)
                 EnsureParentsActive(panel_PopUpPause.transform);
                 panel_PopUpPause.SetActive(true);
-                SoundManager.PlayUIOpenMenu();
-                Debug.Log($"[PauseMenuManager] panel_PopUpPause SET ACTIVE = true, activeSelf={panel_PopUpPause.activeSelf}, activeInHierarchy={panel_PopUpPause.activeInHierarchy}");
-                
+
+                // Fix: Đảm bảo Animator chạy được khi Time.timeScale = 0
+                Animator[] anims = panel_PopUpPause.GetComponentsInChildren<Animator>(true);
+                foreach (var anim in anims)
+                {
+                    anim.updateMode = AnimatorUpdateMode.UnscaledTime;
+                }
+
                 // Kiểm tra Canvas parent
                 Canvas parentCanvas = panel_PopUpPause.GetComponentInParent<Canvas>();
                 if (parentCanvas != null)
+                {
+                    if (!parentCanvas.enabled) parentCanvas.enabled = true;
                     Debug.Log($"[PauseMenuManager] Parent Canvas: {parentCanvas.gameObject.name}, enabled={parentCanvas.enabled}, renderMode={parentCanvas.renderMode}, activeInHierarchy={parentCanvas.gameObject.activeInHierarchy}");
+                }
                 else
+                {
                     Debug.LogError("[PauseMenuManager] NO PARENT CANVAS FOUND! Panel won't render!");
+                }
+                
+                SoundManager.PlayUIOpenMenu();
+                Debug.Log($"[PauseMenuManager] panel_PopUpPause SET ACTIVE = true, activeSelf={panel_PopUpPause.activeSelf}, activeInHierarchy={panel_PopUpPause.activeInHierarchy}");
             }
             else
             {

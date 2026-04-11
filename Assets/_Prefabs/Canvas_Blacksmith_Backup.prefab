@@ -3785,9 +3785,10 @@ GameObject:
   - component: {fileID: 4501464817590259631}
   - component: {fileID: 4601908932248327065}
   - component: {fileID: 430314936359024352}
+  - component: {fileID: 8877665544332211005}
   m_Layer: 0
   m_Name: Canvas_Blacksmith_Backup
-  m_TagString: Untagged
+  m_TagString: HUD
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -3953,6 +3954,14 @@ MonoBehaviour:
   - {fileID: 0}
   refineEquipNameText: {fileID: 0}
   refineLevelText: {fileID: 0}
+  refineStarImages:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
   refineStatsText: {fileID: 0}
   refineMaterialIcon: {fileID: 0}
   refineMaterialText: {fileID: 0}
@@ -3960,11 +3969,26 @@ MonoBehaviour:
   refineSuccessBar: {fileID: 0}
   refineSuccessText: {fileID: 0}
   refineButton: {fileID: 0}
+  refineGearImage: {fileID: 0}
   refineButtonText: {fileID: 0}
   fusionSourceIcon: {fileID: 0}
   fusionResultIcon: {fileID: 0}
   fusionButton: {fileID: 0}
   fusionInfoText: {fileID: 0}
+--- !u!114 &8877665544332211005
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4272123980442151916}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2d3f4e51a2938475968697a8b9c0d1e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  suppressDuringEarlySceneFrames: 1
+  earlyFramesAfterSceneLoad: 2
 --- !u!1 &4275708792520651367
 GameObject:
   m_ObjectHideFlags: 0

@@ -865,7 +865,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 07affa1b4bda77e49899d47e9087ac83, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  activeText: Available
   disabledText: Locked
   hideTextWhenDisabled: 1
   disableOnStart: 1
@@ -2410,7 +2409,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 07affa1b4bda77e49899d47e9087ac83, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  activeText: Available
   disabledText: Locked
   hideTextWhenDisabled: 1
   disableOnStart: 1
@@ -4226,12 +4224,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 080fabcb88a258946833d4e46ae8ca61, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  titleText: {fileID: 332991890006373185}
-  descriptionText: {fileID: 2290758879338800609}
-  instructionText: {fileID: 4055799569394812012}
-  hudTitleText: {fileID: 0}
-  toggleKey: 106
   rootPanel: {fileID: 5623135929104683043}
+  toggleKey: 106
+  titleText: {fileID: 332991890006373185}
+  instructionText: {fileID: 4055799569394812012}
+  descriptionText: {fileID: 2290758879338800609}
+  hudTitleText: {fileID: 0}
+  hudStepText: {fileID: 0}
+  hudPanel: {fileID: 0}
   emptyQuestTitle: No Active Quest
   emptyQuestDesc: You have no core objectives right now. Explore the world or talk
     to NPCs.
@@ -4792,9 +4792,10 @@ GameObject:
   - component: {fileID: 9123236667772193230}
   - component: {fileID: 9215099934693192256}
   - component: {fileID: 4532000550196209494}
+  - component: {fileID: 8877665544332211001}
   m_Layer: 5
   m_Name: Canvas
-  m_TagString: Untagged
+  m_TagString: HUD
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -4903,12 +4904,33 @@ MonoBehaviour:
   portal1_Dest: {fileID: 0}
   portal2_Dest: {fileID: 0}
   portal3_Dest: {fileID: 0}
+  portal4_Dest: {fileID: 0}
   btnPortal1: {fileID: 6880155526037105368}
   btnPortal2: {fileID: 4498755600350068182}
   btnPortal3: {fileID: 6277853727561097241}
+  btnPortal4: {fileID: 0}
   btnClose: {fileID: 4958317865230755391}
+  questAdvances: []
   playerOverride: {fileID: 0}
   rootPanel: {fileID: 7007683653592438219}
+  teleportEffectPrefab: {fileID: 0}
+  effectDuration: 2
+  cinemachineCamera: {fileID: 0}
+  cameraPanDuration: 1.2
+--- !u!114 &8877665544332211001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5935182492464572189}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2d3f4e51a2938475968697a8b9c0d1e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  suppressDuringEarlySceneFrames: 1
+  earlyFramesAfterSceneLoad: 2
 --- !u!1 &6045822397258475740
 GameObject:
   m_ObjectHideFlags: 0
@@ -5140,6 +5162,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   targetSceneName: MapSaMac
   delay: 0.2
+  dungeonDifficulty: 1
+  mapType: 0
+  questID: 0
+  triggerAtStep: 4
 --- !u!1 &6247336489277858492
 GameObject:
   m_ObjectHideFlags: 0
@@ -5848,12 +5874,19 @@ MonoBehaviour:
   portal1_Dest: {fileID: 0}
   portal2_Dest: {fileID: 0}
   portal3_Dest: {fileID: 0}
+  portal4_Dest: {fileID: 0}
   btnPortal1: {fileID: 6880155526037105368}
   btnPortal2: {fileID: 4498755600350068182}
   btnPortal3: {fileID: 6277853727561097241}
+  btnPortal4: {fileID: 0}
   btnClose: {fileID: 0}
+  questAdvances: []
   playerOverride: {fileID: 0}
   rootPanel: {fileID: 0}
+  teleportEffectPrefab: {fileID: 0}
+  effectDuration: 2
+  cinemachineCamera: {fileID: 0}
+  cameraPanDuration: 1.2
 --- !u!1 &7151600941109682450
 GameObject:
   m_ObjectHideFlags: 0
@@ -7820,7 +7853,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 07affa1b4bda77e49899d47e9087ac83, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  activeText: Available
   disabledText: Locked
   hideTextWhenDisabled: 1
   disableOnStart: 1

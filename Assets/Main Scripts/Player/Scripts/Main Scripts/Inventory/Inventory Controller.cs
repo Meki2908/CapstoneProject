@@ -221,11 +221,18 @@ public class InventoryController : MonoBehaviour
         // Show inventory
         inventory.SetActive(true);
         isInventoryOpen = true;
+        TutorialTextDisplay.NotifyInventoryOpenedFromGameplay();
         SoundManager.PlayUIOpenMenu();
 
         // Unlock cursor SAU CÙNG (đảm bảo không bị script khác override)
         Cursor.visible = true;
         Cursor.lockState = CursorLockMode.None;
+        if (MouseLockManager.Instance != null)
+        {
+            MouseLockManager.Instance.SetGameplayCursorLocked(false);
+            MouseLockManager.Instance.ClearGameplayLockRetries();
+        }
+        GameCursorManager.TryApplyNormalCursorTextureFromScene();
 
         Debug.Log($"[InventoryController] Inventory opened - timeScale={Time.timeScale}, cursor locked={Cursor.lockState}");
     }
@@ -256,6 +263,7 @@ public class InventoryController : MonoBehaviour
         // Hide inventory
         inventory.SetActive(false);
         isInventoryOpen = false;
+        TutorialTextDisplay.NotifyInventoryClosedFromGameplay();
         SoundManager.PlayUICloseMenu();
 
         // Trả cursor + CameraCursor về trạng thái trước khi mở UI đầu tiên (stack UI)

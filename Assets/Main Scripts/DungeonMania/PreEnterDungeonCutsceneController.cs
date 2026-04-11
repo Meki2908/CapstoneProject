@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Playables;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Gắn lên object pre-enter dungeon (vd. "Timeline holder" cùng <see cref="PlayableDirector"/>).
@@ -81,8 +82,8 @@ public class PreEnterDungeonCutsceneController : MonoBehaviour
         if (_cutsceneActive) return;
         _cutsceneActive = true;
 
-        // Restart dungeon: không ẩn HUD trong lúc intro (xem DungeonPreEnterSession).
-        if (DungeonPreEnterSession.ConsumeSkipHudHideNextEntry())
+        bool skipHide = DungeonPreEnterSession.ConsumeSkipHudHideNextEntry();
+        if (skipHide)
             return;
 
         if (hideAllPlayerUi)
@@ -100,6 +101,9 @@ public class PreEnterDungeonCutsceneController : MonoBehaviour
             RestoreAllPlayerUi();
         else
             ShowSingleHud();
+
+        if (SceneTransitionManager.Instance != null)
+            SceneTransitionManager.Instance.HideLoadingPanelIfAny();
     }
 
     private void HideSingleHud()
@@ -143,42 +147,64 @@ public class PreEnterDungeonCutsceneController : MonoBehaviour
         go.SetActive(active);
     }
 
+    private static readonly string[] FallbackHudRootNames =
+    {
+        "AbilityIcons", "SkillBar", "UI_Skills",
+        "Canvas_Menu",
+        "UI_HP+Invetory_1.0", "UI_HP+Invetory_1", "UI_HP+Invetory",
+        "UI_HP+Inventory_1.0", "UI_HP+Inventory"
+    };
+
+    /// <summary>
+    /// Khớp prefab gốc, bản Instantiate <c>(Clone)</c>, hoặc tên biến thể UI_HP+Inventory (typo Invetory).
+    /// </summary>
+    private static bool MatchesFallbackHudRootName(string objectName)
+    {
+        if (string.IsNullOrEmpty(objectName)) return false;
+        foreach (var n in FallbackHudRootNames)
+        {
+            if (objectName == n) return true;
+            if (objectName.StartsWith(n + " (", System.StringComparison.Ordinal)) return true;
+        }
+
+        if (objectName.StartsWith("UI_HP", System.StringComparison.Ordinal) &&
+            (objectName.IndexOf("Invetory", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+             objectName.IndexOf("Inventory", System.StringComparison.OrdinalIgnoreCase) >= 0))
+            return true;
+
+        return false;
+    }
+
     private void HideAllPlayerUi()
     {
         _playerUiToRestore.Clear();
         _playerUiWasActive.Clear();
 
-        try
+        // Một pass: tag HUD + inactive (FindGameObjectsWithTag chỉ thấy active → DDOL HUD inactive bị sót).
+        var allGos = Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (var go in allGos)
         {
-            var hudTagged = GameObject.FindGameObjectsWithTag("HUD");
-            if (hudTagged != null && hudTagged.Length > 0)
+            if (go == null || !go.scene.IsValid() || !go.scene.isLoaded) continue;
+
+            bool isHudTag = false;
+            try
             {
-                foreach (var go in hudTagged)
-                {
-                    if (go == null) continue;
-                    RememberAndSetActive(go, false);
-                }
-
-                return;
+                isHudTag = go.CompareTag("HUD");
             }
-        }
-        catch (UnityException)
-        {
-            Debug.LogWarning("[PreEnterDungeonCutscene] Tag \"HUD\" chưa có trong Tag Manager — dùng fallback tên.");
-        }
+            catch (UnityException)
+            {
+                continue;
+            }
 
-        string[] fallbackNames =
-        {
-            "AbilityIcons", "SkillBar", "UI_Skills",
-            "Canvas_Menu",
-            "UI_HP+Invetory_1.0", "UI_HP+Invetory_1", "UI_HP+Invetory",
-            "UI_HP+Inventory_1.0", "UI_HP+Inventory"
-        };
+            if (isHudTag)
+            {
+                if (!HudSceneTagUtilities.IsDungeonHudUiRoot(go))
+                    RememberAndSetActive(go, false);
 
-        foreach (string n in fallbackNames)
-        {
-            GameObject go = GameObject.Find(n);
-            if (go != null)
+                continue;
+            }
+
+            if (MatchesFallbackHudRootName(go.name))
                 RememberAndSetActive(go, false);
         }
     }

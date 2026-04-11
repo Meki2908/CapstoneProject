@@ -57,6 +57,7 @@ public class CombatMoveState : BaseMoveState
             sheathWeapon = false;
             character.isWeaponDrawn = false;
             character.currentLocomotionState = character.standing;
+            TutorialTextDisplay.NotifyWeaponSheathedFromGameplay();
 
             // Gá»i Ä‘Ãºng trigger vÃ  trÃ¡nh double ChangeState
             character.animator.ResetTrigger("drawWeapon");

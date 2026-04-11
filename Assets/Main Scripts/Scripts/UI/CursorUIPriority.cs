@@ -28,15 +28,16 @@ public static class CursorUIPriority
     /// <summary>True khi có ít nhất một UI đang giữ quyền ưu tiên.</summary>
     public static bool IsUiOverlayActive => _depth > 0;
 
-    /// <summary>Gọi khi mở một UI (Inventory, Pause, Dialogue, ...).</summary>
     public static void BeginUiOverlay()
     {
         _depth++;
+        UnityEngine.Debug.Log($"[CursorUIPriority] BeginUiOverlay: depth={_depth}\nStackTrace: {new System.Diagnostics.StackTrace(1, true)}");
     }
 
     /// <summary>Gọi khi đóng một UI; khi không còn UI nào — về FPS: ẩn chuột + bật xoay camera.</summary>
     public static void EndUiOverlay()
     {
+        UnityEngine.Debug.Log($"[CursorUIPriority] EndUiOverlay called! current depth={_depth}\nStackTrace: {new System.Diagnostics.StackTrace(1, true)}");
         if (_depth <= 0)
             return;
 

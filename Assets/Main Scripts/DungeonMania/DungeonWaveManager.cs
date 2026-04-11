@@ -630,6 +630,9 @@ public class DungeonWaveManager : MonoBehaviour, INetworkRunnerCallbacks
         // === CHỜ TIMELINE INTRO (Pre-enter desert) — chỉ wave 1, trước thông báo + countdown ===
         yield return WaitForPreEnterDungeonTimelineIfNeeded();
 
+        if (SceneTransitionManager.Instance != null)
+            SceneTransitionManager.Instance.HideLoadingPanelIfAny();
+
         // === HIỂN THỊ THÔNG BÁO WAVE ===
         ShowWaveNotification(currentWave);
         
@@ -1816,6 +1819,7 @@ public class DungeonWaveManager : MonoBehaviour, INetworkRunnerCallbacks
         {
             EnsureParentActive(dungeonCompleteUI);
             dungeonCompleteUI.SetActive(true);
+            SoundManager.PlayDungeonVictory();
             
             // Đảm bảo Canvas có GraphicRaycaster để button click được
             EnsureGraphicRaycaster(dungeonCompleteUI);
@@ -1850,6 +1854,7 @@ public class DungeonWaveManager : MonoBehaviour, INetworkRunnerCallbacks
             // Đảm bảo parent chain active
             EnsureParentActive(dungeonFailedUI);
             dungeonFailedUI.SetActive(true);
+            SoundManager.PlayDungeonDefeat();
 
             // Đảm bảo Canvas có GraphicRaycaster để button click được
             EnsureGraphicRaycaster(dungeonFailedUI);
@@ -1884,6 +1889,7 @@ public class DungeonWaveManager : MonoBehaviour, INetworkRunnerCallbacks
     {
         Debug.Log($"[DungeonWave] Đang quay về {mainMapSceneName}...");
 
+        SoundManager.StopDungeonResultMusic();
         CursorUIPriority.EndAllUiOverlays();
         
         // Cleanup: ẩn reward panel nếu đang mở
@@ -1899,10 +1905,10 @@ public class DungeonWaveManager : MonoBehaviour, INetworkRunnerCallbacks
         EnableCameraInput();
         Time.timeScale = 1f;
 
-        // Dùng SceneTransitionManager (có loading screen)
+        // Dùng SceneTransitionManager (có loading screen). interruptIfTransitioning: tránh kẹt cờ từ transition vào dungeon chưa hoàn tất.
         if (SceneTransitionManager.Instance != null)
         {
-            SceneTransitionManager.Instance.GoToScene(mainMapSceneName, "Đang quay về bản đồ...");
+            SceneTransitionManager.Instance.GoToScene(mainMapSceneName, "Đang quay về bản đồ...", interruptIfTransitioning: true);
         }
         else
         {
@@ -1917,6 +1923,7 @@ public class DungeonWaveManager : MonoBehaviour, INetworkRunnerCallbacks
     {
         Debug.Log("[DungeonWave] Restart dungeon...");
 
+        SoundManager.StopDungeonResultMusic();
         CursorUIPriority.EndAllUiOverlays();
 
         // Cleanup reward UI
@@ -1935,7 +1942,7 @@ public class DungeonWaveManager : MonoBehaviour, INetworkRunnerCallbacks
         string currentScene = SceneManager.GetActiveScene().name;
         if (SceneTransitionManager.Instance != null)
         {
-            SceneTransitionManager.Instance.GoToScene(currentScene, "Đang khởi động lại dungeon...");
+            SceneTransitionManager.Instance.GoToScene(currentScene, "Đang khởi động lại dungeon...", interruptIfTransitioning: true);
         }
         else
         {

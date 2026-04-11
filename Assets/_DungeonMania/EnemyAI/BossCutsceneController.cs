@@ -224,6 +224,8 @@ public class BossCutsceneController : MonoBehaviour
             foreach (var go in hudTagged)
             {
                 if (go == null) continue;
+                if (HudSceneTagUtilities.IsDungeonHudUiRoot(go))
+                    continue;
                 RememberAndSetActive(go, false);
             }
             return;

@@ -646,29 +646,24 @@ public class InventoryManager : MonoBehaviour
 
     public void AddRandomItem()
     {
-        Item[] itemsToUse = null;
-
-        if (testItems != null && testItems.Length > 0)
-            itemsToUse = testItems;
-        else if (itemDatabase != null && itemDatabase.Length > 0)
-            itemsToUse = itemDatabase;
-        else if (itemLookup != null && itemLookup.Count > 0)
-            itemsToUse = itemLookup.Values.ToArray();
-
-        if (itemsToUse == null || itemsToUse.Length == 0)
+        if (itemLookup == null || itemLookup.Count == 0)
         {
-            Debug.LogWarning("[InventoryManager] No items available!");
+            Debug.LogWarning("[InventoryManager] No items available in database!");
             return;
         }
 
-        Item[] validItems = itemsToUse.Where(item => item != null).ToArray();
+        Item[] validItems = itemLookup.Values.Where(item => item != null).ToArray();
         if (validItems.Length == 0) return;
 
         Item randomItem = validItems[UnityEngine.Random.Range(0, validItems.Length)];
         int randomAmount = UnityEngine.Random.Range(1, 4);
 
         // Random rarity cho test (skip None=0, bắt đầu từ Common=1)
-        Rarity randomRarity = (Rarity)UnityEngine.Random.Range(1, 7);
+        Rarity randomRarity = randomItem.rarity;
+        if (randomItem.useRandomRarity) 
+        {
+            randomRarity = (Rarity)UnityEngine.Random.Range(1, 7);
+        }
 
         AddItem(randomItem, randomAmount, randomRarity);
         Debug.Log($"[InventoryManager] Added random: {randomItem.itemName} [{randomRarity}] x{randomAmount}");
@@ -678,7 +673,7 @@ public class InventoryManager : MonoBehaviour
 
     #region Save/Load
 
-    private void SaveInventory()
+    public void SaveInventory()
     {
         InventorySaveData saveData = new InventorySaveData();
 
@@ -701,6 +696,7 @@ public class InventoryManager : MonoBehaviour
         try
         {
             File.WriteAllText(filePath, json);
+            Debug.Log($"[InventoryManager] Đã lưu thành công. Đường dẫn: {filePath}");
         }
         catch (Exception e)
         {
@@ -727,7 +723,7 @@ public class InventoryManager : MonoBehaviour
 
         if (!File.Exists(filePath))
         {
-            Debug.Log($"[InventoryManager] No save file found, starting empty");
+            Debug.Log($"[InventoryManager] No save file found at {filePath}, starting empty");
             return;
         }
 

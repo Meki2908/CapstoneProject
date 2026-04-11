@@ -180,10 +180,10 @@ public class GameCursorManager : MonoBehaviour
     private bool ShouldApplyCursorOverrides()
     {
         if (!syncVisibilityWithCursorLock) return true;
-        // FPS (chuột khóa gameplay): không ép visible / hover — kể cả khi tắt UseTransparentDefaultCursorGameplay
+        // FPS: tin cờ MouseLockManager — không phụ thuộc Cursor.lockState (có thể lệch 1 frame hoặc soft-cursor).
+        // Nếu chỉ check lockState == Locked, LateUpdate sẽ ép Cursor.visible = true và Alt không “ẩn” được (MapSaMac / dungeon).
         if (MouseLockManager.Instance != null &&
-            MouseLockManager.Instance.IsGameplayCursorLocked &&
-            Cursor.lockState == CursorLockMode.Locked)
+            MouseLockManager.Instance.IsGameplayCursorLocked)
             return false;
         return Cursor.lockState != CursorLockMode.Locked || Cursor.visible;
     }

@@ -43785,15 +43785,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1154441978264960392, guid: 29e3d8521a2be704ca92cfc9151717f5, type: 3}
       propertyPath: canSummon
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1154441978264960392, guid: 29e3d8521a2be704ca92cfc9151717f5, type: 3}
       propertyPath: enemyNewPrefab
       value: 
       objectReference: {fileID: 1979783443647161850}
     - target: {fileID: 1154441978264960392, guid: 29e3d8521a2be704ca92cfc9151717f5, type: 3}
+      propertyPath: summonCooldown
+      value: 60
+      objectReference: {fileID: 0}
+    - target: {fileID: 1154441978264960392, guid: 29e3d8521a2be704ca92cfc9151717f5, type: 3}
       propertyPath: summonSkeletCount
-      value: 3
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4397696924408593742, guid: 29e3d8521a2be704ca92cfc9151717f5, type: 3}
       propertyPath: maxHealth
@@ -45375,9 +45379,25 @@ PrefabInstance:
     m_TransformParent: {fileID: 1976825276289276082}
     m_Modifications:
     - target: {fileID: 3925689727373752578, guid: 83c30fc4cf94ceb4783c197f2c122d3b, type: 3}
+      propertyPath: canSummon
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3925689727373752578, guid: 83c30fc4cf94ceb4783c197f2c122d3b, type: 3}
       propertyPath: enemyNewPrefab
       value: 
       objectReference: {fileID: 1979783443647161850}
+    - target: {fileID: 3925689727373752578, guid: 83c30fc4cf94ceb4783c197f2c122d3b, type: 3}
+      propertyPath: summonCooldown
+      value: 60
+      objectReference: {fileID: 0}
+    - target: {fileID: 3925689727373752578, guid: 83c30fc4cf94ceb4783c197f2c122d3b, type: 3}
+      propertyPath: summonSkeletCount
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 3925689727373752578, guid: 83c30fc4cf94ceb4783c197f2c122d3b, type: 3}
+      propertyPath: summonMonsterCount
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4469523544793556960, guid: 83c30fc4cf94ceb4783c197f2c122d3b, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0

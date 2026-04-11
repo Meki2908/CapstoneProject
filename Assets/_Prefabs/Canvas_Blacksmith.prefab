@@ -13593,9 +13593,10 @@ GameObject:
   - component: {fileID: 2185830245408183173}
   - component: {fileID: 6261119386125319575}
   - component: {fileID: 1810838792248298707}
+  - component: {fileID: 8877665544332211004}
   m_Layer: 0
   m_Name: Canvas_Blacksmith
-  m_TagString: Untagged
+  m_TagString: HUD
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -13789,6 +13790,20 @@ MonoBehaviour:
   fusionResultIcon: {fileID: 8139614546994127418}
   fusionButton: {fileID: 1941421726052964624}
   fusionInfoText: {fileID: 7100037560635191103}
+--- !u!114 &8877665544332211004
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6501148072936362980}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2d3f4e51a2938475968697a8b9c0d1e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  suppressDuringEarlySceneFrames: 1
+  earlyFramesAfterSceneLoad: 2
 --- !u!1 &6503067107483321474
 GameObject:
   m_ObjectHideFlags: 0

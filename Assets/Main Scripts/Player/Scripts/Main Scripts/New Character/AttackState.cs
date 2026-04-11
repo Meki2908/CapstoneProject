@@ -101,6 +101,7 @@ public class AttackState : State
         character.animator.SetTriggerNetworked("attack");
         character.playerVelocity = Vector3.zero;
         character.animator.SetFloat("speed", 0f);
+        TutorialTextDisplay.NotifyNormalAttackStartedFromGameplay();
 
         if (hitHandler != null && currentWeapon != null && currentWeapon.hitTimings != null && currentWeapon.hitTimings.Length > 0)
         {

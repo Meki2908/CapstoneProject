@@ -48,13 +48,13 @@ public class RefinementManager : MonoBehaviour
     private static readonly float[,] RefineRateTable = new float[7, 7]
     {
         //              T1     T2     T3     T4     T5     T6     T7
-        /* +0→+1 */ { 1.00f, 1.00f, 1.00f, 1.00f, 1.00f, 1.00f, 1.00f },
-        /* +1→+2 */ { 0.80f, 0.95f, 1.00f, 1.00f, 1.00f, 1.00f, 1.00f },
-        /* +2→+3 */ { 0.50f, 0.70f, 0.85f, 0.95f, 1.00f, 1.00f, 1.00f },
-        /* +3→+4 */ { 0.25f, 0.40f, 0.55f, 0.70f, 0.85f, 0.95f, 1.00f },
-        /* +4→+5 */ { 0.10f, 0.20f, 0.35f, 0.50f, 0.65f, 0.80f, 0.95f },
-        /* +5→+6 */ { 0.05f, 0.10f, 0.20f, 0.35f, 0.50f, 0.65f, 0.80f },
-        /* +6→+7 */ { 0.02f, 0.05f, 0.10f, 0.20f, 0.35f, 0.50f, 0.70f },
+        /* +0→+1 */ { 0.90f, 1.00f, 1.00f, 1.00f, 1.00f, 1.00f, 1.00f },
+        /* +1→+2 */ { 0.50f, 0.75f, 0.90f, 1.00f, 1.00f, 1.00f, 1.00f },
+        /* +2→+3 */ { 0.30f, 0.50f, 0.70f, 0.85f, 0.95f, 1.00f, 1.00f },
+        /* +3→+4 */ { 0.15f, 0.25f, 0.40f, 0.60f, 0.75f, 0.90f, 0.95f },
+        /* +4→+5 */ { 0.05f, 0.10f, 0.20f, 0.35f, 0.50f, 0.65f, 0.80f },
+        /* +5→+6 */ { 0.02f, 0.05f, 0.10f, 0.20f, 0.30f, 0.45f, 0.60f },
+        /* +6→+7 */ { 0.01f, 0.02f, 0.05f, 0.10f, 0.15f, 0.25f, 0.40f },
     };
 
     /// <summary>
@@ -125,9 +125,15 @@ public class RefinementManager : MonoBehaviour
         }
         else
         {
-            // FAIL — only stone consumed, level stays
-            Debug.Log($"[RefinementManager] FAIL! {equippedItem.itemName} stays at +{currentLevel}. Stone consumed. (rate={rate:P0}, roll={roll:F2})");
-            OnRefineAttempt?.Invoke(RefinementResult.Fail, equipSlotIndex, currentLevel);
+            // FAIL — stone consumed, level drops by 1
+            int newLevel = Mathf.Max(0, currentLevel - 1);
+            if (newLevel < currentLevel)
+            {
+                EquipmentManager.Instance.SetEnhancementLevel(equipSlotIndex, newLevel);
+            }
+            
+            Debug.Log($"[RefinementManager] FAIL! {equippedItem.itemName} dropped +{currentLevel} → +{newLevel}. Stone consumed. (rate={rate:P0}, roll={roll:F2})");
+            OnRefineAttempt?.Invoke(RefinementResult.Fail, equipSlotIndex, newLevel);
             return RefinementResult.Fail;
         }
     }

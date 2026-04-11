@@ -33,6 +33,7 @@ public class JumpingState : State
         character.animator.SetTriggerNetworked("jump");
         character.NotifyJumpImpulseStarted();
         Jump();
+        TutorialTextDisplay.NotifyJumpStartedFromGameplay();
     }
     public override void HandleInput()
     {

@@ -30,6 +30,8 @@ namespace MovementSystem
         [SerializeField]
         private InputActionReference zoomInputAction;
 
+        private static int s_lastAltToggleFrame = int.MinValue;
+
         // Track cursor state internally to avoid conflicts
         private bool isCursorHidden = false;
         private PlayerInput cachedPlayerInput;
@@ -38,27 +40,28 @@ namespace MovementSystem
 
         private void Awake()
         {
-            // Alt toggle giờ được xử lý thống nhất trong Update() qua legacy Input
-
-            if (startHidden)
+            // Luôn khóa chuột khi mới chạy game (trừ các scene Menu)
+            string sName = SceneManager.GetActiveScene().name;
+            if (sName != "UI_Game" && sName != "Menu_Game" && sName != "DemoSceneSettings")
             {
                 ForceHideCursor();
             }
 
-            // Đăng ký callback khi scene mới load xong → reset cursor state
             SceneManager.sceneLoaded += OnSceneLoaded;
-
-            // Listen GameSettings changes
             GameSettings.OnSettingsChanged += ApplyCameraSpeedSettings;
-
             ResolveCinemachineInputs();
+
+            if (cameraToggleInputAction != null && cameraToggleInputAction.action != null)
+            {
+                cameraToggleInputAction.action.started += OnCameraCursorToggled;
+            }
         }
 
         private void OnDestroy()
         {
             SceneManager.sceneLoaded -= OnSceneLoaded;
             GameSettings.OnSettingsChanged -= ApplyCameraSpeedSettings;
-            if (cameraToggleInputAction != null)
+            if (cameraToggleInputAction != null && cameraToggleInputAction.action != null)
             {
                 cameraToggleInputAction.action.started -= OnCameraCursorToggled;
             }
@@ -71,10 +74,15 @@ namespace MovementSystem
         {
             ResolveCinemachineInputs();
 
-            if (startHidden)
+            // Không khóa chuột nếu đang ở các scene Menu chính
+            string sName = scene.name;
+            if (sName == "UI_Game" || sName == "Menu_Game" || sName == "DemoSceneSettings")
             {
-                StartCoroutine(DelayedForceHideCursor());
+                return;
             }
+
+            // Luôn khóa chuột khi load scene (nếu không có UI đè lên)
+            StartCoroutine(DelayedForceHideCursor());
         }
 
         private System.Collections.IEnumerator DelayedForceHideCursor()
@@ -110,10 +118,14 @@ namespace MovementSystem
             if (IsUiOverlayBlocking()) return;
 
             // Luôn check Alt qua legacy Input (fallback khi InputAction không fire)
-            if (Input.GetKeyDown(KeyCode.LeftAlt))
+            try
             {
-                ToggleCursor();
+                if (Input.GetKeyDown(KeyCode.LeftAlt))
+                {
+                    ToggleCursor();
+                }
             }
+            catch { }
         }
 
         private void OnEnable()
@@ -136,12 +148,16 @@ namespace MovementSystem
         {
             // KHÔNG toggle cursor khi inventory đang mở
             if (IsUiOverlayBlocking()) return;
-
             ToggleCursor();
         }
 
         private void ToggleCursor()
         {
+            int f = Time.frameCount;
+            if (s_lastAltToggleFrame == f)
+                return;
+            s_lastAltToggleFrame = f;
+
             if (MouseLockManager.Instance != null)
             {
                 // wasFree: cursor is unlocked (gameplay NOT locked)
@@ -156,8 +172,8 @@ namespace MovementSystem
                 return;
             }
 
-            // Legacy: không có MouseLockManager — dựa Cursor.visible
-            isCursorHidden = !Cursor.visible;
+            // Legacy: không có MouseLockManager — tự đảo trạng thái
+            isCursorHidden = Cursor.visible; // Nếu đang hiện (free) -> ẩn (lock)
 
             if (isCursorHidden)
             {
@@ -275,6 +291,54 @@ namespace MovementSystem
             var cc = FindFirstObjectByType<CameraCursor>();
             if (cc != null)
                 cc.ApplyGameplayCursorInternal();
+        }
+
+        /// <summary>
+        /// Canvas tag HUD vừa được bật (blacksmith, menu dungeon, ...) — chuột tự do + Normal texture, đồng bộ Cinemachine.
+        /// </summary>
+        public static void ApplyFreeCursorForHudCanvasActivated()
+        {
+            var cc = FindFirstObjectByType<CameraCursor>();
+            if (cc != null)
+                cc.ApplyFreeCursorForHudCanvasActivatedInternal();
+            else
+                ApplyFreeCursorForHudCanvasActivatedWithoutCameraCursor();
+        }
+
+        private static void ApplyFreeCursorForHudCanvasActivatedWithoutCameraCursor()
+        {
+            if (CursorUIPriority.IsUiOverlayActive)
+                return;
+            if (MouseLockManager.Instance != null)
+            {
+                MouseLockManager.Instance.SetGameplayCursorLocked(false);
+                MouseLockManager.Instance.ClearGameplayLockRetries();
+            }
+            else
+            {
+                Cursor.visible = true;
+                Cursor.lockState = CursorLockMode.None;
+            }
+            GameCursorManager.TryApplyNormalCursorTextureFromScene();
+        }
+
+        private void ApplyFreeCursorForHudCanvasActivatedInternal()
+        {
+            if (IsUiOverlayBlocking())
+                return;
+            isCursorHidden = false;
+            if (MouseLockManager.Instance != null)
+            {
+                MouseLockManager.Instance.SetGameplayCursorLocked(false);
+                MouseLockManager.Instance.ClearGameplayLockRetries();
+            }
+            else
+            {
+                Cursor.visible = true;
+                Cursor.lockState = CursorLockMode.None;
+            }
+            GameCursorManager.TryApplyNormalCursorTextureFromScene();
+            SetCinemachineInput(false);
         }
 
         private void ApplyGameplayCursorInternal()
