@@ -1,10 +1,11 @@
 using UnityEngine;
-using Unity.Netcode;
+// using Unity.Netcode; // Commented out to fix missing namespace error
 
 public class TitleScreenManager : MonoBehaviour
 {
     public void StartNetworkAsHost()
     {
-        NetworkManager.Singleton.StartHost();
+        Debug.LogWarning("StartNetworkAsHost called, but Unity.Netcode is not installed. Function disabled.");
+        // NetworkManager.Singleton.StartHost();
     }
 }

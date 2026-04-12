@@ -2,25 +2,6 @@ using System;
 using UnityEngine;
 using DamageNumbersPro;
 
-/// <summary>
-/// Enhanced enemy HEALTH and DETECTION system - ENEMY RECEIVES DAMAGE FROM PLAYER
-/// This component handles enemy taking damage from player attacks, NOT enemy dealing damage to player.
-///
-/// For enemy DEALING damage to player, use EnemyContactDamage.cs instead.
-///
-/// Usage:
-/// - For normal attacks: TakeDamage(damage, weaponType, isCrit)
-/// - For skills: Use specific skill methods like TakeSwordSkillDamage(damage, isCrit)
-/// - For projectiles: TakeProjectileDamage(damage, weaponType, isCrit)
-/// - For area effects: TakeAreaDamage(damage, weaponType, damageSourcePosition)
-///
-/// IMPORTANT: If skills don't work with spider/catfish enemies, ensure that:
-/// 1. Skill projectiles/weapons have correct collision layers
-/// 2. Skill scripts call the appropriate TakeDamage methods
-/// 3. Enemy colliders are set to trigger if needed for projectile detection
-///
-/// WARNING: ActiveDamage() method is DISABLED to prevent conflicts with EnemyContactDamage.cs
-/// </summary>
 public class TakeDamageTest : MonoBehaviour
 {
     public event Action OnEnemyDied;
