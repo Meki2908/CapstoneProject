@@ -5,222 +5,243 @@ using Unity.Cinemachine;
 
 namespace MovementSystem
 {
+    /// <summary>
+    /// Phát hiện input phím Alt và báo cáo lên <see cref="MouseLockManager"/>.
+    /// Quản lý enable/disable Cinemachine Look + Zoom theo trạng thái cursor.
+    ///
+    /// KHÔNG tự set Cursor.visible / Cursor.lockState — toàn bộ quyết định đó thuộc về MouseLockManager.
+    /// Khi cursor hiện → Cinemachine tắt. Khi cursor ẩn → Cinemachine bật.
+    /// </summary>
     public class CameraCursor : MonoBehaviour
     {
         [SerializeField]
         private InputActionReference cameraToggleInputAction;
         [SerializeField]
         private bool startHidden;
+
+#pragma warning disable CS0618 // Type is obsolete
         [SerializeField]
-#pragma warning disable CS0618 // Type is obsolete - still functional, will migrate to InputAxisController later
-        private CinemachineInputProvider inputProvider; // Corrected type reference
+        private CinemachineInputProvider inputProvider;
 #pragma warning restore CS0618
+
         [SerializeField]
         private CinemachineInputAxisController[] inputAxisControllers;
+
         [SerializeField]
-        private bool disableCameraLookOnCursorVisible;
+        private bool disableCameraLookOnCursorVisible = true;
         [SerializeField]
-        private bool disableCameraZoomOnCursorVisible;
-        [Tooltip("If you're using Cinemachine 2.8.4 or earlier, untick this option.\\nIf unticked, both Look and Zoom will be disabled.")]
+        private bool disableCameraZoomOnCursorVisible = true;
+
+        [Tooltip("If you're using Cinemachine 2.8.4 or earlier, untick this option.")]
         [SerializeField]
         private bool fixedCinemachineVersion;
+
         [Header("Input Actions (New Cinemachine/Input System)")]
         [SerializeField]
         private InputActionReference lookInputAction;
         [SerializeField]
         private InputActionReference zoomInputAction;
 
-        private static int s_lastAltToggleFrame = int.MinValue;
+        // ── Runtime ──────────────────────────────────────────────────────
 
-        // Track cursor state internally to avoid conflicts
-        private bool isCursorHidden = false;
-        private PlayerInput cachedPlayerInput;
-        private InputAction resolvedLookAction;
-        private InputAction resolvedZoomAction;
+        // True khi Alt đang được giữ theo track nội bộ
+        private bool _isAltHeld = false;
+
+        // Track xem InputAction callback đã đăng ký chưa (tránh double)
+        private bool _actionsRegistered = false;
+
+        private PlayerInput _cachedPlayerInput;
+        private InputAction _resolvedLookAction;
+        private InputAction _resolvedZoomAction;
+
+        // ── Lifecycle ─────────────────────────────────────────────────────
 
         private void Awake()
         {
-            // Luôn khóa chuột khi mới chạy game (trừ các scene Menu)
             string sName = SceneManager.GetActiveScene().name;
             if (sName != "UI_Game" && sName != "Menu_Game" && sName != "DemoSceneSettings")
             {
-                ForceHideCursor();
+                // MouseLockManager xử lý cursor — chúng ta chỉ sync Cinemachine
+                SetCinemachineInput(true);
             }
 
             SceneManager.sceneLoaded += OnSceneLoaded;
             GameSettings.OnSettingsChanged += ApplyCameraSpeedSettings;
             ResolveCinemachineInputs();
-
-            if (cameraToggleInputAction != null && cameraToggleInputAction.action != null)
-            {
-                cameraToggleInputAction.action.started += OnCameraCursorToggled;
-            }
+            RegisterAltCallbacks();
         }
 
         private void OnDestroy()
         {
             SceneManager.sceneLoaded -= OnSceneLoaded;
             GameSettings.OnSettingsChanged -= ApplyCameraSpeedSettings;
+            UnregisterAltCallbacks();
+        }
+
+        private void RegisterAltCallbacks()
+        {
+            if (_actionsRegistered) return;
             if (cameraToggleInputAction != null && cameraToggleInputAction.action != null)
             {
-                cameraToggleInputAction.action.started -= OnCameraCursorToggled;
+                cameraToggleInputAction.action.started  += OnAltPressed;
+                cameraToggleInputAction.action.canceled += OnAltReleased;
+                _actionsRegistered = true;
             }
         }
 
-        /// <summary>
-        /// Khi scene mới load (bao gồm teleport vào dungeon) → reset cursor về trạng thái đúng
-        /// </summary>
-        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        private void UnregisterAltCallbacks()
         {
-            ResolveCinemachineInputs();
-
-            // Không khóa chuột nếu đang ở các scene Menu chính
-            string sName = scene.name;
-            if (sName == "UI_Game" || sName == "Menu_Game" || sName == "DemoSceneSettings")
+            if (!_actionsRegistered) return;
+            if (cameraToggleInputAction != null && cameraToggleInputAction.action != null)
             {
-                return;
+                cameraToggleInputAction.action.started  -= OnAltPressed;
+                cameraToggleInputAction.action.canceled -= OnAltReleased;
             }
-
-            // Luôn khóa chuột khi load scene (nếu không có UI đè lên)
-            StartCoroutine(DelayedForceHideCursor());
-        }
-
-        private System.Collections.IEnumerator DelayedForceHideCursor()
-        {
-            yield return null; // Đợi 1 frame
-            ForceHideCursor();
-        }
-
-        /// <summary>
-        /// Force ẩn cursor — dùng khi khởi tạo hoặc chuyển scene
-        /// </summary>
-        private void ForceHideCursor()
-        {
-            // Không lock cursor nếu inventory đang mở
-            if (IsUiOverlayBlocking()) return;
-
-            isCursorHidden = true;
-            if (MouseLockManager.Instance != null)
-            {
-                MouseLockManager.Instance.SetGameplayCursorLocked(true);
-            }
-            else
-            {
-                Cursor.visible = false;
-                Cursor.lockState = CursorLockMode.Locked;
-            }
-            SetCinemachineInput(true);
-        }
-
-        private void Update()
-        {
-            // KHÔNG xử lý cursor khi inventory đang mở
-            if (IsUiOverlayBlocking()) return;
-
-            // Luôn check Alt qua legacy Input (fallback khi InputAction không fire)
-            try
-            {
-                if (Input.GetKeyDown(KeyCode.LeftAlt))
-                {
-                    ToggleCursor();
-                }
-            }
-            catch { }
+            _actionsRegistered = false;
         }
 
         private void OnEnable()
         {
             if (cameraToggleInputAction != null && cameraToggleInputAction.asset != null)
-            {
                 cameraToggleInputAction.asset.Enable();
-            }
         }
 
         private void OnDisable()
         {
             if (cameraToggleInputAction != null && cameraToggleInputAction.asset != null)
-            {
                 cameraToggleInputAction.asset.Disable();
-            }
         }
 
-        private void OnCameraCursorToggled(InputAction.CallbackContext context)
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
-            // KHÔNG toggle cursor khi inventory đang mở
-            if (IsUiOverlayBlocking()) return;
-            ToggleCursor();
-        }
+            ResolveCinemachineInputs();
+            _isAltHeld = false; // Reset hold state khi chuyển scene
 
-        private void ToggleCursor()
-        {
-            int f = Time.frameCount;
-            if (s_lastAltToggleFrame == f)
+            string sName = scene.name;
+            if (sName == "UI_Game" || sName == "Menu_Game" || sName == "DemoSceneSettings")
                 return;
-            s_lastAltToggleFrame = f;
 
+            // Sync Cinemachine với trạng thái MouseLockManager (apply sau 1 frame)
+            StartCoroutine(DelayedSyncCinemachine());
+        }
+
+        private System.Collections.IEnumerator DelayedSyncCinemachine()
+        {
+            yield return null;
+            // MouseLockManager đã apply cursor state — sync Cinemachine
+            bool locked = MouseLockManager.Instance == null || MouseLockManager.Instance.IsGameplayCursorLocked;
+            SetCinemachineInput(locked);
+        }
+
+        // ── Update ───────────────────────────────────────────────────────
+
+        private void Update()
+        {
+            // Luôn sync Cinemachine với trạng thái MouseLockManager hiện tại
+            // (để không bị lệch nếu MouseLockManager thay đổi state từ nguồn khác)
             if (MouseLockManager.Instance != null)
             {
-                // wasFree: cursor is unlocked (gameplay NOT locked)
-                bool wasFree = !MouseLockManager.Instance.IsGameplayCursorLocked;
-                // Toggle: if was free → lock, if was locked → free
-                bool shouldLock = wasFree;
-                MouseLockManager.Instance.SetGameplayCursorLocked(shouldLock, fromUserToggleFromFreeCursor: wasFree && shouldLock);
-                if (!shouldLock)
-                    MouseLockManager.Instance.ClearGameplayLockRetries();
-                isCursorHidden = shouldLock;
-                SetCinemachineInput(shouldLock);
-                return;
+                bool shouldCameraBeActive = MouseLockManager.Instance.IsGameplayCursorLocked;
+                SyncCinemachineIfNeeded(shouldCameraBeActive);
             }
 
-            // Legacy: không có MouseLockManager — tự đảo trạng thái
-            isCursorHidden = Cursor.visible; // Nếu đang hiện (free) -> ẩn (lock)
+            // Fallback legacy Alt input (khi InputAction không fire)
+            // Chỉ dùng fallback nếu InputAction chưa được setup
+            if (cameraToggleInputAction == null || cameraToggleInputAction.action == null)
+            {
+                try
+                {
+                    if (Input.GetKeyDown(KeyCode.LeftAlt)) OnAltPressedLegacy();
+                    else if (Input.GetKeyUp(KeyCode.LeftAlt)) OnAltReleasedLegacy();
+                }
+                catch { }
+            }
+        }
 
-            if (isCursorHidden)
-            {
-                Cursor.visible = false;
-                Cursor.lockState = CursorLockMode.Locked;
-                SetCinemachineInput(true);
-            }
-            else
-            {
-                Cursor.visible = true;
-                Cursor.lockState = CursorLockMode.None;
-                GameCursorManager.TryApplyNormalCursorTextureFromScene();
-                SetCinemachineInput(false);
-            }
+        // ── Alt Input Callbacks ──────────────────────────────────────────
+
+        private void OnAltPressed(InputAction.CallbackContext context)
+        {
+            // UI overlay đang mở → không xử lý
+            if (CursorUIPriority.IsUiOverlayActive) return;
+            ShowCursorForAlt();
+        }
+
+        private void OnAltReleased(InputAction.CallbackContext context)
+        {
+            HideCursorAfterAlt();
+        }
+
+        private void OnAltPressedLegacy()
+        {
+            if (_isAltHeld) return;
+            if (CursorUIPriority.IsUiOverlayActive) return;
+            ShowCursorForAlt();
+        }
+
+        private void OnAltReleasedLegacy()
+        {
+            if (!_isAltHeld) return;
+            HideCursorAfterAlt();
+        }
+
+        // ── Alt Show / Hide ───────────────────────────────────────────────
+
+        private void ShowCursorForAlt()
+        {
+            _isAltHeld = true;
+            if (MouseLockManager.Instance != null)
+                MouseLockManager.Instance.NotifyAltHeld(true);
+            // Cinemachine sẽ được sync tự động trong Update()
+        }
+
+        private void HideCursorAfterAlt()
+        {
+            _isAltHeld = false;
+            if (MouseLockManager.Instance != null)
+                MouseLockManager.Instance.NotifyAltHeld(false);
+        }
+
+        // ── Cinemachine Control ──────────────────────────────────────────
+
+        private bool _lastCinemachineEnabled = true;
+
+        /// <summary>
+        /// Chỉ apply Cinemachine nếu trạng thái thay đổi (tránh spam SetCinemachine mỗi frame).
+        /// </summary>
+        private void SyncCinemachineIfNeeded(bool enabled)
+        {
+            if (enabled == _lastCinemachineEnabled) return;
+            SetCinemachineInput(enabled);
         }
 
         /// <summary>
-        /// Enable/Disable Cinemachine input dựa trên trạng thái cursor
-        /// Tự tìm inputProvider nếu reference bị null (sau scene transition)
+        /// Enable/Disable Cinemachine input (Look + Zoom).
+        /// Gọi khi cursor state thay đổi.
         /// </summary>
-        private void SetCinemachineInput(bool enableInput)
+        public void SetCinemachineInput(bool enableInput)
         {
+            _lastCinemachineEnabled = enableInput;
             ResolveCinemachineInputs();
 
             bool allowLook = enableInput || !disableCameraLookOnCursorVisible;
             bool allowZoom = enableInput || !disableCameraZoomOnCursorVisible;
 
-            // New Cinemachine path: use Input System actions to disable look/zoom independently.
-            SetInputActionEnabled(resolvedLookAction, allowLook);
-            SetInputActionEnabled(resolvedZoomAction, allowZoom);
+            // New Cinemachine path
+            SetInputActionEnabled(_resolvedLookAction, allowLook);
+            SetInputActionEnabled(_resolvedZoomAction, allowZoom);
 
-            // New Cinemachine controllers: if both look and zoom should be disabled, disable controllers.
             if (inputAxisControllers != null && inputAxisControllers.Length > 0)
             {
                 bool shouldEnableControllers = allowLook || allowZoom;
                 for (int i = 0; i < inputAxisControllers.Length; i++)
-                {
                     if (inputAxisControllers[i] != null)
                         inputAxisControllers[i].enabled = shouldEnableControllers;
-                }
             }
 
             // Legacy Cinemachine fallback
             if (inputProvider == null)
-            {
                 inputProvider = FindFirstObjectByType<CinemachineInputProvider>();
-            }
 
             if (inputProvider == null)
             {
@@ -243,150 +264,73 @@ namespace MovementSystem
             }
             else
             {
-                if (!allowLook)
-                {
-                    inputProvider.XYAxis.action?.Disable();
-                }
-                if (!allowZoom)
-                {
-                    inputProvider.ZAxis.action?.Disable();
-                }
+                if (!allowLook) inputProvider.XYAxis.action?.Disable();
+                if (!allowZoom) inputProvider.ZAxis.action?.Disable();
             }
         }
 
-        /// <summary>
-        /// Apply GameSettings camera speed vào CinemachineInputProvider Gain
-        /// </summary>
-        private void ApplyCameraSpeedSettings()
-        {
-            if (inputProvider == null)
-                inputProvider = FindFirstObjectByType<CinemachineInputProvider>();
-            if (inputProvider == null)
-            {
-                // New Cinemachine input-axis controller path currently does not expose a single "gain" API here.
-                return;
-            }
-
-            var gs = GameSettings.Instance;
-            if (gs == null) return;
-
-            // TODO: Migrate to InputAxisController to support Gain (camera sensitivity)
-            // CinemachineInputProvider (deprecated) does not support Gain on InputActionReference
-            Debug.Log($"[CameraCursor] Camera speed setting: MouseSpeed={gs.cameraMouseSpeed:F2} (not yet applied)");
-        }
+        // ── Static API (gọi từ CursorUIPriority + HUD scripts) ───────────
 
         /// <summary>
-        /// UI (Inventory, Pause, ...) đang giữ quyền ưu tiên — không xử lý Alt / force hide cursor.
-        /// </summary>
-        private bool IsUiOverlayBlocking()
-        {
-            return CursorUIPriority.IsUiOverlayActive;
-        }
-
-        /// <summary>
-        /// Sau khi đóng UI cuối cùng: đồng bộ chế độ FPS (chuột đã được CursorUIPriority set ẩn + lock).
+        /// Sau khi đóng UI cuối cùng — re-sync Cinemachine với gameplay state.
         /// </summary>
         public static void ApplyGameplayCursorAfterUiClosed()
         {
             var cc = FindFirstObjectByType<CameraCursor>();
             if (cc != null)
-                cc.ApplyGameplayCursorInternal();
+                cc.SetCinemachineInput(true); // Gameplay: camera active
         }
 
         /// <summary>
-        /// Canvas tag HUD vừa được bật (blacksmith, menu dungeon, ...) — chuột tự do + Normal texture, đồng bộ Cinemachine.
+        /// HUD canvas vừa được bật — thông báo MouseLockManager (HUD).
+        /// MouseLockManager sẽ tự hiện cursor và lock Cinemachine.
         /// </summary>
         public static void ApplyFreeCursorForHudCanvasActivated()
         {
-            var cc = FindFirstObjectByType<CameraCursor>();
-            if (cc != null)
-                cc.ApplyFreeCursorForHudCanvasActivatedInternal();
-            else
-                ApplyFreeCursorForHudCanvasActivatedWithoutCameraCursor();
+            // Delegate hoàn toàn cho MouseLockManager
+            if (MouseLockManager.Instance != null)
+                MouseLockManager.Instance.NotifyHudVisibilityChanged(true);
         }
 
-        private static void ApplyFreeCursorForHudCanvasActivatedWithoutCameraCursor()
-        {
-            if (CursorUIPriority.IsUiOverlayActive)
-                return;
-            if (MouseLockManager.Instance != null)
-            {
-                MouseLockManager.Instance.SetGameplayCursorLocked(false);
-                MouseLockManager.Instance.ClearGameplayLockRetries();
-            }
-            else
-            {
-                Cursor.visible = true;
-                Cursor.lockState = CursorLockMode.None;
-            }
-            GameCursorManager.TryApplyNormalCursorTextureFromScene();
-        }
+        // ── Settings & Helpers ────────────────────────────────────────────
 
-        private void ApplyFreeCursorForHudCanvasActivatedInternal()
+        private void ApplyCameraSpeedSettings()
         {
-            if (IsUiOverlayBlocking())
-                return;
-            isCursorHidden = false;
-            if (MouseLockManager.Instance != null)
-            {
-                MouseLockManager.Instance.SetGameplayCursorLocked(false);
-                MouseLockManager.Instance.ClearGameplayLockRetries();
-            }
-            else
-            {
-                Cursor.visible = true;
-                Cursor.lockState = CursorLockMode.None;
-            }
-            GameCursorManager.TryApplyNormalCursorTextureFromScene();
-            SetCinemachineInput(false);
-        }
+            if (inputProvider == null)
+                inputProvider = FindFirstObjectByType<CinemachineInputProvider>();
+            if (inputProvider == null) return;
 
-        private void ApplyGameplayCursorInternal()
-        {
-            isCursorHidden = true;
-            if (MouseLockManager.Instance != null)
-                MouseLockManager.Instance.SetGameplayCursorLocked(true);
-            else
-            {
-                Cursor.visible = false;
-                Cursor.lockState = CursorLockMode.Locked;
-            }
-            SetCinemachineInput(true);
+            var gs = GameSettings.Instance;
+            if (gs == null) return;
+
+            Debug.Log($"[CameraCursor] Camera speed setting: MouseSpeed={gs.cameraMouseSpeed:F2} (not yet applied)");
         }
 
         private void ResolveCinemachineInputs()
         {
             if (inputAxisControllers == null || inputAxisControllers.Length == 0)
-            {
                 inputAxisControllers = FindObjectsByType<CinemachineInputAxisController>(FindObjectsSortMode.None);
-            }
 
-            if (cachedPlayerInput == null)
-                cachedPlayerInput = FindFirstObjectByType<PlayerInput>();
+            if (_cachedPlayerInput == null)
+                _cachedPlayerInput = FindFirstObjectByType<PlayerInput>();
 
-            resolvedLookAction = ResolveAction(lookInputAction, "Look");
-            resolvedZoomAction = ResolveAction(zoomInputAction, "CameraZoom");
+            _resolvedLookAction = ResolveAction(lookInputAction, "Look");
+            _resolvedZoomAction = ResolveAction(zoomInputAction, "CameraZoom");
         }
 
         private InputAction ResolveAction(InputActionReference directReference, string fallbackActionName)
         {
             if (directReference != null && directReference.action != null)
                 return directReference.action;
-
-            if (cachedPlayerInput != null && cachedPlayerInput.actions != null)
-                return cachedPlayerInput.actions.FindAction(fallbackActionName, false);
-
+            if (_cachedPlayerInput != null && _cachedPlayerInput.actions != null)
+                return _cachedPlayerInput.actions.FindAction(fallbackActionName, false);
             return null;
         }
 
         private void SetInputActionEnabled(InputAction action, bool enable)
         {
             if (action == null) return;
-
-            if (enable)
-                action.Enable();
-            else
-                action.Disable();
+            if (enable) action.Enable(); else action.Disable();
         }
     }
 }

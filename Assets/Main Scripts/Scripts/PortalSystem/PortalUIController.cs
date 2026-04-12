@@ -92,13 +92,7 @@ public class PortalUIController : MonoBehaviour
         if (!overlayOnPanel)
         {
             CursorUIPriority.BeginUiOverlay();
-            Cursor.visible = true;
-            Cursor.lockState = CursorLockMode.None;
-            if (MouseLockManager.Instance != null)
-            {
-                MouseLockManager.Instance.SetGameplayCursorLocked(false);
-                MouseLockManager.Instance.ClearGameplayLockRetries();
-            }
+            MouseLockManager.Instance?.ClearGameplayLockRetries();
             GameCursorManager.TryApplyNormalCursorTextureFromScene();
         }
         if (rootPanel != null) rootPanel.SetActive(true);

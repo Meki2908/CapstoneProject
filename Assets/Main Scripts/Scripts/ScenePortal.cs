@@ -69,9 +69,7 @@ public class ScenePortal : MonoBehaviour
             CursorUIPriority.BeginUiOverlay();
             portalCanvas.SetActive(true);
             
-            // Hiển thị chuột để chọn
-            Cursor.visible = true;
-            Cursor.lockState = CursorLockMode.None;
+            // Cursor được xử lý bởi CursorUIPriority.BeginUiOverlay() ở trên
         }
         else
         {

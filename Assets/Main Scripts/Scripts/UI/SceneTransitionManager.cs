@@ -484,11 +484,8 @@ public class SceneTransitionManager : MonoBehaviour
         // Quét thêm mọi bản Panel_* trùng tên (DDOL + scene) — tránh sót sau bước 4.
         HideLoadingPanelIfAny();
 
-        if (restoreCursorAfterLoad)
-        {
-            Cursor.visible = true;
-            Cursor.lockState = CursorLockMode.None;
-        }
+        // Cursor state được xử lý bời MouseLockManager.OnSceneLoaded()
+        // (tự ăng refresh theo scene mới)
 
         isTransitioning = false;
         Debug.Log($"[SceneTransition] Chuyển scene hoàn tất: {sceneName}");

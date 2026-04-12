@@ -180,9 +180,7 @@ public class BlacksmithNPC : MonoBehaviour
         // Pause game
         Time.timeScale = 0f;
 
-        // Unlock cursor
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
+        // Cursor được xử lý bời CursorUIPriority.BeginUiOverlay() ở trên
 
         // Disable player input
         DisablePlayerInput();

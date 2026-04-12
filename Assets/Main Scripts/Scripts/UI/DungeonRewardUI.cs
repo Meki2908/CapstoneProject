@@ -208,9 +208,7 @@ public class DungeonRewardUI : MonoBehaviour
         // Không RaiseTooltipCanvas(true) ở đây — canvas tooltip sort 1000 có thể cản raycast tới reward (999).
         // Chỉ nâng order khi hover slot (NotifyTooltipLayerForHover).
 
-        // Hiện cursor
-        Cursor.visible = true;
-        Cursor.lockState = CursorLockMode.None;
+        // Cursor được xử lý bởi CursorUIPriority.BeginUiOverlay() ở trên
         GameCursorManager.TryApplyNormalCursorTextureFromScene();
     }
 

@@ -157,13 +157,7 @@ public class InventoryController : MonoBehaviour
 
     void LateUpdate()
     {
-        // Force cursor visible while inventory is open — runs AFTER all Update()
-        // (prevents CameraCursor/GameCursorManager from hiding cursor)
-        if (isInventoryOpen)
-        {
-            Cursor.visible = true;
-            Cursor.lockState = CursorLockMode.None;
-        }
+        // Cursor được xử lý bời MouseLockManager — không cần force ở đây
     }
 
     private void ToggleInventory()
@@ -224,14 +218,8 @@ public class InventoryController : MonoBehaviour
         TutorialTextDisplay.NotifyInventoryOpenedFromGameplay();
         SoundManager.PlayUIOpenMenu();
 
-        // Unlock cursor SAU CÙNG (đảm bảo không bị script khác override)
-        Cursor.visible = true;
-        Cursor.lockState = CursorLockMode.None;
-        if (MouseLockManager.Instance != null)
-        {
-            MouseLockManager.Instance.SetGameplayCursorLocked(false);
-            MouseLockManager.Instance.ClearGameplayLockRetries();
-        }
+        // Cursor được xử lý bời CursorUIPriority.BeginUiOverlay() ở trên
+        MouseLockManager.Instance?.ClearGameplayLockRetries();
         GameCursorManager.TryApplyNormalCursorTextureFromScene();
 
         Debug.Log($"[InventoryController] Inventory opened - timeScale={Time.timeScale}, cursor locked={Cursor.lockState}");

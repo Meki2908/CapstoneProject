@@ -1803,10 +1803,9 @@ public class DungeonWaveManager : MonoBehaviour
         // FREEZE GAME — quái dừng tấn công, animation dừng
         Time.timeScale = 0f;
 
-        // Unlock cursor để player click button trên UI
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
+        // Cursor được xử lý bởi CursorUIPriority.BeginUiOverlay() ở trên
         GameCursorManager.TryApplyNormalCursorTextureFromScene();
+
 
         // Tắt toàn bộ camera — đứng yên khi GUI hiện
         DisableCameraFull();
@@ -1842,10 +1841,9 @@ public class DungeonWaveManager : MonoBehaviour
         // FREEZE GAME — quái dừng tấn công, animation dừng
         Time.timeScale = 0f;
 
-        // Unlock cursor để player click button trên UI
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
+        // Cursor được xử lý bởi CursorUIPriority.BeginUiOverlay() ở trên
         GameCursorManager.TryApplyNormalCursorTextureFromScene();
+
 
         // Tắt toàn bộ camera — đứng yên khi GUI hiện
         DisableCameraFull();

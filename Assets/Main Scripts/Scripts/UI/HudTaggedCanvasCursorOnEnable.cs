@@ -3,9 +3,14 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Gắn trên object được bật bằng SetActive khi cần chuột tự do + Normal Cursor texture.
-/// Tag: để <see cref="requiredTag"/> trống thì không kiểm tra tag (dùng cho object con với tag riêng).
-/// Lưu ý: nếu UI đã gọi <see cref="CursorUIPriority.BeginUiOverlay"/> trước khi bật panel, vẫn áp texture + đồng bộ MouseLockManager.
+/// Gắn trên object tag "HUD" được bật/tắt bằng SetActive khi cần cursor tự do
+/// (vd: Blacksmith NPC menu, Dungeon complete panel, World Map...).
+/// 
+/// OnEnable → báo MouseLockManager rằng 1 HUD object vừa hiện (P3 priority).
+/// OnDisable → báo MouseLockManager rằng 1 HUD object vừa ẩn.
+/// 
+/// Dùng counter trong MouseLockManager, không dùng toggle → spam-safe.
+/// Không tự set Cursor.visible / Cursor.lockState.
 /// </summary>
 [DefaultExecutionOrder(50)]
 public sealed class HudTaggedCanvasCursorOnEnable : MonoBehaviour
@@ -15,7 +20,7 @@ public sealed class HudTaggedCanvasCursorOnEnable : MonoBehaviour
     private string requiredTag = "";
 
     [SerializeField]
-    [Tooltip("Bỏ qua OnEnable nếu quá sớm sau khi load scene (Single) — tránh mở chuột nhầm cho HUD mặc định luôn active.")]
+    [Tooltip("Bỏ qua OnEnable nếu quá sớm sau khi load scene — tránh mở cursor nhầm.")]
     private bool suppressDuringEarlySceneFrames = true;
 
     [SerializeField]
@@ -23,6 +28,9 @@ public sealed class HudTaggedCanvasCursorOnEnable : MonoBehaviour
     private int earlyFramesAfterSceneLoad = 2;
 
     private static int s_lastSingleSceneLoadFrame = int.MinValue / 4;
+
+    // Track xem đã notify "active" cho MouseLockManager chưa
+    private bool _notifiedActive = false;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void RegisterSceneHook()
@@ -39,49 +47,51 @@ public sealed class HudTaggedCanvasCursorOnEnable : MonoBehaviour
 
     private void OnEnable()
     {
-        if (!isActiveAndEnabled || !PassesTagFilter())
-            return;
-        StartCoroutine(ApplyAfterDeferredFrame());
+        if (!isActiveAndEnabled || !PassesTagFilter()) return;
+        StartCoroutine(NotifyActiveAfterFrame());
+    }
+
+    private void OnDisable()
+    {
+        if (!PassesTagFilter()) return;
+        if (_notifiedActive)
+        {
+            _notifiedActive = false;
+            MouseLockManager.Instance?.NotifyHudVisibilityChanged(false);
+        }
+    }
+
+    private void OnDestroy()
+    {
+        // Đảm bảo không để counter bị leak khi object bị destroy khi đang active
+        if (_notifiedActive)
+        {
+            _notifiedActive = false;
+            MouseLockManager.Instance?.NotifyHudVisibilityChanged(false);
+        }
     }
 
     private bool PassesTagFilter()
     {
-        if (string.IsNullOrWhiteSpace(requiredTag))
-            return true;
-        try
-        {
-            return CompareTag(requiredTag.Trim());
-        }
-        catch (UnityException)
-        {
-            return false;
-        }
+        if (string.IsNullOrWhiteSpace(requiredTag)) return true;
+        try { return CompareTag(requiredTag.Trim()); }
+        catch (UnityException) { return false; }
     }
 
-    private IEnumerator ApplyAfterDeferredFrame()
+    private IEnumerator NotifyActiveAfterFrame()
     {
         yield return null;
-        if (!isActiveAndEnabled || !gameObject.activeInHierarchy)
-            yield break;
-        if (!PassesTagFilter())
-            yield break;
+        if (!isActiveAndEnabled || !gameObject.activeInHierarchy) yield break;
+        if (!PassesTagFilter()) yield break;
         if (suppressDuringEarlySceneFrames &&
             earlyFramesAfterSceneLoad >= 0 &&
             Time.frameCount - s_lastSingleSceneLoadFrame <= earlyFramesAfterSceneLoad)
             yield break;
 
-        // UI thường gọi BeginUiOverlay trước khi SetActive(panel) → không được bỏ qua, chỉ cần áp texture + lock.
-        if (CursorUIPriority.IsUiOverlayActive)
+        if (!_notifiedActive)
         {
-            if (MouseLockManager.Instance != null)
-            {
-                MouseLockManager.Instance.SetGameplayCursorLocked(false);
-                MouseLockManager.Instance.ClearGameplayLockRetries();
-            }
-            GameCursorManager.TryApplyNormalCursorTextureFromScene();
-            yield break;
+            _notifiedActive = true;
+            MouseLockManager.Instance?.NotifyHudVisibilityChanged(true);
         }
-
-        MovementSystem.CameraCursor.ApplyFreeCursorForHudCanvasActivated();
     }
 }
