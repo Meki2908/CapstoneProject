@@ -15,8 +15,7 @@ public class WorldMapController : MonoBehaviour
         if (mapCanvas != null) mapCanvas.SetActive(false);
         else Debug.LogError("[WorldMap] mapCanvas chưa gán!");
 
-        Cursor.visible   = false;
-        Cursor.lockState = CursorLockMode.Locked;
+        // Cursor được xử lý bời MouseLockManager
     }
 
     void Update()
@@ -35,8 +34,6 @@ public class WorldMapController : MonoBehaviour
         if (open)
         {
             CursorUIPriority.BeginUiOverlay();
-            Cursor.visible = true;
-            Cursor.lockState = CursorLockMode.None;
         }
         else
         {

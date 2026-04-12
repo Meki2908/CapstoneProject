@@ -215,8 +215,8 @@ public class MariaDialogue : MonoBehaviour
         if (dialoguePanel)  dialoguePanel.SetActive(true);
 
         SetText(npcNameTMP, npcNameLegacy, "Maria");
-        Cursor.visible   = true;
-        Cursor.lockState = CursorLockMode.None;
+        // Cursor được xử lý bời CursorUIPriority.BeginUiOverlay()
+        CursorUIPriority.BeginUiOverlay();
         DialogueNextButton.Register(OnNextClicked);
         ShowLine(0);
     }
@@ -300,8 +300,8 @@ public class MariaDialogue : MonoBehaviour
         DialogueNextButton.Unregister();
         if (dialoguePanel)  dialoguePanel.SetActive(false);
         if (dialogueCanvas != null) dialogueCanvas.gameObject.SetActive(false);
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible   = false;
+        // Cursor được xử lý bời CursorUIPriority.EndUiOverlay()
+        CursorUIPriority.EndUiOverlay();
         if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
     }
 
