@@ -102,6 +102,29 @@ public class WolfBossAI : NetworkBehaviour
     private float _stunTimer   = 0f;
     private bool  _isAttacking = false;
 
+    // Phase 2 entry flag — Đảm bảo Ultimate phase 2 luôn được dùng (ít nhất 1 lần mỗi phase)
+    // _phase2UltiPending = true khi vừa enter phase 2, chờ dịp đưa Ultimate ra
+    private bool _phase2UltiPending = false;
+
+    // ─── Phase 2 Fang Buff System ────────────────────────────────────────────
+    // Khi cả 2 Fang còn sống, boss được buff:
+    //   • Damage × 1.2 (tích và _fangDmgMultiplier)
+    //   • Lifesteal = 80% (BossPawDamage.CheckPaw đọc qua GetLifeStealPercent())
+    //   • Armor += baseArmor × 2.5 (EnemyScript.armorValue)
+    //   • MagicResist += baseMagic × 2.5 (EnemyScript.magicValue)
+    //   • Animator Speed = 1 khi di chuyển (chạy thay vì đi)
+    // Khi Fang bị phá huỷ hết → buff tắt, CD 60s bắt đầu đếm
+    private bool  _fangBuffActive      = false;
+    private float _lifeStealPercent    = 0f;           // 0 = không hút máu, 0.8 = 80%
+    private float _fangDmgMultiplier   = 1f;           // 1.2 khi fang active, 1 khi không
+
+    // Base stats của EnemyScript — lưu khi Start để reset buff sau
+    private int   _baseArmorValue      = 0;
+    private int   _baseMagicValue      = 0;
+
+    // Cache EnemyScript để apply buff
+    private EnemyScript _enemyScript;
+
     // === Animation Event movement lock ===
     // LockMovement() và UnlockMovement() được gọi bởi WolfBossAnimationEvents (trên Wolfboss_A).
     // Khi _movementLocked = true, MoveAgentToward() không làm gì.
@@ -154,7 +177,10 @@ public class WolfBossAI : NetworkBehaviour
 
         float delta = Time.deltaTime;
         _specialAttackTimer += delta;
-        _ultimateTimer += delta;
+        // Ultimate CD chỉ đếm khi không còn Fang nào trên sân
+        if (!_fireFangAlive && !_iceFangAlive && _ultimateActivatedForPhase2)
+            _ultimateTimer += delta;
+        // Fang damage timer: chỉ đếm khi fang còn sống
         if (_fireFangAlive || _iceFangAlive) _fangDamageTimer += delta;
 
         RunFSM(delta);
@@ -192,7 +218,9 @@ public class WolfBossAI : NetworkBehaviour
 
         float delta = Runner.DeltaTime;
         _specialAttackTimer += delta;
-        _ultimateTimer += delta;
+        // Ultimate CD chỉ đếm khi không còn Fang
+        if (!_fireFangAlive && !_iceFangAlive && _ultimateActivatedForPhase2)
+            _ultimateTimer += delta;
         if (_fireFangAlive || _iceFangAlive) _fangDamageTimer += delta;
 
         RunFSM(delta);
@@ -231,6 +259,23 @@ public class WolfBossAI : NetworkBehaviour
         if (animator == null)
             animator = GetComponentInChildren<Animator>();
 
+        // EnemyScript — đảm bảo isBoss = true để CC immunity và damage system
+        _enemyScript = GetComponent<EnemyScript>();
+        if (_enemyScript == null) _enemyScript = GetComponentInChildren<EnemyScript>();
+        if (_enemyScript != null)
+        {
+            _enemyScript.isBoss = true;
+            _baseArmorValue = _enemyScript.armorValue;
+            _baseMagicValue = _enemyScript.magicValue;
+            Log($"[WolfBossAI] EnemyScript found — isBoss=true, baseArmor={_baseArmorValue}, baseMagic={_baseMagicValue}");
+        }
+        else
+        {
+            Debug.LogWarning("[WolfBossAI] EnemyScript not found on Vargr! CC immunity relies on isBoss flag. " +
+                             "Add EnemyScript to Vargr root GO and set isBoss=true in Inspector.");
+        }
+
+
         // NavMeshAgent — Root ưu tiên, sau đó mới tìm trong children
         if (agent == null)
         {
@@ -248,11 +293,9 @@ public class WolfBossAI : NetworkBehaviour
             agent.updateRotation = false;
 
             // Warp agent về vị trí Root để đảm bảo sampling đúng trên NavMesh
-            // (quan trọng khi agent là child có offset)
             if (agent.isOnNavMesh)
                 agent.Warp(transform.position);
             else
-                // Thử Warp về gốc — NavMesh cần được bake trước
                 UnityEngine.AI.NavMesh.SamplePosition(
                     transform.position, out var hit, 5f,
                     UnityEngine.AI.NavMesh.AllAreas);
@@ -281,6 +324,7 @@ public class WolfBossAI : NetworkBehaviour
         IsStunning       = false;
         DamageMultiplier = 1;
         _state = BossState.Idle;
+        ResetPhase2State();
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -509,6 +553,7 @@ public class WolfBossAI : NetworkBehaviour
         _ultimateTimer = 0f;
         _ultimateReadyAfterStun = false;
         _ultimateActivatedForPhase2 = true;
+        _phase2UltiPending = false; // Đã xử lý phase 2 pending
 
         // War Roar — roar không phải attack nên không lock movement
         TriggerAnimationOnAll("roar");
@@ -586,10 +631,13 @@ public class WolfBossAI : NetworkBehaviour
     {
         _phase2Entered = true;
         SetBossPhase(2);
+        _phase2UltiPending = true; // Queue ultimate để dùng ngay khi có dịp
         Log("[WolfBossAI] *** PHASE 2 ENTERED ***");
 
+        // Nếu boss đang rảnh (đang Chase hoặc Idle và không tấn công) thì dùng ngay
         if (!_isAttacking && _state != BossState.Stun && _state != BossState.Dead)
             StartAttack(BossState.Ultimate);
+        // Nếu đang tấn công thì _phase2UltiPending sẽ được xử lý sau khi UnlockMovement()
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -614,6 +662,9 @@ public class WolfBossAI : NetworkBehaviour
         }
 
         Log($"[WolfBossAI] Fangs spawned: Fire={_fireFangAlive}, Ice={_iceFangAlive}");
+        // Bật buff ngay khi spawn Fang thành công
+        if (_fireFangAlive && _iceFangAlive)
+            EnableFangBuff();
     }
 
     private void SpawnFangFusion(NetworkObject prefab, Transform spawnPoint, Vector3 fallback,
@@ -649,20 +700,76 @@ public class WolfBossAI : NetworkBehaviour
 
         if (!_fireFangAlive && !_iceFangAlive)
         {
-            Log("[WolfBossAI] Both Fangs down → STUN!");
+            Log("[WolfBossAI] Both Fangs down → STUN + remove buff!");
+            // Tắt buff khi cả 2 Fang bị phá huỷ
+            EndFangBuff();
             TriggerStun();
+            // Bắt đầu đếm CD Ultimate từ đây (timer đã reset trong EndStun)
+            _ultimateTimer = 0f;
         }
     }
 
-    private void TickFangDamageBuff()
-    {
-        if (!(_fireFangAlive || _iceFangAlive)) return;
-        if (_fangDamageTimer < fangDamageTickInterval) return;
+    // ── Fang Buff System ─────────────────────────────────────────────────────
 
-        _fangDamageTimer -= fangDamageTickInterval;
-        SetDamageMultiplier(GetDamageMultiplier() + 1);
-        Log($"[WolfBossAI] Fang buff! DamageMultiplier = {GetDamageMultiplier()}");
+    /// <summary>
+    /// Bật buff của Fang khi cả 2 Fang vừa được spawn.
+    /// • Damage × 1.2
+    /// • Lifesteal = 80%
+    /// • Armor += baseArmor × 2.5
+    /// • MagicResist += baseMagic × 2.5
+    /// </summary>
+    private void EnableFangBuff()
+    {
+        if (_fangBuffActive) return;
+        _fangBuffActive    = true;
+        _fangDmgMultiplier = 1.2f;
+        _lifeStealPercent  = 0.8f;
+
+        if (_enemyScript != null)
+        {
+            _enemyScript.armorValue = _baseArmorValue + Mathf.RoundToInt(_baseArmorValue * 2.5f);
+            _enemyScript.magicValue = _baseMagicValue + Mathf.RoundToInt(_baseMagicValue * 2.5f);
+            // Kicking inspector values into EnemyClass immediately
+            if (_enemyScript.enemy != null)
+            {
+                _enemyScript.enemy.armor.value = _enemyScript.armorValue;
+                _enemyScript.enemy.magic.value = _enemyScript.magicValue;
+            }
+        }
+        Log($"[WolfBossAI] FANG BUFF ON — dmg×1.2, lifesteal 80%, " +
+            $"armor={( _enemyScript != null ? _enemyScript.armorValue : 0 )}, " +
+            $"magic={( _enemyScript != null ? _enemyScript.magicValue : 0 )}");
     }
+
+    /// <summary>Tắt buff Fang — reset stats về base.</summary>
+    private void EndFangBuff()
+    {
+        if (!_fangBuffActive) return;
+        _fangBuffActive    = false;
+        _fangDmgMultiplier = 1f;
+        _lifeStealPercent  = 0f;
+
+        if (_enemyScript != null)
+        {
+            _enemyScript.armorValue = _baseArmorValue;
+            _enemyScript.magicValue = _baseMagicValue;
+            if (_enemyScript.enemy != null)
+            {
+                _enemyScript.enemy.armor.value = _baseArmorValue;
+                _enemyScript.enemy.magic.value = _baseMagicValue;
+            }
+        }
+        Log("[WolfBossAI] FANG BUFF OFF — stats reset to base.");
+    }
+
+    /// <summary>
+    /// Public: BossPawDamage đọc vào để tính damage thực tế.
+    /// Bao gồm cả DamageMultiplier từ Networked var và fang buff.
+    /// </summary>
+    public float GetCurrentDamageMultiplier() => _fangDmgMultiplier;
+
+    /// <summary>Public: BossPawDamage đọc vào để hồi máu sau mỗi đòn đánh.</summary>
+    public float GetLifeStealPercent() => _lifeStealPercent;
 
     // ═══════════════════════════════════════════════════════════════════════════
     //  STUN
@@ -710,8 +817,15 @@ public class WolfBossAI : NetworkBehaviour
     private bool CanUseUltimate()
     {
         if (GetBossPhase() < 2) return false;
+
+        // Pending từ Phase 2 entry (chưa dùng lần đầu)
+        // Cho phép immediate — không cần stun hay timer
+        if (_phase2UltiPending) return true;
+
+        // Lần sau: chỉ dùng khi KHÔNG còn Fang và CD đủ (60s)
+        // • Nếu Fang còn sống → CD không đếm, không dùng được
         if (!_ultimateActivatedForPhase2) return false;
-        if (!_ultimateReadyAfterStun) return false;
+        if (_fireFangAlive || _iceFangAlive) return false;
         return _ultimateTimer >= ultimateCooldown;
     }
 
@@ -900,13 +1014,23 @@ public class WolfBossAI : NetworkBehaviour
         if (_state == BossState.NormalAttack)
             _normalAttackCount++;
 
+        bool wasDead = (_state == BossState.Dead);
         SetRootMotion(false);
         StopAllCoroutines(); // huỷ safety-timeout coroutine nếu AE fire trước
         _isAttacking = false;
         ResumeAgent();
-        _state = BossState.Chase;
+
+        if (!wasDead)
+            _state = BossState.Chase;
 
         Log("[WolfBossAI] Movement UNLOCKED (Animation Event) → Chase");
+
+        // Nếu Phase 2 Ultimate bị pending (boss đang tấn công khi enter phase 2), dùng ngay bây giờ
+        if (_phase2UltiPending && !wasDead)
+        {
+            Log("[WolfBossAI] Phase 2 Ultimate pending — triggering now!");
+            StartAttack(BossState.Ultimate);
+        }
     }
 
     /// <summary>Gọi khi HP thay đổi. Cập nhật networked HP + Fang buff.</summary>
@@ -922,8 +1046,6 @@ public class WolfBossAI : NetworkBehaviour
 
         // Gethit animation được điều khiển bởi Animator Controller (Stun state).
         // Không trigger gethit từ code nữa vì quái to không giật khi ăn đòn nhỏ.
-
-        TickFangDamageBuff();
     }
 
     /// <summary>Gọi khi Boss chết.</summary>
@@ -940,6 +1062,34 @@ public class WolfBossAI : NetworkBehaviour
 
         _fireFang?.ForceKill();
         _iceFang?.ForceKill();
+
+        // Reset toàn bộ Phase 2 state để Play Mode lần sau khởi đầu sạch
+        ResetPhase2State();
+    }
+
+    private void OnDisable()
+    {
+        // Đảm bảo Phase 2 được reset hoàn toàn khi thoát Play Mode hoặc disable GO
+        ResetPhase2State();
+    }
+
+    /// <summary>
+    /// Reset toàn bộ Phase 2 runtime state về giá trị ban đầu.
+    /// Gọi khi: boss chết, OnDisable, InitValues.
+    /// Đảm bảo mỗi lần vào Play Mode đều sạch rủi mới bắt đầu Phase.
+    /// </summary>
+    private void ResetPhase2State()
+    {
+        _phase2Entered              = false;
+        _phase2UltiPending          = false;
+        _ultimateActivatedForPhase2 = false;
+        _ultimateReadyAfterStun     = false;
+        _ultimateTimer              = 0f;
+        _fangDamageTimer            = 0f;
+        _fireFangAlive              = false;
+        _iceFangAlive               = false;
+        EndFangBuff(); // reset stats + flags
+        SetBossPhase(1);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════

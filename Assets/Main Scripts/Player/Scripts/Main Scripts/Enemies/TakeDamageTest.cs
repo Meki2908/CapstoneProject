@@ -734,6 +734,13 @@ public class TakeDamageTest : MonoBehaviour
     public bool EnableRaycastDamage { get => enableRaycastDamage; set => enableRaycastDamage = value; }
     public void DisableRaycastDamage() => enableRaycastDamage = false;
 
+    /// <summary>Hồi máu cho enemy (dùng cho lifesteal boss).</summary>
+    public void HealHealth(float amount)
+    {
+        if (!isAlive || amount <= 0f) return;
+        currentHealth = Mathf.Min(currentHealth + amount, maxHealth);
+    }
+
     #endregion
 
     // Try to play "Hit" animation on this enemy if Animator supports it.

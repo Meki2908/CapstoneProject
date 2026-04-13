@@ -6,24 +6,31 @@ public abstract class BaseEffectScript : MonoBehaviour
     [SerializeField] protected float damage = 10f;
     [SerializeField] protected bool debugMode = false;
 
-    private float baseDamage; // Store original damage value
+    private float baseDamage;
     private WeaponController weaponController;
     private EquipmentSystem equipmentSystem;
 
-    // Crit system
-    private const float BASE_CRIT_MULTIPLIER = 1.5f; // Default 1.5x crit multiplier
+    private const float BASE_CRIT_MULTIPLIER = 1.5f;
+
+    // ── Dedup per-frame ───────────────────────────────────────────────────────
+    // Vargr / boss có nhiều bone collider → OnParticleCollision / OnCollisionEnter
+    // có thể fire nhiều lần trong cùng 1 frame cho cùng 1 enemy.
+    // Dùng HashSet<int> (InstanceID của TakeDamageTest.gameObject) để chỉ
+    // apply damage + hiệu ứng đúng 1 lần mỗi frame.
+    private readonly System.Collections.Generic.HashSet<int> _hitThisFrame
+        = new System.Collections.Generic.HashSet<int>();
+    private int _lastResetFrame = -1;
+
+    // ─────────────────────────────────────────────────────────────────────────
 
     protected virtual void Awake()
     {
-        baseDamage = damage; // Store original damage
+        baseDamage = damage;
         weaponController = FindFirstObjectByType<WeaponController>();
-        
-        // Find EquipmentSystem for crit calculation
+
         equipmentSystem = GetComponentInParent<EquipmentSystem>();
         if (equipmentSystem == null)
-        {
             equipmentSystem = FindFirstObjectByType<EquipmentSystem>();
-        }
     }
 
     protected virtual void Start()
@@ -31,14 +38,11 @@ public abstract class BaseEffectScript : MonoBehaviour
         UpdateDamageWithGems();
     }
 
-    /// <summary>
-    /// Update damage based on equipped gems: damage = baseDamage + (baseDamage × %)
-    /// </summary>
     private void UpdateDamageWithGems()
     {
         if (WeaponGemManager.Instance == null || weaponController == null)
         {
-            damage = baseDamage; // No gems, use base damage
+            damage = baseDamage;
             return;
         }
 
@@ -49,113 +53,91 @@ public abstract class BaseEffectScript : MonoBehaviour
             return;
         }
 
-        // Get damage multiplier from gems (returns 1.0 + total %)
         float damageMultiplier = WeaponGemManager.Instance.GetDamageMultiplier(currentWeapon.weaponType);
-
-        // Calculate: baseDamage + (baseDamage × %)
-        // damageMultiplier = 1.0 + totalPercent, so we need to extract the percent part
-        float damagePercent = damageMultiplier - 1f; // Extract the % part (e.g., 1.15 -> 0.15)
+        float damagePercent = damageMultiplier - 1f;
         damage = baseDamage + (baseDamage * damagePercent);
 
         if (debugMode)
-        {
-            Debug.Log($"[{GetType().Name}] Updated damage: {baseDamage} -> {damage} (multiplier: {damageMultiplier:F2}, %: {damagePercent * 100f:F1}%)");
-        }
+            Debug.Log($"[{GetType().Name}] Updated damage: {baseDamage} -> {damage} (x{damageMultiplier:F2})");
     }
+
+    // ── Collision callbacks ───────────────────────────────────────────────────
 
     protected virtual void OnParticleCollision(GameObject other)
     {
-        if (other.TryGetComponent(out TakeDamageTest enemy))
-        {
-            // Update damage before applying (in case weapon changed)
-            UpdateDamageWithGems();
-
-            // Calculate crit
-            bool isCrit = false;
-            float finalDamage = damage;
-            WeaponType weaponType = WeaponType.None;
-
-            // Get weapon type
-            if (weaponController != null && weaponController.GetCurrentWeapon() != null)
-            {
-                weaponType = weaponController.GetCurrentWeapon().weaponType;
-            }
-
-            // Check for critical hit
-            if (EquipmentManager.Instance != null)
-            {
-                float critRate = EquipmentManager.Instance.GetTotalCritRateBonus();
-                float randomValue = Random.Range(0f, 1f);
-                isCrit = randomValue < critRate;
-
-                if (isCrit)
-                {
-                    // Base crit multiplier (1.5x) + equipment bonus
-                    float critDamageMultiplier = BASE_CRIT_MULTIPLIER;
-                    float equipmentCritBonus = EquipmentManager.Instance.GetTotalCritDamageMultiplier();
-                    // Equipment returns total multiplier (e.g., 1.5), so we need to extract the bonus part
-                    // If equipment gives 1.5x, and base is 1.5x, total should be 1.5 + (1.5 - 1.0) = 2.0x
-                    float equipmentBonus = equipmentCritBonus - 1f; // Extract bonus part (e.g., 1.5 -> 0.5)
-                    critDamageMultiplier = BASE_CRIT_MULTIPLIER + equipmentBonus;
-                    finalDamage *= critDamageMultiplier;
-                }
-            }
-
-            if (debugMode) Debug.Log($"[{GetType().Name}] Particle hit: {enemy.name} for {finalDamage} damage (crit: {isCrit})");
-
-            // Apply damage with weapon type and crit status
-            enemy.TakeSkillDamage(finalDamage * CheatPanel.DamageMultiplier, weaponType, isCrit);
-
-            // Apply specific effect
-            ApplyEffect(enemy);
-        }
+        // Tìm TakeDamageTest: trực tiếp → parent (bone-child của Vargr/boss)
+        TakeDamageTest enemy = other.GetComponent<TakeDamageTest>();
+        if (enemy == null) enemy = other.GetComponentInParent<TakeDamageTest>();
+        if (enemy != null) ProcessHit(enemy);
     }
 
     protected virtual void OnCollisionEnter(Collision collision)
     {
-        if (collision.gameObject.TryGetComponent(out TakeDamageTest enemy))
+        // Tương tự — leo lên parent nếu hit bone-child
+        TakeDamageTest enemy = collision.collider.GetComponent<TakeDamageTest>();
+        if (enemy == null) enemy = collision.collider.GetComponentInParent<TakeDamageTest>();
+        if (enemy != null) ProcessHit(enemy);
+    }
+
+    // ── Core processing ───────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Áp dụng damage + effect lên enemy, với per-frame dedup để tránh
+    /// nhiều bone collider của boss kích hoạt nhiều lần trong 1 frame.
+    /// </summary>
+    private void ProcessHit(TakeDamageTest enemy)
+    {
+        // Reset bộ lọc khi bước sang frame mới
+        int frame = Time.frameCount;
+        if (frame != _lastResetFrame)
         {
-            // Update damage before applying (in case weapon changed)
-            UpdateDamageWithGems();
-
-            // Calculate crit
-            bool isCrit = false;
-            float finalDamage = damage;
-            WeaponType weaponType = WeaponType.None;
-
-            // Get weapon type
-            if (weaponController != null && weaponController.GetCurrentWeapon() != null)
-            {
-                weaponType = weaponController.GetCurrentWeapon().weaponType;
-            }
-
-            // Check for critical hit
-            if (EquipmentManager.Instance != null)
-            {
-                float critRate = EquipmentManager.Instance.GetTotalCritRateBonus();
-                float randomValue = Random.Range(0f, 1f);
-                isCrit = randomValue < critRate;
-
-                if (isCrit)
-                {
-                    // Base crit multiplier (1.5x) + equipment bonus
-                    float critDamageMultiplier = BASE_CRIT_MULTIPLIER;
-                    float equipmentCritBonus = EquipmentManager.Instance.GetTotalCritDamageMultiplier();
-                    // Equipment returns total multiplier (e.g., 1.5), so we need to extract the bonus part
-                    float equipmentBonus = equipmentCritBonus - 1f; // Extract bonus part (e.g., 1.5 -> 0.5)
-                    critDamageMultiplier = BASE_CRIT_MULTIPLIER + equipmentBonus;
-                    finalDamage *= critDamageMultiplier;
-                }
-            }
-
-            if (debugMode) Debug.Log($"[{GetType().Name}] Collision hit: {enemy.name} for {finalDamage} damage (crit: {isCrit})");
-
-            // Apply damage with weapon type and crit status
-            enemy.TakeSkillDamage(finalDamage * CheatPanel.DamageMultiplier, weaponType, isCrit);
-
-            // Apply specific effect
-            ApplyEffect(enemy);
+            _hitThisFrame.Clear();
+            _lastResetFrame = frame;
         }
+
+        // Dedup: chỉ xử lý mỗi enemy 1 lần mỗi frame
+        int id = enemy.gameObject.GetInstanceID();
+        if (_hitThisFrame.Contains(id)) return;
+        _hitThisFrame.Add(id);
+
+        // Cập nhật damage theo gem (vũ khí có thể đổi trong runtime)
+        UpdateDamageWithGems();
+
+        // Weapon type
+        WeaponType weaponType = WeaponType.None;
+        if (weaponController != null && weaponController.GetCurrentWeapon() != null)
+            weaponType = weaponController.GetCurrentWeapon().weaponType;
+
+        // Crit
+        bool isCrit = false;
+        float finalDamage = damage;
+        if (EquipmentManager.Instance != null)
+        {
+            float critRate = EquipmentManager.Instance.GetTotalCritRateBonus();
+            if (Random.Range(0f, 1f) < critRate)
+            {
+                isCrit = true;
+                float equipBonus = EquipmentManager.Instance.GetTotalCritDamageMultiplier() - 1f;
+                finalDamage *= BASE_CRIT_MULTIPLIER + equipBonus;
+            }
+        }
+
+        if (debugMode)
+            Debug.Log($"[{GetType().Name}] Hit {enemy.name} for {finalDamage:F1} (crit:{isCrit}, weapon:{weaponType})");
+
+        // Gửi skill damage (isSkill=true → boss nhận đúng, không bị block)
+        enemy.TakeSkillDamage(finalDamage * CheatPanel.DamageMultiplier, weaponType, isCrit);
+
+        // CC / hiệu ứng đặc biệt: KHÔNG áp lên boss
+        // (boss có EnemyScript.isBoss = true → immune CC, chỉ nhận damage)
+        var enemyScriptComp = enemy.GetComponent<EnemyScript>();
+        if (enemyScriptComp == null) enemyScriptComp = enemy.GetComponentInParent<EnemyScript>();
+        bool isBoss = enemyScriptComp != null && enemyScriptComp.isBoss;
+
+        if (!isBoss)
+            ApplyEffect(enemy);
+        else if (debugMode)
+            Debug.Log($"[{GetType().Name}] Boss detected — CC effect skipped, damage applied only.");
     }
 
     protected abstract void ApplyEffect(TakeDamageTest enemy);

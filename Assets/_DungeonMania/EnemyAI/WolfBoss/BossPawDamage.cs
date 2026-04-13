@@ -24,8 +24,23 @@ public class BossPawDamage : MonoBehaviour
     public bool showGizmos = true;
 
     // State
-    private bool _damageWindowOpen = false;
+    private bool  _damageWindowOpen = false;
     private float _lastDamageTime   = -99f;
+
+    // References — tự tìm khi Start
+    private WolfBossAI _bossAI;
+    private TakeDamageTest _bossHealth;
+
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private void Start()
+    {
+        _bossAI    = GetComponentInParent<WolfBossAI>();
+        _bossHealth = GetComponentInParent<TakeDamageTest>();
+
+        if (_bossAI == null)
+            _bossAI = FindFirstObjectByType<WolfBossAI>();
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     //  Animation Event API (gọi từ WolfBossAnimationEvents)
@@ -62,16 +77,31 @@ public class BossPawDamage : MonoBehaviour
         Collider[] hits = Physics.OverlapSphere(paw.position, pawRadius, playerLayerMask);
         foreach (var hit in hits)
         {
-            // Tìm PlayerHealth trực tiếp — không phụ thuộc vào Tag
+            // Tìm PlayerHealth — không phụ thuộc vào Tag
             var ph = hit.GetComponentInParent<PlayerHealth>();
             if (ph == null) ph = hit.GetComponent<PlayerHealth>();
             if (ph == null) continue;
 
-            ph.TakeDamage(damagePerHit, paw.position);
+            // Tính damage thực tế (bao gồm multiplier từ Phase 2 buff nếu có)
+            float actualDamage = (_bossAI != null)
+                ? damagePerHit * _bossAI.GetCurrentDamageMultiplier()
+                : damagePerHit;
+
+            ph.TakeDamage(actualDamage, paw.position);
+
+            // Lifesteal — hồi máu cho boss theo % damage gây ra
+            float lifeSteal = _bossAI != null ? _bossAI.GetLifeStealPercent() : 0f;
+            if (lifeSteal > 0f && _bossHealth != null)
+            {
+                float healAmount = actualDamage * lifeSteal;
+                _bossHealth.HealHealth(healAmount);
+            }
+
             _lastDamageTime = Time.time;
             _damageWindowOpen = false; // chỉ damage 1 lần mỗi window
 
-            Debug.Log($"[BossPawDamage] {paw.name} hit Player for {damagePerHit} dmg");
+            Debug.Log($"[BossPawDamage] {paw.name} hit Player for {actualDamage:F1} dmg" +
+                      (lifeSteal > 0f ? $" | healed {actualDamage * lifeSteal:F1}" : ""));
             return; // chỉ damage 1 player mỗi frame
         }
     }

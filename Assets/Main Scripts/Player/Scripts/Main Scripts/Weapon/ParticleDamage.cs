@@ -86,7 +86,13 @@ public class ProjectileDamage : MonoBehaviour
 
     private void OnCollisionEnter(Collision collision)
     {
-        if (collision.gameObject.TryGetComponent(out TakeDamageTest enemy))
+        if (collision.gameObject.TryGetComponent(out TakeDamageTest enemy) == false)
+        {
+            // Fallback: tìm trên parent (trường hợp Vargr/boss có bone-child collider)
+            enemy = collision.collider.GetComponentInParent<TakeDamageTest>();
+        }
+
+        if (enemy != null)
         {
             // Update damage before applying (in case weapon changed)
             UpdateDamageWithGems();
@@ -110,15 +116,21 @@ public class ProjectileDamage : MonoBehaviour
 
             if (debugMode) Debug.Log($"[ProjectileDamage] Collision hit: {enemy.name} for {finalDamage} damage (crit: {isCrit})");
             
-            // Pass weapon type (Mage) and crit status
-            enemy.TakeDamage(finalDamage, WeaponType.Mage, isCrit);
+            // isSkill=true để skill projectile damage boss đúng cách
+            enemy.TakeDamage(finalDamage, WeaponType.Mage, isCrit, true);
             PlayImpactSfxOnce();
         }
     }
 
     private void OnParticleCollision(GameObject other)
     {
-        if (other.TryGetComponent(out TakeDamageTest enemy))
+        if (other.TryGetComponent(out TakeDamageTest enemy) == false)
+        {
+            // Fallback: tìm trên parent (bone-child collider)
+            enemy = other.GetComponentInParent<TakeDamageTest>();
+        }
+
+        if (enemy != null)
         {
             // Update damage before applying (in case weapon changed)
             UpdateDamageWithGems();
@@ -142,8 +154,8 @@ public class ProjectileDamage : MonoBehaviour
 
             if (debugMode) Debug.Log($"[ProjectileDamage] Particle hit: {enemy.name} for {finalDamage} damage (crit: {isCrit})");
             
-            // Pass weapon type (Mage) and crit status
-            enemy.TakeDamage(finalDamage, WeaponType.Mage, isCrit);
+            // isSkill=true để skill projectile damage boss đúng cách
+            enemy.TakeDamage(finalDamage, WeaponType.Mage, isCrit, true);
             PlayImpactSfxOnce();
         }
     }
