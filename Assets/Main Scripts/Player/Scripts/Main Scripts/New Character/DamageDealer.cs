@@ -14,13 +14,15 @@ public class DamageDealer : MonoBehaviour
 
     bool canDealDamage;
     bool hasPlayedHitSfxInCurrentSwing;
-    List<GameObject> hasDealtDamage;
+    // Track theo root damageTarget (object có TakeDamageTest/IDamageable), KHÔNG phải hit-collider's GameObject
+    // => Tránh nhiều collider trên cùng 1 enemy (Vargr/boss có nhiều bone collider) gây double damage
+    HashSet<int> _hitRootIds;
 
     void Start()
     {
         canDealDamage = false;
         hasPlayedHitSfxInCurrentSwing = false;
-        hasDealtDamage = new List<GameObject>();
+        _hitRootIds = new HashSet<int>();
 
         if (hitAudioSource == null)
         {
@@ -41,15 +43,10 @@ public class DamageDealer : MonoBehaviour
                 targetLayer
             );
 
-            HashSet<GameObject> processed = new HashSet<GameObject>();
-
             foreach (var hit in hits)
             {
                 if (hit.transform == null) continue;
-                var go = hit.transform.gameObject;
-                if (processed.Contains(go) || hasDealtDamage.Contains(go)) continue;
                 ProcessHitTransform(hit.transform, hit.point);
-                processed.Add(go);
             }
 
             // Secondary detection: overlap capsule from base to top of weapon (covers vertical spikes)
@@ -59,11 +56,8 @@ public class DamageDealer : MonoBehaviour
             foreach (var col in overlaps)
             {
                 if (col == null || col.transform == null) continue;
-                var go = col.transform.gameObject;
-                if (processed.Contains(go) || hasDealtDamage.Contains(go)) continue;
                 Vector3 hitPoint = col.ClosestPoint(transform.position);
                 ProcessHitTransform(col.transform, hitPoint);
-                processed.Add(go);
             }
         }
     }
@@ -72,7 +66,7 @@ public class DamageDealer : MonoBehaviour
     {
         canDealDamage = true;
         hasPlayedHitSfxInCurrentSwing = false;
-        hasDealtDamage.Clear(); // reset list cho mỗi cú vung
+        _hitRootIds.Clear(); // reset mỗi cú vung
     }
 
     public void EndDealDamage()
@@ -95,17 +89,20 @@ public class DamageDealer : MonoBehaviour
     {
         if (targetTransform == null) return;
 
-        GameObject rootGo = targetTransform.gameObject;
-        if (debugDamage) Debug.Log($"[DamageDealer] Processing hit: target={rootGo.name}, layer={LayerMask.LayerToName(rootGo.layer)}, damage={weaponDamage:F2}");
+        if (debugDamage) Debug.Log($"[DamageDealer] Processing hit: target={targetTransform.name}, layer={LayerMask.LayerToName(targetTransform.gameObject.layer)}, damage={weaponDamage:F2}");
 
         // 1) IDamageable on self or parent
         var dmgable = targetTransform.GetComponentInParent<IDamageable>();
         if (dmgable != null)
         {
+            // Dùng root transform ID để de-duplicate (nhiều collider trên cùng một boss)
+            int rootId = dmgable.GetTransform().GetInstanceID();
+            if (_hitRootIds.Contains(rootId)) return;
+            _hitRootIds.Add(rootId);
+
             int intDamage = Mathf.RoundToInt(weaponDamage * CheatPanel.DamageMultiplier);
             if (debugDamage) Debug.Log($"[DamageDealer] Found IDamageable on {dmgable.GetTransform().name}, applying {intDamage} damage");
             dmgable.TakeDamage(intDamage, hitPoint);
-            hasDealtDamage.Add(rootGo);
             return;
         }
 
@@ -113,6 +110,10 @@ public class DamageDealer : MonoBehaviour
         var playerHealth = targetTransform.GetComponentInParent<PlayerHealth>();
         if (playerHealth != null)
         {
+            int rootId = playerHealth.gameObject.GetInstanceID();
+            if (_hitRootIds.Contains(rootId)) return;
+            _hitRootIds.Add(rootId);
+
             float finalDamage = weaponDamage;
             var wc = GetComponentInParent<WeaponController>();
             if (wc != null && wc.GetCurrentWeapon() != null && WeaponGemManager.Instance != null)
@@ -122,7 +123,6 @@ public class DamageDealer : MonoBehaviour
             }
             if (debugDamage) Debug.Log($"[DamageDealer] Hitting PlayerHealth on {playerHealth.gameObject.name} for {finalDamage:F2} at {hitPoint}");
             playerHealth.TakeDamage(finalDamage, hitPoint);
-            hasDealtDamage.Add(rootGo);
             return;
         }
 
@@ -130,6 +130,11 @@ public class DamageDealer : MonoBehaviour
         var enemy = targetTransform.GetComponentInParent<TakeDamageTest>();
         if (enemy != null)
         {
+            // De-duplicate: nhiều collider trên cùng 1 boss (Vargr) chỉ gây 1 lần damage
+            int rootId = enemy.gameObject.GetInstanceID();
+            if (_hitRootIds.Contains(rootId)) return;
+            _hitRootIds.Add(rootId);
+
             float finalDamage = weaponDamage;
             var wc = GetComponentInParent<WeaponController>();
             if (wc != null && wc.GetCurrentWeapon() != null && WeaponGemManager.Instance != null)
@@ -160,10 +165,9 @@ public class DamageDealer : MonoBehaviour
             var wc2 = GetComponentInParent<WeaponController>();
             if (wc2 != null && wc2.GetCurrentWeapon() != null) currentWeaponType = wc2.GetCurrentWeapon().weaponType;
 
-            finalDamage *= CheatPanel.DamageMultiplier;
+            // NOTE: CheatPanel.DamageMultiplier đã nhân 1 lần ở trên, bỏ lần nhân thừa
             enemy.TakeDamage(finalDamage, currentWeaponType, isCrit);
             TryPlayWeaponHitSfx(currentWeaponType);
-            hasDealtDamage.Add(rootGo);
             if (isCrit) Debug.Log($"[DamageDealer] Critical hit! Damage: {finalDamage} (multiplier: {critDamageMultiplier:F2}x)");
         }
     }

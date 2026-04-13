@@ -512,7 +512,7 @@ BoxCollider:
     m_Bits: 0
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 8192
   m_LayerOverridePriority: 0
   m_IsTrigger: 1
   m_ProvidesContacts: 0
@@ -632,7 +632,7 @@ BoxCollider:
     m_Bits: 0
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 8192
   m_LayerOverridePriority: 0
   m_IsTrigger: 1
   m_ProvidesContacts: 0
@@ -713,7 +713,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2179052734456102306}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Fang red spawn point
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1607,16 +1607,16 @@ CapsuleCollider:
     m_Bits: 0
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 8192
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.78
+  m_Radius: 1.23
   m_Height: 3.4
   m_Direction: 0
-  m_Center: {x: -1.08, y: 0.07, z: 0}
+  m_Center: {x: -1.08, y: 0.53, z: 0}
 --- !u!1 &4561423103761884422
 GameObject:
   m_ObjectHideFlags: 0
@@ -2077,7 +2077,7 @@ BoxCollider:
     m_Bits: 0
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 8192
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
@@ -2227,7 +2227,7 @@ BoxCollider:
     m_Bits: 0
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 8192
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
@@ -2341,7 +2341,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1037708239492318425}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Fang blue spawn point
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2587,7 +2587,7 @@ MonoBehaviour:
   damagePerHit: 1
   damageInterval: 2
   enableRaycastDamage: 0
-  maxHealth: 100
+  maxHealth: 2090
   currentHealth: 0
   isAlive: 1
   useHealthBar: 0
@@ -2714,7 +2714,8 @@ GameObject:
   - component: {fileID: 4346278853822507434}
   - component: {fileID: 3459811297384479368}
   - component: {fileID: 5246823247095522152}
-  m_Layer: 0
+  - component: {fileID: 5691949920170487815}
+  m_Layer: 6
   m_Name: Vargr
   m_TagString: Boss
   m_Icon: {fileID: 0}
@@ -2783,8 +2784,8 @@ MonoBehaviour:
   normalAttackCountForSpecial: 5
   specialAttackCooldown: 10
   ultimateCooldown: 60
-  stunDuration: 5
-  fangDamageTickInterval: 20
+  stunDuration: 15
+  fangDamageTickInterval: 150
   rootMotionOnNormalAttack: 1
   rootMotionOnSpecialAttack: 1
   rootMotionOnUltimate: 0
@@ -2800,6 +2801,71 @@ MonoBehaviour:
   _IsStunning:
     _value: 0
   _DamageMultiplier: 0
+--- !u!114 &5691949920170487815
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9004115136587860382}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cb4db324eaba44a4392129d1b3cd6f19, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  hit: 0
+  attack: 0
+  delay: 0
+  wait: 0
+  alive: 0
+  enemyName: Enemy
+  attackDamage: 150
+  armorValue: 50
+  magicValue: 45
+  critChance: 20
+  accuracy: 100
+  goldReward: 10000
+  scoreReward: 100
+  attackDistanceOverride: 1.5
+  moveSpeed: 3.5
+  rotationSpeed: 8
+  minRangedDistance: 0
+  skillWarningDuration: 1.2
+  isBoss: 1
+  enemyType: 0
+  specificEnemyType: 0
+  boss: 0
+  bow: []
+  skill: []
+  bowScript: []
+  skillScript: {fileID: 0}
+  skillVfxPrefab: {fileID: 0}
+  skillVfxRadius: 3
+  skillIsDirectional: 0
+  skillAngle: 90
+  skillDistance: 8
+  skillCooldown: 8
+  skillDamageMultiplier: 2
+  skillRepeatCount: 1
+  skillRepeatDelay: 1
+  spawnVfxPrefab: {fileID: 0}
+  spawnVfxDuration: 2
+  lastSkillTime: -999
+  skillOnCooldown: 0
+  bossMultiSkill: {fileID: 0}
+  randomEnemyScript: {fileID: 0}
+  playerManager: {fileID: 0}
+  enemyManager: {fileID: 0}
+  enemyState: {fileID: 0}
+  enemyAttack: {fileID: 0}
+  enemyDamage: {fileID: 0}
+  audioManager: {fileID: 0}
+  heroInformation: {fileID: 0}
+  animator: {fileID: 0}
+  navMeshAgent: {fileID: 0}
+  target: {fileID: 0}
+  attackDistance: 0
+  cont: 0
 --- !u!1 &9096805639363886164
 GameObject:
   m_ObjectHideFlags: 0
