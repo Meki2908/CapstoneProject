@@ -29,6 +29,10 @@ public class WolfBossAI : NetworkBehaviour
     [Tooltip("Spawn point Ice Fang (Transform trên prefab Root).")]
     [SerializeField] private Transform iceFangSpawn;
 
+    [Header("=== Phase 2 Visuals ===")]
+    [Tooltip("Danh sách GameObjects (Eye Trails, Aura Smoke) được bật khi vào Phase 2.")]
+    [SerializeField] private GameObject[] phase2Visuals;
+
     [Header("=== Combat ===")]
     [SerializeField] private float attackRange       = 7f;
     [SerializeField] private float detectRange       = 20f;
@@ -633,6 +637,15 @@ public class WolfBossAI : NetworkBehaviour
         SetBossPhase(2);
         _phase2UltiPending = true; // Queue ultimate để dùng ngay khi có dịp
         Log("[WolfBossAI] *** PHASE 2 ENTERED ***");
+
+        // Bật các hiệu ứng hình ảnh phase 2 (Eye Trails, Aura Smoke...)
+        if (phase2Visuals != null)
+        {
+            foreach (var go in phase2Visuals)
+            {
+                if (go != null) go.SetActive(true);
+            }
+        }
 
         // Nếu boss đang rảnh (đang Chase hoặc Idle và không tấn công) thì dùng ngay
         if (!_isAttacking && _state != BossState.Stun && _state != BossState.Dead)

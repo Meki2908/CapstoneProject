@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 8397313357629546138}
   - component: {fileID: 5125775692637076843}
   - component: {fileID: 234525313476919163}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Body
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -121,7 +121,8 @@ GameObject:
   - component: {fileID: 4668231457379568240}
   - component: {fileID: 7164717673923508218}
   - component: {fileID: 4645110593259055049}
-  m_Layer: 0
+  - component: {fileID: 7046759839535389300}
+  m_Layer: 6
   m_Name: Wolf fang flame
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -215,3 +216,23 @@ MonoBehaviour:
   NestedObjects: []
   NetworkedBehaviours: []
   ForceRemoteRenderTimeframe: 0
+--- !u!114 &7046759839535389300
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2381685393608395277}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 913838921f1be7741be37aca55a7bc6b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  bossFang: {fileID: 0}
+  vfxEvents: {fileID: 0}
+  attackInterval: 5
+  intervalRandomness: 0.5
+  detectionRadius: 7
+  playerLayer:
+    serializedVersion: 2
+    m_Bits: 256

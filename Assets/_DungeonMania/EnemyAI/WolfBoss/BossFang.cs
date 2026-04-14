@@ -33,50 +33,115 @@ public class BossFang : NetworkBehaviour
 
     private TakeDamageTest _health;
 
+    // Local alive flag — dùng khi Fusion không active (standalone mode)
+    private bool _localAlive = false;
+
     // ── Lifecycle ─────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Start(): xử lý standalone mode — khi không có Fusion session,
+    /// Spawned() không bao giờ được gọi, nên ta subscribe health events ở đây.
+    /// </summary>
+    private void Start()
+    {
+        bool hasFusion = Runner != null && Object != null && Object.IsValid;
+        if (!hasFusion)
+        {
+            // Standalone mode: Fusion không active
+            _localAlive = true;
+            SubscribeHealth();
+            Debug.Log($"[BossFang] {fangType} — Standalone mode, subscribed health events via Start().");
+        }
+    }
 
     public override void Spawned()
     {
         IsFangAlive = true;
+        _localAlive  = true;
+        SubscribeHealth();
+        Debug.Log($"[BossFang] {fangType} Spawned (Fusion).");
+    }
 
-        // Subscribe vào sự kiện chết từ TakeDamageTest
+    public override void Despawned(NetworkRunner runner, bool hasState)
+    {
+        UnsubscribeHealth();
+    }
+
+    private void OnDestroy()
+    {
+        // Đảm bảo unsubscribe trong mọi trường hợp (standalone Destroy)
+        UnsubscribeHealth();
+    }
+
+    // ── Health subscription helpers ───────────────────────────────────────────
+
+    private void SubscribeHealth()
+    {
         _health = GetComponent<TakeDamageTest>();
         if (_health == null) _health = GetComponentInChildren<TakeDamageTest>();
 
         if (_health != null)
+        {
+            _health.OnEnemyDied -= OnFangKilled; // tránh double-subscribe
             _health.OnEnemyDied += OnFangKilled;
+        }
+        else
+        {
+            Debug.LogWarning($"[BossFang] {fangType}: TakeDamageTest không tìm thấy! " +
+                             "Fang sẽ không báo death về Boss.");
+        }
     }
 
-    public override void Despawned(NetworkRunner runner, bool hasState)
+    private void UnsubscribeHealth()
     {
         if (_health != null)
             _health.OnEnemyDied -= OnFangKilled;
     }
 
     /// <summary>
-    /// Dành cho hệ thống Object Pooling — gọi khi Fang bị ẩn đi thay vì Despawn.
+    /// Object Pooling: fang bị SetActive(false) thay vì Destroy/Despawn.
     /// </summary>
     private void OnDisable()
     {
-        if (!IsFangAlive) return; // Đã thông báo rồi
+        bool alreadyDead = (Runner != null && Object != null && Object.IsValid)
+            ? !IsFangAlive
+            : !_localAlive;
 
-        // Nếu Fang bị tắt giữa chừng (pooling) → coi như chết
-        if (Runner != null && Object != null && Object.HasStateAuthority)
-            OnFangKilled();
+        if (alreadyDead) return; // Đã thông báo rồi, bỏ qua
+
+        // Fusion mode: chỉ authority mới xử lý
+        bool hasFusion = Runner != null && Object != null && Object.IsValid;
+        if (hasFusion && !Object.HasStateAuthority) return;
+
+        // Coi như chết khi bị pool
+        OnFangKilled();
     }
 
     // ── Logic ─────────────────────────────────────────────────────────────────
 
     private void OnFangKilled()
     {
-        if (!IsFangAlive) return; // Tránh gọi 2 lần
+        // Kiểm tra đã chết chưa (tránh gọi 2 lần)
+        bool hasFusion = Runner != null && Object != null && Object.IsValid;
+        if (hasFusion)
+        {
+            if (!IsFangAlive) return;
+            IsFangAlive  = false;
+        }
+        else
+        {
+            if (!_localAlive) return;
+        }
 
-        IsFangAlive = false;
+        _localAlive = false;
         Debug.Log($"[BossFang] {fangType} destroyed!");
 
         // Thông báo cho Boss
         if (bossRef != null)
             bossRef.OnFangDestroyed(this);
+
+        // Unsubscribe để tránh double-call
+        UnsubscribeHealth();
     }
 
     /// <summary>

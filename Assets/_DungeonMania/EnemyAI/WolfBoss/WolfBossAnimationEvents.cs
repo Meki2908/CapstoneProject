@@ -5,12 +5,14 @@ public class WolfBossAnimationEvents : MonoBehaviour
 {
     private WolfBossAI _bossAI;
     private BossPawDamage _pawDamage;
+    private WolfBossVFXEvents _vfxEvents;
 
     private void Awake()
     {
         // WolfBossAI nằm trên Root (parent của Wolfboss_A)
         _bossAI = GetComponentInParent<WolfBossAI>();
         _pawDamage = GetComponent<BossPawDamage>();
+        _vfxEvents = GetComponentInParent<WolfBossVFXEvents>();
 
         if (_bossAI == null)
             Debug.LogError("[WolfBossAnimationEvents] Không tìm thấy WolfBossAI trên parent! " +
@@ -62,4 +64,25 @@ public class WolfBossAnimationEvents : MonoBehaviour
     {
         _pawDamage?.EndPawDamage();
     }
+
+    /// <summary>
+    /// Frame sinh ra hình ảnh chém vào không khí (VFX).
+    /// Đặt ở một frame bất kì trong lúc quẹt (nhập int: 0 cho tay trái, 1 cho tay phải).
+    /// </summary>
+    public void SpawnClawVFX(int pawIndex)
+    {
+        _pawDamage?.SpawnClawVFX(pawIndex);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  New Pooled VFX Events (via WolfBossVFXEvents)
+
+    /// <summary>Spawn VFX cho kỹ năng Nổi Giận / Ultimate.</summary>
+    public void SpawnUltimateVFX() => _vfxEvents?.SpawnUltimateVFX();
+
+    /// <summary>Spawn VFX cho đòn Special Attack (sa).</summary>
+    public void SpawnSpecialVFX() => _vfxEvents?.SpawnSpecialVFX();
+
+    /// <summary>Spawn VFX cho Normal Attack (thường gán cùng frame với paw damage).</summary>
+    public void SpawnNormalAttackVFX(int pawIndex) => _vfxEvents?.SpawnNormalAttackVFX(pawIndex);
 }
