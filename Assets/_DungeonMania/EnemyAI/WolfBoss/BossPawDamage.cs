@@ -10,6 +10,10 @@ public class BossPawDamage : MonoBehaviour
     [Tooltip("Tag của Player object.")]
     public string playerTag = "Player";
 
+    [Header("=== VFX ===")]
+    [Tooltip("Prefab Claw Slash VFX sẽ được sinh ra (Instantiate) khi quẹt.")]
+    public GameObject clawSlashPrefab;
+
     [Header("=== Paw Raycast ===")]
     [Tooltip("Transform xương chi trước TRÁI (Bip01 L Hand hoặc Bip01 L Forearm).")]
     public Transform pawLeft;
@@ -55,6 +59,25 @@ public class BossPawDamage : MonoBehaviour
     public void EndPawDamage()
     {
         _damageWindowOpen = false;
+    }
+
+    /// <summary>
+    /// Gắn function này vào frame đoạn giữa đòn đánh để tạo VFX chém cào.
+    /// pawIndex: 0 = tay trái, 1 = tay phải.
+    /// </summary>
+    public void SpawnClawVFX(int pawIndex)
+    {
+        if (clawSlashPrefab == null) return;
+        
+        Transform pawTransform = (pawIndex == 0) ? pawLeft : pawRight;
+        if (pawTransform == null) return;
+
+        // Sinh ra VFX tại vị trí chân. 
+        // Lưu ý: Có thể cần điều chỉnh rotation tuỳ thuộc vào trục của Mesh
+        GameObject vfx = Instantiate(clawSlashPrefab, pawTransform.position, pawTransform.rotation);
+        
+        // Tự động huỷ sau 1.5s để dọn dẹp bộ nhớ (phòng trường hợp cấu hình thiếu Particle System Auto Destroy)
+        Destroy(vfx, 1.5f);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
