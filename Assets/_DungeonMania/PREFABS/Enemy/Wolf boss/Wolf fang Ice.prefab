@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 1714360293477180024}
   - component: {fileID: 8397313357629546138}
   - component: {fileID: 5125775692637076843}
-  - component: {fileID: 234525313476919163}
   m_Layer: 6
   m_Name: Body
   m_TagString: Untagged
@@ -87,28 +86,6 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &234525313476919163
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2375690207231768135}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 0
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 8683032972494583714, guid: 351a614b40d1bba4fb01645a4fe3de40, type: 3}
 --- !u!1 &2381685393608395277
 GameObject:
   m_ObjectHideFlags: 0
@@ -123,6 +100,8 @@ GameObject:
   - component: {fileID: 1836731058838245951}
   - component: {fileID: 937927314519684511}
   - component: {fileID: 8805717792749377489}
+  - component: {fileID: 2623856606052800252}
+  - component: {fileID: 5577039153434477760}
   m_Layer: 6
   m_Name: Wolf fang Ice
   m_TagString: Untagged
@@ -237,7 +216,8 @@ MonoBehaviour:
   ObjectInterest: 1
   Flags: 262145
   NestedObjects: []
-  NetworkedBehaviours: []
+  NetworkedBehaviours:
+  - {fileID: 2623856606052800252}
   ForceRemoteRenderTimeframe: 0
 --- !u!114 &8805717792749377489
 MonoBehaviour:
@@ -251,11 +231,68 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 913838921f1be7741be37aca55a7bc6b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  bossFang: {fileID: 0}
+  bossFang: {fileID: 2623856606052800252}
   vfxEvents: {fileID: 0}
   attackInterval: 5
   intervalRandomness: 0.5
+  combinedAttackCooldown: 30
   detectionRadius: 7
   playerLayer:
     serializedVersion: 2
     m_Bits: 256
+--- !u!114 &2623856606052800252
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2381685393608395277}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4a0e00683a11c4f45a3366b1a7645414, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  fangType: 1
+  deathVFXPrefab: {fileID: 178602, guid: bf0f46cd212baa94f86e2b21737a2d05, type: 3}
+  deathVFXDuration: 3
+  _IsFangAlive:
+    _value: 0
+  bossRef: {fileID: 0}
+--- !u!114 &5577039153434477760
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2381685393608395277}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 19c1d4ae4a02ff743952d6f5e7c17df8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  damageNumberPrefab: {fileID: 0}
+  hitEffect: {fileID: 0}
+  hitEffectLifetime: 1
+  showDebugInfo: 1
+  detectionRange: 8
+  detectionBufferZone: 2
+  detectionAngle: 120
+  playerLayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  obstacleLayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  enableDetection: 1
+  showDetectionGizmos: 1
+  raycastRange: 5
+  raycastBufferZone: 0.5
+  damagePerHit: 1
+  damageInterval: 2
+  enableRaycastDamage: 0
+  maxHealth: 1500
+  currentHealth: 0
+  isAlive: 1
+  useHealthBar: 0
+  bossName: 
+  healthBarColor: {r: 1, g: 0, b: 0, a: 1}

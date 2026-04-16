@@ -60,6 +60,14 @@ public class WolfBossAI : NetworkBehaviour
     [SerializeField] private float walkSpeed     = 3.5f;
     [SerializeField] private float runSpeed      = 6f;
 
+    [Header("=== Post-Attack Face Target ===")]
+    [Tooltip("Tốc độ xoay nhanh khi re-align về phía player sau mỗi đòn đánh.")]
+    [SerializeField] private float faceTargetRotationSpeed = 10f;
+    [Tooltip("Dot product tối thiểu để tính là \"đã xoay đúng hướng\" (0.98 ≈ ±11°, 0.95 ≈ ±18°).")]
+    [SerializeField] private float faceTargetDotThreshold  = 0.97f;
+    [Tooltip("Timeout tối đa (giây) chờ xoay — sau đó vẫn cho phép tấn công tiếp.")]
+    [SerializeField] private float faceTargetTimeout       = 1.5f;
+
     [Header("=== Debug ===")]
     [SerializeField] private bool showDebugLog = true;
 
@@ -80,8 +88,11 @@ public class WolfBossAI : NetworkBehaviour
     //  FSM
     // ═══════════════════════════════════════════════════════════════════════════
 
-    private enum BossState { Idle, Chase, NormalAttack, SpecialAttack, Ultimate, Stun, Dead }
+    private enum BossState { Idle, Chase, FaceTarget, NormalAttack, SpecialAttack, Ultimate, Stun, Dead }
     private BossState _state = BossState.Idle;
+
+    // Post-attack re-align timer (dùng trong FaceTarget state)
+    private float _faceTargetTimer = 0f;
 
     // ═══════════════════════════════════════════════════════════════════════════
     //  RUNTIME
@@ -263,6 +274,9 @@ public class WolfBossAI : NetworkBehaviour
         if (animator == null)
             animator = GetComponentInChildren<Animator>();
 
+        // ── Phase 2 Visuals: ẩn ngay từ đầu (Phase 1 không có visuals) ──
+        HidePhase2Visuals();
+
         // EnemyScript — đảm bảo isBoss = true để CC immunity và damage system
         _enemyScript = GetComponent<EnemyScript>();
         if (_enemyScript == null) _enemyScript = GetComponentInChildren<EnemyScript>();
@@ -347,8 +361,9 @@ public class WolfBossAI : NetworkBehaviour
 
         switch (_state)
         {
-            case BossState.Idle:  HandleIdleState();  break;
-            case BossState.Chase: HandleChaseState(); break;
+            case BossState.Idle:       HandleIdleState();       break;
+            case BossState.FaceTarget: HandleFaceTargetState(delta); break;
+            case BossState.Chase:      HandleChaseState();      break;
         }
     }
 
@@ -360,6 +375,37 @@ public class WolfBossAI : NetworkBehaviour
         if (_distToTarget <= detectRange)
         {
             Log("[WolfBossAI] Player detected → Chase");
+            ChangeState(BossState.Chase);
+        }
+    }
+
+    // ── FaceTarget (Post-attack re-align) ────────────────────────────────────
+
+    /// <summary>
+    /// Sau mỗi đòn đánh, boss xoay nhanh về phía player trước khi được phép tấn công tiếp.
+    /// Chuyển sang Chase khi dot >= faceTargetDotThreshold hoặc timeout.
+    /// </summary>
+    private void HandleFaceTargetState(float delta)
+    {
+        if (_target == null) { ChangeState(BossState.Chase); return; }
+
+        _faceTargetTimer -= delta;
+
+        // Xoay nhanh về phía player
+        SmoothRotateToTarget(faceTargetRotationSpeed);
+
+        // Kiểm tra đã quay đủ hướng chưa
+        Vector3 toTarget = (_target.position - transform.position);
+        toTarget.y = 0f;
+        bool facingOk = toTarget.sqrMagnitude < 0.001f
+            || Vector3.Dot(transform.forward, toTarget.normalized) >= faceTargetDotThreshold;
+
+        if (facingOk || _faceTargetTimer <= 0f)
+        {
+            if (!facingOk)
+                Log("[WolfBossAI] FaceTarget timeout — proceeding anyway.");
+            else
+                Log("[WolfBossAI] FaceTarget done — facing player.");
             ChangeState(BossState.Chase);
         }
     }
@@ -563,10 +609,9 @@ public class WolfBossAI : NetworkBehaviour
         TriggerAnimationOnAll("roar");
         yield return new WaitForSeconds(GetAnimationDuration("roar", 2f));
 
-        // Ultimate anim — AE sẽ gọi LockMovement/UnlockMovement
+        // Ultimate anim — AE sẽ gọi SpawnFangs() vào đúng frame triệu hồi
         TriggerAnimationOnAll("ulti");
-        SpawnFangs();
-        _fangDamageTimer = 0f;
+        // ❗ KHÔNG gọi SpawnFangs() ở đây nữa — mọi lần spawn được điều khiển bởi Animation Event.
 
         // Safety fallback cho ulti
         yield return new WaitForSeconds(GetAnimationDuration("ulti", 2.5f) + 0.5f);
@@ -638,19 +683,13 @@ public class WolfBossAI : NetworkBehaviour
         _phase2UltiPending = true; // Queue ultimate để dùng ngay khi có dịp
         Log("[WolfBossAI] *** PHASE 2 ENTERED ***");
 
-        // Bật các hiệu ứng hình ảnh phase 2 (Eye Trails, Aura Smoke...)
-        if (phase2Visuals != null)
-        {
-            foreach (var go in phase2Visuals)
-            {
-                if (go != null) go.SetActive(true);
-            }
-        }
+        // Phase 2 Visuals sẽ được bật bởi Animation Event trong clip roar/ulti.
+        // ❗ KHÔNG bật ngay ở đây nữa.
 
-        // Nếu boss đang rảnh (đang Chase hoặc Idle và không tấn công) thì dùng ngay
+        // Nếu boss đang rảnh (Chase/Idle/FaceTarget) thì dùng Ultimate ngay
         if (!_isAttacking && _state != BossState.Stun && _state != BossState.Dead)
             StartAttack(BossState.Ultimate);
-        // Nếu đang tấn công thì _phase2UltiPending sẽ được xử lý sau khi UnlockMovement()
+        // Nếu đang tấn công thì _phase2UltiPending sẽ được xử lý sau UnlockMovement()
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -686,7 +725,8 @@ public class WolfBossAI : NetworkBehaviour
         if (prefab == null) { Debug.LogWarning($"[WolfBossAI] {fangType} prefab null!"); return; }
 
         Vector3 pos = spawnPoint != null ? spawnPoint.position : transform.position + fallback;
-        var obj = Runner.Spawn(prefab, pos, Quaternion.identity, Object.InputAuthority);
+        Quaternion rot = spawnPoint != null ? spawnPoint.rotation : transform.rotation;
+        var obj = Runner.Spawn(prefab, pos, rot, Object.InputAuthority);
         if (obj == null) return;
 
         fangRef = obj.GetComponent<BossFang>();
@@ -699,7 +739,8 @@ public class WolfBossAI : NetworkBehaviour
         if (prefab == null) { Debug.LogWarning($"[WolfBossAI] {fangType} prefab null!"); return; }
 
         Vector3 pos = spawnPoint != null ? spawnPoint.position : transform.position + fallback;
-        var go = Instantiate(prefab.gameObject, pos, Quaternion.identity);
+        Quaternion rot = spawnPoint != null ? spawnPoint.rotation : transform.rotation;
+        var go = Instantiate(prefab.gameObject, pos, rot);
         fangRef = go.GetComponent<BossFang>();
         if (fangRef != null) { fangRef.bossRef = this; aliveFlag = true; }
     }
@@ -1014,6 +1055,44 @@ public class WolfBossAI : NetworkBehaviour
     }
 
     /// <summary>
+    /// Gọi bởi Animation Event tại frame triệu hồi Fang trong clip "ulti".
+    /// Thay thế cho việc gọi SpawnFangs() trực tiếp trong coroutine.
+    /// Guard: chỉ spawn khi đang trong state Ultimate để tránh fire nhầm.
+    /// </summary>
+    public void SpawnFangsFromAE()
+    {
+        if (_state != BossState.Ultimate)
+        {
+            Log("[WolfBossAI] SpawnFangsFromAE() bị bỏ qua — không phải Ultimate state.");
+            return;
+        }
+
+        SpawnFangs();
+        _fangDamageTimer = 0f;
+        Log("[WolfBossAI] SpawnFangsFromAE() — Fang spawned via Animation Event.");
+    }
+
+    /// <summary>
+    /// Gọi bởi Animation Event tại frame muốn Phase 2 Visuals xuất hiện
+    /// (Eye Trails, Aura Smoke, v.v.) trong clip roar hoặc ulti.
+    /// An toàn để gọi từ bất kỳ clip nào; tự guard bằng BossPhase >= 2.
+    /// </summary>
+    public void ShowPhase2VisualsFromAE()
+    {
+        if (GetBossPhase() < 2)
+        {
+            Log("[WolfBossAI] ShowPhase2VisualsFromAE() bị bỏ qua — chưa vào Phase 2.");
+            return;
+        }
+
+        if (phase2Visuals == null) return;
+        foreach (var go in phase2Visuals)
+            if (go != null) go.SetActive(true);
+
+        Log("[WolfBossAI] ShowPhase2VisualsFromAE() — Phase 2 Visuals activated via AE.");
+    }
+
+    /// <summary>
     /// Gọi bởi Animation Event (qua WolfBossAnimationEvents) tại frame CUỐI animation attack.
     /// Mở lại di chuyển và chuyển Boss về trạng thái Chase.
     /// </summary>
@@ -1034,15 +1113,23 @@ public class WolfBossAI : NetworkBehaviour
         ResumeAgent();
 
         if (!wasDead)
-            _state = BossState.Chase;
-
-        Log("[WolfBossAI] Movement UNLOCKED (Animation Event) → Chase");
-
-        // Nếu Phase 2 Ultimate bị pending (boss đang tấn công khi enter phase 2), dùng ngay bây giờ
-        if (_phase2UltiPending && !wasDead)
         {
-            Log("[WolfBossAI] Phase 2 Ultimate pending — triggering now!");
-            StartAttack(BossState.Ultimate);
+            // Nếu Phase 2 Ultimate đang pending → dùng ngay, không cần re-align
+            if (_phase2UltiPending)
+            {
+                Log("[WolfBossAI] Phase 2 Ultimate pending — triggering now (skip FaceTarget)!");
+                StartAttack(BossState.Ultimate);
+                return;
+            }
+
+            // Post-attack: vào FaceTarget để xoay hướng player trước khi đánh tiếp
+            _faceTargetTimer = faceTargetTimeout;
+            _state = BossState.FaceTarget;
+            Log("[WolfBossAI] Movement UNLOCKED → FaceTarget (re-aligning before next attack)");
+        }
+        else
+        {
+            Log("[WolfBossAI] Movement UNLOCKED (dead)");
         }
     }
 
@@ -1103,6 +1190,18 @@ public class WolfBossAI : NetworkBehaviour
         _iceFangAlive               = false;
         EndFangBuff(); // reset stats + flags
         SetBossPhase(1);
+        HidePhase2Visuals(); // Ẩn visuals khi reset về Phase 1
+    }
+
+    /// <summary>
+    /// Ẩn tất cả Phase 2 Visuals (Eye Trails, Aura Smoke, v.v.).
+    /// Gọi khi init (Phase 1) và khi reset.
+    /// </summary>
+    private void HidePhase2Visuals()
+    {
+        if (phase2Visuals == null) return;
+        foreach (var go in phase2Visuals)
+            if (go != null) go.SetActive(false);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -1114,7 +1213,7 @@ public class WolfBossAI : NetworkBehaviour
         if (_state == newState || _state == BossState.Dead) return;
         Log($"[WolfBossAI] {_state} → {newState}");
         _state = newState;
-        if (newState == BossState.Chase) ResumeAgent();
+        if (newState == BossState.Chase || newState == BossState.FaceTarget) ResumeAgent();
     }
 
     // ═══════════════════════════════════════════════════════════════════════════

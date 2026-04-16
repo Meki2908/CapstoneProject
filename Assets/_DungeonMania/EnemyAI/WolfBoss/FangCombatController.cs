@@ -1,18 +1,5 @@
 using UnityEngine;
 
-/// <summary>
-/// Quản lý combat tự động cho Fang (Wolf fang flame / Wolf fang Ice).
-/// Vì Fang không có animation, script này tự động đếm timer và kích hoạt VFX/Damage.
-///
-/// ═══ Logic ═══
-///   1. Tự động kiểm tra Player trong tầm mỗi frame.
-///   2. Cứ sau khoảng [attackInterval] giây, nếu có Player trong tầm -> kích hoạt đòn đánh.
-///   3. Ưu tiên đòn kết hợp: Nếu cả 2 Fang còn sống, đòn tấn công sẽ là Combined Attack
-///      (do Fire Fang điều phối để tránh trùng lặp VFX).
-///
-/// ═══ Setup ═══
-///   • Gắn script này lên ROOT của mỗi Fang prefab.
-/// </summary>
 public class FangCombatController : MonoBehaviour
 {
     // ── Inspector ─────────────────────────────────────────────────────────
@@ -25,11 +12,14 @@ public class FangCombatController : MonoBehaviour
     [SerializeField] private WolfBossVFXEvents vfxEvents;
 
     [Header("═══ Combat Settings ═══")]
-    [Tooltip("Khoảng thời gian giữa các đòn đánh (seconds).")]
+    [Tooltip("Khoảng thời gian giữa các đòn đánh cá nhân (seconds).")]
     [SerializeField] private float attackInterval = 5f;
 
     [Tooltip("Độ lệch ngẫu nhiên của timer (seconds) để tránh các đòn đánh quá đều nhau.")]
     [SerializeField] private float intervalRandomness = 0.5f;
+
+    [Tooltip("Cooldown dùng chung cho đòn kết hợp (seconds). Reset khi game bắt đầu.")]
+    [SerializeField] private float combinedAttackCooldown = 30f;
 
     [Tooltip("Tầm kiểm tra Player để kích hoạt đòn đánh.")]
     [SerializeField] private float detectionRadius = 6f;
@@ -42,47 +32,40 @@ public class FangCombatController : MonoBehaviour
     private float _nextAttackTime;
     private bool  _isInitialized = false;
 
+    // Cooldown dùng chung (static) giữa 2 Fang — đảm bảo chỉ 1 Combined mỗi 30s.
+    // Reset về 0 khi scene/play mode bắt đầu để lần Combined đầu tiên xảy ra sớm.
+    private static float _nextCombinedTime = 0f;
+
     // ── Lifecycle ─────────────────────────────────────────────────────────
 
     private void Start()
     {
-        // ── Tìm references ────────────────────────────────────────────────
-        if (bossFang == null)
-        {
-            bossFang = GetComponent<BossFang>();
-            if (bossFang == null) bossFang = GetComponentInParent<BossFang>();
-        }
+        TryInitialize();
+    }
 
-        if (vfxEvents == null)
-            vfxEvents = FindFirstObjectByType<WolfBossVFXEvents>();
-
-        if (vfxEvents == null || bossFang == null)
-        {
-            Debug.LogWarning($"[FangCombatController] Thiếu references trên {gameObject.name}! Script sẽ không chạy.");
-            return;
-        }
-
-        // ── Đăng ký với hệ thống manager ──────────────────────────────────
-        vfxEvents.RegisterFang(bossFang);
-        
-        // Setup timer lần đầu (tặng thêm một chút delay ngẫu nhiên lúc vừa xuất hiện)
-        _nextAttackTime = Time.time + Random.Range(1f, 3f);
-        _isInitialized = true;
+    private void OnEnable()
+    {
+        // Quan trọng cho pooling/Fusion reuse:
+        // object có thể bị disable/enable nhiều lần, nên cần đăng ký lại mỗi lần bật.
+        TryInitialize();
     }
 
     private void Update()
     {
-        if (!_isInitialized) return;
+        if (!_isInitialized)
+        {
+            // Retry nhẹ trong trường hợp Start/OnEnable chạy trước khi VFX manager xuất hiện.
+            TryInitialize();
+            return;
+        }
 
         // Chỉ xử lý khi đến thời điểm tấn công
         if (Time.time < _nextAttackTime) return;
 
-        // Phải có Player trong tầm mới thực hiện "vfx 1 lần"
+        // Phải có Player trong tầm mới thực hiện tấn công
+        // ExecuteAttack() tự gọi ResetAttackTimer() bên trong
         if (IsPlayerInRange())
-        {
             ExecuteAttack();
-            ResetAttackTimer();
-        }
     }
 
     private void OnDestroy()
@@ -95,6 +78,36 @@ public class FangCombatController : MonoBehaviour
     {
         if (bossFang != null && vfxEvents != null)
             vfxEvents.UnregisterFang(bossFang);
+        _isInitialized = false;
+    }
+
+    private void TryInitialize()
+    {
+        if (_isInitialized) return;
+
+        // ── Tìm references ────────────────────────────────────────────────
+        if (bossFang == null)
+        {
+            bossFang = GetComponent<BossFang>();
+            if (bossFang == null) bossFang = GetComponentInParent<BossFang>();
+        }
+
+        if (vfxEvents == null)
+            vfxEvents = FindFirstObjectByType<WolfBossVFXEvents>();
+
+        if (vfxEvents == null || bossFang == null)
+        {
+            return;
+        }
+
+        // Đăng ký lại mỗi lần được bật (an toàn vì RegisterFang chỉ set transform theo type).
+        vfxEvents.RegisterFang(bossFang);
+
+        // Setup timer lần đầu cho vòng sống hiện tại.
+        // Stagger nhẹ để Fire và Ice không bắn cùng lúc.
+        float stagger = bossFang.Type == BossFang.FangType.FireFang ? 0f : attackInterval * 0.5f;
+        _nextAttackTime = Time.time + Random.Range(1f, 3f) + stagger;
+        _isInitialized = true;
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -103,8 +116,15 @@ public class FangCombatController : MonoBehaviour
 
     private bool IsPlayerInRange()
     {
-        // Kiểm tra xem có bất kỳ object nào thuộc layer Player trong bán kính detectionRadius
-        return Physics.CheckSphere(transform.position, detectionRadius, playerLayer);
+        // Tầng 1: LayerMask check (nhanh, ưu tiên)
+        if (playerLayer.value != 0 &&
+            Physics.CheckSphere(transform.position, detectionRadius, playerLayer))
+            return true;
+
+        // Tầng 2: Fallback tìm bằng tag "Player" (đảm bảo không miss do layer set sai)
+        var playerGO = GameObject.FindGameObjectWithTag("Player");
+        if (playerGO == null) return false;
+        return Vector3.Distance(transform.position, playerGO.transform.position) <= detectionRadius;
     }
 
     private void ResetAttackTimer()
@@ -118,46 +138,86 @@ public class FangCombatController : MonoBehaviour
     {
         if (vfxEvents == null || bossFang == null) return;
 
-        // ── KIỂM TRA ĐÒN KẾT HỢP (COMBINED ATTACK) ───────────────────────
-        // Nếu cả 2 nanh còn sống, ta gộp lại thành 1 đòn mạnh (Combined).
-        // Để tránh việc cả 2 cùng gọi Combined VFX trùng nhau, ta quy tắc:
-        // CHỈ Fire Fang mới được gọi lệnh Combined.
-        if (vfxEvents.BothFangsAlive())
+        bool combinedReady = Time.time >= _nextCombinedTime;
+        bool bothAlive     = vfxEvents.BothFangsAlive();
+
+        // ── ƯU TIÊN 1: ĐÒN KẾT HỢP (COMBINED ATTACK) — mỗi 30s ───────────
+        // Chỉ kích hoạt khi CD đã hồi VÀ cả 2 nanh còn sống.
+        // Nếu CD hồi nhưng thiếu 1 nanh → KHÔNG consume CD, chờ cơ hội sau.
+        if (combinedReady && bothAlive)
         {
             if (bossFang.Type == BossFang.FangType.FireFang)
             {
-                // Solo Master: Fire Fang gọi đòn kết hợp
+                // FireFang là master — trigger combined & consume CD dùng chung.
+                _nextCombinedTime = Time.time + combinedAttackCooldown;
                 vfxEvents.SpawnCombinedFangVFX();
-                Debug.Log("[FangCombatController] Cả 2 nanh còn sống → Execute COMBINED Attack (Fire Fang master).");
-                return;
+                Debug.Log($"[FangCombatController] CD hồi → COMBINED Attack! CD tiếp theo sau {combinedAttackCooldown}s.");
             }
             else
             {
-                // Ice Fang: Nếu Fire Fang còn sống, Ice Fang sẽ không tự bắn solo (để chừa chỗ cho Combined)
-                // Nó chỉ đơn giản là Reset timer để chờ đợt sau.
-                Debug.Log("[FangCombatController] Ice Fang nhường Fire Fang gọi đòn kết hợp.");
-                return;
+                // IceFang nhường — FireFang sẽ tự trigger khi đến turn của nó.
+                Debug.Log("[FangCombatController] IceFang nhường — chờ FireFang trigger Combined.");
             }
+            ResetAttackTimer();
+            return;
         }
 
-        // ── ĐÒN ĐÁNH ĐƠN LẺ (AUTO ATTACK) ────────────────────────────────
-        // Chạy khi chỉ còn 1 nanh duy nhất trên sân.
+        // ── ƯU TIÊN 2: ĐÒN ĐƠN LẺ (SOLO ATTACK) ─────────────────────────
+        // Mỗi Fang dùng skill của riêng mình khi CD kết hợp chưa hồi,
+        // hoặc khi chỉ còn 1 nanh sống.
         if (bossFang.Type == BossFang.FangType.FireFang)
+        {
             vfxEvents.SpawnFireFangAutoVFX();
+            Debug.Log("[FangCombatController] FireFang solo attack.");
+        }
         else
+        {
             vfxEvents.SpawnIceFangAutoVFX();
-            
-        Debug.Log($"[FangCombatController] Tấn công đơn lẻ: {bossFang.Type}.");
+            Debug.Log("[FangCombatController] IceFang solo attack.");
+        }
+
+        ResetAttackTimer();
     }
 
     // ═══════════════════════════════════════════════════════════════════════
     //  GIZMOS
     // ═══════════════════════════════════════════════════════════════════════
 
-    private void OnDrawGizmosSelected()
+    private void OnDrawGizmos()
     {
-        // Hiển thị tầm detection trong Scene View (màu vàng)
-        Gizmos.color = Color.yellow;
+        bool playerDetected = false;
+
+#if UNITY_EDITOR
+        if (Application.isPlaying)
+        {
+            // Tầng 1: CheckSphere theo layer
+            if (playerLayer.value != 0 &&
+                Physics.CheckSphere(transform.position, detectionRadius, playerLayer))
+                playerDetected = true;
+
+            // Tầng 2: Tag fallback
+            if (!playerDetected)
+            {
+                var playerGO = GameObject.FindGameObjectWithTag("Player");
+                if (playerGO != null &&
+                    Vector3.Distance(transform.position, playerGO.transform.position) <= detectionRadius)
+                    playerDetected = true;
+            }
+        }
+#endif
+
+        // Màu đỏ = Player trong tầm (sẽ tấn công)
+        // Màu vàng = ngoài tầm
+        Gizmos.color = playerDetected
+            ? new Color(1f, 0.1f, 0.1f, 0.6f)
+            : new Color(1f, 1f, 0f, 0.3f);
+
         Gizmos.DrawWireSphere(transform.position, detectionRadius);
+
+        // Vẽ thêm vòng solid nhỏ ở tâm để dễ thấy vị trí Fang
+        Gizmos.color = playerDetected
+            ? new Color(1f, 0.1f, 0.1f, 0.8f)
+            : new Color(1f, 1f, 0f, 0.8f);
+        Gizmos.DrawSphere(transform.position, 0.15f);
     }
 }
