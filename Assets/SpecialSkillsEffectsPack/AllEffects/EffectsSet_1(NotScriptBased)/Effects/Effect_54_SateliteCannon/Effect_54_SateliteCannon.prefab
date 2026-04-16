@@ -9837,7 +9837,7 @@ MonoBehaviour:
   damageMultiplier: 1
   hitEffectPrefab: {fileID: 0}
   hitEffectLifetime: 0.5
-  showDebugLog: 0
+  showDebugLog: 1
 --- !u!1 &3921831350928491704
 GameObject:
   m_ObjectHideFlags: 0
@@ -14761,6 +14761,7 @@ GameObject:
   - component: {fileID: 6252130925328517598}
   - component: {fileID: 6252130925328517596}
   - component: {fileID: 6252130925328517597}
+  - component: {fileID: 4274268377106061485}
   m_Layer: 13
   m_Name: Effect_54_Particle
   m_TagString: Untagged
@@ -18436,9 +18437,9 @@ ParticleSystem:
         m_NumAlphaKeys: 2
     range: {x: 0, y: 1}
   CollisionModule:
-    enabled: 0
+    enabled: 1
     serializedVersion: 4
-    type: 0
+    type: 1
     collisionMode: 0
     colliderForce: 0
     multiplyColliderForceByParticleSize: 0
@@ -18615,11 +18616,11 @@ ParticleSystem:
     radiusScale: 1
     collidesWith:
       serializedVersion: 2
-      m_Bits: 4294967295
+      m_Bits: 256
     maxCollisionShapes: 256
     quality: 0
     voxelSize: 0.5
-    collisionMessages: 0
+    collisionMessages: 1
     collidesWithDynamic: 1
     interiorCollisions: 0
   TriggerModule:
@@ -19662,6 +19663,28 @@ ParticleSystemRenderer:
   m_MeshWeighting2: 1
   m_MeshWeighting3: 1
   m_MaskInteraction: 0
+--- !u!114 &4274268377106061485
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6252130925328517595}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 318b89ed0247f20469822fd88ebc4dce, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  targetLayer:
+    serializedVersion: 2
+    m_Bits: 0
+  damagePerHit: 45
+  damageCooldown: 0.4
+  damageOncePerActivation: 1
+  damageMultiplier: 1
+  hitEffectPrefab: {fileID: 0}
+  hitEffectLifetime: 0.5
+  showDebugLog: 0
 --- !u!1 &6252130925861768005
 GameObject:
   m_ObjectHideFlags: 0

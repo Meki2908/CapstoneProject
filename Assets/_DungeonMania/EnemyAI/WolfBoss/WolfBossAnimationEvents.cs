@@ -85,4 +85,20 @@ public class WolfBossAnimationEvents : MonoBehaviour
 
     /// <summary>Spawn VFX cho Normal Attack (thường gán cùng frame với paw damage).</summary>
     public void SpawnNormalAttackVFX(int pawIndex) => _vfxEvents?.SpawnNormalAttackVFX(pawIndex);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Fang Spawning (via WolfBossAI)
+
+    /// <summary>
+    /// Triệu hồi 2 Fang tại frame chỉ định trong clip "ulti".
+    /// Đặt Animation Event vào đúng frame xuất hiện của Fang trong animation.
+    /// </summary>
+    public void SpawnFangs() => _bossAI?.SpawnFangsFromAE();
+
+    /// <summary>
+    /// Bật Phase 2 Visuals (Eye Trails, Aura Smoke, v.v.) tại frame chỉ định.
+    /// Thường đặt trong clip "roar" tại đỉnh của động tác gầm thét,
+    /// hoặc đầu clip "ulti" trước khi Fang xuất hiện.
+    /// </summary>
+    public void ShowPhase2Visuals() => _bossAI?.ShowPhase2VisualsFromAE();
 }

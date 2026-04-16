@@ -1,14 +1,6 @@
 using UnityEngine;
 using Fusion;
 
-/// <summary>
-/// Gắn lên Wolf Fang prefab (Fire Fang và Ice Fang).
-/// Khi Fang bị phá hủy hoặc SetActive(false) (Object Pooling),
-/// script sẽ báo về WolfBossAI để kiểm tra điều kiện Stun.
-///
-/// Setup: Gắn script này lên "Wolf fang flame.prefab" và "Wolf fang Ice.prefab".
-/// Gán tham chiếu WolfBossAI qua code (được set khi Boss spawn Fang).
-/// </summary>
 public class BossFang : NetworkBehaviour
 {
     // ── Loại Nanh ────────────────────────────────────────────────────────────
@@ -17,6 +9,12 @@ public class BossFang : NetworkBehaviour
 
     [Header("Fang Settings")]
     [SerializeField] private FangType fangType = FangType.FireFang;
+
+    [Header("Death VFX")]
+    [Tooltip("Prefab VFX hiện ra khi Fang bị tiêu diệt. Để trống nếu không cần.")]
+    [SerializeField] private GameObject deathVFXPrefab;
+    [Tooltip("Thời gian (giây) trước khi tự huỷ VFX. 0 = không tự huỷ (prefab tự xử lý).")]
+    [SerializeField] private float deathVFXDuration = 3f;
 
     // ── Networked State ───────────────────────────────────────────────────────
 
@@ -136,12 +134,24 @@ public class BossFang : NetworkBehaviour
         _localAlive = false;
         Debug.Log($"[BossFang] {fangType} destroyed!");
 
+        // Spawn Death VFX tại vị trí Fang (trước khi GO bị pool/disable)
+        SpawnDeathVFX();
+
         // Thông báo cho Boss
         if (bossRef != null)
             bossRef.OnFangDestroyed(this);
 
         // Unsubscribe để tránh double-call
         UnsubscribeHealth();
+    }
+
+    private void SpawnDeathVFX()
+    {
+        if (deathVFXPrefab == null) return;
+
+        GameObject vfx = Instantiate(deathVFXPrefab, transform.position, Quaternion.identity);
+        if (deathVFXDuration > 0f)
+            Destroy(vfx, deathVFXDuration);
     }
 
     /// <summary>

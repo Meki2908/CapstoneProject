@@ -1,60 +1,52 @@
 using UnityEngine;
 
 /// <summary>
-/// Helper tự động trả VFX instance về WolfBossVFXEvents pool khi hiệu ứng kết thúc.
-/// Được gắn tự động bởi WolfBossVFXEvents.CreateInstance() — KHÔNG gắn tay.
+/// Tự động Destroy VFX instance khi hiệu ứng kết thúc.
 ///
-/// Điều kiện trả pool (whichever comes first):
+/// Điều kiện Destroy (whichever comes first):
 ///   1. Tất cả ParticleSystem con đã dừng (IsAlive = false)
 ///   2. Đã tồn tại quá maxLifetime giây kể từ khi được kích hoạt
 /// </summary>
 [DisallowMultipleComponent]
 public class PooledVFXReturn : MonoBehaviour
 {
-    // ── Được set bởi WolfBossVFXEvents.Init() ────────────────────────────
-    private GameObject        _prefabKey;    // Key tra cứu trong pool dictionary
-    private WolfBossVFXEvents _poolManager;  // Reference về pool manager
-    private float             _maxLifetime;  // Thời gian sống tối đa (safety)
-
-    // ── Runtime ──────────────────────────────────────────────────────────
-    private ParticleSystem[] _particles;     // Tất cả PS trên object và children
-    private float            _timer;         // Bộ đếm thời gian kể từ OnEnable
-
-    // ─────────────────────────────────────────────────────────────────────
+    private float            _maxLifetime = 6f;
+    private ParticleSystem[] _particles;
+    private float            _timer;
 
     /// <summary>
-    /// Khởi tạo các tham chiếu. Gọi ngay sau khi Instantiate bởi WolfBossVFXEvents.
+    /// Khởi tạo. Gọi ngay sau khi Instantiate bởi WolfBossVFXEvents nếu muốn tuỳ chỉnh lifetime.
+    /// Nếu không gọi Init(), lifetime mặc định 6s sẽ được dùng.
     /// </summary>
     public void Init(GameObject prefabKey, WolfBossVFXEvents poolManager, float maxLifetime = 6f)
     {
-        _prefabKey   = prefabKey;
-        _poolManager = poolManager;
+        // prefabKey và poolManager không còn dùng (đã bỏ pooling)
+        // Giữ signature để tránh compile error nếu có nơi khác gọi Init()
         _maxLifetime = maxLifetime;
-
-        // Cache tất cả ParticleSystem (bao gồm children) một lần
-        _particles = GetComponentsInChildren<ParticleSystem>(includeInactive: true);
+        _particles   = GetComponentsInChildren<ParticleSystem>(includeInactive: true);
     }
 
     private void OnEnable()
     {
-        _timer = 0f; // Reset bộ đếm mỗi lần object được kích hoạt từ pool
+        _particles = GetComponentsInChildren<ParticleSystem>(includeInactive: true);
+        _timer = 0f;
     }
 
     private void Update()
     {
         _timer += Time.deltaTime;
 
-        // Kiểm tra safety timeout trước
+        // Safety timeout
         if (_timer >= _maxLifetime)
         {
-            ReturnNow();
+            Destroy(gameObject);
             return;
         }
 
         // Chờ tất cả ParticleSystem dừng hoàn toàn
         if (_particles == null || _particles.Length == 0)
         {
-            ReturnNow(); // Không có PS → trả ngay
+            Destroy(gameObject);
             return;
         }
 
@@ -64,12 +56,7 @@ public class PooledVFXReturn : MonoBehaviour
                 return; // Còn particle đang sống → chờ tiếp
         }
 
-        // Tất cả đã dừng → trả về pool
-        ReturnNow();
-    }
-
-    private void ReturnNow()
-    {
-        _poolManager?.ReturnToPool(_prefabKey, gameObject);
+        // Tất cả đã dừng → Destroy
+        Destroy(gameObject);
     }
 }

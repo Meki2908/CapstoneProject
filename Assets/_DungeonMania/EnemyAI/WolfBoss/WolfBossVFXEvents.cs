@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -95,13 +94,10 @@ public class WolfBossVFXEvents : MonoBehaviour
     [Tooltip("Layer mask của Player để detect hit khi Fang attack.")]
     [SerializeField] private LayerMask playerLayer = ~0;
 
-    // ── Pool ───────────────────────────────────────────────────────────────
+    // ── Lifetime ───────────────────────────────────────────────────────────
 
-    [Header("=== Pool Settings ===")]
-    [Tooltip("Số instance khởi tạo trước (pre-warm) cho mỗi loại VFX.")]
-    [SerializeField] private int defaultPoolSize = 3;
-
-    [Tooltip("Thời gian tối đa một VFX instance được phép sống (seconds). Sau đó tự trả pool.")]
+    [Header("=== VFX Settings ===")]
+    [Tooltip("Thời gian tối đa một VFX instance được phép sống (seconds). Sau đó tự Destroy.")]
     [SerializeField] private float vfxMaxLifetime = 6f;
 
     // ── Debug ──────────────────────────────────────────────────────────────
@@ -112,13 +108,6 @@ public class WolfBossVFXEvents : MonoBehaviour
     // ═══════════════════════════════════════════════════════════════════════
     //  RUNTIME
     // ═══════════════════════════════════════════════════════════════════════
-
-    // Pool: key = prefab GameObject, value = queue của inactive instances
-    private readonly Dictionary<GameObject, Queue<GameObject>> _pool =
-        new Dictionary<GameObject, Queue<GameObject>>();
-
-    // Container Transform giữ pool objects cho gọn Hierarchy
-    private Transform _poolContainer;
 
     // Fang transforms — set qua RegisterFang / UnregisterFang
     private Transform _fireFangTransform;
@@ -135,27 +124,6 @@ public class WolfBossVFXEvents : MonoBehaviour
             bossAI = GetComponent<WolfBossAI>();
             if (bossAI == null) bossAI = GetComponentInParent<WolfBossAI>();
         }
-
-        // Tạo container cho pooled objects (ở root hierarchy, không bị affected bởi boss transform)
-        var containerGO = new GameObject("[WolfBoss VFX Pool]");
-        DontDestroyOnLoad(containerGO);   // optional: giữ qua scene nếu cần
-        _poolContainer = containerGO.transform;
-
-        // Pre-warm pool cho tất cả prefabs được gán
-        PrewarmPool(ultimateVFXPrefab);
-        PrewarmPool(specialVFXPrefab);
-        PrewarmPool(normalAttackLeftVFXPrefab);
-        PrewarmPool(normalAttackRightVFXPrefab);
-        PrewarmPool(fireFangAutoVFXPrefab);
-        PrewarmPool(iceFangAutoVFXPrefab);
-        PrewarmPool(combinedFangVFXPrefab);
-    }
-
-    private void OnDestroy()
-    {
-        // Dọn dẹp pool container khi boss bị destroy / scene unload
-        if (_poolContainer != null)
-            Destroy(_poolContainer.gameObject);
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -332,6 +300,8 @@ public class WolfBossVFXEvents : MonoBehaviour
 
     private void DealFangDamage(Vector3 center, float damage, float radius, string sourceName)
     {
+        // Tầng 1: OverlapSphere theo LayerMask (nhanh)
+        bool hit = false;
         Collider[] hits = Physics.OverlapSphere(center, radius, playerLayer);
         foreach (var col in hits)
         {
@@ -341,7 +311,25 @@ public class WolfBossVFXEvents : MonoBehaviour
 
             ph.TakeDamage(damage, center);
             Log($"[WolfBossVFXEvents] {sourceName} → {col.name} {damage} dmg");
+            hit = true;
             break; // Chỉ damage 1 player mỗi lần
+        }
+
+        // Tầng 2: Fallback tìm bằng tag "Player" nếu LayerMask miss
+        if (!hit)
+        {
+            var playerGO = GameObject.FindGameObjectWithTag("Player");
+            if (playerGO != null &&
+                Vector3.Distance(center, playerGO.transform.position) <= radius)
+            {
+                var ph = playerGO.GetComponentInChildren<PlayerHealth>();
+                if (ph == null) ph = playerGO.GetComponent<PlayerHealth>();
+                if (ph != null)
+                {
+                    ph.TakeDamage(damage, center);
+                    Log($"[WolfBossVFXEvents] {sourceName} → {playerGO.name} {damage} dmg (tag fallback)");
+                }
+            }
         }
     }
 
@@ -349,78 +337,18 @@ public class WolfBossVFXEvents : MonoBehaviour
     //  OBJECT POOL IMPLEMENTATION
     // ═══════════════════════════════════════════════════════════════════════
 
-    private void PrewarmPool(GameObject prefab)
-    {
-        if (prefab == null) return;
-        if (_pool.ContainsKey(prefab)) return; // đã warm rồi
-
-        var queue = new Queue<GameObject>(defaultPoolSize);
-        _pool[prefab] = queue;
-
-        for (int i = 0; i < defaultPoolSize; i++)
-        {
-            var inst = CreateInstance(prefab);
-            queue.Enqueue(inst);
-        }
-
-        Log($"[WolfBossVFXEvents] Pool pre-warmed: {prefab.name} ×{defaultPoolSize}");
-    }
-
-    private GameObject CreateInstance(GameObject prefab)
-    {
-        var inst = Instantiate(prefab, Vector3.zero, Quaternion.identity, _poolContainer);
-        inst.SetActive(false);
-
-        // Gắn PooledVFXReturn để tự trả về pool
-        var ret = inst.GetComponent<PooledVFXReturn>();
-        if (ret == null) ret = inst.AddComponent<PooledVFXReturn>();
-        ret.Init(prefab, this, vfxMaxLifetime);
-
-        return inst;
-    }
-
-    /// <summary>Lấy VFX từ pool (hoặc tạo mới nếu pool cạn) và kích hoạt tại vị trí đã cho.</summary>
+    /// <summary>Instantiate VFX và tự Destroy sau vfxMaxLifetime giây.</summary>
     private void SpawnVFX(GameObject prefab, Vector3 position, Quaternion rotation)
     {
-        if (prefab == null) return;
-
-        // Đảm bảo pool tồn tại
-        if (!_pool.TryGetValue(prefab, out var queue))
+        if (prefab == null)
         {
-            PrewarmPool(prefab);
-            _pool.TryGetValue(prefab, out queue);
+            Log($"[WolfBossVFXEvents] SpawnVFX — prefab null, bỏ qua.");
+            return;
         }
 
-        GameObject inst;
-        if (queue != null && queue.Count > 0)
-        {
-            inst = queue.Dequeue();
-        }
-        else
-        {
-            // Pool cạn — tạo thêm instance mới
-            Log($"[WolfBossVFXEvents] Pool cạn cho {prefab.name}, tạo thêm instance.");
-            inst = CreateInstance(prefab);
-        }
-
-        inst.transform.SetPositionAndRotation(position, rotation);
-        inst.transform.SetParent(null); // ra ngoài pool container khi đang dùng
-        inst.SetActive(true);
-    }
-
-    /// <summary>
-    /// Trả một VFX instance về pool sau khi hết hiệu ứng.
-    /// Được gọi bởi PooledVFXReturn.
-    /// </summary>
-    public void ReturnToPool(GameObject prefabKey, GameObject instance)
-    {
-        if (instance == null) return;
-
-        instance.SetActive(false);
-        instance.transform.SetParent(_poolContainer);
-
-        if (_pool.TryGetValue(prefabKey, out var queue))
-            queue.Enqueue(instance);
+        var inst = Instantiate(prefab, position, rotation);
+        Destroy(inst, vfxMaxLifetime);
+        Log($"[WolfBossVFXEvents] Spawned VFX: {prefab.name} tại {position}");
     }
 
     // ═══════════════════════════════════════════════════════════════════════
