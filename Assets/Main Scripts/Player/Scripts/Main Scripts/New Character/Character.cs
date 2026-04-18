@@ -534,23 +534,23 @@ public class Character : MonoBehaviour
         }
     }
 
-    public void AE_PlayFootstepSound() { if (Emitter != null) Emitter.AE_PlayFootstepSound(); }
-    public void AE_PlayFootstepSoundFromWeaponLayer() { if (Emitter != null) Emitter.AE_PlayFootstepSoundFromWeaponLayer(); }
+    public void AE_PlayFootstepSound() { if (Emitter != null) Emitter.AE_PlayFootstepSound(); else SoundManager.PlayFootstep(null, 1f); }
+    public void AE_PlayFootstepSoundFromWeaponLayer() { if (Emitter != null) Emitter.AE_PlayFootstepSoundFromWeaponLayer(); else if (isWeaponDrawn) SoundManager.PlayFootstep(null, 1f); }
     public void AE_PlayFootstepVFXLeft() { if (Emitter != null) Emitter.AE_PlayFootstepVFXLeft(); }
     public void AE_PlayFootstepVFXRight() { if (Emitter != null) Emitter.AE_PlayFootstepVFXRight(); }
-    public void AE_PlayJumpSound() { if (Emitter != null) Emitter.AE_PlayJumpSound(); }
-    public void AE_PlayLandSound() { if (Emitter != null) Emitter.AE_PlayLandSound(); }
-    public void AE_PlayDashSound() { if (Emitter != null) Emitter.AE_PlayDashSound(); }
-    public void AE_PlayCrouchMoveSound() { if (Emitter != null) Emitter.AE_PlayCrouchMoveSound(); }
-    public void AE_PlayGetHitSound() { if (Emitter != null) Emitter.AE_PlayGetHitSound(); }
-    public void AE_PlayDieSound() { if (Emitter != null) Emitter.AE_PlayDieSound(); }
-    public void AE_PlayDrawWeaponSound() { if (Emitter != null) Emitter.AE_PlayDrawWeaponSound(); }
-    public void AE_PlayDrawWeaponSoundSecond() { if (Emitter != null) Emitter.AE_PlayDrawWeaponSoundSecond(); }
-    public void AE_PlaySheathWeaponSound() { if (Emitter != null) Emitter.AE_PlaySheathWeaponSound(); }
-    public void AE_PlaySheathWeaponSoundSecond() { if (Emitter != null) Emitter.AE_PlaySheathWeaponSoundSecond(); }
-    public void AE_PlayBasicAttackSound(int comboIndex) { if (Emitter != null) Emitter.AE_PlayBasicAttackSound(comboIndex); }
-    public void AE_PlaySkillSound(int abilityInputIndex) { if (Emitter != null) Emitter.AE_PlaySkillSound(abilityInputIndex); }
-    public void AE_PlayMageProjectileHitSound() { if (Emitter != null) Emitter.AE_PlayMageProjectileHitSound(); }
+    public void AE_PlayJumpSound() { if (Emitter != null) Emitter.AE_PlayJumpSound(); else SoundManager.PlayJump(null, 1f); }
+    public void AE_PlayLandSound() { if (Emitter != null) Emitter.AE_PlayLandSound(); else SoundManager.PlayLand(null, 1f); }
+    public void AE_PlayDashSound() { if (Emitter != null) Emitter.AE_PlayDashSound(); else SoundManager.PlayDash(null, 1f); }
+    public void AE_PlayCrouchMoveSound() { if (Emitter != null) Emitter.AE_PlayCrouchMoveSound(); else SoundManager.PlayCrouchMove(null, 1f); }
+    public void AE_PlayGetHitSound() { if (Emitter != null) Emitter.AE_PlayGetHitSound(); else SoundManager.PlayGetHit(null, 1f); }
+    public void AE_PlayDieSound() { if (Emitter != null) Emitter.AE_PlayDieSound(); else SoundManager.PlayDie(null, 1f); }
+    public void AE_PlayDrawWeaponSound() { if (Emitter != null) Emitter.AE_PlayDrawWeaponSound(); else { var w = GetComponent<WeaponController>()?.GetCurrentWeapon()?.weaponType ?? WeaponType.Sword; SoundManager.PlayDrawWeapon(w, null, 1f); } }
+    public void AE_PlayDrawWeaponSoundSecond() { if (Emitter != null) Emitter.AE_PlayDrawWeaponSoundSecond(); else { var w = GetComponent<WeaponController>()?.GetCurrentWeapon()?.weaponType ?? WeaponType.Sword; SoundManager.PlayDrawWeapon(w, 1, null, 1f); } }
+    public void AE_PlaySheathWeaponSound() { if (Emitter != null) Emitter.AE_PlaySheathWeaponSound(); else { var w = GetComponent<WeaponController>()?.GetCurrentWeapon()?.weaponType ?? WeaponType.Sword; SoundManager.PlaySheathWeapon(w, null, 1f); } }
+    public void AE_PlaySheathWeaponSoundSecond() { if (Emitter != null) Emitter.AE_PlaySheathWeaponSoundSecond(); else { var w = GetComponent<WeaponController>()?.GetCurrentWeapon()?.weaponType ?? WeaponType.Sword; SoundManager.PlaySheathWeapon(w, 1, null, 1f); } }
+    public void AE_PlayBasicAttackSound(int comboIndex) { if (Emitter != null) Emitter.AE_PlayBasicAttackSound(comboIndex); else { var w = GetComponent<WeaponController>()?.GetCurrentWeapon()?.weaponType ?? WeaponType.Sword; SoundManager.PlayBasicAttack(w, comboIndex, null, 1f); } }
+    public void AE_PlaySkillSound(int abilityInputIndex) { if (Emitter != null) Emitter.AE_PlaySkillSound(abilityInputIndex); else { var w = GetComponent<WeaponController>()?.GetCurrentWeapon()?.weaponType ?? WeaponType.Sword; SoundManager.PlaySkill(w, (AbilityInput)abilityInputIndex, null, 1f); } }
+    public void AE_PlayMageProjectileHitSound() { if (Emitter != null) Emitter.AE_PlayMageProjectileHitSound(); else SoundManager.PlayMageProjectileHit(null, 1f); }
 
     /// <summary>
     /// Recursively set layer for GameObject and all its children
