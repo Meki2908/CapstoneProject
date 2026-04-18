@@ -73,9 +73,7 @@ public class ScenePortal : MonoBehaviour
                     coord.ResetDungeonPortalPanelsForEntry();
             }
             
-            // Hiển thị chuột để chọn
-            Cursor.visible = true;
-            Cursor.lockState = CursorLockMode.None;
+            // Cursor được xử lý bởi CursorUIPriority.BeginUiOverlay() ở trên
         }
         else
         {
