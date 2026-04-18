@@ -13,12 +13,16 @@ public class PortalUIController : MonoBehaviour
     public Transform portal2_Dest;
     public Transform portal3_Dest;
     public Transform portal4_Dest;
+    [Tooltip("World Boss destination — dành cho Vargr và các boss ngoài dungeon.")]
+    public Transform portal5_Dest;
 
     [Header("UI Buttons")]
     public Button btnPortal1;
     public Button btnPortal2;
     public Button btnPortal3;
     public Button btnPortal4;
+    [Tooltip("Nút World Boss (Vargr v.v.) trên trang Page_WorldBosses.")]
+    public Button btnPortal5;
     public Button btnClose;
 
     [Header("── Quest Advance (mỗi button có thể advance một quest riêng) ──")]
@@ -72,6 +76,7 @@ public class PortalUIController : MonoBehaviour
         if (btnPortal2 != null) btnPortal2.onClick.AddListener(() => TeleportTo(portal2_Dest, 2));
         if (btnPortal3 != null) btnPortal3.onClick.AddListener(() => TeleportTo(portal3_Dest, 3));
         if (btnPortal4 != null) btnPortal4.onClick.AddListener(() => TeleportTo(portal4_Dest, 4));
+        if (btnPortal5 != null) btnPortal5.onClick.AddListener(() => TeleportTo(portal5_Dest, 5));
         if (btnClose   != null) btnClose.onClick.AddListener(ClosePortalMenu);
     }
 
@@ -121,6 +126,29 @@ public class PortalUIController : MonoBehaviour
             CursorUIPriority.EndUiOverlay();
         SoundManager.PlayUICloseMenu();
     }
+
+    // ── Public portal wrappers cho Inspector / ngoài Button mặc định ────────────────
+    // Dùng cho các nút tele nằm ngoài btnPortal1-4 (ví dụ: Btn_Vargr trên trang World Bosses)
+    // Chạy đúng flow: OpenPortalMenu ưu tiên không cần, chỉ cần TeleportTo để giữ VFX + camera pan.
+
+    /// <summary>Teleport đến portal slot 1. Gọn vào OnClick Inspector.</summary>
+    public void TeleportToPortal1() => TeleportTo(portal1_Dest, 1);
+
+    /// <summary>Teleport đến portal slot 2. Gọn vào OnClick Inspector.</summary>
+    public void TeleportToPortal2() => TeleportTo(portal2_Dest, 2);
+
+    /// <summary>Teleport đến portal slot 3. Gọn vào OnClick Inspector.</summary>
+    public void TeleportToPortal3() => TeleportTo(portal3_Dest, 3);
+
+    /// <summary>Teleport đến portal slot 4 (Dungeon Địa Ngục). Gọn vào OnClick Inspector.</summary>
+    public void TeleportToPortal4() => TeleportTo(portal4_Dest, 4);
+
+    /// <summary>
+    /// Teleport đến portal slot 5 (World Boss — Vargr). Gọn vào OnClick Inspector của Btn_Vargr.
+    /// Chạy đúng flow: SFX start, camera pan, warp player, SFX arrive, spawn VFX.
+    /// Gán portal5_Dest = VargrSpawnPoint trong Inspector của Canvas_MapChinh.
+    /// </summary>
+    public void TeleportToPortal5() => TeleportTo(portal5_Dest, 5);
 
     private void TeleportTo(Transform destination, int portalIndex = 0)
     {

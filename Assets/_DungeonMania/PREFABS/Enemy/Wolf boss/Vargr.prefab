@@ -2690,6 +2690,9 @@ GameObject:
   - component: {fileID: 833589366893075365}
   - component: {fileID: 2186220652699282431}
   - component: {fileID: 2002438917274785353}
+  - component: {fileID: 3746549150939019621}
+  - component: {fileID: 2885895542898827920}
+  - component: {fileID: 6871356069432231394}
   m_Layer: 6
   m_Name: Wolfboss_A
   m_TagString: Enemy
@@ -2804,10 +2807,10 @@ MonoBehaviour:
   damagePerHit: 1
   damageInterval: 2
   enableRaycastDamage: 0
-  maxHealth: 5000
+  maxHealth: 30000
   currentHealth: 0
   isAlive: 1
-  useHealthBar: 0
+  useHealthBar: 1
   bossName: Vargr of the Dual Embers
   healthBarColor: {r: 1, g: 0, b: 0, a: 1}
 --- !u!114 &833589366893075365
@@ -2858,6 +2861,136 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 256
   showGizmos: 1
+--- !u!82 &3746549150939019621
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8765556585176640271}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 0}
+  m_PlayOnAwake: 0
+  m_Volume: 1
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+--- !u!114 &2885895542898827920
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8765556585176640271}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1d3f95fb1aa704c419657d32f50d3f3a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  soundsDB: {fileID: 11400000, guid: 802c940bffe72b94a9730a02735a3c0d, type: 2}
+  audioSource: {fileID: 3746549150939019621}
+  bossAI: {fileID: 5246823247095522152}
+  volumeScale: 1
+--- !u!114 &6871356069432231394
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8765556585176640271}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c9f2e8bf9769f642b6529136f3335af, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  healthBarPrefab: {fileID: 1571064345891557536, guid: a5260e07807631146b6d132c3917d6a1, type: 3}
+  smoothSpeed: 6
+  trailDelay: 0.5
+  trailSpeed: 2.5
+  flashDuration: 0.12
 --- !u!1 &8804357877916648024
 GameObject:
   m_ObjectHideFlags: 0
@@ -2994,6 +3127,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   animator: {fileID: 6958587597134917948}
   agent: {fileID: 7608152922368497709}
+  bossHealthScript: {fileID: 1834968789106887428}
+  bossDisplayName: Vargr of the Dual Embers
   fireFangPrefab: {fileID: 4645110593259055049, guid: 2e32cc5994a2f714198a25bdc084b06a, type: 3}
   iceFangPrefab: {fileID: 937927314519684511, guid: 5d38851a42ee1c64798a0ba8aa063955, type: 3}
   fireFangSpawn: {fileID: 2179052734456102306}
@@ -3118,7 +3253,7 @@ MonoBehaviour:
   specialVFXSpawnPoint: {fileID: 0}
   combinedFangVFXSpawnPoint: {fileID: 0}
   fireFangDamage: 120
-  iceFangDamage: 50
+  iceFangDamage: 30
   combinedFangDamage: 40
   fangAttackRadius: 3
   combinedFangAttackRadius: 5

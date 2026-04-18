@@ -16,6 +16,12 @@ public class BossFang : NetworkBehaviour
     [Tooltip("Thời gian (giây) trước khi tự huỷ VFX. 0 = không tự huỷ (prefab tự xử lý).")]
     [SerializeField] private float deathVFXDuration = 3f;
 
+    [Header("Death SFX")]
+    [Tooltip("SoundsSO asset chứa clip âm thanh của Fang. Gán cùng asset với WolfBossSFX.")]
+    [SerializeField] private SoundsSO soundsDB;
+    [Tooltip("Delay (giây) trước khi Destroy/Despawn thật — để SFX phát xong.\nNên đặt bằng hoặc lớn hơn độ dài clip.")]
+    [SerializeField] private float deathSFXDelay = 1f;
+
     // ── Networked State ───────────────────────────────────────────────────────
 
     [Networked] public NetworkBool IsFangAlive { get; set; }
@@ -34,7 +40,39 @@ public class BossFang : NetworkBehaviour
     // Local alive flag — dùng khi Fusion không active (standalone mode)
     private bool _localAlive = false;
 
+    // ── CC Immunity ───────────────────────────────────────────────────────────
+    // EnemyScript.isBoss = true → BaseEffectScript bỏ qua ApplyEffect()
+    // (hất tung, đẩy lùi, tornado... không tác dụng lên Fang)
+    private EnemyScript _enemyScript;
+
+    // ── AudioSource (luôn trên root prefab) ──────────────────────────────────
+    // Tìm trong Awake, KHÔNG tạo dynamic — phải có sẵn trên prefab.
+    private AudioSource _audioSource;
+
     // ── Lifecycle ─────────────────────────────────────────────────────────────
+
+    private void Awake()
+    {
+        // AudioSource phải có sẵn trên root prefab
+        _audioSource = GetComponent<AudioSource>();
+        if (_audioSource == null)
+            Debug.LogWarning($"[BossFang] {fangType} — Không tìm thấy AudioSource trên root! " +
+                             "Thêm AudioSource component vào prefab Fang.");
+
+        // CC Immunity: set isBoss=true để BaseEffectScript bỏ qua hất tung / đẩy lùi
+        _enemyScript = GetComponent<EnemyScript>();
+        if (_enemyScript == null) _enemyScript = GetComponentInChildren<EnemyScript>();
+        if (_enemyScript != null)
+        {
+            _enemyScript.isBoss = true;
+            Debug.Log($"[BossFang] {fangType} — isBoss=true set (CC immune).");
+        }
+        else
+        {
+            Debug.LogWarning($"[BossFang] {fangType} — EnemyScript không tìm thấy! " +
+                             "Fang sẽ KHÔNG immune CC. Thêm EnemyScript lên prefab Fang.");
+        }
+    }
 
     /// <summary>
     /// Start(): xử lý standalone mode — khi không có Fusion session,
@@ -45,7 +83,6 @@ public class BossFang : NetworkBehaviour
         bool hasFusion = Runner != null && Object != null && Object.IsValid;
         if (!hasFusion)
         {
-            // Standalone mode: Fusion không active
             _localAlive = true;
             SubscribeHealth();
             Debug.Log($"[BossFang] {fangType} — Standalone mode, subscribed health events via Start().");
@@ -67,7 +104,6 @@ public class BossFang : NetworkBehaviour
 
     private void OnDestroy()
     {
-        // Đảm bảo unsubscribe trong mọi trường hợp (standalone Destroy)
         UnsubscribeHealth();
     }
 
@@ -80,7 +116,7 @@ public class BossFang : NetworkBehaviour
 
         if (_health != null)
         {
-            _health.OnEnemyDied -= OnFangKilled; // tránh double-subscribe
+            _health.OnEnemyDied -= OnFangKilled;
             _health.OnEnemyDied += OnFangKilled;
         }
         else
@@ -105,13 +141,11 @@ public class BossFang : NetworkBehaviour
             ? !IsFangAlive
             : !_localAlive;
 
-        if (alreadyDead) return; // Đã thông báo rồi, bỏ qua
+        if (alreadyDead) return;
 
-        // Fusion mode: chỉ authority mới xử lý
         bool hasFusion = Runner != null && Object != null && Object.IsValid;
         if (hasFusion && !Object.HasStateAuthority) return;
 
-        // Coi như chết khi bị pool
         OnFangKilled();
     }
 
@@ -119,12 +153,11 @@ public class BossFang : NetworkBehaviour
 
     private void OnFangKilled()
     {
-        // Kiểm tra đã chết chưa (tránh gọi 2 lần)
         bool hasFusion = Runner != null && Object != null && Object.IsValid;
         if (hasFusion)
         {
             if (!IsFangAlive) return;
-            IsFangAlive  = false;
+            IsFangAlive = false;
         }
         else
         {
@@ -134,8 +167,9 @@ public class BossFang : NetworkBehaviour
         _localAlive = false;
         Debug.Log($"[BossFang] {fangType} destroyed!");
 
-        // Spawn Death VFX tại vị trí Fang (trước khi GO bị pool/disable)
+        // Spawn VFX + phát SFX ngay lập tức
         SpawnDeathVFX();
+        PlayDeathSFX();
 
         // Thông báo cho Boss
         if (bossRef != null)
@@ -143,7 +177,49 @@ public class BossFang : NetworkBehaviour
 
         // Unsubscribe để tránh double-call
         UnsubscribeHealth();
+
+        // Tắt visual & collider ngay — Fang "biến mất" với player
+        // Nhưng giữ GO sống thêm deathSFXDelay giây để AudioSource phát xong
+        DisableVisuals();
+
+        StartCoroutine(DelayedDestroy(hasFusion));
     }
+
+    /// <summary>
+    /// Tắt Renderer, Collider, ParticleSystem ngay khi die.
+    /// AudioSource vẫn giữ nguyên để SFX phát đủ thời gian.
+    /// </summary>
+    private void DisableVisuals()
+    {
+        foreach (var r in GetComponentsInChildren<Renderer>())
+            r.enabled = false;
+
+        foreach (var c in GetComponentsInChildren<Collider>())
+            c.enabled = false;
+
+        foreach (var ps in GetComponentsInChildren<ParticleSystem>())
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+    }
+
+    /// <summary>
+    /// Chờ deathSFXDelay giây rồi mới Despawn (Fusion) hoặc Destroy (standalone).
+    /// </summary>
+    private System.Collections.IEnumerator DelayedDestroy(bool hasFusion)
+    {
+        yield return new WaitForSeconds(deathSFXDelay);
+
+        if (hasFusion)
+        {
+            if (Runner != null && Object != null && Object.IsValid && Object.HasStateAuthority)
+                Runner.Despawn(Object);
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
+
+    // ── Audio / VFX ───────────────────────────────────────────────────────────
 
     private void SpawnDeathVFX()
     {
@@ -154,8 +230,27 @@ public class BossFang : NetworkBehaviour
             Destroy(vfx, deathVFXDuration);
     }
 
+    private void PlayDeathSFX()
+    {
+        if (_audioSource == null || soundsDB == null) return;
+        if (!soundsDB.vargrFangDie.IsValid()) return;
+
+        SoundList sfx = soundsDB.vargrFangDie;
+        AudioClip clip = sfx.GetRandomClip();
+        if (clip == null) return;
+
+        _audioSource.pitch = sfx.changePitch
+            ? Random.Range(sfx.pitchMin, sfx.pitchMax)
+            : 1f;
+
+        if (sfx.mixer != null)
+            _audioSource.outputAudioMixerGroup = sfx.mixer;
+
+        _audioSource.PlayOneShot(clip, sfx.volume);
+    }
+
     /// <summary>
-    /// Gọi công khai từ bên ngoài nếu cần force-kill Fang (vd: despawn scene).
+    /// Gọi công khai nếu cần force-kill Fang từ bên ngoài (vd: despawn scene).
     /// </summary>
     public void ForceKill()
     {

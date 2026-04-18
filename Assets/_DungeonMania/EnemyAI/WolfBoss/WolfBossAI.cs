@@ -16,6 +16,12 @@ public class WolfBossAI : NetworkBehaviour
     [Tooltip("NavMeshAgent — có thể là Root hoặc child. Tự tìm nếu để trống.")]
     [SerializeField] private NavMeshAgent agent;
 
+    [Header("=== Boss Health Bar ===")]
+    [Tooltip("TakeDamageTest của Vargr (root hoặc child). Tự tìm nếu để trống.")]
+    [SerializeField] private TakeDamageTest bossHealthScript;
+    [Tooltip("Tên hiển thị trên BossHealthBar.")]
+    [SerializeField] private string bossDisplayName = "Vargr";
+
     [Header("=== Fang Spawning ===")]
     [Tooltip("NetworkObject prefab Fire Fang (có NetworkObject + BossFang).")]
     [SerializeField] private NetworkObject fireFangPrefab;
@@ -114,8 +120,9 @@ public class WolfBossAI : NetworkBehaviour
     private bool  _iceFangAlive  = false;
     private float _fangDamageTimer = 0f;
 
-    private float _stunTimer   = 0f;
-    private bool  _isAttacking = false;
+    private float _stunTimer    = 0f;
+    private bool  _isAttacking  = false;
+    private bool  _bossBarShown = false; // Chỉ hiện thanh máu Boss một lần khi phát hiện player
 
     // Phase 2 entry flag — Đảm bảo Ultimate phase 2 luôn được dùng (ít nhất 1 lần mỗi phase)
     // _phase2UltiPending = true khi vừa enter phase 2, chờ dịp đưa Ultimate ra
@@ -293,7 +300,23 @@ public class WolfBossAI : NetworkBehaviour
                              "Add EnemyScript to Vargr root GO and set isBoss=true in Inspector.");
         }
 
-
+        // TakeDamageTest — dùng để cấp thông tin cho BossHealthBarUI
+        if (bossHealthScript == null)
+        {
+            bossHealthScript = GetComponent<TakeDamageTest>();
+            if (bossHealthScript == null) bossHealthScript = GetComponentInChildren<TakeDamageTest>();
+        }
+        if (bossHealthScript != null)
+        {
+            // Thiết lập thông tin Boss cho Health Bar
+            bossHealthScript.BossName    = bossDisplayName;
+            bossHealthScript.UseHealthBar = true;
+            Log($"[WolfBossAI] TakeDamageTest found — BossName='{bossDisplayName}', UseHealthBar=true.");
+        }
+        else
+        {
+            Debug.LogWarning("[WolfBossAI] TakeDamageTest không tìm thấy — BossHealthBar sẽ không hiển thị!");
+        }
         // NavMeshAgent — Root ưu tiên, sau đó mới tìm trong children
         if (agent == null)
         {
@@ -375,7 +398,29 @@ public class WolfBossAI : NetworkBehaviour
         if (_distToTarget <= detectRange)
         {
             Log("[WolfBossAI] Player detected → Chase");
+            ShowBossHealthBar();
             ChangeState(BossState.Chase);
+        }
+    }
+
+    /// <summary>
+    /// Hiển thị BossHealthBar (chỉ một lần) khi Boss lần đầu phát hiện player.
+    /// Tự lấy ref từ bossHealthScript (TakeDamageTest) đã được setup trong InitReferences().
+    /// </summary>
+    private void ShowBossHealthBar()
+    {
+        if (_bossBarShown || bossHealthScript == null) return;
+        _bossBarShown = true;
+
+        var ui = BossHealthBarUI.EnsureInstance();
+        if (ui != null)
+        {
+            ui.ShowBossHealth(bossHealthScript);
+            Log($"[WolfBossAI] BossHealthBar shown — '{bossDisplayName}' HP={bossHealthScript.MaxHealth}");
+        }
+        else
+        {
+            Debug.LogWarning("[WolfBossAI] BossHealthBarUI.EnsureInstance() trả về null — kiểm tra prefab Resources/BossHealthBar.");
         }
     }
 
@@ -754,12 +799,10 @@ public class WolfBossAI : NetworkBehaviour
 
         if (!_fireFangAlive && !_iceFangAlive)
         {
-            Log("[WolfBossAI] Both Fangs down → STUN + remove buff!");
-            // Tắt buff khi cả 2 Fang bị phá huỷ
+            Log("[WolfBossAI] Both Fangs down → GetHit → STUN + remove buff!");
             EndFangBuff();
-            TriggerStun();
-            // Bắt đầu đếm CD Ultimate từ đây (timer đã reset trong EndStun)
             _ultimateTimer = 0f;
+            StartCoroutine(StunAfterGetHit());
         }
     }
 
@@ -841,6 +884,31 @@ public class WolfBossAI : NetworkBehaviour
         SetIsStunning(true);
         SetAnimBoolIsStunning(true);
         Log($"[WolfBossAI] STUNNED for {stunDuration}s");
+    }
+
+    /// <summary>
+    /// Khi cả 2 Fang bị tiêu diệt:
+    ///   1. Fire trigger "gethit" → Animator: Locomotion → GetHit
+    ///   2. Chờ độ dài clip GetHit (hoặc fallback 1.2s nếu không detect được)
+    ///   3. Gọi TriggerStun() → Animator: GetHit → Stun (qua transition đã setup)
+    /// </summary>
+    private System.Collections.IEnumerator StunAfterGetHit()
+    {
+        // Bước 1: dừng tấn công, tự do huyện
+        _isAttacking = false;
+        StopAgent();
+
+        // Bước 2: fire trigger gethit → Locomotion → GetHit
+        TriggerAnimationOnAll("gethit");
+        Log("[WolfBossAI] Both Fangs down → gethit trigger fired.");
+
+        // Bước 3: chờ GetHit animation chạy xong
+        float getHitDuration = GetAnimationDuration("GetHit", 1.2f);
+        yield return new WaitForSeconds(getHitDuration);
+
+        // Bước 4: vào Stun thất sự
+        TriggerStun();
+        Log("[WolfBossAI] GetHit done → TriggerStun().");
     }
 
     private void EndStun()
@@ -1188,6 +1256,7 @@ public class WolfBossAI : NetworkBehaviour
         _fangDamageTimer            = 0f;
         _fireFangAlive              = false;
         _iceFangAlive               = false;
+        _bossBarShown               = false; // Reset để thanh máu xuất hiện lại nếu chạy lại
         EndFangBuff(); // reset stats + flags
         SetBossPhase(1);
         HidePhase2Visuals(); // Ẩn visuals khi reset về Phase 1

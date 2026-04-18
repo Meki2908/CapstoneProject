@@ -199,21 +199,31 @@ public class BossHealthBarUI : MonoBehaviour
             if (e.hpScript == hpScript) return;
         }
         
-        // Tìm tên boss
-        var es = hpScript.GetComponent<EnemyScript>();
-        if (es == null) es = hpScript.GetComponentInParent<EnemyScript>();
-        
-        string bossName = "";
-        if (es != null)
-        {
-            bossName = es.specificEnemyType.ToString();
-            if (!string.IsNullOrEmpty(es.enemyName) && es.enemyName != "Enemy")
-                bossName = es.enemyName;
-        }
+        // ưu tiên 1: BossName từ TakeDamageTest (tên đầy đủ, kể cả biệt danh)
+        string bossName = hpScript.BossName;
+
+        // ưu tiên 2 (fallback): lấy tên từ EnemyScript chỉ khi BossName để trống
         if (string.IsNullOrEmpty(bossName))
-            bossName = hpScript.BossName;
+        {
+            var es = hpScript.GetComponent<EnemyScript>();
+            if (es == null) es = hpScript.GetComponentInParent<EnemyScript>();
+            if (es != null)
+            {
+                // enemyName ưu tiên hơn specificEnemyType
+                if (!string.IsNullOrEmpty(es.enemyName) && es.enemyName != "Enemy")
+                    bossName = es.enemyName;
+                else
+                    bossName = es.specificEnemyType.ToString();
+            }
+        }
+
+        // ưu tiên 3 (fallback cuối): tên GameObject
         if (string.IsNullOrEmpty(bossName))
             bossName = hpScript.gameObject.name;
+
+        // Lấy EnemyScript cho entry (chỉ dùng để track HP, không dùng lấy tên)
+        var enemyScript = hpScript.GetComponent<EnemyScript>();
+        if (enemyScript == null) enemyScript = hpScript.GetComponentInParent<EnemyScript>();
         
         float maxHP = hpScript.MaxHealth;
         if (maxHP <= 0) maxHP = hpScript.CurrentHealth;
@@ -222,7 +232,7 @@ public class BossHealthBarUI : MonoBehaviour
         // Tạo entry từ prefab
         var entry = CreateBossEntry(bossName, activeBosses.Count);
         entry.hpScript = hpScript;
-        entry.enemyScript = es;
+        entry.enemyScript = enemyScript;
         entry.maxHP = maxHP;
         entry.lastHP = hpScript.CurrentHealth;
         entry.trailTarget = 1f;
