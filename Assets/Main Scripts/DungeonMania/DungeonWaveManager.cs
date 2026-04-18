@@ -307,6 +307,12 @@ public class DungeonWaveManager : MonoBehaviour
         // ĐẢM BẢO tất cả parent objects của UI đều active (GUI_Dungeon có thể bị tắt mặc định)
         EnsureUIParentsActive();
 
+        // XÓA CursorUiOverlayWhenActive khỏi các panel gameplay-only (wave notification,
+        // countdown, status, waveFrame, complete/failed). Các panel này KHÔNG cần hiện
+        // cursor — chúng chỉ hiển thị thông tin. Nếu để nguyên, ShowCountdown/ShowWaveNotification
+        // gọi SetActive(true) → OnEnable() → BeginUiOverlay() → cursor hiện → CN IAC bị tắt.
+        StripCursorOverlayFromGameplayPanels();
+
         // Đảm bảo ItemPickupNotification tồn tại cho item drops (Genshin-style notification)
         if (ItemPickupNotification.Instance == null)
         {
@@ -317,6 +323,12 @@ public class DungeonWaveManager : MonoBehaviour
 
         // Ẩn tất cả UI
         HideAllUI();
+
+        // Reset toàn bộ cursor priority stack — EnsureUIParentsActive() có thể đã
+        // kích hoạt OnEnable() của CursorUiOverlayWhenActive trên các parent objects,
+        // làm CursorUIPriority._depth bị dương. Vì HideAllUI() chỉ tắt các panel con
+        // (không tắt parent), stack cần được reset thủ công ở đây.
+        CursorUIPriority.EndAllUiOverlays();
 
         // Reset reward tracking cho dungeon mới
         if (DungeonRewardUI.Instance != null)
@@ -460,6 +472,45 @@ public class DungeonWaveManager : MonoBehaviour
                 waveNameText.color = Color.white;
             }
         }
+    }
+
+    /// <summary>
+    /// Xóa CursorUiOverlayWhenActive khỏi tất cả panel gameplay-only của dungeon wave.
+    /// Các panel này (wave notification, countdown, status, waveFrame) KHÔNG cần hiện cursor
+    /// — chúng chỉ là HUD thông tin, không phải interactive menu.
+    /// Mỗi lần SetActive(true) sẽ gọi OnEnable() → BeginUiOverlay() → cursor hiện
+    /// → CinemachineInputAxisController bị tắt. Stripping ngăn điều này.
+    /// LƯU Ý: dungeonCompleteUI/dungeonFailedUI ĐƯỢC GIỮ NGUYÊN vì chúng có buttons
+    /// tương tác và đã được quản lý bởi BeginUiOverlay() trực tiếp trong ShowDungeonComplete/Failed.
+    /// </summary>
+    private void StripCursorOverlayFromGameplayPanels()
+    {
+        GameObject[] gameplayOnlyPanels =
+        {
+            waveNotificationUI,
+            countdownUI,
+            waveFramePanel,
+            statusText    != null ? statusText.gameObject    : null,
+            waveNameText  != null ? waveNameText.gameObject  : null,
+            countdownText != null ? countdownText.gameObject : null,
+        };
+
+        int removed = 0;
+        foreach (var panel in gameplayOnlyPanels)
+        {
+            if (panel == null) continue;
+            var overlays = panel.GetComponentsInChildren<CursorUiOverlayWhenActive>(includeInactive: true);
+            foreach (var ov in overlays)
+            {
+                Destroy(ov);
+                removed++;
+            }
+        }
+
+        if (removed > 0)
+            Debug.Log($"[DungeonWave] Stripped {removed} CursorUiOverlayWhenActive từ gameplay-only panels.");
+        else
+            Debug.Log("[DungeonWave] StripCursorOverlayFromGameplayPanels: không tìm thấy overlay component (OK).");
     }
 
     /// <summary>
@@ -664,6 +715,9 @@ public class DungeonWaveManager : MonoBehaviour
                 Debug.Log("[DungeonWave] Pre-enter timeline đã kết thúc trước bước chờ — bỏ qua.");
             else
                 Debug.LogWarning("[DungeonWave] Pre-enter timeline không ở trạng thái Playing — kiểm tra PlayableDirector / Play On Awake. Bỏ qua chờ.");
+            // Force-enable camera dù timeline không chạy đúng
+            MovementSystem.CameraCursor.ApplyGameplayCursorAfterUiClosed();
+            CursorUIPriority.EndAllUiOverlays();
             yield break;
         }
 
@@ -688,6 +742,23 @@ public class DungeonWaveManager : MonoBehaviour
         }
 
         Debug.Log("[DungeonWave] Pre-enter timeline hoàn tất — bắt đầu thông báo wave / đếm ngược.");
+
+        // QUAN TRỌNG: Gỡ bỏ mọi kẹt state HUD/UI từ timeline.
+        // Timeline PreEnterDungeonCutsceneController tắt/bật lại canvas khiến
+        // _uiOverlayDepth và _hudVisibleCount bị tăng lên do onEnable,
+        // khiến IsGameplayCursorLocked = false -> Camera bị vô hiệu.
+        yield return null; // Chờ 1 frame để CinemachineBrain blend xong về PlayerCamera
+        MovementSystem.CameraCursor.ApplyGameplayCursorAfterUiClosed();
+        CursorUIPriority.EndAllUiOverlays();
+        
+        // --- BẠO LỰC XOÁ MỌI CẢN TRỞ CURSOR TỪ HUD KẸT TRONG TIMELINE ---
+        if (MouseLockManager.Instance != null)
+        {
+            MouseLockManager.Instance.ClearAllLocksAndForceGameplay();
+        }
+        
+        Debug.Log("[DungeonWave] Camera input force-enabled và UI locks cleared sau pre-enter timeline.");
+
     }
 
     /// <summary>
@@ -699,6 +770,9 @@ public class DungeonWaveManager : MonoBehaviour
         if (preEnterDungeonTimeline.state != PlayState.Playing) return;
         preEnterDungeonTimeline.time = preEnterDungeonTimeline.duration;
         preEnterDungeonTimeline.Stop();
+        // Force-enable camera ngay khi skip — không chờ coroutine yield (stopped event sẽ kích hoạt coroutine tiếp tục)
+        MovementSystem.CameraCursor.ApplyGameplayCursorAfterUiClosed();
+        CursorUIPriority.EndAllUiOverlays();
     }
 
     void CreatePreEnterSkipButtonIfNeeded()
@@ -2046,14 +2120,8 @@ public class DungeonWaveManager : MonoBehaviour
             provider.enabled = false;
         }
 
-        // Tắt CameraCursor để nó không re-enable camera khi nhấn ALT
-        var cameraCursors = FindObjectsByType<MovementSystem.CameraCursor>(FindObjectsSortMode.None);
-        foreach (var cc in cameraCursors)
-        {
-            cc.enabled = false;
-        }
-
         // KHÔNG tắt CinemachineBrain/CinemachineCamera → camera vẫn follow player
+        // KHÔNG tắt CameraCursor → để nó vẫn sync CinemachineInputAxisController theo MouseLockManager
         Debug.Log($"[DungeonWave] Camera ROTATION disabled (providers={providers.Length}) — camera vẫn follow player");
     }
 
@@ -2086,12 +2154,8 @@ public class DungeonWaveManager : MonoBehaviour
             provider.enabled = false;
         }
 
-        var cameraCursors = FindObjectsByType<MovementSystem.CameraCursor>(FindObjectsSortMode.None);
-        foreach (var cc in cameraCursors)
-        {
-            cc.enabled = false;
-        }
-
+        // KHÔNG tắt CameraCursor — để nó tiếp tục sync CinemachineInputAxisController theo trạng thái
+        // cursor của MouseLockManager. Camera đứng yên vì Brain/Camera/Providers đã bị tắt.
         Debug.Log("[DungeonWave] Camera FULLY disabled — camera đứng yên hoàn toàn");
     }
 
@@ -2114,9 +2178,8 @@ public class DungeonWaveManager : MonoBehaviour
             provider.ZAxis.action?.Enable();
         }
 
-        var cameraCursors = FindObjectsByType<MovementSystem.CameraCursor>(FindObjectsSortMode.None);
-        foreach (var cc in cameraCursors) cc.enabled = true;
-
+        // CameraCursor không bị tắt trong DisableCameraFull/Rotation nên không cần enable lại.
+        // Nó sẽ tự sync CinemachineInputAxisController khi MouseLockManager ẩn cursor.
         Debug.Log("[DungeonWave] Camera input ENABLED");
     }
 

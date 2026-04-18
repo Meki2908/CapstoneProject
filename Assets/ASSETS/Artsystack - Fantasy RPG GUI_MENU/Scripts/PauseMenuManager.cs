@@ -210,12 +210,8 @@ namespace Artsystack.ArtsystackGui
             // Tắt PlayerInput để UI buttons nhận được click
             SetPlayerInput(false);
 
-            if (cursorVisibleOnPause)
-            {
-                Cursor.visible = true;
-                Cursor.lockState = CursorLockMode.None;
-                GameCursorManager.TryApplyNormalCursorTextureFromScene();
-            }
+            // CursorUIPriority.BeginUiOverlay() abaixo já notifica o MouseLockManager
+            GameCursorManager.TryApplyNormalCursorTextureFromScene();
 
             // Đồng bộ với CameraCursor / UI — tránh trạng thái cursor/input lệch
             CursorUIPriority.BeginUiOverlay();
@@ -240,13 +236,7 @@ namespace Artsystack.ArtsystackGui
             RestoreParents();
 
             Time.timeScale = 1f;
-            if (MouseLockManager.Instance != null)
-                MouseLockManager.Instance.SetGameplayCursorLocked(true);
-            else
-            {
-                Cursor.visible = false;
-                Cursor.lockState = CursorLockMode.Locked;
-            }
+            // Cursor: CursorUIPriority.EndUiOverlay() bên dưới đã thông báo MouseLockManager
 
             // Bật lại PlayerInput khi resume
             SetPlayerInput(true);
@@ -335,9 +325,9 @@ namespace Artsystack.ArtsystackGui
 
         private void ExitToMainMenu()
         {
+            // Cursor: CursorUIPriority.EndAllUiOverlays() trong DungeonWaveManager.ReturnToMainMap() hoặc
+            // MouseLockManager.OnSceneLoaded() sẽ xử lý khi chuyển scene
             Time.timeScale = 1f;
-            Cursor.visible = true;
-            Cursor.lockState = CursorLockMode.None;
             GameCursorManager.TryApplyNormalCursorTextureFromScene();
             isPaused = false;
             HideAllPanels();

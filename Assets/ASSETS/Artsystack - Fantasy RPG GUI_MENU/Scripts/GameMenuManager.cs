@@ -74,9 +74,7 @@ namespace Artsystack.ArtsystackGui
             if (btn_Exit != null)
                 btn_Exit.onClick.AddListener(OnExitClicked);
 
-            // Cursor settings
-            Cursor.visible = true;
-            Cursor.lockState = CursorLockMode.None;
+            // Cursor: MouseLockManager tự hiện cursor trong menu scene (IsMenuScene = true)
         }
 
         private void HideAllPanels()
@@ -205,11 +203,7 @@ namespace Artsystack.ArtsystackGui
 
             isGameRunning = true;
             
-            if (!showCursorOnPlay)
-            {
-                Cursor.visible = false;
-                Cursor.lockState = CursorLockMode.Locked;
-            }
+            // Cursor: MouseLockManager.OnSceneLoaded() sẽ tự ẩn cursor khi vào gameplay scene
         }
 
         /// <summary>
@@ -229,9 +223,7 @@ namespace Artsystack.ArtsystackGui
                 panel_PopUpPause.SetActive(true);
 
             Time.timeScale = 0f;
-            
-            Cursor.visible = true;
-            Cursor.lockState = CursorLockMode.None;
+            CursorUIPriority.BeginUiOverlay(); // Thông báo MouseLockManager hiện cursor
         }
 
         /// <summary>
@@ -243,12 +235,7 @@ namespace Artsystack.ArtsystackGui
                 panel_PopUpPause.SetActive(false);
 
             Time.timeScale = 1f;
-            
-            if (!showCursorOnPlay)
-            {
-                Cursor.visible = false;
-                Cursor.lockState = CursorLockMode.Locked;
-            }
+            CursorUIPriority.EndUiOverlay(); // Thông báo MouseLockManager ẩn cursor (nếu không còn UI nào khác)
         }
 
         /// <summary>

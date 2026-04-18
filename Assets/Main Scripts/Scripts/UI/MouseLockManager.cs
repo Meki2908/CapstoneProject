@@ -170,7 +170,31 @@ public sealed class MouseLockManager : MonoBehaviour
         bool p2 = _isAltHeld;            // Giữ Alt
         bool p3 = _hudVisibleCount > 0;  // HUD canvas active
 
-        return p1 || p2 || p3;
+        if (p1 || p2 || p3)
+        {
+            // DIANGNOSTIC: In ra nguyên nhân hiển thị cursor (giới hạn tần suất để đỡ spam log)
+            if (Time.frameCount % 90 == 0)
+            {
+                Debug.Log($"[MouseLockManager] Cursors is visible because: UI_Overlay={_uiOverlayDepth}, Alt={_isAltHeld}, HUD={_hudVisibleCount}");
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Bạo lực reset tất cả các state đếm overlay/hud về 0.
+    /// Dùng cho các trường hợp Timeline/Transition bị kẹt state (HUD bật nhưng không tắt).
+    /// </summary>
+    public void ClearAllLocksAndForceGameplay()
+    {
+        _uiOverlayDepth = 0;
+        _isAltHeld = false;
+        _hudVisibleCount = 0;
+        IsGameplayCursorLocked = true;
+        ForceApplyCurrentState();
+        Debug.Log("[MouseLockManager] Đã dùng bạo lực CLEAR ALL LOCKS -> Ép về Gameplay!");
     }
 
     // ── Public Notification APIs ──────────────────────────────────────────

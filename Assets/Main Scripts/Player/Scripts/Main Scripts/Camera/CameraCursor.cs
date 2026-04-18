@@ -68,6 +68,8 @@ namespace MovementSystem
             SceneManager.sceneLoaded += OnSceneLoaded;
             GameSettings.OnSettingsChanged += ApplyCameraSpeedSettings;
             ResolveCinemachineInputs();
+            // Tắt SuppressInputWhileBlending ngay từ đầu (cả entries từ Inspector serialization)
+            DisableSuppressInputWhileBlendingOnControllers();
             RegisterAltCallbacks();
         }
 
@@ -133,7 +135,7 @@ namespace MovementSystem
             SetCinemachineInput(locked);
         }
 
-        // ── Update ───────────────────────────────────────────────────────
+        private int _debugLogFrame = 0;
 
         private void Update()
         {
@@ -144,6 +146,30 @@ namespace MovementSystem
                 bool shouldCameraBeActive = MouseLockManager.Instance.IsGameplayCursorLocked;
                 SyncCinemachineIfNeeded(shouldCameraBeActive);
             }
+
+            // === DEBUG: Log trạng thái mỗi 90 frame ===
+            #if UNITY_EDITOR
+            _debugLogFrame++;
+            if (_debugLogFrame >= 90)
+            {
+                _debugLogFrame = 0;
+                var mlm = MouseLockManager.Instance;
+                string ctrlStatus = "[]";
+                if (inputAxisControllers != null && inputAxisControllers.Length > 0)
+                {
+                    var sb = new System.Text.StringBuilder();
+                    for (int i = 0; i < inputAxisControllers.Length; i++)
+                    {
+                        var c = inputAxisControllers[i];
+                        sb.Append(c == null ? "[NULL]" : $"[{c.gameObject.name}:{c.enabled}]");
+                    }
+                    ctrlStatus = sb.ToString();
+                }
+                Debug.Log($"[CameraCursor] IsGameplayCursorLocked={mlm?.IsGameplayCursorLocked} | " +
+                    $"Cursor.visible={Cursor.visible} | _lastCinemachineEnabled={_lastCinemachineEnabled} | " +
+                    $"Controllers={ctrlStatus}");
+            }
+            #endif
 
             // Fallback legacy Alt input (khi InputAction không fire)
             // Chỉ dùng fallback nếu InputAction chưa được setup
@@ -157,6 +183,7 @@ namespace MovementSystem
                 catch { }
             }
         }
+
 
         // ── Alt Input Callbacks ──────────────────────────────────────────
 
@@ -207,12 +234,26 @@ namespace MovementSystem
         private bool _lastCinemachineEnabled = true;
 
         /// <summary>
-        /// Chỉ apply Cinemachine nếu trạng thái thay đổi (tránh spam SetCinemachine mỗi frame).
+        /// Sync Cinemachine với trạng thái cursor mới nhất.
+        /// Hướng disable: chỉ gọi khi state thay đổi (tránh spam).
+        /// Hướng enable: luôn apply để đảm bảo controller không bị tắt bởi nguồn ngoài (force-active).
         /// </summary>
         private void SyncCinemachineIfNeeded(bool enabled)
         {
-            if (enabled == _lastCinemachineEnabled) return;
-            SetCinemachineInput(enabled);
+            if (!enabled)
+            {
+                // Chỉ disable khi state thay đổi
+                if (_lastCinemachineEnabled)
+                    SetCinemachineInput(false);
+            }
+            else
+            {
+                // Luôn bảo đảm enabled — phát hiện controller bị tắt bởi nguồn khác và force-enable lại
+                if (!_lastCinemachineEnabled)
+                    SetCinemachineInput(true);
+                else
+                    ForceEnsureAxisControllersEnabled();
+            }
         }
 
         /// <summary>
@@ -306,10 +347,75 @@ namespace MovementSystem
             Debug.Log($"[CameraCursor] Camera speed setting: MouseSpeed={gs.cameraMouseSpeed:F2} (not yet applied)");
         }
 
+        /// <summary>
+        /// Force-enable tất cả CinemachineInputAxisController hiện tại nếu bị tắt bởi nguồn ngoài.
+        /// Được gọi mỗi frame trong gameplay để chống lại bất kỳ code nào vô tình tắt controller.
+        /// </summary>
+        private void ForceEnsureAxisControllersEnabled()
+        {
+            if (inputAxisControllers == null) return;
+            bool needRefresh = false;
+            for (int i = 0; i < inputAxisControllers.Length; i++)
+            {
+                if (inputAxisControllers[i] == null) { needRefresh = true; continue; }
+                if (!inputAxisControllers[i].enabled)
+                    inputAxisControllers[i].enabled = true;
+            }
+            // Nếu phát hiện null entry (scene mới load) → refresh array và enable ngay
+            if (needRefresh)
+            {
+                inputAxisControllers = FindObjectsByType<CinemachineInputAxisController>(FindObjectsSortMode.None);
+                DisableSuppressInputWhileBlendingOnControllers();
+                for (int i = 0; i < inputAxisControllers.Length; i++)
+                    if (inputAxisControllers[i] != null)
+                        inputAxisControllers[i].enabled = true;
+            }
+        }
+
+        /// <summary>
+        /// Tắt SuppressInputWhileBlending trên tất cả CinemachineInputAxisController.
+        ///
+        /// ROOT CAUSE FIX:
+        /// MouseLockManager dùng "soft cursor phase": IsGameplayCursorLocked=true
+        /// nhưng Cursor.visible=true (transparent cursor chờ click đầu tiên).
+        /// CinemachineInputAxisController.SuppressInputWhileBlending đọc Cursor.visible
+        /// TRỰC TIẾP (không qua MouseLockManager) → suppress input dù gameplay đang chạy.
+        ///
+        /// Bằng cách tắt SuppressInputWhileBlending, CinemachineInputAxisController
+        /// không tự quản lý enabled state nữa — CameraCursor là nguồn duy nhất
+        /// bật/tắt controller qua SetCinemachineInput() dựa trên IsGameplayCursorLocked.
+        /// </summary>
+        private void DisableSuppressInputWhileBlendingOnControllers()
+        {
+            if (inputAxisControllers == null) return;
+            for (int i = 0; i < inputAxisControllers.Length; i++)
+            {
+                if (inputAxisControllers[i] == null) continue;
+                if (inputAxisControllers[i].SuppressInputWhileBlending)
+                {
+                    inputAxisControllers[i].SuppressInputWhileBlending = false;
+                    Debug.Log($"[CameraCursor] SuppressInputWhileBlending disabled on '{inputAxisControllers[i].gameObject.name}' (soft-cursor compat fix).");
+                }
+            }
+        }
+
+
         private void ResolveCinemachineInputs()
         {
-            if (inputAxisControllers == null || inputAxisControllers.Length == 0)
+            // Refresh nếu array null, rỗng, HOẶC có entry bị destroy (scene cũ unload)
+            bool needRefresh = inputAxisControllers == null || inputAxisControllers.Length == 0;
+            if (!needRefresh)
+            {
+                for (int i = 0; i < inputAxisControllers.Length; i++)
+                {
+                    if (inputAxisControllers[i] == null) { needRefresh = true; break; }
+                }
+            }
+            if (needRefresh)
+            {
                 inputAxisControllers = FindObjectsByType<CinemachineInputAxisController>(FindObjectsSortMode.None);
+                DisableSuppressInputWhileBlendingOnControllers();
+            }
 
             if (_cachedPlayerInput == null)
                 _cachedPlayerInput = FindFirstObjectByType<PlayerInput>();
