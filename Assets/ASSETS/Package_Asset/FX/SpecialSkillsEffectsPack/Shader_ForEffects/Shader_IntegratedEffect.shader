@@ -19,6 +19,11 @@ Shader "GAPH Custom Shader/Shader_IntegradedEffect"
 						_TexPosMove("xPosMove", Range(-1,1)) = 0
 					[Toggle(IS_USE_ROTATE_UV)]_IsRotateAngle("Is Rotate Angle", int) = 0
 						_RotateAngle("RotateAngle", Range(-1,1)) = 0
+			[Header(Camera Fade)]
+				[Space]
+					[Toggle(IS_CAMERA_FADE)]_CameraFade("Is Camera Fade",int) = 0
+						_CameraFadeNear("Camera Fade Near Distance",float) = 0.5
+						_CameraFadeFar("Camera Fade Far Distance",float) = 2.0
 			[Header(Soft Particle)]
 				[Space]
 					[Toggle(IS_SOFT_PARTICLES)]_SoftParticle("Is Soft Particles",int) = 1
@@ -100,6 +105,7 @@ Shader "GAPH Custom Shader/Shader_IntegradedEffect"
 							#pragma multi_compile_fog
 							#pragma multi_compile_instancing
 
+							#pragma shader_feature IS_CAMERA_FADE
 							#pragma shader_feature IS_SOFT_PARTICLES
 							#pragma shader_feature IS_USE_SECOND_COLOR
 							#pragma shader_feature IS_NORMAL_DISTORTION
@@ -228,6 +234,11 @@ Shader "GAPH Custom Shader/Shader_IntegradedEffect"
 							UNITY_INSTANCING_BUFFER_END(data)
 
 							half _InvFade;
+
+							#ifdef IS_CAMERA_FADE
+								half _CameraFadeNear;
+								half _CameraFadeFar;
+							#endif
 							
 							struct appdata_t {
 								float4 vertex : POSITION;
@@ -263,7 +274,7 @@ Shader "GAPH Custom Shader/Shader_IntegradedEffect"
 								#ifdef IS_TEXTURE_NOISE
 									half2 noisetex : TEXCOORD6;
 								#endif
-								#ifdef SOFTPARTICLES_ON
+								#if defined(SOFTPARTICLES_ON) || defined(IS_SOFTPARTICLES) || defined(IS_CAMERA_FADE)
 									half4 projPos : TEXCOORD7;
 								#endif
 								UNITY_FOG_COORDS(8)
@@ -353,11 +364,9 @@ Shader "GAPH Custom Shader/Shader_IntegradedEffect"
 									o.noisetex = TRANSFORM_TEX(i.texcoord, _NoiseNormal);
 								#endif
 
-								#ifdef IS_SOFTPARTICLES
-									#ifdef SOFTPARTICLES_ON
+								#if defined(SOFTPARTICLES_ON) || defined(IS_SOFTPARTICLES) || defined(IS_CAMERA_FADE)
 										o.projPos = ComputeNonStereoScreenPos(o.vertex);
-										COMPUTE_EYEDEPTH(o.projPos.z);
-									#endif
+										o.projPos.z = -UnityObjectToViewPos(i.vertex).z;
 								#endif
 
 								#ifdef IS_RIMLIGHT
@@ -414,6 +423,12 @@ Shader "GAPH Custom Shader/Shader_IntegradedEffect"
 									half partZ = i.projPos.z;
 									half fade = saturate(_InvFade * (sceneZ - partZ));
 									i.color.a *= fade;
+								#endif
+
+								#ifdef IS_CAMERA_FADE
+									half camZ = i.projPos.z;
+									half camFade = saturate((camZ - _CameraFadeNear) / max(_CameraFadeFar - _CameraFadeNear, 0.0001));
+									i.color *= camFade;
 								#endif
 
 								#ifdef IS_TEXTURE_NOISE
