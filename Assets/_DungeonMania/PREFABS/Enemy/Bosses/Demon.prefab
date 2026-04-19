@@ -20,7 +20,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &3096276342714183741
 Transform:
   m_ObjectHideFlags: 0
@@ -298,6 +298,7 @@ GameObject:
   - component: {fileID: 83173672069684312}
   - component: {fileID: 3401461901825957466}
   - component: {fileID: 5598521706004051494}
+  - component: {fileID: 5198848746823153583}
   m_Layer: 0
   m_Name: Portal camera
   m_TagString: Untagged
@@ -432,6 +433,45 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   LookAtOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &5198848746823153583
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3446125516086027954}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dbe43d662878a7c43bcd44d43c9e2094, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  CollideAgainst:
+    serializedVersion: 2
+    m_Bits: 8
+  IgnoreTag: Boss
+  TransparentLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  MinimumDistanceFromTarget: 0.3
+  AvoidObstacles:
+    Enabled: 1
+    DistanceLimit: 0
+    MinimumOcclusionTime: 0
+    CameraRadius: 0.4
+    UseFollowTarget:
+      Enabled: 0
+      YOffset: 0
+    Strategy: 0
+    MaximumEffort: 4
+    SmoothingTime: 0
+    Damping: 0.4
+    DampingWhenOccluded: 0.2
+  ShotQualityEvaluation:
+    Enabled: 0
+    OptimalDistance: 10
+    NearLimit: 5
+    FarLimit: 30
+    MaxQualityBoost: 0.2
 --- !u!1 &5766843582309052903
 GameObject:
   m_ObjectHideFlags: 0
@@ -518,6 +558,7 @@ GameObject:
   - component: {fileID: 760452571230495396}
   - component: {fileID: 2471343421090251092}
   - component: {fileID: 802659160157118786}
+  - component: {fileID: 8752263301485285821}
   m_Layer: 6
   m_Name: Demon Camera
   m_TagString: Untagged
@@ -533,7 +574,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6722721353259080718}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.039219823, y: 0.95135146, z: 0.13644949, w: 0.273448}
+  m_LocalRotation: {x: -0.038371295, y: 0.954269, z: 0.14015573, w: 0.26125607}
   m_LocalPosition: {x: -2.4099998, y: 0.49, z: 4.06}
   m_LocalScale: {x: 0.9094951, y: 1.1936285, z: 1.0906934}
   m_ConstrainProportionsScale: 0
@@ -596,6 +637,45 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   LookAtOffset: {x: -0.18, y: 0.02, z: -1.68}
+--- !u!114 &8752263301485285821
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6722721353259080718}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dbe43d662878a7c43bcd44d43c9e2094, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  CollideAgainst:
+    serializedVersion: 2
+    m_Bits: 8
+  IgnoreTag: Boss
+  TransparentLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  MinimumDistanceFromTarget: 0.3
+  AvoidObstacles:
+    Enabled: 1
+    DistanceLimit: 0
+    MinimumOcclusionTime: 0
+    CameraRadius: 0.4
+    UseFollowTarget:
+      Enabled: 0
+      YOffset: 0
+    Strategy: 0
+    MaximumEffort: 4
+    SmoothingTime: 0
+    Damping: 0.4
+    DampingWhenOccluded: 0.2
+  ShotQualityEvaluation:
+    Enabled: 0
+    OptimalDistance: 10
+    NearLimit: 5
+    FarLimit: 30
+    MaxQualityBoost: 0.2
 --- !u!1 &7568129952658305513
 GameObject:
   m_ObjectHideFlags: 0
@@ -2651,6 +2731,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   distance: 0
   isStop: 0
+  isCastingSkill: 0
+  skillCastDirection: {x: 0, y: 0, z: 0}
 --- !u!114 &337231325157497022
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2678,6 +2760,9 @@ MonoBehaviour:
   scoreReward: 100
   attackDistanceOverride: 3
   moveSpeed: 3.5
+  rotationSpeed: 8
+  minRangedDistance: 0
+  skillWarningDuration: 1.2
   isBoss: 1
   enemyType: 4
   specificEnemyType: 10
@@ -2687,13 +2772,15 @@ MonoBehaviour:
   bowScript:
   - {fileID: 0}
   skillScript: {fileID: 0}
-  skillVfxPrefab: {fileID: 591572520099923528, guid: b35e8c1e720472e47849cdba14d67702, type: 3}
-  skillVfxRadius: 6
-  skillIsDirectional: 0
+  skillVfxPrefab: {fileID: 5971203435228136222, guid: f0b2a41c3f8adb84f8753145e83bafe7, type: 3}
+  skillVfxRadius: 8
+  skillIsDirectional: 1
   skillAngle: 60
   skillDistance: 6
-  skillCooldown: 8
+  skillCooldown: 12
   skillDamageMultiplier: 2
+  skillRepeatCount: 3
+  skillRepeatDelay: 0.1
   spawnVfxPrefab: {fileID: 0}
   spawnVfxDuration: 1
   lastSkillTime: -999
@@ -2862,8 +2949,8 @@ Rigidbody:
   m_ImplicitTensor: 1
   m_UseGravity: 0
   m_IsKinematic: 0
-  m_Interpolate: 0
-  m_Constraints: 16
+  m_Interpolate: 1
+  m_Constraints: 80
   m_CollisionDetection: 0
 --- !u!95 &337231323536912910 stripped
 Animator:

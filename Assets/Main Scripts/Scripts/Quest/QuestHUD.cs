@@ -46,8 +46,18 @@ public class QuestHUD : MonoBehaviour
             if (titleText) titleText.text = activeQuest.questTitle;
             if (instructionText) 
             {
-                if (activeStep != null) instructionText.text = activeStep.instruction;
-                else instructionText.text = "Goal reached!";
+                if (activeStep != null) 
+                {
+                    instructionText.text = activeStep.instruction;
+                    if (activeStep.suggestedPortalIndex > 0)
+                    {
+                        instructionText.text += "\n<color=yellow><size=80%><i>(Use the teleport portal for fast travelling)</i></size></color>";
+                    }
+                }
+                else 
+                {
+                    instructionText.text = "Goal reached!";
+                }
             }
         }
     }

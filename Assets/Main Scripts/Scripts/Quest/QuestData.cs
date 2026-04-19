@@ -34,4 +34,8 @@ public class QuestStep
     [Header("Objective Marker")]
     public string targetTag;        // Target GameObject tag (e.g., "NPC_Leona")
     public string targetSceneName;  // Scene name (empty if same scene)
+
+    [Header("Teleport Hint (Tuỳ chọn)")]
+    [Tooltip("Nếu lớn hơn 0 (ví dụ 1, 2, 3, 4), sẽ hiện gợi ý Teleport và highlight nút tương ứng trong bảng Portal")]
+    public int suggestedPortalIndex = 0;
 }

@@ -7,7 +7,13 @@ public class SceneSwitcher : MonoBehaviour
 
     void Update()
     {
-        // Kiểm tra nếu người dùng nhấn phím X
+        // KHÔNG nhận lệnh nếu game đang Pause (tức là đang mở Menu/Settings)
+        if (Time.timeScale == 0f) return;
+
+        // Bỏ qua nếu giao diện UI đang che màn hình (để tránh đụng phím với Menu)
+        if (CursorUIPriority.IsUiOverlayActive) return;
+
+        // Kiểm tra nếu người dùng nhấn phím X lúc đang chơi bình thường
         if (Input.GetKeyDown(KeyCode.X))
         {
             SwitchScene(sceneName);  // Gọi hàm chuyển scene

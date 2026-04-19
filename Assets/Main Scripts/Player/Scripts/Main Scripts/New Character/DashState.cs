@@ -132,6 +132,12 @@ public class DashState : State
 
         // Stop dash movement
         isDashMovementActive = false;
+        
+        // Failsafe: Ensure iframe and layer collision are restored if state exits early (e.g., interrupted by hit/stun)
+        if (character != null && character.IsDashing)
+        {
+            character.AE_DisableDashInvincibility();
+        }
 
         // Reset dash-related variables if needed
         dashDirection = Vector3.zero;

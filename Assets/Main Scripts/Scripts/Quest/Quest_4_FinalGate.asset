@@ -13,17 +13,19 @@ MonoBehaviour:
   m_Name: Quest_4_FinalGate
   m_EditorClassIdentifier: 
   questID: 4
-  questTitle: "The Final Gate"
-  questDescription: "Maria says the final gate is at the mountain top. She will
-    guard the battlefield — head to the summit and close the gate for good."
+  questTitle: The Final Gate
+  questDescription: "Maria says the final gate is at the mountain top. She will guard
+    the battlefield \u2014 head to the summit and close the gate for good."
   steps:
-  - stepTitle: "Talk with Maria"
-    instruction: "Speak with Maria at the battlefield. She has new intel."
+  - stepTitle: Talk with Maria
+    instruction: Speak with Maria at the battlefield. She has new intel.
     targetTag: NPC_Maria2
     targetSceneName: 
-  - stepTitle: "Go to the Mountain Top"
-    instruction: "Head to the mountain summit where the final gate awaits."
+    suggestedPortalIndex: 0
+  - stepTitle: Go to the Mountain Top
+    instruction: Head to the mountain summit where the final gate awaits.
     targetTag: MountainTop_Gate
     targetSceneName: 
+    suggestedPortalIndex: 4
   rewardGold: 500
   rewardExp: 1000

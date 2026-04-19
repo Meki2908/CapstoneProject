@@ -399,6 +399,12 @@ public class Character : MonoBehaviour
 
         // Set player and all children to "Nothing" layer to prevent damage detection
         SetLayerRecursively(gameObject, NOTHING_LAYER);
+        
+        // Bỏ qua va chạm với Quái để dash xuyên qua vật thể
+        if (controller != null)
+        {
+            controller.excludeLayers |= (1 << LayerMask.NameToLayer("Enemy"));
+        }
 
         Debug.Log($"[Character] AE_EnableDashInvincibility - Dash iframe enabled (layer set to Nothing, original: {originalLayer})");
     }
@@ -410,10 +416,18 @@ public class Character : MonoBehaviour
     /// </summary>
     public void AE_DisableDashInvincibility()
     {
+        if (!IsDashing) return; // Prevent double-triggering
+        
         IsDashing = false;
 
         // Restore original layer for player and all children
         SetLayerRecursively(gameObject, originalLayer);
+        
+        // Khôi phục va chạm với Quái
+        if (controller != null)
+        {
+            controller.excludeLayers &= ~(1 << LayerMask.NameToLayer("Enemy"));
+        }
 
         Debug.Log($"[Character] AE_DisableDashInvincibility - Dash iframe disabled (layer restored to {originalLayer})");
     }

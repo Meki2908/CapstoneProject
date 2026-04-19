@@ -9696,7 +9696,7 @@ GameObject:
   - component: {fileID: 3220440682565326708}
   - component: {fileID: 3220440682565326709}
   - component: {fileID: 3220440682565326710}
-  - component: {fileID: 5765270659526136333}
+  - component: {fileID: 7163864923063465697}
   m_Layer: 0
   m_Name: Light
   m_TagString: Untagged
@@ -14705,7 +14705,7 @@ Light:
   m_LightUnit: 1
   m_LuxAtDistance: 1
   m_EnableSpotReflector: 1
---- !u!114 &5765270659526136333
+--- !u!114 &7163864923063465697
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -14763,6 +14763,7 @@ Transform:
   - {fileID: 1025236002006986783}
   - {fileID: 2843229867266135104}
   - {fileID: 3220440682565326711}
+  - {fileID: 2584225066506623653}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!198 &1601506141239540749
@@ -19623,6 +19624,76 @@ ParticleSystemRenderer:
   m_MeshWeighting2: 1
   m_MeshWeighting3: 1
   m_MaskInteraction: 0
+--- !u!1 &5271743460561748905
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2584225066506623653}
+  - component: {fileID: 1916936422891668404}
+  - component: {fileID: 7239967754172578504}
+  m_Layer: 0
+  m_Name: Trigger
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2584225066506623653
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5271743460561748905}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.14, y: 0.18, z: -1.9}
+  m_LocalScale: {x: 2.6882, y: 4.265, z: 1.6093}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3423388300971593625}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!65 &1916936422891668404
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5271743460561748905}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1, y: 1, z: 1}
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &7239967754172578504
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5271743460561748905}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c1ffd36f27d57640bfdf0a58bdf6e45, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  portalCanvas: {fileID: 0}
+  playerTag: Player
+  teleportDelay: 0.5
+  portalEffect: {fileID: 0}
 --- !u!1 &8598798586939600705
 GameObject:
   m_ObjectHideFlags: 0

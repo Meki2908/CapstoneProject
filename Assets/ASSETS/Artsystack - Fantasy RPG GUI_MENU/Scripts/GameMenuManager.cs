@@ -41,6 +41,7 @@ namespace Artsystack.ArtsystackGui
             if (!mainMenuSceneNames.Contains(currentSceneName))
             {
                 Debug.Log($"[GameMenuManager] Current scene '{currentSceneName}' is NOT a Main Menu scene. Disabling GameMenuManager.");
+                HideAllPanels();
                 this.enabled = false;
                 return;
             }

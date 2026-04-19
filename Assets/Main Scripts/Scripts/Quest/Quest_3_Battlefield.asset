@@ -13,25 +13,29 @@ MonoBehaviour:
   m_Name: Quest_3_Battlefield
   m_EditorClassIdentifier: 
   questID: 3
-  questTitle: "The New Battlefield"
-  questDescription: "The Paladin has news — Maria pushed forward to a new front.
+  questTitle: The New Battlefield
+  questDescription: "The Paladin has news \u2014 Maria pushed forward to a new front.
     Teleport to the Battlefields portal, find Maria, and clear the Swamp Dungeon."
   steps:
-  - stepTitle: "Talk with the Paladin"
-    instruction: "Speak with the Paladin. He knows where Maria went."
+  - stepTitle: Talk with the Paladin
+    instruction: Speak with the Paladin. He knows where Maria went.
     targetTag: NPC_Paladin
     targetSceneName: 
-  - stepTitle: "Teleport to Battlefields"
-    instruction: "Use the Battlefields portal to reach Maria's position."
+    suggestedPortalIndex: 0
+  - stepTitle: Teleport to Battlefields
+    instruction: Use the Battlefields portal to reach Maria's position.
     targetTag: TeleportPoint_Battlefield
     targetSceneName: 
-  - stepTitle: "Talk with Maria"
-    instruction: "Find and speak with Maria at the battlefield."
+    suggestedPortalIndex: 3
+  - stepTitle: Talk with Maria
+    instruction: Find and speak with Maria at the battlefield.
     targetTag: NPC_Maria2
     targetSceneName: 
-  - stepTitle: "Enter the Swamp Dungeon"
-    instruction: "Enter the Swamp Dungeon gate and begin the fight."
+    suggestedPortalIndex: 0
+  - stepTitle: Enter the Swamp Dungeon
+    instruction: Enter the Swamp Dungeon gate and begin the fight.
     targetTag: DungeonGate_Swamp
     targetSceneName: 
+    suggestedPortalIndex: 0
   rewardGold: 200
   rewardExp: 500

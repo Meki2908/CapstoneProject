@@ -288,6 +288,10 @@ public class QuestDirectionTracker : MonoBehaviour
         _target = null;
         var markers = FindObjectsByType<QuestMarker>(FindObjectsSortMode.None);
         if (QuestManager.Instance == null) return;
+        
+        float closestDist = float.MaxValue;
+        Transform bestTarget = null;
+        int matchedQuestID = -1;
 
         // Tìm marker đúng quest active + đúng step
         foreach (var m in markers)
@@ -300,10 +304,20 @@ public class QuestDirectionTracker : MonoBehaviour
             int currentStep = QuestManager.Instance.GetStepIndex(m.questID);
             if (m.showAtStep != currentStep) continue;
 
-            // Marker đúng quest + step → dùng luôn (không cần check visible)
-            _target = m.transform;
-            Debug.Log($"[Tracker] Matched quest={m.questID} step={currentStep}, marker='{m.name}' at {m.transform.position}");
-            return;
+            // Tính khoảng cách từ player đến marker này
+            float dist = _player != null ? Vector3.Distance(_player.position, m.transform.position) : 0f;
+            if (dist < closestDist)
+            {
+                closestDist = dist;
+                bestTarget = m.transform;
+                matchedQuestID = m.questID;
+            }
+        }
+        
+        if (bestTarget != null)
+        {
+            _target = bestTarget;
+            Debug.Log($"[Tracker] Matched quest={matchedQuestID}, closest marker='{bestTarget.name}' at {bestTarget.position} (dist: {closestDist:F1})");
         }
     }
 

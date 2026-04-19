@@ -13,29 +13,35 @@ MonoBehaviour:
   m_Name: Quest_2_CityGate
   m_EditorClassIdentifier: 
   questID: 2
-  questTitle: "The City Gate"
-  questDescription: "Leona needs your help! Head to the front line outside the City
-    Gate and support the warriors holding back the monsters."
+  questTitle: The City Gate
+  questDescription: Leona needs your help! Head to the front line outside the City
+    Gate and support the warriors holding back the monsters.
   steps:
-  - stepTitle: "Find and talk with Leona"
-    instruction: "Speak with Leona at the town square. She has urgent news."
+  - stepTitle: Find and talk with Leona
+    instruction: Speak with Leona at the town square. She has urgent news.
     targetTag: NPC_Leona
     targetSceneName: 
-  - stepTitle: "Find the portal and go to City Gate"
-    instruction: "Head to the teleport point nearby to travel to the City Gate."
+    suggestedPortalIndex: 0
+  - stepTitle: Find the portal and go to City Gate
+    instruction: Head to the teleport point nearby to travel to the City Gate.
     targetTag: TeleportPoint_CityGate
     targetSceneName: 
-  - stepTitle: "Use the teleport"
-    instruction: "Step into the teleport — it will take you straight outside the City Gate."
+    suggestedPortalIndex: 0
+  - stepTitle: Use the teleport
+    instruction: "Step into the teleport \u2014 it will take you straight outside
+      the City Gate."
     targetTag: TeleportPoint_CityGate
     targetSceneName: 
-  - stepTitle: "Find and talk with Maria"
-    instruction: "Locate Maria near the portal at the City Gate and speak with her."
+    suggestedPortalIndex: 2
+  - stepTitle: Find and talk with Maria
+    instruction: Locate Maria near the portal at the City Gate and speak with her.
     targetTag: NPC_Maria
     targetSceneName: 
-  - stepTitle: "Enter the dungeon portal"
-    instruction: "The portal is open. Step through it and face what lies inside."
+    suggestedPortalIndex: 0
+  - stepTitle: Enter the dungeon portal
+    instruction: The portal is open. Step through it and face what lies inside.
     targetTag: DungeonGate
     targetSceneName: 
+    suggestedPortalIndex: 0
   rewardGold: 150
   rewardExp: 300

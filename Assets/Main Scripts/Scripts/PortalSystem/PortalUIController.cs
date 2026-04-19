@@ -21,6 +21,13 @@ public class PortalUIController : MonoBehaviour
     public Button btnPortal4;
     public Button btnClose;
 
+    [Header("Teleport Quest Highlight")]
+    [Tooltip("Kéo Sprite màu vàng vào đây. Sprite gốc của các nút sẽ tự động được phục hồi khi xong quest.")]
+    public Sprite highlightedPortalSprite;
+
+    private Image _img1, _img2, _img3, _img4;
+    private Sprite _norm1, _norm2, _norm3, _norm4;
+
     [Header("── Quest Advance (mỗi button có thể advance một quest riêng) ──")]
     public PortalQuestAdvance[] questAdvances;
 
@@ -62,10 +69,10 @@ public class PortalUIController : MonoBehaviour
 
     private void Awake()
     {
-        if (btnPortal1 != null) btnPortal1.onClick.AddListener(() => TeleportTo(portal1_Dest, 1));
-        if (btnPortal2 != null) btnPortal2.onClick.AddListener(() => TeleportTo(portal2_Dest, 2));
-        if (btnPortal3 != null) btnPortal3.onClick.AddListener(() => TeleportTo(portal3_Dest, 3));
-        if (btnPortal4 != null) btnPortal4.onClick.AddListener(() => TeleportTo(portal4_Dest, 4));
+        if (btnPortal1 != null) { btnPortal1.onClick.AddListener(() => TeleportTo(portal1_Dest, 1)); _img1 = btnPortal1.GetComponent<Image>(); if (_img1) _norm1 = _img1.sprite; }
+        if (btnPortal2 != null) { btnPortal2.onClick.AddListener(() => TeleportTo(portal2_Dest, 2)); _img2 = btnPortal2.GetComponent<Image>(); if (_img2) _norm2 = _img2.sprite; }
+        if (btnPortal3 != null) { btnPortal3.onClick.AddListener(() => TeleportTo(portal3_Dest, 3)); _img3 = btnPortal3.GetComponent<Image>(); if (_img3) _norm3 = _img3.sprite; }
+        if (btnPortal4 != null) { btnPortal4.onClick.AddListener(() => TeleportTo(portal4_Dest, 4)); _img4 = btnPortal4.GetComponent<Image>(); if (_img4) _norm4 = _img4.sprite; }
         if (btnClose   != null) btnClose.onClick.AddListener(ClosePortalMenu);
     }
 
@@ -97,6 +104,28 @@ public class PortalUIController : MonoBehaviour
         }
         if (rootPanel != null) rootPanel.SetActive(true);
         SoundManager.PlayUIOpenMenu();
+        
+        HighlightQuestPortal();
+    }
+
+    private void HighlightQuestPortal()
+    {
+        // Phục hồi sprite gốc
+        if (_img1 && _norm1) _img1.sprite = _norm1;
+        if (_img2 && _norm2) _img2.sprite = _norm2;
+        if (_img3 && _norm3) _img3.sprite = _norm3;
+        if (_img4 && _norm4) _img4.sprite = _norm4;
+
+        if (highlightedPortalSprite == null || QuestManager.Instance == null) return;
+
+        var activeStep = QuestManager.Instance.GetActiveStep();
+        if (activeStep != null && activeStep.suggestedPortalIndex > 0)
+        {
+            if (activeStep.suggestedPortalIndex == 1 && _img1) _img1.sprite = highlightedPortalSprite;
+            else if (activeStep.suggestedPortalIndex == 2 && _img2) _img2.sprite = highlightedPortalSprite;
+            else if (activeStep.suggestedPortalIndex == 3 && _img3) _img3.sprite = highlightedPortalSprite;
+            else if (activeStep.suggestedPortalIndex == 4 && _img4) _img4.sprite = highlightedPortalSprite;
+        }
     }
 
     public void ClosePortalMenu()
