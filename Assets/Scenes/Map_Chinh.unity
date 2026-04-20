@@ -837,6 +837,17 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 8254075824800788008, guid: cb4e698814347a9449b4ec633b04f878, type: 3}
   m_PrefabInstance: {fileID: 7040713434276759114}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &843790405 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1810838792248298707, guid: 88a78dd302cddd04b8c6cbb3b7d69bac, type: 3}
+  m_PrefabInstance: {fileID: 1975587197}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0e9319f340efb2f47ba88671687abdb1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!115 &963748290
 MonoScript:
   m_ObjectHideFlags: 0
@@ -1546,6 +1557,11 @@ MonoBehaviour:
   blendDistance: 0
   weight: 1
   sharedProfile: {fileID: 11400000, guid: 0aeb7e6c2402eea4b847c2c76f42dd14, type: 2}
+--- !u!1 &1123173689 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8937652995256441109, guid: cb4e698814347a9449b4ec633b04f878, type: 3}
+  m_PrefabInstance: {fileID: 7040713434276759114}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1171884496
 GameObject:
   m_ObjectHideFlags: 0
@@ -3345,6 +3361,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 887708425009504, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
+      propertyPath: triggerAtStep
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 1933288384218302903, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
       propertyPath: portalUI
       value: 
@@ -3361,12 +3381,20 @@ PrefabInstance:
       propertyPath: portalEffect
       value: 
       objectReference: {fileID: 2602143417993216822}
+    - target: {fileID: 2024351670877894456, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
+      propertyPath: m_TagString
+      value: DungeonGate
+      objectReference: {fileID: 0}
     - target: {fileID: 2404940572529245404, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
       propertyPath: questID
       value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 2404940572529245404, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
       propertyPath: triggerAtStep
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 2506602133035551425, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
+      propertyPath: showAtStep
       value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 2506602133035551425, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
@@ -3379,7 +3407,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3383525105646096642, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
       propertyPath: showAtStep
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3523773929875930727, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
       propertyPath: m_IsActive
@@ -3393,13 +3421,25 @@ PrefabInstance:
       propertyPath: enableBobbing
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4464120448270375106, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
+      propertyPath: m_TagString
+      value: DungeonGate
+      objectReference: {fileID: 0}
+    - target: {fileID: 4516527273506783910, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
+      propertyPath: questID
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4516527273506783910, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
+      propertyPath: triggerAtStep
+      value: 2
+      objectReference: {fileID: 0}
     - target: {fileID: 5098018956545412245, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
       propertyPath: questID
       value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 5098018956545412245, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
       propertyPath: showAtStep
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5272430549036278091, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
       propertyPath: questID
@@ -3420,6 +3460,10 @@ PrefabInstance:
     - target: {fileID: 5630105597604377843, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
       propertyPath: m_Name
       value: Portal
+      objectReference: {fileID: 0}
+    - target: {fileID: 5981559718422964006, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
+      propertyPath: m_TagString
+      value: DungeonGate_Swamp
       objectReference: {fileID: 0}
     - target: {fileID: 6389915913465324528, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
       propertyPath: m_IsActive
@@ -3476,6 +3520,14 @@ PrefabInstance:
     - target: {fileID: 6964089955787839273, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7514353072729498871, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
+      propertyPath: questID
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 7514353072729498871, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
+      propertyPath: triggerAtStep
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8259342893077402656, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
       propertyPath: portalUI
@@ -3673,6 +3725,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 198066471803694085, guid: cb4e698814347a9449b4ec633b04f878, type: 3}
+      propertyPath: markerObject
+      value: 
+      objectReference: {fileID: 1123173689}
     - target: {fileID: 2033558137521833927, guid: cb4e698814347a9449b4ec633b04f878, type: 3}
       propertyPath: m_Camera
       value: 
@@ -3825,10 +3881,18 @@ PrefabInstance:
       propertyPath: nextButtonLabelTMP
       value: 
       objectReference: {fileID: 1006791096}
+    - target: {fileID: 4048930235704565346, guid: cb4e698814347a9449b4ec633b04f878, type: 3}
+      propertyPath: m_TagString
+      value: NPC_Maria
+      objectReference: {fileID: 0}
     - target: {fileID: 4405136058468903445, guid: cb4e698814347a9449b4ec633b04f878, type: 3}
       propertyPath: m_Camera
       value: 
       objectReference: {fileID: 373138166}
+    - target: {fileID: 4659006397871857741, guid: cb4e698814347a9449b4ec633b04f878, type: 3}
+      propertyPath: m_TagString
+      value: NPC_Maria2
+      objectReference: {fileID: 0}
     - target: {fileID: 4981952403428313455, guid: cb4e698814347a9449b4ec633b04f878, type: 3}
       propertyPath: nextButton
       value: 
@@ -3857,10 +3921,18 @@ PrefabInstance:
       propertyPath: nextButtonLabelTMP
       value: 
       objectReference: {fileID: 1006791096}
+    - target: {fileID: 5639853413837311082, guid: cb4e698814347a9449b4ec633b04f878, type: 3}
+      propertyPath: m_TagString
+      value: NPC_Maria
+      objectReference: {fileID: 0}
     - target: {fileID: 6258784187508466416, guid: cb4e698814347a9449b4ec633b04f878, type: 3}
       propertyPath: m_Camera
       value: 
       objectReference: {fileID: 373138166}
+    - target: {fileID: 8254075824800788008, guid: cb4e698814347a9449b4ec633b04f878, type: 3}
+      propertyPath: m_TagString
+      value: NPC_Paladin
+      objectReference: {fileID: 0}
     - target: {fileID: 8550072231955474817, guid: cb4e698814347a9449b4ec633b04f878, type: 3}
       propertyPath: nextButton
       value: 
@@ -3889,6 +3961,18 @@ PrefabInstance:
       propertyPath: nextButtonLabelTMP
       value: 
       objectReference: {fileID: 1006791096}
+    - target: {fileID: 8721702470784784102, guid: cb4e698814347a9449b4ec633b04f878, type: 3}
+      propertyPath: blacksmithUI
+      value: 
+      objectReference: {fileID: 843790405}
+    - target: {fileID: 8721702470784784102, guid: cb4e698814347a9449b4ec633b04f878, type: 3}
+      propertyPath: promptCanvas
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 8768920782446962539, guid: cb4e698814347a9449b4ec633b04f878, type: 3}
+      propertyPath: m_TagString
+      value: NPC_Maria2
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

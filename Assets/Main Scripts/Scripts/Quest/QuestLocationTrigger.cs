@@ -36,6 +36,16 @@ public class QuestLocationTrigger : MonoBehaviour
         if (state != QuestManager.QuestState.Active) return;
         if (step != triggerAtStep) return;
 
+        // BẢO VỆ NGHIÊM NGẶT - NGĂN TRIGGER ẨN BỎ QUA HỘI THOẠI CỦA MARIA
+        // Tránh trường hợp Trigger đặt ở vùng người chơi vừa teleport tới vô tình tự động hoàn thành luôn việc phải nói chuyện với Maria!
+        if ((questID == 2 && triggerAtStep == 2) || 
+            (questID == 3 && triggerAtStep == 2) || 
+            (questID == 4 && triggerAtStep == 0))
+        {
+            Debug.LogWarning($"[QuestLocationTrigger] Ngăn chặn trigger ẩn tự động bỏ qua Bước {triggerAtStep} của Quest {questID} (Bước này bắt buộc phải nói chuyện với Maria).");
+            return;
+        }
+
         _triggered = true;
         QuestManager.Instance.AdvanceStep(questID);
 

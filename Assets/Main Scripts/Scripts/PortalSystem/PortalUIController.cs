@@ -274,19 +274,22 @@ public class PortalUIController : MonoBehaviour
             if (qa.questID <= 0) continue;
             if (qa.portalButton != 0 && _lastPortalIndex != qa.portalButton) continue;
 
+            // Bảo vệ tuyểt đối: Quest 4 KHÔNG CÓ bước Use Portal (bước 1 của chúng đều là Talk to Maria).
+            // Nếu UI Portal cố tình advance thì sẽ vô tình skip qua việc nói chuyện với Maria!
+            if (qa.questID == 4) 
+            {
+                continue;
+            }
+
             var state = QuestManager.Instance.GetState(qa.questID);
             int step  = QuestManager.Instance.GetStepIndex(qa.questID);
-            int maxStep = qa.triggerAtStep + qa.advanceSteps - 1;
 
-            if (state != QuestManager.QuestState.Active || step < qa.triggerAtStep || step > maxStep) continue;
-
-            int stepsLeft = maxStep - step + 1;
-            for (int i = 0; i < stepsLeft; i++)
+            // Kiểm tra xem quest có đang ở đúng bước cần kích hoạt bởi cổng không
+            if (state == QuestManager.QuestState.Active && step == qa.triggerAtStep)
             {
-                if (QuestManager.Instance.GetState(qa.questID) != QuestManager.QuestState.Active) break;
                 QuestManager.Instance.AdvanceStep(qa.questID);
+                Debug.Log($"[Portal] Quest {qa.questID}: advanced 1 step from step {step} (portal {_lastPortalIndex}).");
             }
-            Debug.Log($"[Portal] Quest {qa.questID}: advanced {stepsLeft} step(s) from step {step} (portal {_lastPortalIndex}).");
         }
     }
 }

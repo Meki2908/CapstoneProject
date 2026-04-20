@@ -165,6 +165,8 @@ public class QuestDirectionTracker : MonoBehaviour
         var rt = _root.GetComponent<RectTransform>();
         rt.sizeDelta = new Vector2(5f, 5f); // 5x5 meter area
         rt.pivot = new Vector2(0.5f, 0.5f);
+        Material overlayMat = new Material(Shader.Find("UI/Default"));
+        overlayMat.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);
 
         // ── Circle Image ──
         var circleGo = new GameObject("Circle");
@@ -173,6 +175,7 @@ public class QuestDirectionTracker : MonoBehaviour
         _circleImg.texture = GenerateCircleTexture(256, circleRadius, circleThickness);
         _circleImg.color = color;
         _circleImg.raycastTarget = false;
+        _circleImg.material = overlayMat;
         var circleRT = _circleImg.rectTransform;
         float circleWorldSize = circleRadius * 2f + circleThickness;
         circleRT.sizeDelta = new Vector2(circleWorldSize, circleWorldSize);
@@ -185,6 +188,7 @@ public class QuestDirectionTracker : MonoBehaviour
         _arrowImg.texture = GenerateArrowTexture(128);
         _arrowImg.color = color;
         _arrowImg.raycastTarget = false;
+        _arrowImg.material = overlayMat;
         var arrowRT = _arrowImg.rectTransform;
         arrowRT.sizeDelta = new Vector2(arrowSize, arrowSize);
         arrowRT.localPosition = Vector3.zero;
@@ -286,13 +290,52 @@ public class QuestDirectionTracker : MonoBehaviour
     void FindActiveMarker()
     {
         _target = null;
-        var markers = FindObjectsByType<QuestMarker>(FindObjectsSortMode.None);
         if (QuestManager.Instance == null) return;
         
         float closestDist = float.MaxValue;
         Transform bestTarget = null;
         int matchedQuestID = -1;
 
+        // 1. Ưu tiên tìm mục tiêu bằng 'targetTag' cấu hình trong QuestData Asset
+        var activeStep = QuestManager.Instance.GetActiveStep();
+        if (activeStep != null && !string.IsNullOrEmpty(activeStep.targetTag))
+        {
+            try
+            {
+                GameObject[] taggedObjs = GameObject.FindGameObjectsWithTag(activeStep.targetTag);
+                if (taggedObjs != null && taggedObjs.Length > 0)
+                {
+                    foreach (var obj in taggedObjs)
+                    {
+                        if (obj != null && obj.activeInHierarchy)
+                        {
+                            float d = _player != null ? Vector3.Distance(_player.position, obj.transform.position) : 0f;
+                            if (d < closestDist)
+                            {
+                                closestDist = d;
+                                bestTarget = obj.transform;
+                            }
+                        }
+                    }
+
+                    if (bestTarget != null)
+                    {
+                        _target = bestTarget;
+                        Debug.Log($"[Tracker] Matched targetTag '{activeStep.targetTag}' -> {_target.name}");
+                        return;
+                    }
+                }
+            }
+            catch (UnityException)
+            {
+                // Tag không tồn tại trong Tag Manager, bỏ qua và dùng fallback
+                // Debug.LogWarning($"[Tracker] Tag '{activeStep.targetTag}' chưa được khai báo trong Unity.");
+            }
+        }
+
+        // 2. Tìm fallback thông qua QuestMarker component (như cũ)
+        var markers = FindObjectsByType<QuestMarker>(FindObjectsSortMode.None);
+        
         // Tìm marker đúng quest active + đúng step
         foreach (var m in markers)
         {

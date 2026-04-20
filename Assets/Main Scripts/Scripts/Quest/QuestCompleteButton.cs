@@ -44,10 +44,24 @@ public class QuestCompleteButton : MonoBehaviour
             return;
         }
 
-        var state = QuestManager.Instance.GetState(questID);
-        if (state != QuestManager.QuestState.Active)
+        // Tự động dò tìm Quest nào đang Active để xử lý
+        int targetQuest = this.questID > 0 ? this.questID : -1;
+
+        if (targetQuest <= 0)
         {
-            Debug.LogWarning($"[QuestCompleteButton] Quest {questID} không ở trạng thái Active (hiện là {state}). Bỏ qua.");
+            foreach (var qd in QuestManager.Instance.quests)
+            {
+                if (QuestManager.Instance.GetState(qd.questID) == QuestManager.QuestState.Active)
+                {
+                    targetQuest = qd.questID;
+                    break;
+                }
+            }
+        }
+
+        if (targetQuest == -1)
+        {
+            Debug.LogWarning("[QuestCompleteButton] Không tìm thấy Quest nào đang Active để hoành thành! Bỏ qua.");
             return;
         }
 
@@ -56,13 +70,13 @@ public class QuestCompleteButton : MonoBehaviour
         switch (mode)
         {
             case Mode.AdvanceStep:
-                QuestManager.Instance.AdvanceStep(questID);
-                Debug.Log($"[QuestCompleteButton] AdvanceStep Quest {questID}");
+                QuestManager.Instance.AdvanceStep(targetQuest);
+                Debug.Log($"[QuestCompleteButton] Tự động AdvanceStep cho Quest {targetQuest}");
                 break;
 
             case Mode.ForceComplete:
-                QuestManager.Instance.CompleteQuest(questID);
-                Debug.Log($"[QuestCompleteButton] ForceComplete Quest {questID}");
+                QuestManager.Instance.CompleteQuest(targetQuest);
+                Debug.Log($"[QuestCompleteButton] Tự động ForceComplete Quest {targetQuest}");
                 break;
         }
 

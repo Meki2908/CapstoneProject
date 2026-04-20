@@ -44,6 +44,15 @@ public class QuestNPCInteract : MonoBehaviour
 
             if (state == QuestManager.QuestState.Active && cur == triggerAtStep)
             {
+                // BẢO VỆ NGHIÊM NGẶT - NGĂN TRIGGER ẨN BỎ QUA HỘI THOẠI CỦA MARIA
+                if ((questID == 2 && triggerAtStep == 2) || 
+                    (questID == 3 && triggerAtStep == 2) || 
+                    (questID == 4 && triggerAtStep == 0))
+                {
+                    Debug.LogWarning($"[QuestNPCInteract] Ngăn chặn NPC/Trigger ẩn tự động bỏ qua Bước {triggerAtStep} của Quest {questID} (Bước này bắt buộc phải qua MariaDialogue).");
+                    return;
+                }
+
                 QuestManager.Instance.AdvanceStep(questID);
                 success = true;
             }

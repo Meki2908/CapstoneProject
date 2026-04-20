@@ -100,7 +100,7 @@ public class MariaDialogue : MonoBehaviour
     public string playerTag        = "Player";
 
     // ─── Runtime ──────────────────────────────────────────────────────────
-    enum DialogueMode { Quest2Step3, Quest3Step2, Quest4Step0, Reminder, Quest4Reminder, None }
+    enum DialogueMode { Quest2Step2, Quest3Step1, Quest4Step0, Reminder, Quest4Reminder, None }
 
     string[]     _activeLines;
     DialogueMode _mode;
@@ -118,7 +118,7 @@ public class MariaDialogue : MonoBehaviour
         if (dialoguePanel) dialoguePanel.SetActive(false);
         if (npcPortrait && mariaSprite) npcPortrait.sprite = mariaSprite;
         SetText(npcNameTMP, npcNameLegacy, "Maria");
-        if (nextButton) nextButton.onClick.AddListener(OnNextClicked);
+        // removed double-binding legacy code
     }
 
     void Update()
@@ -154,12 +154,13 @@ public class MariaDialogue : MonoBehaviour
     {
         if (QuestManager.Instance == null) return DialogueMode.None;
 
-        // Quest 3 TRƯỚC — ưu tiên quest đang active
+        // Quest 3 TRƯỚC ƯU TIÊN quest đang active
         var q3 = QuestManager.Instance.GetState(quest3ID);
         if (q3 == QuestManager.QuestState.Active)
         {
             int q3step = QuestManager.Instance.GetStepIndex(quest3ID);
-            if (q3step == 2) return DialogueMode.Quest3Step2;
+// Added Teleport step offset
+            if (q3step <= 2) return DialogueMode.Quest3Step1;
             if (q3step > 2)  return DialogueMode.Reminder;
         }
 
@@ -175,13 +176,13 @@ public class MariaDialogue : MonoBehaviour
             }
         }
 
-        // Quest 2 — step 3: Maria at City Gate
+        // Quest 2 — step 2: Maria at City Gate
         var q2 = QuestManager.Instance.GetState(quest2ID);
         if (q2 == QuestManager.QuestState.Active)
         {
             int q2step = QuestManager.Instance.GetStepIndex(quest2ID);
-            if (q2step == 3) return DialogueMode.Quest2Step3;
-            if (q2step > 3)  return DialogueMode.Reminder;
+            if (q2step <= 2) return DialogueMode.Quest2Step2;
+            if (q2step > 2)  return DialogueMode.Reminder;
         }
 
         return DialogueMode.None;
@@ -191,8 +192,8 @@ public class MariaDialogue : MonoBehaviour
     {
         switch (mode)
         {
-            case DialogueMode.Quest2Step3:   return quest2Lines;
-            case DialogueMode.Quest3Step2:   return quest3Lines;
+            case DialogueMode.Quest2Step2:   return quest2Lines;
+            case DialogueMode.Quest3Step1:   return quest3Lines;
             case DialogueMode.Quest4Step0:   return quest4Lines;
             case DialogueMode.Quest4Reminder:return quest4ReminderLines;
             case DialogueMode.Reminder:      return reminderLines;
@@ -264,22 +265,25 @@ public class MariaDialogue : MonoBehaviour
 
         switch (_mode)
         {
-            case DialogueMode.Quest2Step3:
-                // Quest 2 step 3 → 4: enter dungeon
-                if (QuestManager.Instance.GetStepIndex(quest2ID) == 3)
+            case DialogueMode.Quest2Step2:
+                // Nếu quest đang kẹt ở step 1 hoặc 2, đẩy thẳng tới step 3 (Dungeon Gate)
+                int currentQ2 = QuestManager.Instance.GetStepIndex(quest2ID);
+                while (currentQ2 >= 0 && currentQ2 <= 2)
                 {
                     QuestManager.Instance.AdvanceStep(quest2ID);
-                    Debug.Log("[MariaDialogue] Quest 2 step 3 → 4: Enter dungeon gate.");
+                    currentQ2++;
                 }
+                Debug.Log($"[MariaDialogue] Auto-forwarded Quest {quest2ID} up to step {currentQ2} -> Enter dungeon gate.");
                 break;
 
-            case DialogueMode.Quest3Step2:
-                // Quest 3 step 2 → 3: go to Swamp Dungeon
-                if (QuestManager.Instance.GetStepIndex(quest3ID) == 2)
+            case DialogueMode.Quest3Step1:
+                int currentQ3 = QuestManager.Instance.GetStepIndex(quest3ID);
+                while (currentQ3 >= 0 && currentQ3 <= 2)
                 {
                     QuestManager.Instance.AdvanceStep(quest3ID);
-                    Debug.Log("[MariaDialogue] Quest 3 step 2 → 3: Go to Swamp Dungeon.");
+                    currentQ3++;
                 }
+                Debug.Log($"[MariaDialogue] Auto-forwarded Quest {quest3ID} up to step {currentQ3} -> Go to Swamp Dungeon.");
                 break;
 
             case DialogueMode.Quest4Step0:

@@ -137,7 +137,7 @@ public class LeonaDialogue : MonoBehaviour
         if (dialoguePanel) dialoguePanel.SetActive(false);
         if (npcPortrait && leonaSprite) npcPortrait.sprite = leonaSprite;
         SetText(npcNameTMP, npcNameLegacy, "Leona");
-        if (nextButton) nextButton.onClick.AddListener(OnNextClicked);
+        // removed double-binding legacy code
 
         // Debug
         Debug.Log($"[LeonaDialogue] Start – promptPanel={(promptPanel != null ? promptPanel.name : "NULL")}, dialoguePanel={(dialoguePanel != null ? "OK" : "NULL")}");

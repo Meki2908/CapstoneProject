@@ -603,8 +603,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -153.72}
-  m_SizeDelta: {x: 3740, y: 2220.3}
+  m_AnchoredPosition: {x: -11.012001, y: -158.578}
+  m_SizeDelta: {x: 3717.976, y: 2091.512}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!223 &7875720860785838120
 Canvas:
@@ -1297,6 +1297,7 @@ GameObject:
   - component: {fileID: 3702233564481182473}
   - component: {fileID: 1496694872862905888}
   - component: {fileID: 3368246300052248935}
+  - component: {fileID: 5725721780779085816}
   m_Layer: 0
   m_Name: Button_Return
   m_TagString: Untagged
@@ -1418,6 +1419,18 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+      - m_Target: {fileID: 5725721780779085816}
+        m_TargetAssemblyTypeName: QuestCompleteButton, Assembly-CSharp
+        m_MethodName: OnButtonClicked
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &3368246300052248935
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1463,6 +1476,22 @@ MonoBehaviour:
     callback:
       m_PersistentCalls:
         m_Calls: []
+--- !u!114 &5725721780779085816
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3718343904408053458}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 481ae86288e6e2646926456108368324, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  questID: 2
+  mode: 1
+  onlyOnce: 1
+  disableButtonAfter: 1
 --- !u!1 &3809677283058224767
 GameObject:
   m_ObjectHideFlags: 0
@@ -2062,8 +2091,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 21.842, y: -164.668}
-  m_SizeDelta: {x: 4045.64, y: 2548.597}
+  m_AnchoredPosition: {x: -21.977, y: -169.41}
+  m_SizeDelta: {x: 4045.719, y: 2528.8}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!223 &7137694327270216225
 Canvas:
@@ -2367,9 +2396,9 @@ RectTransform:
   - {fileID: 1564294844197916214}
   m_Father: {fileID: 5684155521356528763}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 348, y: -419.49}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 348, y: 121.8}
   m_Pivot: {x: 1, y: 0.5}
 --- !u!222 &419268281617701072
@@ -2566,9 +2595,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 03f2f42eaa7fc4745b78dfdb1ecc6a27, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  dungeonName: Hell Dungeon
+  dungeonName: Dam Lay Dungeon
   totalWaves: 5
-  mapType: 2
+  mapType: 1
   balanceData: {fileID: 11400000, guid: c98caa24a953c984ab41bf974c60ac67, type: 2}
   mainMapSceneName: Map_Chinh
   returnDelayOnWin: 5
@@ -3051,9 +3080,9 @@ RectTransform:
   - {fileID: 3891499069209936173}
   m_Father: {fileID: 5684155521356528763}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 350, y: -603.80994}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 352, y: 122}
   m_Pivot: {x: 1, y: 0.5}
 --- !u!222 &936830156633369245

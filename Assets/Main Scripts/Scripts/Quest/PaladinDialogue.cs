@@ -81,7 +81,7 @@ public class PaladinDialogue : MonoBehaviour
         if (dialoguePanel)  dialoguePanel.SetActive(false);
         if (npcPortrait && paladinSprite) npcPortrait.sprite = paladinSprite;
         SetText(npcNameTMP, npcNameLegacy, "Paladin");
-        if (nextButton) nextButton.onClick.AddListener(OnNextClicked);
+        // removed double-binding legacy code
     }
 
     void Update()
