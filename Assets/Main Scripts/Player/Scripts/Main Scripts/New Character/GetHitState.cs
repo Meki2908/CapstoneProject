@@ -8,7 +8,10 @@ public class GetHitState : State
     bool jump;
     bool toBaseMove;
     bool toggleWeapon; // NEW: cho phép rút/cất vũ khí khi đang bị đánh
-    float hitDuration = 0.1f; // Thời gian stun rất ngắn — player hồi phục gần như ngay lập tức
+    
+    // BỎ LOGIC DELAY: Set thời gian stun = 0 theo yêu cầu để bỏ hoàn toàn delay.
+    // Kết hợp với layer UpperBody_Hit, player có thể đánh/chạy ngay cả khi animation đang chạy!
+    float hitDuration = 0.0f; 
     float hitTimer;
 
     private WeaponController weaponController;
@@ -28,17 +31,13 @@ public class GetHitState : State
         toBaseMove = false;
         toggleWeapon = false;
         hitTimer = hitDuration;
-        weaponLayersWereDisabled = false;
 
         // === FIX: Clear buffered dash input để tránh auto-dash khi exit GetHitState ===
-        // Consume dashAction trigger nếu đang pending
         if (dashAction != null && dashAction.triggered)
         {
-            // Reading .triggered consumes it, preventing auto-dash
             Debug.Log("[GetHitState] Consumed buffered dash input");
         }
 
-        // Find WeaponController if not already found
         if (weaponController == null)
         {
             weaponController = character.GetComponent<WeaponController>();
@@ -46,70 +45,9 @@ public class GetHitState : State
 
         if (character.animator != null)
         {
-            // Single source of truth: use explicit draw flag instead of locomotion-state inference.
-            // currentLocomotionState can be stale in edge cases (e.g. hit/interrupt transitions).
-            bool isWeaponDrawn = character.isWeaponDrawn;
-
-            if (isWeaponDrawn)
-            {
-                // Weapon is drawn - ensure weapon layer can play animation
-                // The animation should play on the active weapon layer
-                character.animator.SetTrigger("gethit");
-            }
-            else
-            {
-                // Weapon is not drawn - disable weapon layers temporarily to force base layer
-                DisableWeaponLayersForBaseHit();
-
-                // Trigger gethit - will play on base layer since weapon layers are disabled
-                character.animator.SetTrigger("gethit");
-            }
-        }
-
-        // KHÔNG cancel skill/timeline khi bị hit
-        // Player chỉ bị flinch nhẹ, vẫn tiếp tục đánh thường và skill bình thường
-    }
-
-    private void DisableWeaponLayersForBaseHit()
-    {
-        if (weaponController == null || character.animator == null) return;
-
-        // Store original layer weights and disable weapon layers
-        // This ensures gethit plays on base layer only
-        weaponLayersWereDisabled = true;
-
-        int baseLayer = 0; // Base Layer is always 0
-        int swordLayer = 1;
-        int axeLayer = 2;
-        int mageLayer = 3;
-
-        // Keep tiny non-zero weights to avoid killing draw-layer evaluation/AE.
-        SetLayerWeightSafe(swordLayer, SheathedLayerWeight);
-        SetLayerWeightSafe(axeLayer, SheathedLayerWeight);
-        SetLayerWeightSafe(mageLayer, SheathedLayerWeight);
-
-        // Ensure base layer is active
-        SetLayerWeightSafe(baseLayer, 1f);
-    }
-
-    private void RestoreWeaponLayers()
-    {
-        if (!weaponLayersWereDisabled) return;
-
-        weaponLayersWereDisabled = false;
-
-        // Actually restore weapon layers via WeaponController
-        if (weaponController != null)
-        {
-            weaponController.ReapplyWeaponLayers();
-        }
-    }
-
-    private void SetLayerWeightSafe(int layer, float weight)
-    {
-        if (character.animator != null && layer >= 0 && layer < character.animator.layerCount)
-        {
-            character.animator.SetLayerWeight(layer, weight);
+            // BỎ HẾT logic ép Weapon Layers = 1 vì user đã gộp GetHit vào UpperBody_Hit mask
+            // Chỉ cần set trigger, Layer UpperBody_Hit sẽ tự bắt (kể cả cầm hay cất vũ khí)
+            character.animator.SetTrigger("gethit");
         }
     }
 
@@ -217,13 +155,6 @@ public class GetHitState : State
     public override void Exit()
     {
         base.Exit();
-
-        // Restore weapon layers if they were disabled
-        if (weaponLayersWereDisabled && weaponController != null)
-        {
-            // Restore weapon layer weights by reapplying weapon controller settings
-            // The WeaponController should handle this, but we ensure layers are restored
-            RestoreWeaponLayers();
-        }
+        // Weapon layers are no longer manipulated by GetHitState
     }
 }

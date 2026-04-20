@@ -238,6 +238,14 @@ public class EnemyScript : MonoBehaviour {
             break;
         }
 
+        // Fix Rigidbody + NavMeshAgent Build Jitter
+        // Khi dùng chung với NavMeshAgent, Rigidbody KHÔNG kinematic bật Interpolate sẽ gây giật lag và đi chậm khi Build
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null) {
+            rb.isKinematic = true;
+            rb.interpolation = RigidbodyInterpolation.None;
+        }
+
         // Setup NavMeshAgent
         navMeshAgent = GetComponent<NavMeshAgent>();
         if (navMeshAgent != null && navMeshAgent.isOnNavMesh)
@@ -519,18 +527,25 @@ public class EnemyScript : MonoBehaviour {
 
     Transform FindBestPlayerTarget()
     {
-        Character character = FindFirstObjectByType<Character>(FindObjectsInactive.Include);
-        if (character != null)
+        // FIX BUG TARGET ẢO: Player thật có thể có component Character bị tắt (disabled)
+        // nhưng GameObject của player thật thì đang Active.
+        // Còn Dummy Player của Cutscene thì GameObject bị Inactive.
+        // Phải tìm TẤT CẢ Character (kể cả bị tắt), sau đó lọc ra GameObject đang Active!
+        Character[] characters = FindObjectsByType<Character>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (Character c in characters)
         {
-            #region agent log
-            AgentDebugLogger.Log(
-                "post-fix-3",
-                "H8",
-                "EnemyScript.cs:FindBestPlayerTarget",
-                "Target resolved via Character",
-                "{\"enemy\":\"" + gameObject.name + "\",\"target\":\"" + character.name + "\"}");
-            #endregion
-            return character.transform;
+            if (c != null && c.gameObject.activeInHierarchy)
+            {
+                #region agent log
+                AgentDebugLogger.Log(
+                    "post-fix-3",
+                    "H8",
+                    "EnemyScript.cs:FindBestPlayerTarget",
+                    "Target resolved via Character",
+                    "{\"enemy\":\"" + gameObject.name + "\",\"target\":\"" + c.name + "\"}");
+                #endregion
+                return c.transform;
+            }
         }
 
         GameObject playerObj = GameObject.FindGameObjectWithTag("Player");

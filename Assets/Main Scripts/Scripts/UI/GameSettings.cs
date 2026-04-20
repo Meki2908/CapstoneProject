@@ -197,9 +197,9 @@ public class GameSettings : MonoBehaviour
         }
 
         // Clamp resolution index
-        int resCount = Screen.resolutions.Length;
-        if (resCount > 0)
-            screenResolutionIndex = Mathf.Clamp(screenResolutionIndex, 0, resCount - 1);
+        var extRes = GetExtendedResolutions();
+        if (extRes.Count > 0)
+            screenResolutionIndex = Mathf.Clamp(screenResolutionIndex, 0, extRes.Count - 1);
 
         Debug.Log("[GameSettings] Loaded from PlayerPrefs");
     }
@@ -279,10 +279,10 @@ public class GameSettings : MonoBehaviour
         Application.targetFrameRate = frameRate;
 
         // Screen Resolution + Display Mode
-        Resolution[] resolutions = Screen.resolutions;
-        if (resolutions.Length > 0 && screenResolutionIndex >= 0 && screenResolutionIndex < resolutions.Length)
+        var resolutions = GetExtendedResolutions();
+        if (resolutions.Count > 0 && screenResolutionIndex >= 0 && screenResolutionIndex < resolutions.Count)
         {
-            Resolution res = resolutions[screenResolutionIndex];
+            var res = resolutions[screenResolutionIndex];
             FullScreenMode mode = displayModeIndex switch
             {
                 0 => FullScreenMode.FullScreenWindow,
@@ -290,13 +290,13 @@ public class GameSettings : MonoBehaviour
                 2 => FullScreenMode.MaximizedWindow,
                 _ => FullScreenMode.FullScreenWindow
             };
-            Screen.SetResolution(res.width, res.height, mode);
+            Screen.SetResolution(res.x, res.y, mode);
 
             // Ép toàn bộ Canvas cập nhật lại layout ngay lập tức
             // Tránh UI bị lệch/bể trong 1-2 frame sau khi đổi Resolution
             Canvas.ForceUpdateCanvases();
 
-            Debug.Log($"[GameSettings] Resolution: {res.width}x{res.height}, Mode={mode}");
+            Debug.Log($"[GameSettings] Resolution: {res.x}x{res.y}, Mode={mode}");
         }
 
         // === GRAPHICS QUALITY ===
@@ -466,17 +466,44 @@ public class GameSettings : MonoBehaviour
     }
 
     /// <summary>
+    /// Tạo danh sách custom resolutions kết hợp với hệ thống để đảm bảo luôn có FullHD, 2K, 4K
+    /// </summary>
+    public static System.Collections.Generic.List<Vector2Int> GetExtendedResolutions()
+    {
+        var list = new System.Collections.Generic.List<Vector2Int>();
+        foreach (var res in Screen.resolutions)
+        {
+            var v = new Vector2Int(res.width, res.height);
+            if (!list.Contains(v)) list.Add(v);
+        }
+        var targets = new Vector2Int[] {
+            new Vector2Int(1280, 720),
+            new Vector2Int(1920, 1080),
+            new Vector2Int(2560, 1440),
+            new Vector2Int(3840, 2160)
+        };
+        foreach(var t in targets) {
+            if (!list.Contains(t)) list.Add(t);
+        }
+        // Fallback safety
+        if (list.Count == 0) list.Add(new Vector2Int(1920, 1080));
+        // Sắp xếp độ phân giải tăng dần
+        list.Sort((a, b) => (a.x * a.y).CompareTo(b.x * b.y));
+        return list;
+    }
+
+    /// <summary>
     /// Tìm index của resolution gần nhất với target (mặc định 1920x1080)
     /// </summary>
     int FindResolutionIndex(int targetW, int targetH)
     {
-        var resolutions = Screen.resolutions;
-        for (int i = 0; i < resolutions.Length; i++)
+        var resolutions = GetExtendedResolutions();
+        for (int i = 0; i < resolutions.Count; i++)
         {
-            if (resolutions[i].width == targetW && resolutions[i].height == targetH)
+            if (resolutions[i].x == targetW && resolutions[i].y == targetH)
                 return i;
         }
         // Fallback: lấy resolution cao nhất
-        return Mathf.Max(0, resolutions.Length - 1);
+        return Mathf.Max(0, resolutions.Count - 1);
     }
 }

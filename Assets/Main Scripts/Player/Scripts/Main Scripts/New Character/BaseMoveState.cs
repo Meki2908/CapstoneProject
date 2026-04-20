@@ -32,9 +32,10 @@ public class BaseMoveState : State
         crouch = false;
         sprint = false;
         dash = false; // Initialize dash to false
-        input = Vector2.zero;
-        velocity = Vector3.zero;
-        currentVelocity = Vector3.zero;
+        
+        // FIX: Bỏ reset velocity ở đây để giữ lại gia tốc (momentum) của nhân vật
+        // khi chuyển từ GetHitState hoặc các state khác quay lại BaseMove,
+        // giúp nhân vật không bị khựng (stutter) rồi phải tăng tốc lại từ đầu.
         gravityVelocity.y = 0;
 
         playerSpeed = character.playerSpeed;

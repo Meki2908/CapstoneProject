@@ -637,6 +637,27 @@ public class DungeonWaveManager : MonoBehaviour
         // === CHỜ TIMELINE INTRO (Pre-enter desert) — chỉ wave 1, trước thông báo + countdown ===
         yield return WaitForPreEnterDungeonTimelineIfNeeded();
 
+        // FIX BUG TARGET ẢO: Timeline Intro thường dùng 1 "Dummy Player" (bản sao). 
+        // Trong lúc Start() ở frame đầu tiên, Dummy này đang Active nên bị DungeonWaveManager "bắt nhầm" làm player chính.
+        // Cập nhật lại Player chính bằng cách tìm chính xác Character trên GameObject Active
+        Character[] characters = FindObjectsByType<Character>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        Transform realPlayerTransform = null;
+        foreach (Character c in characters)
+        {
+            if (c != null && c.gameObject.activeInHierarchy)
+            {
+                realPlayerTransform = c.transform;
+                break;
+            }
+        }
+
+        if (realPlayerTransform != null && realPlayerTransform != player)
+        {
+            Debug.Log($"[DungeonWave] Refreshing Player Reference after Timeline! Old: {(player != null ? player.name : "null")} -> New: {realPlayerTransform.gameObject.name}");
+            player = realPlayerTransform;
+            SetupPlayerReference(); // Tạo lại object "player" (lowercase) cho EnemyScript
+        }
+
         if (SceneTransitionManager.Instance != null)
             SceneTransitionManager.Instance.HideLoadingPanelIfAny();
 

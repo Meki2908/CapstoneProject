@@ -498,25 +498,15 @@ namespace Artsystack.ArtsystackGui
         {
             screenResolutions.Clear();
 
-            Resolution[] resolutions = Screen.resolutions;
+            var resolutions = GameSettings.GetExtendedResolutions();
 
-            for (int i = 0; i < resolutions.Length; i++)
+            for (int i = 0; i < resolutions.Count; i++)
             {
-                Resolution res = resolutions[i];
-                string resString = $"{res.width} x {res.height}";
+                string resString = $"{resolutions[i].x} x {resolutions[i].y}";
                 if (!screenResolutions.Contains(resString))
                 {
                     screenResolutions.Add(resString);
                 }
-            }
-
-            // Add common resolutions as fallback if list is empty
-            if (screenResolutions.Count == 0)
-            {
-                screenResolutions.Add("1920 x 1080");
-                screenResolutions.Add("1280 x 720");
-                screenResolutions.Add("2560 x 1440");
-                screenResolutions.Add("3840 x 2160");
             }
         }
 
