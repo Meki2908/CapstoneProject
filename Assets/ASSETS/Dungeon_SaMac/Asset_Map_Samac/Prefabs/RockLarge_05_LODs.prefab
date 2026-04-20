@@ -58,7 +58,7 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: 743cc44adf0e14648b3ead32db4a5c6d, type: 2}
     - target: {fileID: -6876379240866152566, guid: 8e4545c9c99a40540a84d921c4759365, type: 3}
       propertyPath: m_Layer
-      value: 15
+      value: 18
       objectReference: {fileID: 0}
     - target: {fileID: -6876379240866152566, guid: 8e4545c9c99a40540a84d921c4759365, type: 3}
       propertyPath: m_StaticEditorFlags
@@ -74,7 +74,7 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: 743cc44adf0e14648b3ead32db4a5c6d, type: 2}
     - target: {fileID: -3036625270245130094, guid: 8e4545c9c99a40540a84d921c4759365, type: 3}
       propertyPath: m_Layer
-      value: 15
+      value: 18
       objectReference: {fileID: 0}
     - target: {fileID: -3036625270245130094, guid: 8e4545c9c99a40540a84d921c4759365, type: 3}
       propertyPath: m_StaticEditorFlags
@@ -86,7 +86,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 8e4545c9c99a40540a84d921c4759365, type: 3}
       propertyPath: m_Layer
-      value: 15
+      value: 18
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 8e4545c9c99a40540a84d921c4759365, type: 3}
       propertyPath: m_StaticEditorFlags
@@ -102,7 +102,7 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: 743cc44adf0e14648b3ead32db4a5c6d, type: 2}
     - target: {fileID: 1845853128110994079, guid: 8e4545c9c99a40540a84d921c4759365, type: 3}
       propertyPath: m_Layer
-      value: 15
+      value: 18
       objectReference: {fileID: 0}
     - target: {fileID: 1845853128110994079, guid: 8e4545c9c99a40540a84d921c4759365, type: 3}
       propertyPath: m_StaticEditorFlags
@@ -110,7 +110,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2675727857300108956, guid: 8e4545c9c99a40540a84d921c4759365, type: 3}
       propertyPath: m_Layer
-      value: 15
+      value: 18
       objectReference: {fileID: 0}
     - target: {fileID: 2675727857300108956, guid: 8e4545c9c99a40540a84d921c4759365, type: 3}
       propertyPath: m_StaticEditorFlags
@@ -122,7 +122,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3472141715820517680, guid: 8e4545c9c99a40540a84d921c4759365, type: 3}
       propertyPath: m_Layer
-      value: 15
+      value: 18
       objectReference: {fileID: 0}
     - target: {fileID: 3472141715820517680, guid: 8e4545c9c99a40540a84d921c4759365, type: 3}
       propertyPath: m_StaticEditorFlags
@@ -152,6 +152,9 @@ PrefabInstance:
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 8e4545c9c99a40540a84d921c4759365, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: -145648959194255199}
     - targetCorrespondingSourceObject: {fileID: -3036625270245130094, guid: 8e4545c9c99a40540a84d921c4759365, type: 3}
       insertIndex: -1
       addedObject: {fileID: 7614190731561773485}
@@ -159,6 +162,27 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 5690250640503022417}
   m_SourcePrefab: {fileID: 100100000, guid: 8e4545c9c99a40540a84d921c4759365, type: 3}
+--- !u!1 &3069939936983513917 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 8e4545c9c99a40540a84d921c4759365, type: 3}
+  m_PrefabInstance: {fileID: 2764075244982552172}
+  m_PrefabAsset: {fileID: 0}
+--- !u!208 &-145648959194255199
+NavMeshObstacle:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3069939936983513917}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Shape: 1
+  m_Extents: {x: 0.95, y: 0.74, z: 2.795}
+  m_MoveThreshold: 0.1
+  m_Carve: 0
+  m_CarveOnlyStationary: 1
+  m_Center: {x: 0, y: -0.32, z: -0.54}
+  m_TimeToStationary: 0.5
 --- !u!1 &8322734221201393406 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -3036625270245130094, guid: 8e4545c9c99a40540a84d921c4759365, type: 3}

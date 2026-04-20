@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 9069158974625963533}
   - component: {fileID: 2025189820526527560}
   - component: {fileID: 101034524536063671}
-  m_Layer: 15
+  m_Layer: 18
   m_Name: RockLarge_01_LOD1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -97,7 +97,7 @@ GameObject:
   - component: {fileID: 1120119504855494515}
   - component: {fileID: 3586532049969020676}
   - component: {fileID: 8438646279999587674}
-  m_Layer: 15
+  m_Layer: 18
   m_Name: RockLarge_01_LOD0
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -182,7 +182,8 @@ GameObject:
   m_Component:
   - component: {fileID: 264349050100694005}
   - component: {fileID: 5039870644648938628}
-  m_Layer: 15
+  - component: {fileID: -2613873714117394692}
+  m_Layer: 18
   m_Name: RockLarge_01_LODs
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -240,6 +241,22 @@ LODGroup:
     renderers:
     - renderer: {fileID: 2668360172741433584}
   m_Enabled: 1
+--- !u!208 &-2613873714117394692
+NavMeshObstacle:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 639784529829486927}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Shape: 1
+  m_Extents: {x: 1.745, y: 1.295, z: 2.71}
+  m_MoveThreshold: 0.1
+  m_Carve: 0
+  m_CarveOnlyStationary: 1
+  m_Center: {x: 0, y: 0, z: 0}
+  m_TimeToStationary: 0.5
 --- !u!1 &4269557677257801177
 GameObject:
   m_ObjectHideFlags: 0
@@ -251,7 +268,7 @@ GameObject:
   - component: {fileID: 4423740670031253660}
   - component: {fileID: 2373481625023727879}
   - component: {fileID: 2502598761913354506}
-  m_Layer: 15
+  m_Layer: 18
   m_Name: RockLarge_01_LOD2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -337,7 +354,7 @@ GameObject:
   - component: {fileID: 8110540226603718084}
   - component: {fileID: 4338747903106793207}
   - component: {fileID: 2668360172741433584}
-  m_Layer: 15
+  m_Layer: 18
   m_Name: RockLarge_01_LOD3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -424,7 +441,7 @@ GameObject:
   - component: {fileID: 5036976647917088930}
   - component: {fileID: 1864490081306578201}
   - component: {fileID: 3317691633782953902}
-  m_Layer: 15
+  m_Layer: 18
   m_Name: RockLarge_01_Collider
   m_TagString: Untagged
   m_Icon: {fileID: 0}

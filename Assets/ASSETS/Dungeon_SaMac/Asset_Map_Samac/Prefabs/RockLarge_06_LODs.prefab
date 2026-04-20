@@ -54,7 +54,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -3554765776014491852, guid: 0506e28bc91fa7a4e969dd7039f79735, type: 3}
       propertyPath: m_Layer
-      value: 3
+      value: 18
       objectReference: {fileID: 0}
     - target: {fileID: -3554765776014491852, guid: 0506e28bc91fa7a4e969dd7039f79735, type: 3}
       propertyPath: m_StaticEditorFlags
@@ -70,7 +70,7 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: 743cc44adf0e14648b3ead32db4a5c6d, type: 2}
     - target: {fileID: -1884237071992485049, guid: 0506e28bc91fa7a4e969dd7039f79735, type: 3}
       propertyPath: m_Layer
-      value: 3
+      value: 18
       objectReference: {fileID: 0}
     - target: {fileID: -1884237071992485049, guid: 0506e28bc91fa7a4e969dd7039f79735, type: 3}
       propertyPath: m_StaticEditorFlags
@@ -78,7 +78,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -1756238247358670147, guid: 0506e28bc91fa7a4e969dd7039f79735, type: 3}
       propertyPath: m_Layer
-      value: 3
+      value: 18
       objectReference: {fileID: 0}
     - target: {fileID: -1756238247358670147, guid: 0506e28bc91fa7a4e969dd7039f79735, type: 3}
       propertyPath: m_StaticEditorFlags
@@ -90,7 +90,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 0506e28bc91fa7a4e969dd7039f79735, type: 3}
       propertyPath: m_Layer
-      value: 3
+      value: 18
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 0506e28bc91fa7a4e969dd7039f79735, type: 3}
       propertyPath: m_StaticEditorFlags
@@ -106,7 +106,7 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: 743cc44adf0e14648b3ead32db4a5c6d, type: 2}
     - target: {fileID: 4661970934170263030, guid: 0506e28bc91fa7a4e969dd7039f79735, type: 3}
       propertyPath: m_Layer
-      value: 3
+      value: 18
       objectReference: {fileID: 0}
     - target: {fileID: 4661970934170263030, guid: 0506e28bc91fa7a4e969dd7039f79735, type: 3}
       propertyPath: m_StaticEditorFlags
@@ -142,7 +142,7 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: 743cc44adf0e14648b3ead32db4a5c6d, type: 2}
     - target: {fileID: 6322738662144556355, guid: 0506e28bc91fa7a4e969dd7039f79735, type: 3}
       propertyPath: m_Layer
-      value: 3
+      value: 18
       objectReference: {fileID: 0}
     - target: {fileID: 6322738662144556355, guid: 0506e28bc91fa7a4e969dd7039f79735, type: 3}
       propertyPath: m_StaticEditorFlags
@@ -152,6 +152,9 @@ PrefabInstance:
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0506e28bc91fa7a4e969dd7039f79735, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: -3120331639911433033}
     - targetCorrespondingSourceObject: {fileID: -3554765776014491852, guid: 0506e28bc91fa7a4e969dd7039f79735, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1383998111112706478}
@@ -159,6 +162,27 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 9043041685472556634}
   m_SourcePrefab: {fileID: 100100000, guid: 0506e28bc91fa7a4e969dd7039f79735, type: 3}
+--- !u!1 &1196786826094538837 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 0506e28bc91fa7a4e969dd7039f79735, type: 3}
+  m_PrefabInstance: {fileID: 2043154936400071940}
+  m_PrefabAsset: {fileID: 0}
+--- !u!208 &-3120331639911433033
+NavMeshObstacle:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1196786826094538837}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Shape: 1
+  m_Extents: {x: 1.12, y: 1.14, z: 1.325}
+  m_MoveThreshold: 0.1
+  m_Carve: 0
+  m_CarveOnlyStationary: 1
+  m_Center: {x: 0, y: 0, z: 0}
+  m_TimeToStationary: 0.5
 --- !u!1 &5976366636662714928 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -3554765776014491852, guid: 0506e28bc91fa7a4e969dd7039f79735, type: 3}

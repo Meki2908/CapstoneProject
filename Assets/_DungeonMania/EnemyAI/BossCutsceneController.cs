@@ -59,9 +59,18 @@ public class BossCutsceneController : MonoBehaviour
     {
         CacheDirector();
         CacheEnemyComponents();
+    }
 
-        if (lockOnAwake)
+    private void OnEnable()
+    {
+        if (lockOnAwake && !_cutsceneActive)
             BeginCutsceneInternal();
+    }
+
+    private void OnDisable()
+    {
+        if (_cutsceneActive)
+            EndCutsceneInternal();
     }
 
     private void OnDestroy()

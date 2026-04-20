@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 1129590000278342797}
   - component: {fileID: 6936784243976574289}
   - component: {fileID: 7733615979391802266}
-  m_Layer: 15
+  m_Layer: 18
   m_Name: RockLarge_02_LOD0
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -96,7 +96,8 @@ GameObject:
   m_Component:
   - component: {fileID: 4089996583982629478}
   - component: {fileID: 9122192298603853079}
-  m_Layer: 15
+  - component: {fileID: -7453832411885730666}
+  m_Layer: 18
   m_Name: RockLarge_02_LODs
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -154,6 +155,22 @@ LODGroup:
     renderers:
     - renderer: {fileID: 2473808192230146121}
   m_Enabled: 1
+--- !u!208 &-7453832411885730666
+NavMeshObstacle:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3713576976366754012}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Shape: 1
+  m_Extents: {x: 0.91, y: 0.65, z: 2.35}
+  m_MoveThreshold: 0.1
+  m_Carve: 0
+  m_CarveOnlyStationary: 1
+  m_Center: {x: 0.05, y: -0.36, z: -0.03}
+  m_TimeToStationary: 0.5
 --- !u!1 &5245296120310409473
 GameObject:
   m_ObjectHideFlags: 0
@@ -166,7 +183,7 @@ GameObject:
   - component: {fileID: 8683062125117012584}
   - component: {fileID: 8529543906855796955}
   - component: {fileID: 842330178151951493}
-  m_Layer: 15
+  m_Layer: 18
   m_Name: RockLarge_02_Collider
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -274,7 +291,7 @@ GameObject:
   - component: {fileID: 3888924587524826616}
   - component: {fileID: 3518372045014594289}
   - component: {fileID: 3787333218433551248}
-  m_Layer: 15
+  m_Layer: 18
   m_Name: RockLarge_02_LOD1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -360,7 +377,7 @@ GameObject:
   - component: {fileID: 8968585790229663683}
   - component: {fileID: 7862713519147200812}
   - component: {fileID: 2361326001435314019}
-  m_Layer: 15
+  m_Layer: 18
   m_Name: RockLarge_02_LOD2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -446,7 +463,7 @@ GameObject:
   - component: {fileID: 8609540074425228618}
   - component: {fileID: 1951171675767326484}
   - component: {fileID: 2473808192230146121}
-  m_Layer: 15
+  m_Layer: 18
   m_Name: RockLarge_02_LOD3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
