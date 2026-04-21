@@ -27220,6 +27220,15 @@ MonoBehaviour:
   btn_Sharpening_Prev: {fileID: 4225585951044908292}
   btn_Sharpening_Next: {fileID: 2018776439958391051}
   text_Sharpening: {fileID: 8934975965743455951}
+  btn_RenderDistance_Prev: {fileID: 0}
+  btn_RenderDistance_Next: {fileID: 0}
+  text_RenderDistance: {fileID: 0}
+  btn_ShadowQuality_Prev: {fileID: 0}
+  btn_ShadowQuality_Next: {fileID: 0}
+  text_ShadowQuality: {fileID: 0}
+  btn_GraphicsQuality_Prev: {fileID: 0}
+  btn_GraphicsQuality_Next: {fileID: 0}
+  text_GraphicsQuality: {fileID: 0}
   btn_KeyBind_Dodge: {fileID: 3739873637642706770}
   input_KeyBind_Dodge: {fileID: 1715748705934053512}
   btn_KeyBind_Sprint: {fileID: 7766991096752137618}
@@ -27247,7 +27256,6 @@ MonoBehaviour:
   btn_KeyBind_WeaponWheel: {fileID: 5362647087296228763}
   input_KeyBind_WeaponWheel: {fileID: 977720104860012896}
   tab_CameraMouseSpeed: {fileID: 7438483310331899598}
-  tab_CameraRotateSpeed: {fileID: 2565903086016491777}
   tab_CameraZoomSpeedGameplay: {fileID: 8846036692960855432}
   btn_MiniMap_Prev: {fileID: 2362152245586202610}
   btn_MiniMap_Next: {fileID: 2387933181075743779}
@@ -27269,10 +27277,15 @@ MonoBehaviour:
   panel_Loading: {fileID: 7369890290234291127}
   panel_PopUpPause: {fileID: 409113026416246072}
   panel_Exit: {fileID: 1341483227440482641}
-  btn_Play: {fileID: 7264947783687413324}
+  btn_NewGame: {fileID: 0}
+  btn_Continue: {fileID: 0}
   btn_Help: {fileID: 4308781405832834687}
   btn_Settings: {fileID: 2936396764404101537}
   btn_Exit: {fileID: 5401226003208340040}
+  mainMenuSceneNames:
+  - DemoSceneSettings
+  - Menu_Game
+  - UI_Game
   gameSceneName: Game
   showCursorOnPlay: 1
 --- !u!114 &1222620186201719978
@@ -27294,9 +27307,13 @@ MonoBehaviour:
   btn_Setting: {fileID: 7372219515158961293}
   btn_Exit: {fileID: 6551187700824529177}
   panel_GUISettings: {fileID: 4692073894408001755}
+  mainMenuSceneNames:
+  - DemoSceneSettings
+  - Menu_Game
+  - UI_Game
   mainMenuSceneName: UI_Game
   cursorVisibleOnPause: 1
-  openMenuAction: {fileID: 5750602332980554053, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  togglePauseDebounceSeconds: 0.2
 --- !u!1 &6553680795892926528
 GameObject:
   m_ObjectHideFlags: 0

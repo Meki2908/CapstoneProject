@@ -136,10 +136,16 @@ public class SoundManager : MonoBehaviour
     public static void PlayMageProjectileHit(AudioSource source = null, float volume = 1f)
         => PlaySound(SoundType.Mage_Projectile_Hit, source, volume);
 
-    public static void PlayFootstep(AudioSource source = null, float volume = 1f)
+    public static void PlayFootstep(AudioSource source = null, float volume = 1f, bool isWater = false)
     {
         if (instance == null || instance.soundDatabase == null)
         {
+            return;
+        }
+
+        if (isWater)
+        {
+            PlaySound(SoundType.Footstep_Water, source, volume);
             return;
         }
 

@@ -31,6 +31,7 @@ public enum SoundType
 
     // Movement & status
     Footstep_Default,
+    Footstep_Water,
     Dash,
     Jump,
     Land,

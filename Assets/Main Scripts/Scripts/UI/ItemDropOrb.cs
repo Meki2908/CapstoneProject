@@ -53,18 +53,7 @@ public class ItemDropOrb : MonoBehaviour
 
     private void Start()
     {
-        // Tìm player
-        var player = GameObject.FindGameObjectWithTag("Player");
-        if (player == null)
-        {
-            // Fallback: tìm PlayerHealth component
-            var ph = FindObjectOfType<PlayerHealth>();
-            if (ph != null) player = ph.gameObject;
-        }
-        if (player != null)
-            playerTransform = player.transform;
-        else
-            Debug.LogWarning("[ItemDropOrb] Không tìm thấy Player! Orb sẽ không bị hút.");
+        FindRealPlayer();
 
         // Random scatter direction
         Vector2 randomDir = Random.insideUnitCircle.normalized;
@@ -79,6 +68,12 @@ public class ItemDropOrb : MonoBehaviour
 
     private void Update()
     {
+        // Re-find player if missing or inactive
+        if (playerTransform == null || !playerTransform.gameObject.activeInHierarchy)
+        {
+            FindRealPlayer();
+        }
+
         lifetime += Time.deltaTime;
         stateTimer += Time.deltaTime;
 
@@ -97,6 +92,37 @@ public class ItemDropOrb : MonoBehaviour
 
         // Xoay orb
         transform.Rotate(Vector3.up, rotateSpeed * Time.deltaTime);
+    }
+
+    private void FindRealPlayer()
+    {
+        // Ưu tiên tìm PlayerHealth đang active để tránh trúng dummy player của cutscene
+        PlayerHealth[] allHealths = FindObjectsByType<PlayerHealth>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        foreach (var ph in allHealths)
+        {
+            if (ph.gameObject.CompareTag("Player") && ph.IsAlive)
+            {
+                playerTransform = ph.transform;
+                return;
+            }
+        }
+        
+        // Fallback 1: Lấy PlayerHealth đầu tiên tìm được
+        if (playerTransform == null && allHealths.Length > 0)
+        {
+            playerTransform = allHealths[0].transform;
+            return;
+        }
+
+        // Fallback 2: Thử tìm theo tag (cách cũ nhưng kém an toàn hơn)
+        if (playerTransform == null)
+        {
+            var pObject = GameObject.FindGameObjectWithTag("Player");
+            if (pObject != null)
+            {
+                playerTransform = pObject.transform;
+            }
+        }
     }
 
     // === GIAI ĐOẠN 1: Bay tung ra ===

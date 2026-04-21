@@ -39,7 +39,7 @@ public class PlayerAudioEmitter : MonoBehaviour
     public void AE_PlayFootstepSound()
     {
         if (character != null && character.isWeaponDrawn) return;
-        SoundManager.PlayFootstep(localSource, defaultVolume);
+        SoundManager.PlayFootstep(localSource, defaultVolume, IsOnWater());
         footstepVfx?.EmitFromAnimationEvent();
     }
 
@@ -47,7 +47,7 @@ public class PlayerAudioEmitter : MonoBehaviour
     public void AE_PlayFootstepSoundFromWeaponLayer()
     {
         if (character == null || !character.isWeaponDrawn) return;
-        SoundManager.PlayFootstep(localSource, defaultVolume);
+        SoundManager.PlayFootstep(localSource, defaultVolume, IsOnWater());
         footstepVfx?.EmitFromAnimationEvent();
     }
     
@@ -79,5 +79,22 @@ public class PlayerAudioEmitter : MonoBehaviour
 
         WeaponSO currentWeapon = weaponController.GetCurrentWeapon();
         return currentWeapon != null ? currentWeapon.weaponType : fallbackWeaponType;
+    }
+
+    private bool IsOnWater()
+    {
+        // Bắn tia từ đầu gối/hông xuống đất để check xem chạm mặt cắt nào trước
+        Vector3 rayOrigin = transform.position + Vector3.up * 0.8f; 
+        float rayDistance = 1.5f; 
+
+        // Phải dùng QueryTriggerInteraction.Collide vì Layer Water là 1 bề mặt Trigger vô hình
+        if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, rayDistance, Physics.AllLayers, QueryTriggerInteraction.Collide))
+        {
+            if (hit.collider.gameObject.layer == LayerMask.NameToLayer("Water"))
+            {
+                return true; 
+            }
+        }
+        return false;
     }
 }

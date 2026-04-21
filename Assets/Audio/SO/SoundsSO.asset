@@ -157,28 +157,41 @@ MonoBehaviour:
     changePitch: 0
     pitchMin: 0.92
     pitchMax: 1.08
+  - name: Footstep_Water
+    volume: 1
+    mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
+    sounds:
+    - {fileID: 8300000, guid: b121a7e64616b4b4f86ef51ac983a669, type: 3}
+    - {fileID: 8300000, guid: 749f27032ade4324b96ccec26cc4eb55, type: 3}
+    - {fileID: 8300000, guid: 522a1f1ea1e833b4498da18c1a0ce620, type: 3}
+    - {fileID: 8300000, guid: 19f63360ee439f9419ae190fb0e2da9e, type: 3}
+    - {fileID: 8300000, guid: 5965d5633a3b3234798732c56f5805cd, type: 3}
+    - {fileID: 8300000, guid: 04598d120d089b4499583f679035af9d, type: 3}
+    changePitch: 0
+    pitchMin: 0.92
+    pitchMax: 1.2
   - name: Dash
     volume: 1
     mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
     sounds:
     - {fileID: 8300000, guid: b431eb0c454b01e4f9f3eccfa23c00b1, type: 3}
     changePitch: 1
-    pitchMin: 0.92
-    pitchMax: 1.2
+    pitchMin: 0.7
+    pitchMax: 1.3
   - name: Jump
     volume: 1
     mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
     sounds:
     - {fileID: 8300000, guid: 5ad6770a86a84f446996d62434b49d43, type: 3}
     changePitch: 1
-    pitchMin: 0.7
-    pitchMax: 1.3
+    pitchMin: 0
+    pitchMax: 0
   - name: Land
     volume: 1
     mixer: {fileID: 8155554364784751334, guid: 9d9536dd515a46f45a9ee27a7403f21f, type: 2}
     sounds:
     - {fileID: 8300000, guid: c9d5a74bef5fa6449b7b8907cf988805, type: 3}
-    changePitch: 1
+    changePitch: 0
     pitchMin: 0
     pitchMax: 0
   - name: Crouch_Move

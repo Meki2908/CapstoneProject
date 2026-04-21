@@ -467,6 +467,7 @@ MonoBehaviour:
   dungeonName: Sa Mac Dungeon
   totalWaves: 5
   mapType: 0
+  balanceData: {fileID: 0}
   mainMapSceneName: Map_Chinh
   returnDelayOnWin: 5
   returnDelayOnLose: 3
@@ -478,20 +479,50 @@ MonoBehaviour:
   spawnAttemptCount: 10
   waveCountdownTime: 5
   waveDelayTime: 3
+  preEnterDungeonTimeline: {fileID: 0}
+  waitForPreEnterTimelineBeforeWave1: 1
+  playPreEnterTimelineFromCode: 0
+  showRuntimeSkipPreEnterButton: 1
+  skipPreEnterButtonLabel: Skip
   skeletCount: 0600000005000000050000000500000000000000
   lichCount: 0000000000000000000000000100000000000000
-  bossCount: 0000000000000000000000000100000002000000
+  stoneogreCount: 0000000000000000000000000000000000000000
+  golemCount: 0000000000000000000000000000000000000000
+  minotaurCount: 0000000000000000000000000000000000000000
+  ifritCount: 0000000000000000000000000000000000000000
   demonCount: 0000000000000000000000000000000001000000
   monsterCount: 0000000000000000000000000000000000000000
   totalEnemiesPerWave: 0600000005000000050000000700000003000000
   enemyNewPrefab: {fileID: 1979783443647161850, guid: fbdfd458b0556456fa052acb093beffc, type: 3}
   dropExpOrb: 1
-  maxDropsPerEnemy: 3
+  itemOrbPrefab: {fileID: 0}
   skeletDrops: []
+  skeletMaxDrops: 2
+  skeletExp: 100
   monsterDrops: []
+  monsterMaxDrops: 3
+  monsterExp: 300
   lichDrops: []
+  lichMaxDrops: 3
+  lichExp: 350
   bossDrops: []
+  bossMaxDrops: 5
+  bossExp: 1500
   demonDrops: []
+  demonMaxDrops: 5
+  demonExp: 3000
+  stoneogreDrops: []
+  stoneogreMaxDrops: 5
+  stoneogreExp: 1500
+  golemDrops: []
+  golemMaxDrops: 5
+  golemExp: 1800
+  minotaurDrops: []
+  minotaurMaxDrops: 5
+  minotaurExp: 2000
+  ifritDrops: []
+  ifritMaxDrops: 5
+  ifritExp: 2500
   player: {fileID: 0}
   waveNotificationUI: {fileID: 7727550219427392808}
   waveNameText: {fileID: 1244742186104325549}
@@ -501,6 +532,8 @@ MonoBehaviour:
   dungeonFailedUI: {fileID: 5603228829320253832}
   expRewardText: {fileID: 7744030717274973898}
   statusText: {fileID: 6044888189830362079}
+  waveFramePanel: {fileID: 0}
+  lastWaveLootDelay: 6
   deathAnimationDelay: 3
 --- !u!114 &5444252132967615883
 MonoBehaviour:

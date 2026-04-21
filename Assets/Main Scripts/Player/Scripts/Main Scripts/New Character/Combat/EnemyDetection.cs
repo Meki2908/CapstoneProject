@@ -119,8 +119,8 @@ public class EnemyDetection : MonoBehaviour
             nearestEnemy = newNearestEnemy;
         }
 
-        // Update combat state - only when enemy is detected AND enemy is aware of player
-        isInCombat = nearestEnemy != null && IsEnemyAwareOfPlayer();
+        // Update combat state - prioritize enemy proximity over enemy awareness state to prevent root motion bugs
+        isInCombat = nearestEnemy != null;
     }
 
     // Check if enemy is aware of player (enemy has detected player)

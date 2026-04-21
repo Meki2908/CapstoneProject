@@ -82,38 +82,47 @@ public class EnemyStuckDetection : MonoBehaviour
             return;
         }
 
-        // Kiểm tra khoảng cách di chuyển
+        // Kiểm tra NavMesh path status
+        bool hasPath = navAgent.hasPath;
+        bool pathPending = navAgent.pathPending;
+        bool pathComplete = navAgent.pathStatus == NavMeshPathStatus.PathComplete;
+        
+        // Cần tính toán khoảng cách
         float movedDistance = Vector3.Distance(transform.position, lastPosition);
         float distToPlayer = Vector3.Distance(transform.position, enemyScript.target.position);
         
         // Chỉ detect stuck khi enemy ở xa player (gần player = đang tấn công, không kẹt)
         if (distToPlayer > maxDistanceFromPlayer)
         {
-            if (movedDistance < minMovementDistance)
+            bool isPathBlocked = !pathPending && (!hasPath || !pathComplete);
+            
+            if (isPathBlocked)
             {
+                // Nếu bị chặn đường hoàn toàn (VD: do NavMeshObstacle), tích luỹ stuckTimer nhanh nhạy hơn,
+                // không phụ thuộc vào movement.
+                stuckTimer += Time.deltaTime * 2.0f; // Tăng gấp đôi tốc độ
+            }
+            else if (movedDistance < minMovementDistance)
+            {
+                // Nếu có đường đi nhưng bị kẹt terrain
                 stuckTimer += Time.deltaTime;
-                
-                // Kiểm tra NavMesh path status
-                bool hasPath = navAgent.hasPath;
-                bool pathPending = navAgent.pathPending;
-                bool pathComplete = navAgent.pathStatus == NavMeshPathStatus.PathComplete;
-                
-                if (stuckTimer >= stuckTimeThreshold)
-                {
-                    // Enemy bị kẹt!
-                    Debug.LogWarning($"[EnemyStuck] {gameObject.name} bị kẹt! " +
-                        $"Moved: {movedDistance:F2}m in {stuckTimeThreshold}s, " +
-                        $"Distance to player: {distToPlayer:F1}m, " +
-                        $"HasPath: {hasPath}, PathComplete: {pathComplete}");
-                    
-                    TryWarpToPlayer();
-                    stuckTimer = 0f;
-                    lastPosition = transform.position;
-                }
             }
             else
             {
                 // Enemy di chuyển OK, reset timer
+                stuckTimer = 0f;
+                lastPosition = transform.position;
+            }
+
+            if (stuckTimer >= stuckTimeThreshold)
+            {
+                // Enemy bị kẹt!
+                Debug.LogWarning($"[EnemyStuck] {gameObject.name} bị kẹt hoặc mất đường! " +
+                    $"Moved: {movedDistance:F2}m, " +
+                    $"Distance to player: {distToPlayer:F1}m, " +
+                    $"HasPath: {hasPath}, PathComplete: {pathComplete}");
+                
+                TryWarpToPlayer();
                 stuckTimer = 0f;
                 lastPosition = transform.position;
             }

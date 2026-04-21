@@ -2,6 +2,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
+using System.Collections;
 
 /// <summary>
 /// Manages the consumable item display UI (Health Potion)
@@ -43,9 +45,12 @@ public class ConsumableItemDisplay : MonoBehaviour
 
     // Input action for direct key input (if not using InputActionReference)
     private InputAction directKeyInput;
+    private bool _pendingReconnectAfterSceneLoad;
 
     private void Awake()
     {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+
         // Auto-find UI components if not assigned
         if (itemIcon == null)
             itemIcon = transform.Find("Item Icon")?.GetComponent<Image>();
@@ -78,6 +83,35 @@ public class ConsumableItemDisplay : MonoBehaviour
     private void OnEnable()
     {
         // Re-find PlayerHealth khi enable lại (scene transition)
+        TryStartReconnectAfterSceneLoadCoroutine();
+        TryFindPlayerHealth();
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        Debug.Log($"[ConsumableItemDisplay] Scene loaded: {scene.name}. Re-finding PlayerHealth...");
+        _pendingReconnectAfterSceneLoad = true;
+        TryStartReconnectAfterSceneLoadCoroutine();
+    }
+
+    private void TryStartReconnectAfterSceneLoadCoroutine()
+    {
+        if (!_pendingReconnectAfterSceneLoad) return;
+        if (!isActiveAndEnabled || !gameObject.activeInHierarchy) return;
+
+        _pendingReconnectAfterSceneLoad = false;
+        StartCoroutine(ReconnectAfterSceneLoad());
+    }
+
+    private IEnumerator ReconnectAfterSceneLoad()
+    {
+        // Chờ 3 frame để đảm bảo PlayerHealth.Start() đã chạy xong
+        yield return null;
+        yield return null;
+        yield return null;
+        
+        // Tìm lại PlayerHealth
+        playerHealth = null;
         TryFindPlayerHealth();
     }
 
@@ -230,7 +264,7 @@ public class ConsumableItemDisplay : MonoBehaviour
         }
 
         // Check if player is alive
-        if (playerHealth == null || !playerHealth.IsAlive)
+        if (playerHealth == null || playerHealth.gameObject == null || !playerHealth.IsAlive)
         {
             Debug.LogWarning("[ConsumableItemDisplay] Cannot use health potion: PlayerHealth is null or player is dead!");
             return;
@@ -332,6 +366,8 @@ public class ConsumableItemDisplay : MonoBehaviour
 
     private void OnDestroy()
     {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+
         // Unsubscribe from events
         if (InventoryManager.Instance != null)
         {

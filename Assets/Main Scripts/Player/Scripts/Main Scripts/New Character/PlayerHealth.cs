@@ -73,60 +73,42 @@ public class PlayerHealth : MonoBehaviour
     /// </summary>
     private void FindHealthText()
     {
-        // Method 1: Try to find HealthBarUI and get TextMeshProUGUI from its children
+        // Method 1: Try to find HealthBarUI and explicitly get the text component meant for HP
         HealthBarUI healthBarUI = FindFirstObjectByType<HealthBarUI>();
         if (healthBarUI != null)
         {
-            // Look for TextMeshProUGUI in HealthBarUI's children
-            healthText = healthBarUI.GetComponentInChildren<TextMeshProUGUI>();
-            if (healthText != null)
+            TextMeshProUGUI[] texts = healthBarUI.GetComponentsInChildren<TextMeshProUGUI>(true);
+            foreach (var txt in texts)
             {
-                Debug.Log("[PlayerHealth] Found health text from HealthBarUI");
-                return;
-            }
-        }
+                // Skip texts that belong to the consumable/potion UI
+                if (txt.GetComponentInParent<ConsumableItemDisplay>() != null) continue;
 
-        // Method 2: Try to find by common names/tags in Canvas
-        Canvas[] canvases = FindObjectsByType<Canvas>(FindObjectsSortMode.None);
-        foreach (Canvas canvas in canvases)
-        {
-            // Look for TextMeshProUGUI with common health text names
-            TextMeshProUGUI[] texts = canvas.GetComponentsInChildren<TextMeshProUGUI>(true);
-            foreach (TextMeshProUGUI text in texts)
-            {
-                string textName = text.name.ToLower();
-                if (textName.Contains("health") || textName.Contains("hp") || textName.Contains("healthtext"))
+                string tName = txt.name.ToLower();
+                if (tName.Contains("health") || tName.Contains("hp") || tName.Contains("value") || tName.Contains("text"))
                 {
-                    healthText = text;
-                    Debug.Log($"[PlayerHealth] Found health text by name: {text.name}");
+                    healthText = txt;
+                    Debug.Log($"[PlayerHealth] Found health text '{txt.name}' from HealthBarUI");
                     return;
                 }
             }
         }
 
-        // Method 3: Try to find in all TextMeshProUGUI components (last resort)
-        TextMeshProUGUI[] allTexts = FindObjectsByType<TextMeshProUGUI>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-        foreach (TextMeshProUGUI text in allTexts)
+        // Method 2: Fallback to finding by common names in Canvas, excluding Potion UI
+        Canvas[] canvases = FindObjectsByType<Canvas>(FindObjectsSortMode.None);
+        foreach (Canvas canvas in canvases)
         {
-            // Check if it's likely a health text (has "HP" or "Health" in name, or is child of health bar)
-            string textName = text.name.ToLower();
-            Transform parent = text.transform.parent;
-            bool isInHealthBar = false;
-            while (parent != null)
+            TextMeshProUGUI[] texts = canvas.GetComponentsInChildren<TextMeshProUGUI>(true);
+            foreach (TextMeshProUGUI txt in texts)
             {
-                if (parent.name.ToLower().Contains("health") || parent.name.ToLower().Contains("bar"))
-                {
-                    isInHealthBar = true;
-                    break;
-                }
-                parent = parent.parent;
-            }
+                if (txt.GetComponentInParent<ConsumableItemDisplay>() != null) continue;
 
-            if (isInHealthBar || textName.Contains("health") || textName.Contains("hp"))
-            {
-                healthText = text;
-                Debug.Log($"[PlayerHealth] Found health text: {text.name}");
-                return;
+                string tName = txt.name.ToLower();
+                if (tName == "health text" || tName == "hp text" || tName == "healthvalue" || tName == "hpvalue")
+                {
+                    healthText = txt;
+                    Debug.Log($"[PlayerHealth] Found health text by exact name: {txt.name}");
+                    return;
+                }
             }
         }
 

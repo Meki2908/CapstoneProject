@@ -9371,7 +9371,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   slotIndex: 0
   emptySlotColor: {r: 0, g: 0, b: 0, a: 1}
-  doubleClickTime: 0.3
   slotImage: {fileID: 0}
 --- !u!114 &195122416
 MonoBehaviour:
@@ -12331,9 +12330,12 @@ MonoBehaviour:
   cameraToggleInputAction: {fileID: 2402619717079170662, guid: dac40529bdee43b4bb0321163193ded6, type: 3}
   startHidden: 1
   inputProvider: {fileID: 0}
+  inputAxisControllers: []
   disableCameraLookOnCursorVisible: 0
   disableCameraZoomOnCursorVisible: 0
   fixedCinemachineVersion: 0
+  lookInputAction: {fileID: 0}
+  zoomInputAction: {fileID: 0}
 --- !u!114 &326155205
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12723,16 +12725,22 @@ MonoBehaviour:
   rCDOverlay: {fileID: 942281445}
   tCDOverlay: {fileID: 1180369406}
   ultimateCDOverlay: {fileID: 1871459695}
-  eCDRemain: {fileID: 630373304}
-  rCDRemain: {fileID: 1000906921}
-  tCDRemain: {fileID: 182441101}
-  ultimateCDRemain: {fileID: 760414934}
+  swordECDRemain: {fileID: 0}
+  swordRCDRemain: {fileID: 0}
+  swordTCDRemain: {fileID: 0}
+  swordUltimateCDRemain: {fileID: 0}
+  axeECDRemain: {fileID: 0}
+  axeRCDRemain: {fileID: 0}
+  axeTCDRemain: {fileID: 0}
+  axeUltimateCDRemain: {fileID: 0}
+  staffECDRemain: {fileID: 0}
+  staffRCDRemain: {fileID: 0}
+  staffTCDRemain: {fileID: 0}
+  staffUltimateCDRemain: {fileID: 0}
   defaultIcon: {fileID: 21300000, guid: 683f8097451745c4a94e534310cc48e3, type: 3}
-  ultimateShaderController: {fileID: 0}
-  eLockOverlay: {fileID: 0}
-  rLockOverlay: {fileID: 0}
   tLockOverlay: {fileID: 209683959}
   ultimateLockOverlay: {fileID: 1678024446}
+  weaponController: {fileID: 0}
 --- !u!1 &336075152
 GameObject:
   m_ObjectHideFlags: 0
@@ -13118,7 +13126,7 @@ MonoBehaviour:
   m_fontAsset: {fileID: 11400000, guid: e3f54f2386eacfb498711344712aeeef, type: 2}
   m_sharedMaterial: {fileID: 4908264701057610302, guid: e3f54f2386eacfb498711344712aeeef, type: 2}
   m_fontSharedMaterials:
-  - {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  - {fileID: 4908264701057610302, guid: e3f54f2386eacfb498711344712aeeef, type: 2}
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
@@ -13470,7 +13478,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   slotIndex: 3
   emptySlotColor: {r: 0, g: 0, b: 0, a: 1}
-  doubleClickTime: 0.3
   slotImage: {fileID: 0}
 --- !u!114 &394299903
 MonoBehaviour:
@@ -13713,6 +13720,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   itemIcon: {fileID: 67843113}
+  qualityView: {fileID: 0}
   itemNameText: {fileID: 646428861}
   itemAmountText: {fileID: 1852722499}
   removeButton: {fileID: 2110578170}
@@ -16835,7 +16843,7 @@ CanvasRenderer:
   m_CullTransparentMesh: 1
 --- !u!224 &531163793 stripped
 RectTransform:
-  m_CorrespondingSourceObject: {fileID: 3736541069023595717, guid: 46dbdab0d393e9447bd0975150300e73, type: 3}
+  m_CorrespondingSourceObject: {fileID: 88192729248576904, guid: 46dbdab0d393e9447bd0975150300e73, type: 3}
   m_PrefabInstance: {fileID: 1455223310}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &535049604
@@ -18347,7 +18355,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MinimapCameraFollow
   player: {fileID: 0}
   offset: {x: 0, y: 50, z: 0}
+  cameraTransform: {fileID: 0}
   playerIcon: {fileID: 0}
+  minimapUIRoot: {fileID: 0}
+  brightenMinimap: 1
+  minimapAmbientIntensity: 1.5
 --- !u!114 &600511387
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -18925,7 +18937,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   slotIndex: 0
   emptySlotColor: {r: 0, g: 0, b: 0, a: 1}
-  doubleClickTime: 0.3
 --- !u!114 &629208662
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -26274,8 +26285,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c1b5c570bffb56f4d8eedae72f2443f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GateTeleporter
-  teleportTarget: {fileID: 1560638660}
+  pointA: {fileID: 0}
+  pointB: {fileID: 0}
   pressFCanvas: {fileID: 1994073162}
+  teleportCooldown: 0.5
 --- !u!65 &759981017
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -42111,7 +42124,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   slotIndex: 1
   emptySlotColor: {r: 0, g: 0, b: 0, a: 1}
-  doubleClickTime: 0.3
 --- !u!114 &1322604605
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -43156,7 +43168,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   slotIndex: 2
   emptySlotColor: {r: 0, g: 0, b: 0, a: 1}
-  doubleClickTime: 0.3
 --- !u!114 &1371858961
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -43613,7 +43624,7 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 3750370462034980711, guid: a6ae84f3500aa7e49a5fa36f710e50cf, type: 3}
   m_PrefabInstance: {fileID: 1380842939}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 837479932}
+  m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0d31e32532adf7446b1af9be360ec0d5, type: 3}
@@ -50649,9 +50660,9 @@ MonoBehaviour:
   healPercentage: 0.5
   cooldownTime: 15
   useConsumableAction: {fileID: 0}
-  useKey: 40
   autoFindPlayerHealth: 1
   playerHealth: {fileID: 0}
+  healVFXPrefab: {fileID: 0}
 --- !u!114 &1475591640
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -57414,8 +57425,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c1b5c570bffb56f4d8eedae72f2443f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GateTeleporter
-  teleportTarget: {fileID: 759981015}
+  pointA: {fileID: 0}
+  pointB: {fileID: 0}
   pressFCanvas: {fileID: 1994073162}
+  teleportCooldown: 0.5
 --- !u!65 &1560638662
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -60668,7 +60681,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   slotIndex: 1
   emptySlotColor: {r: 0, g: 0, b: 0, a: 1}
-  doubleClickTime: 0.3
   slotImage: {fileID: 0}
 --- !u!114 &1702717368
 MonoBehaviour:
@@ -61200,6 +61212,7 @@ MonoBehaviour:
   currentHealth: 0
   healthText: {fileID: 0}
   autoFindHealthText: 1
+  hitCooldown: 0.8
 --- !u!114 &1770143059
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -61217,16 +61230,14 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 0
   autoTargetRadius: 6
+  detectionUpdateInterval: 0.1
   cnCamera: {fileID: 326155208}
   combatCameraDistance: 9
   normalCameraDistance: 5
   cameraTransitionSpeed: 2
-  cameraLookOffset: 0.5
   combatMoveSpeed: 5
-  rotationSpeed: 12
   smoothRotationDuration: 0.3
   useRootMotionWhenNoEnemy: 1
-  moveTowardEnemyWhenAttacking: 1
   swordAttackRange: 2.7
   axeAttackRange: 3
   mageAttackRange: 8
@@ -61304,6 +61315,9 @@ MonoBehaviour:
   useInputDirection: 1
   vfxMinInterval: 0.03
   vfxDuration: 3
+  enableUltimateVfxPool: 1
+  ultimatePoolPrewarm: 2
+  ultimatePoolMaxPerPrefab: 8
 --- !u!114 &1770143064
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -61325,9 +61339,6 @@ MonoBehaviour:
   skillIndexParam: skillIndex
   axeLayerIndex: 2
   skillStateTag: AxeSkill
-  enableRootMotionDuringSkill: 1
-  vfxLifetime: 5
-  maxSkillLockSeconds: 3
   useInputDirection: 1
   forwardAnchor: {fileID: 376450081}
   vfxMinInterval: 0.03
@@ -61478,6 +61489,7 @@ MonoBehaviour:
   sprintSpeed: 7
   dashSpeed: 10
   jumpHeight: 0.8
+  sprintJumpHeight: 1
   gravityMultiplier: 2
   rotationSpeed: 5
   crouchColliderHeight: 1.35
@@ -61496,6 +61508,22 @@ MonoBehaviour:
   cameraTransform: {fileID: 0}
   animator: {fileID: 0}
   playerVelocity: {x: 0, y: 0, z: 0}
+  cachedPlanarForward: {x: 0, y: 0, z: 0}
+  cachedPlanarRight: {x: 0, y: 0, z: 0}
+  lastAttackInputTime: 0
+  dashLockUntil: 0
+  canStartJump: 1
+  groundLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  groundRayDistance: 0.38
+  footRayHalfWidth: 0.12
+  jumpBufferDuration: 0.12
+  coyoteTime: 0.08
+  coyoteMaxUpSpeed: 0.35
+  jumpCooldownSeconds: 0.32
+  locomotionIdleMoveThreshold: 0.05
+  locomotionIdleSnapAfterSeconds: 0.2
 --- !u!114 &1770143072
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -70086,8 +70114,6 @@ MonoBehaviour:
   - {fileID: 1702717367}
   - {fileID: 1954465800}
   - {fileID: 394299902}
-  equipmentViewportContent: {fileID: 1186499755}
-  inventoryController: {fileID: 1944591302}
 --- !u!114 &1944591302
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -70132,8 +70158,6 @@ MonoBehaviour:
   - {fileID: 1322604604}
   - {fileID: 1371858960}
   masteryText: {fileID: 484453192}
-  gemsViewportContent: {fileID: 940324806}
-  inventoryController: {fileID: 1944591302}
 --- !u!114 &1944591304
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -70223,11 +70247,33 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   tooltipPanel: {fileID: 724931282}
   tooltipText: {fileID: 500176792}
+  itemNameText: {fileID: 0}
+  itemDescriptionText: {fileID: 0}
   tooltipBackground: {fileID: 724931284}
-  offset: {x: 10, y: 10}
-  padding: 10
+  nameFont: {fileID: 0}
+  bodyFont: {fileID: 0}
+  nameFontSize: 0
+  bodyFontSize: 0
+  paddingTop: 25
+  paddingBottom: 40
+  paddingLeft: 30
+  paddingRight: 30
   minWidth: 200
   maxWidth: 400
+  maxHeight: 0
+  sectionGap: 10
+  minNameHeight: 40
+  minDescHeight: 50
+  cursorOffsetPixels: 30
+  colorHP: {r: 0.118, g: 0.549, b: 0.118, a: 1}
+  colorDefense: {r: 0.157, g: 0.471, b: 0.722, a: 1}
+  colorCrit: {r: 0.722, g: 0.145, b: 0.431, a: 1}
+  colorMoveSpeed: {r: 0.055, g: 0.557, b: 0.518, a: 1}
+  colorAtkSpeed: {r: 0.8, g: 0.447, b: 0, a: 1}
+  colorSlotPassive: {r: 0.8, g: 0.533, b: 0, a: 1}
+  colorPassiveDesc: {r: 0.69, g: 0.49, b: 0.063, a: 1}
+  colorRarity: {r: 0.176, g: 0.125, b: 0.082, a: 1}
+  colorDescription: {r: 0.176, g: 0.125, b: 0.082, a: 1}
 --- !u!114 &1944591308
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -70283,6 +70329,9 @@ MonoBehaviour:
   weaponController: {fileID: 0}
   character: {fileID: 0}
   enemyDetection: {fileID: 0}
+  OnWeaponSwapped:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &1944591311
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -70974,7 +71023,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   slotIndex: 2
   emptySlotColor: {r: 0, g: 0, b: 0, a: 1}
-  doubleClickTime: 0.3
   slotImage: {fileID: 0}
 --- !u!114 &1954465801
 MonoBehaviour:
@@ -76403,7 +76451,7 @@ MonoBehaviour:
   m_fontAsset: {fileID: 11400000, guid: e3f54f2386eacfb498711344712aeeef, type: 2}
   m_sharedMaterial: {fileID: 4908264701057610302, guid: e3f54f2386eacfb498711344712aeeef, type: 2}
   m_fontSharedMaterials:
-  - {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  - {fileID: 4908264701057610302, guid: e3f54f2386eacfb498711344712aeeef, type: 2}
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
