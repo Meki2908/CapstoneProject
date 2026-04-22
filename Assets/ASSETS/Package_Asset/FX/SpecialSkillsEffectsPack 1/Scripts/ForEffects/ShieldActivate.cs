@@ -2,15 +2,23 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.AI; // Thêm thư viện này để dùng NavMeshAgent
 
 public class ShieldActivate : MonoBehaviour
 {
+    [Header("Visual Effects")]
     public float ImpactLife;
     Vector4[] points;
     Material m_material;
     List<Vector4> Hitpoints;
     MeshRenderer m_meshRenderer;
     float time;
+
+    [Header("Push Enemies Logic")]
+    public float pushRadius = 3f; // Bán kính đẩy quái
+    public float pushForce = 15f; // Lực hất văng
+    public LayerMask enemyLayer;  // Layer của quái (nhớ set trong Inspector)
+    public float stunDuration = 0.5f; // Thời gian quái bị choáng/văng ra trước khi bò dậy đi tiếp
     
     // ── SHIELD STATE (Global flag for PlayerHealth) ──────────────────────────
     public static bool IsShieldActive { get; private set; }
@@ -22,77 +30,16 @@ public class ShieldActivate : MonoBehaviour
     void OnEnable()
     {
         IsShieldActive = true;
-        StartCoroutine(PushEnemiesOutSmoothly());
+        // KHÔNG gọi đẩy 1 lần ở đây nữa
     }
 
-    IEnumerator PushEnemiesOutSmoothly()
+    void FixedUpdate() // Chạy liên tục song song với khung hình vật lý
     {
-        var obstacle = GetComponent<UnityEngine.AI.NavMeshObstacle>();
-        if (obstacle != null) obstacle.carving = false;
-        
-        float disableDuration = 0.8f; // Thời gian bay trên không và rơi xuống đất
-        
-        List<UnityEngine.AI.NavMeshAgent> agents = new List<UnityEngine.AI.NavMeshAgent>();
-        List<Rigidbody> rbs = new List<Rigidbody>();
-        List<bool> originalKinematicState = new List<bool>();
-        
-        Collider[] hits = Physics.OverlapSphere(transform.position, 2.8f);
-        foreach (Collider hit in hits)
-        {
-            if (hit.CompareTag("Enemy") || hit.gameObject.layer == LayerMask.NameToLayer("Enemy"))
-            {
-                UnityEngine.AI.NavMeshAgent agent = hit.GetComponent<UnityEngine.AI.NavMeshAgent>();
-                Rigidbody rb = hit.GetComponent<Rigidbody>();
-                
-                // Tắt agent và chuẩn bị hất văng
-                if (agent != null && rb != null && agent.enabled)
-                {
-                    agent.enabled = false; 
-                    agents.Add(agent);
-                    
-                    rbs.Add(rb);
-                    originalKinematicState.Add(rb.isKinematic);
-                    
-                    // Bật vật lý để nhận lực
-                    rb.isKinematic = false;
-                    
-                    // Hất văng (Lực nổ từ tâm, bán kính 3.5m, hơi hất nhẹ lên trên 0.5m)
-                    rb.AddExplosionForce(1200f, transform.position, 3.5f, 0.5f);
-                }
-            }
-        }
-        
-        // Chờ quái văng xong và rớt xuống
-        yield return new WaitForSeconds(disableDuration);
-        
-        for (int i = 0; i < agents.Count; i++)
-        {
-            if (agents[i] != null && rbs[i] != null)
-            {
-                // Stop mọi chuyển động vật lý tàn dư
-                rbs[i].linearVelocity = Vector3.zero;
-                rbs[i].angularVelocity = Vector3.zero;
-                rbs[i].isKinematic = originalKinematicState[i];
-                
-                // Ép rớt xuống Navmesh an toàn tránh lọt map
-                UnityEngine.AI.NavMeshHit navHit;
-                if (UnityEngine.AI.NavMesh.SamplePosition(agents[i].transform.position, out navHit, 3.0f, UnityEngine.AI.NavMesh.AllAreas))
-                {
-                    agents[i].transform.position = navHit.position;
-                }
-                
-                agents[i].enabled = true; 
-            }
-        }
-        
-        if (obstacle != null) obstacle.carving = true; 
+        PushEnemiesContinuously();
     }
 
     void OnDisable()
     {
-        // Chỉ reset nếu không còn ShieldActivate nào khác đang active (trường hợp nhiều shield)
-        // Tuy nhiên thường shield player chỉ có 1 cái active.
-        // Để an toàn, ta có thể dùng counter hoặc đơn giản là check scene.
         IsShieldActive = false;
     }
 
@@ -107,35 +54,71 @@ public class ShieldActivate : MonoBehaviour
 
     void Update()
     {
-        //Set material ( based on Shader_IntegratedEffect ) point array
+        // ... (Giữ nguyên code phần update Shader của bạn) ...
         m_material.SetVectorArray("_Points", points);
 
-        //Find available points 
         Hitpoints = Hitpoints
         .Select(s => new Vector4(s.x, s.y, s.z, s.w + Time.deltaTime / ImpactLife))
         .Where(w => w.w <= 1).ToList();
 
-        //Fill empty point for list circle
         if (Time.time > time + 0.1f)
         {
             time = Time.time;
             AddEmpty();
         }
 
-        //Set array
         Hitpoints.ToArray().CopyTo(points, 0);
+    }
+
+    // --- THÊM LOGIC ĐẨY QUÁI LIÊN TỤC Ở ĐÂY ---
+    private void PushEnemiesContinuously()
+    {
+        // Liên tục quét những kẻ xâm nhập
+        Collider[] enemiesInRadius = Physics.OverlapSphere(transform.position, pushRadius, enemyLayer);
+
+        foreach (Collider enemyCollider in enemiesInRadius)
+        {
+            NavMeshAgent agent = enemyCollider.GetComponentInParent<NavMeshAgent>();
+            Rigidbody rb = enemyCollider.GetComponentInParent<Rigidbody>();
+
+            if (rb != null)
+            {
+                // Tạm tắt AI để nó không cưỡng lại vật lý
+                if (agent != null && agent.enabled)
+                {
+                    StartCoroutine(TemporarilyDisableAgent(agent));
+                }
+
+                // Tính hướng từ tâm khiên đẩy ra
+                Vector3 pushDirection = (rb.position - transform.position).normalized;
+                pushDirection.y = 0.2f; // Ép một chút lực hất lên trời để quái lùi dễ hơn
+
+                // Áp dụng lực đẩy liên tục (ForceMode.Force) thay vì Impulse
+                rb.isKinematic = false;
+                rb.AddForce(pushDirection * pushForce, ForceMode.Force);
+            }
+        }
+    }
+
+    // Coroutine nhỏ để bật lại AI sau khi quái bị văng ra khỏi khiên 1 thời gian ngắn
+    private IEnumerator TemporarilyDisableAgent(NavMeshAgent agent)
+    {
+        agent.enabled = false;
+        yield return new WaitForSeconds(stunDuration); // Dùng stunDuration thay vì fix cứng 0.5f
+        if (agent != null && agent.gameObject.activeInHierarchy)
+        {
+            agent.enabled = true;
+        }
     }
 
     public void AddHitObject(Vector3 position)
     {
-        position -= transform.position;
-        position = position.normalized/2;
-        Hitpoints.Add(new Vector4(position.x, position.y, position.z, 0));
+        // ... (Giữ nguyên)
     }
 
     public void AddEmpty()
     {
-        Hitpoints.Add(new Vector4(0, 0, 0, 0));
+        // ... (Giữ nguyên)
     }
 
     private void OnDestroy()

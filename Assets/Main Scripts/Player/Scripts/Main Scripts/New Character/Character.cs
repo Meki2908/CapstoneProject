@@ -110,7 +110,6 @@ public class Character : MonoBehaviour
     float jumpAllowedAfterTime = -999f;
 
     private int originalLayer; // Store original layer before dash
-    private const int NOTHING_LAYER = 0; // Unity's "Nothing" layer index
 
     // Start is called before the first frame update
     private void Start()
@@ -391,22 +390,33 @@ public class Character : MonoBehaviour
     {
         IsDashing = true;
 
-        // Store original layer before changing (only if not already Nothing layer)
-        if (gameObject.layer != NOTHING_LAYER)
+        // Lưu layer mặc định của Player (chỉ lưu 1 lần nếu chưa lưu)
+        if (originalLayer == 0 && gameObject.layer != LayerMask.NameToLayer("Player_Dashing"))
         {
             originalLayer = gameObject.layer;
         }
 
-        // Set player and all children to "Nothing" layer to prevent damage detection
-        SetLayerRecursively(gameObject, NOTHING_LAYER);
-        
-        // Bỏ qua va chạm với Quái để dash xuyên qua vật thể
-        if (controller != null)
+        // Lấy layer Player_Dashing
+        int dashLayer = LayerMask.NameToLayer("Player_Dashing");
+        if (dashLayer == -1)
         {
-            controller.excludeLayers |= (1 << LayerMask.NameToLayer("Enemy"));
+            Debug.LogWarning("[Character] CẢNH BÁO: Bạn chưa tạo Layer 'Player_Dashing' trong Unity! Hãy vào Tags and Layers để tạo.");
+            dashLayer = originalLayer; // Fallback an toàn
         }
 
-        Debug.Log($"[Character] AE_EnableDashInvincibility - Dash iframe enabled (layer set to Nothing, original: {originalLayer})");
+        // NGAY LẬP TỨC: Đổi toàn bộ model sang layer Dashing để xài Physics Matrix xuyên thấu
+        SetLayerRecursively(gameObject, dashLayer);
+        
+        // Vẫn giữ lại excludeLayers như một lớp bảo mật bổ sung (phòng hờ matrix config sót)
+        if (controller != null)
+        {
+            int enemyLayer = LayerMask.NameToLayer("Enemy");
+            int hurtboxLayer = LayerMask.NameToLayer("EnemyHurtbox");
+            int ignoreRaycastLayer = LayerMask.NameToLayer("Ignore Raycast");
+            controller.excludeLayers |= (1 << enemyLayer) | (1 << hurtboxLayer) | (1 << ignoreRaycastLayer);
+        }
+
+        Debug.Log($"[Character] AE_EnableDashInvincibility - Đã đổi layer sang {LayerMask.LayerToName(dashLayer)}");
     }
 
     /// <summary>
@@ -423,10 +433,13 @@ public class Character : MonoBehaviour
         // Restore original layer for player and all children
         SetLayerRecursively(gameObject, originalLayer);
         
-        // Khôi phục va chạm với Quái
+        // Khôi phục va chạm
         if (controller != null)
         {
-            controller.excludeLayers &= ~(1 << LayerMask.NameToLayer("Enemy"));
+            int enemyLayer = LayerMask.NameToLayer("Enemy");
+            int hurtboxLayer = LayerMask.NameToLayer("EnemyHurtbox");
+            int ignoreRaycastLayer = LayerMask.NameToLayer("Ignore Raycast");
+            controller.excludeLayers &= ~((1 << enemyLayer) | (1 << hurtboxLayer) | (1 << ignoreRaycastLayer));
         }
 
         Debug.Log($"[Character] AE_DisableDashInvincibility - Dash iframe disabled (layer restored to {originalLayer})");
