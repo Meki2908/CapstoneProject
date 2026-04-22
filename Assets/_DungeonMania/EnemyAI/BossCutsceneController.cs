@@ -57,6 +57,7 @@ public class BossCutsceneController : MonoBehaviour
 
     private EnemyScript _enemyScript;
     private NavMeshAgent _navMeshAgent;
+    private Rigidbody _bossRigidbody; // Lưu Rigidbody của Boss
     private bool _cutsceneActive;
     private bool _hudWasActive = true;
 
@@ -108,6 +109,11 @@ public class BossCutsceneController : MonoBehaviour
     {
         _enemyScript = GetComponentInChildren<EnemyScript>(true);
         _navMeshAgent = GetComponentInChildren<NavMeshAgent>(true);
+        
+        if (_enemyScript != null)
+            _bossRigidbody = _enemyScript.GetComponentInChildren<Rigidbody>(true);
+        else
+            _bossRigidbody = GetComponentInChildren<Rigidbody>(true);
     }
 
     private void OnDirectorStopped(PlayableDirector d)
@@ -132,6 +138,12 @@ public class BossCutsceneController : MonoBehaviour
         if (_cutsceneActive) return;
         _cutsceneActive = true;
 
+        // Ép bật nhạc Boss Phase 1 ngay lập tức khi Timeline (Cutscene) bắt đầu
+        if (DungeonOSTManager.Instance != null)
+        {
+            DungeonOSTManager.Instance.OnBossEnteredPhase1();
+        }
+
         ResolveHudReference();
         if (hideAllPlayerUI)
             HideAllPlayerUI();
@@ -155,14 +167,6 @@ public class BossCutsceneController : MonoBehaviour
 
         if (shutdownPortalClipWhenCutsceneEnds)
             ShutdownPortalClipBinders();
-
-        // Fix: Ép ẩn con trỏ chuột và kích hoạt lại camera gameplay sau khi Timeline Boss kết thúc
-        MovementSystem.CameraCursor.ApplyGameplayCursorAfterUiClosed();
-        CursorUIPriority.EndAllUiOverlays();
-        if (MouseLockManager.Instance != null)
-        {
-            MouseLockManager.Instance.ClearAllLocksAndForceGameplay();
-        }
     }
 
     private void ShutdownPortalClipBinders()
@@ -307,7 +311,7 @@ public class BossCutsceneController : MonoBehaviour
                 _playerInputToRestore.enabled = false; // Cắt đứt hoàn toàn phím bấm
             }
             
-            // Dừng đà trượt của Player
+            // Dừng đà trượt của Player (nếu dùng CharacterController)
             var charController = player.GetComponent<CharacterController>();
             if (charController != null) charController.Move(Vector3.zero);
         }
@@ -315,10 +319,16 @@ public class BossCutsceneController : MonoBehaviour
         Transform bossScope = _enemyScript != null ? _enemyScript.transform : transform;
         DisableEnemyScope(bossScope);
 
+        // Bật Interpolate riêng cho Boss trong lúc cutscene chạy để hoạt ảnh mượt
+        if (_bossRigidbody != null)
+        {
+            _bossRigidbody.interpolation = RigidbodyInterpolation.Interpolate;
+        }
+
         if (!lockAllEnemiesInScene)
             return;
 
-        var allEnemies = Object.FindObjectsByType<EnemyScript>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        var allEnemies = Object.FindObjectsOfType<EnemyScript>(true);
         foreach (var e in allEnemies)
         {
             if (e == null) continue;
@@ -416,6 +426,11 @@ public class BossCutsceneController : MonoBehaviour
             else
             {
                 b.enabled = wasEnabled;
+                // NẾU LÀ NAVMESH AGENT, PHẢI WARP TỚI VỊ TRÍ MỚI!
+                if (wasEnabled && b is UnityEngine.AI.NavMeshAgent agent)
+                {
+                    agent.Warp(agent.transform.position);
+                }
             }
         }
 
@@ -435,10 +450,18 @@ public class BossCutsceneController : MonoBehaviour
         for (int i = 0; i < _rigidbodiesToRestore.Count; i++)
         {
             if (_rigidbodiesToRestore[i] != null)
+            {
                 _rigidbodiesToRestore[i].isKinematic = _rbWasKinematic[i];
+            }
         }
         _rigidbodiesToRestore.Clear();
         _rbWasKinematic.Clear();
+
+        // Ép tắt Interpolate cho riêng Boss sau khi xong intro để không đánh nhau với NavMesh
+        if (_bossRigidbody != null)
+        {
+            _bossRigidbody.interpolation = RigidbodyInterpolation.None;
+        }
 
         // Mở khóa Player
         if (_playerInputToRestore != null)
@@ -450,5 +473,13 @@ public class BossCutsceneController : MonoBehaviour
         // FIX CHUỘT TUYỆT ĐỐI (Dùng lệnh lõi của Windows/Unity)
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+        
+        // Gọi thêm MovementSystem.CameraCursor.ApplyGameplayCursorAfterUiClosed nếu có thể
+        MovementSystem.CameraCursor.ApplyGameplayCursorAfterUiClosed();
+        CursorUIPriority.EndAllUiOverlays();
+        if (MouseLockManager.Instance != null)
+        {
+            MouseLockManager.Instance.ClearAllLocksAndForceGameplay();
+        }
     }
 }

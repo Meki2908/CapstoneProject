@@ -80,10 +80,15 @@ public class PortalPlaneClipBinder : MonoBehaviour
     {
         _useManualPortalPoint = false;
         portalClipEnabled = false;
-        if (portalPlane != null && targetRenderers != null)
-            ApplyNow();
-        else
-            ApplyClipDisabledOnly();
+        
+        if (targetRenderers != null)
+        {
+            foreach (var r in targetRenderers)
+            {
+                if (r != null) r.SetPropertyBlock(null);
+            }
+        }
+        
         if (disableComponent)
             enabled = false;
     }
@@ -94,9 +99,7 @@ public class PortalPlaneClipBinder : MonoBehaviour
         foreach (var r in targetRenderers)
         {
             if (r == null) continue;
-            r.GetPropertyBlock(_block);
-            _block.SetFloat(PortalClipEnabledId, 0f);
-            r.SetPropertyBlock(_block);
+            r.SetPropertyBlock(null);
         }
     }
 
