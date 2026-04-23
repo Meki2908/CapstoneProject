@@ -243,7 +243,7 @@ public class EnemyScript : MonoBehaviour {
         Rigidbody rb = GetComponent<Rigidbody>();
         if (rb != null) {
             rb.isKinematic = true;
-            rb.interpolation = RigidbodyInterpolation.None;
+            // Bỏ ép kiểu Interpolate theo yêu cầu của user
         }
 
         // Setup NavMeshAgent

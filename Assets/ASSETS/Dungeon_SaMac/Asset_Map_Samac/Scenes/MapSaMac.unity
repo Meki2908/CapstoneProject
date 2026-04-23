@@ -20,11 +20,11 @@ RenderSettings:
   m_FogDensity: 0.012
   m_LinearFogStart: 0
   m_LinearFogEnd: 300
-  m_AmbientSkyColor: {r: 0.212, g: 0.227, b: 0.259, a: 1}
+  m_AmbientSkyColor: {r: 0.44299573, g: 0.5188679, b: 0.51043767, a: 1}
   m_AmbientEquatorColor: {r: 0.114, g: 0.125, b: 0.133, a: 1}
   m_AmbientGroundColor: {r: 0.047, g: 0.043, b: 0.035, a: 1}
   m_AmbientIntensity: 1
-  m_AmbientMode: 0
+  m_AmbientMode: 3
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
   m_SkyboxMaterial: {fileID: 2100000, guid: 6a9a29d807a43624b8d8758de7c530d6, type: 2}
   m_HaloStrength: 0.5
@@ -93,7 +93,7 @@ LightmapSettings:
     m_ExportTrainingData: 0
     m_TrainingDataDestination: TrainingData
     m_LightProbeSampleCountMultiplier: 4
-  m_LightingDataAsset: {fileID: 0}
+  m_LightingDataAsset: {fileID: 112000000, guid: 559ee35d69330d943b2a68e6c692cac2, type: 2}
   m_LightingSettings: {fileID: 4890085278179872738, guid: 1a903185898d6954d866fc93d2f3ab1d, type: 2}
 --- !u!196 &4
 NavMeshSettings:
@@ -11776,41 +11776,9 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 1584139004977948411, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
-      propertyPath: field of view
-      value: 60
-      objectReference: {fileID: 0}
     - target: {fileID: 3698074488449676619, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
       propertyPath: m_Name
       value: Player_3.0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7069795437127634594, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: -1.7819824
-      objectReference: {fileID: 0}
-    - target: {fileID: 7069795437127634594, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 1.5695877
-      objectReference: {fileID: 0}
-    - target: {fileID: 7069795437127634594, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: -3.521286
-      objectReference: {fileID: 0}
-    - target: {fileID: 7069795437127634594, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: -0.9993965
-      objectReference: {fileID: 0}
-    - target: {fileID: 7069795437127634594, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: -0.0018093166
-      objectReference: {fileID: 0}
-    - target: {fileID: 7069795437127634594, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0.034690905
-      objectReference: {fileID: 0}
-    - target: {fileID: 7069795437127634594, guid: 83badadf57c803d4bb673774b34bb9c2, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: -0.000062804735
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -42048,7 +42016,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Version: 4
-  m_UsePipelineSettings: 0
+  m_UsePipelineSettings: 1
   m_AdditionalLightsShadowResolutionTier: 2
   m_LightLayerMask: 1
   m_RenderingLayers: 1
@@ -42057,7 +42025,7 @@ MonoBehaviour:
   m_ShadowRenderingLayers: 1
   m_LightCookieSize: {x: 1, y: 1}
   m_LightCookieOffset: {x: 0, y: 0}
-  m_SoftShadowQuality: 3
+  m_SoftShadowQuality: 0
 --- !u!108 &1755507624
 Light:
   m_ObjectHideFlags: 0
@@ -42068,8 +42036,8 @@ Light:
   m_Enabled: 1
   serializedVersion: 11
   m_Type: 1
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_Intensity: 1.39
+  m_Color: {r: 0.7645066, g: 0.7735849, b: 0.6604664, a: 1}
+  m_Intensity: 0.88
   m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -51854,6 +51822,18 @@ PrefabInstance:
       propertyPath: player
       value: 
       objectReference: {fileID: 753448605}
+    - target: {fileID: 3549649341855738058, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
+      propertyPath: mapType
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3549649341855738058, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
+      propertyPath: dungeonName
+      value: Sa Mac Dungeon
+      objectReference: {fileID: 0}
+    - target: {fileID: 3549649341855738058, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
+      propertyPath: obstacleLayer.m_Bits
+      value: 262144
+      objectReference: {fileID: 0}
     - target: {fileID: 3549649341855738058, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
       propertyPath: preEnterDungeonTimeline
       value: 

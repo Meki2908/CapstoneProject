@@ -88,13 +88,23 @@ public class DashState : State
         // Rotate the character to face the dash direction
         character.transform.rotation = Quaternion.LookRotation(dashDirection);
 
-        // Reset dash movement flag (will be set by Animation Event)
-        isDashMovementActive = false;
+        // NGAY LẬP TỨC: Bật cờ cho phép di chuyển lướt (không đợi Animation Event nữa)
+        isDashMovementActive = true;
 
         // Trigger dash animation if available
         if (character.animator)
         {
             character.animator.SetTrigger("dash");
+        }
+
+        // Fix: Bỏ qua va chạm ngay lập tức khi bấm nút (không đợi Animation Event) để tránh bị kẹt momentum ở vài frame đầu
+        if (character != null)
+        {
+            character.AE_EnableDashInvincibility();
+        }
+
+        if(character.TryGetComponent(out StuckDetection stuck)){
+            stuck.enabled = false;
         }
 
         TutorialTextDisplay.NotifyDashStartedFromGameplay();
@@ -147,6 +157,10 @@ public class DashState : State
         {
             Vector2 m = moveAction.ReadValue<Vector2>();
             character.SetAnimatorLocomotionSpeed(m.magnitude);
+        }
+
+        if(character.TryGetComponent(out StuckDetection stuck)){
+            stuck.enabled = true;
         }
     }
 

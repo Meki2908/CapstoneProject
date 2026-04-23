@@ -203,6 +203,7 @@ public class DungeonWaveManager : MonoBehaviour
     private bool isDungeonComplete = false;
     private bool showDebugLog = true;
     private bool isWaveCompleting = false; // Guard: tránh gọi OnWaveComplete() 2 lần
+    private Coroutine failsafeCoroutine;
     private GameObject _preEnterSkipUiRoot;
     
     // Trackers for enemy spawn (tránh gọi GetEnemyCounts nhiều lần)
@@ -864,6 +865,12 @@ public class DungeonWaveManager : MonoBehaviour
         if (isWaveCompleting) return;
         isWaveCompleting = true;
         isWaveActive = false;
+
+        // TẮT RADAR QUÉT LỖI VÌ ĐÃ WIN
+        if (failsafeCoroutine != null) { 
+            StopCoroutine(failsafeCoroutine); 
+            failsafeCoroutine = null; 
+        }
         OnWaveCompleted?.Invoke(currentWave);
 
         Debug.Log($"[DungeonWave] Wave {currentWave} hoàn thành! (enemiesAlive={enemiesAlive})");
@@ -1254,6 +1261,10 @@ public class DungeonWaveManager : MonoBehaviour
 
         isWaveActive = true;
         isWaveCompleting = false; // Reset guard cho wave mới
+
+        // BẬT RADAR QUÉT LỖI KHI BẮT ĐẦU WAVE
+        if (failsafeCoroutine != null) StopCoroutine(failsafeCoroutine);
+        failsafeCoroutine = StartCoroutine(WaveCompletionFailsafe());
     }
 
     /// <summary>
@@ -2375,6 +2386,75 @@ public class DungeonWaveManager : MonoBehaviour
         {
             BossHealthBarUI.Instance.ShowBossHealth(hpScript);
             Debug.Log($"[DungeonWave] Boss health bar shown for: {es.enemyName}");
+        }
+    }
+
+    /// <summary>
+    /// RADAR QUÉT SINH MỆNH (FAILSAFE):
+    /// Chống lỗi Boss chết/đổi phase/bị Timeline nuốt mất script báo cáo.
+    /// </summary>
+    private System.Collections.IEnumerator WaveCompletionFailsafe()
+    {
+        int consecutiveEmptyChecks = 0;
+
+        while (isWaveActive)
+        {
+            // Cứ 2.5 giây quét một lần cho nhẹ máy
+            yield return new WaitForSeconds(2.5f);
+            
+            if (isWaveActive && !isCountingDown && !isWaveCompleting && enemiesAlive > 0)
+            {
+                // Chỉ tìm những Enemy có GameObject đang hiện hữu ngoài map (để loại bỏ mấy cái skin bị ẩn và xác chết)
+                var allEnemies = FindObjectsByType<EnemyScript>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+                bool hasLivingEnemy = false;
+                bool isFinalWave = currentWave >= totalWaves;
+                
+                foreach (var enemy in allEnemies)
+                {
+                    // Lấy script máu
+                    TakeDamageTest hp = enemy.GetComponent<TakeDamageTest>();
+                    if (hp == null) hp = enemy.GetComponentInChildren<TakeDamageTest>(true);
+                    
+                    // Nếu phát hiện CÓ MỘT CON QUÁI NÀO ĐÓ CÒN SỐNG (> 0 máu)
+                    if (hp != null && hp.CurrentHealth > 0)
+                    {
+                        // Ở wave cuối, CHỈ quan tâm đến Boss. Các wave thường quan tâm mọi quái.
+                        if (isFinalWave)
+                        {
+                            if (enemy.isBoss || enemy.enemyType == EnemyScript.EnemyType.boss || enemy.enemyType == EnemyScript.EnemyType.demon || enemy.enemyType == EnemyScript.EnemyType.minotaur || enemy.enemyType == EnemyScript.EnemyType.ifrit || enemy.enemyType == EnemyScript.EnemyType.lich)
+                            {
+                                hasLivingEnemy = true;
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            hasLivingEnemy = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!hasLivingEnemy)
+                {
+                    consecutiveEmptyChecks++;
+                    
+                    // Đòi hỏi phải có 2 lần quét liên tiếp (5 giây) thấy map trống không
+                    // Để tránh việc kích hoạt nhầm lúc Boss đang tàng hình chuyển từ Phase 1 sang Phase 2
+                    if (consecutiveEmptyChecks >= 2)
+                    {
+                        Debug.LogWarning($"[DungeonWave] FAILSAFE KÍCH HOẠT: Hệ thống kẹt enemiesAlive = {enemiesAlive} nhưng không còn quái sống! Ép Win Wave ngay lập tức.");
+                        enemiesAlive = 0;
+                        OnWaveComplete();
+                        yield break;
+                    }
+                }
+                else
+                {
+                    // Vẫn còn quái sống, reset bộ đếm
+                    consecutiveEmptyChecks = 0;
+                }
+            }
         }
     }
 }
