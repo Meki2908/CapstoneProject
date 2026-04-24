@@ -335,7 +335,7 @@ public class BlacksmithUI : MonoBehaviour
     public void Open()
     {
         if (mainPanel) mainPanel.SetActive(true);
-        ApplyGridConfig(); // Apply grid config from Inspector values
+        // ApplyGridConfig(); // Removed because it overrides the GridLayoutGroup and causes rebuilds every frame
         // Suppress global tooltip while Blacksmith is open
         if (ItemTooltipManager.Instance != null)
             ItemTooltipManager.Instance.SuppressTooltip = true;
@@ -984,15 +984,16 @@ public class BlacksmithUI : MonoBehaviour
         var grid = inventoryContent.GetComponent<UnityEngine.UI.GridLayoutGroup>();
         if (grid != null)
         {
-            grid.cellSize = gridCellSize;
-            grid.spacing = gridSpacing;
-            grid.constraintCount = gridColumns;
-            grid.constraint = UnityEngine.UI.GridLayoutGroup.Constraint.FixedColumnCount;
-            grid.padding.left = gridPaddingLeft;
-            grid.padding.right = gridPaddingRight;
-            grid.padding.top = gridPaddingTop;
-            grid.padding.bottom = gridPaddingBottom;
-            UnityEngine.UI.LayoutRebuilder.MarkLayoutForRebuild(inventoryContent as RectTransform);
+            // [REMOVED]
+            // grid.cellSize = gridCellSize;
+            // grid.spacing = gridSpacing;
+            // grid.constraintCount = gridColumns;
+            // grid.constraint = UnityEngine.UI.GridLayoutGroup.Constraint.FixedColumnCount;
+            // grid.padding.left = gridPaddingLeft;
+            // grid.padding.right = gridPaddingRight;
+            // grid.padding.top = gridPaddingTop;
+            // grid.padding.bottom = gridPaddingBottom;
+            // UnityEngine.UI.LayoutRebuilder.MarkLayoutForRebuild(inventoryContent as RectTransform);
         }
 
         // ── Scroll settings ──
@@ -1576,8 +1577,8 @@ public class BlacksmithUI : MonoBehaviour
     void Update()
     {
         // Always apply grid config when UI is open (live tweaking in play mode)
-        if (mainPanel != null && mainPanel.activeSelf)
-            ApplyGridConfig();
+        // if (mainPanel != null && mainPanel.activeSelf)
+        //     ApplyGridConfig();
             
         // Follow mouse when tooltip is showing, perfectly constrained to screen
         if (bsTooltipPanel != null && bsTooltipPanel.activeSelf && bsTooltipRect != null)
