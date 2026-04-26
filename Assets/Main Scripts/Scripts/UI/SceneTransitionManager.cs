@@ -491,6 +491,88 @@ public class SceneTransitionManager : MonoBehaviour
         Debug.Log($"[SceneTransition] Chuyển scene hoàn tất: {sceneName}");
     }
 
+    // ===== FUSION NETWORKING LOGIC =====
+
+    public void StartNetworkingLoadingUI()
+    {
+        isTransitioning = true;
+        Time.timeScale = 1f;
+
+        // Hide Panel_GUIGame (Main Menu Panel) immediately
+        GameObject panelGuiGame = GameObject.Find("Panel_GUIGame");
+        if (panelGuiGame != null)
+        {
+            panelGuiGame.SetActive(false);
+        }
+
+        GameObject panel = FindLoadingPanelForShowDuringTransition();
+        _loadingPanelShownThisTransition = panel;
+
+        if (panel != null)
+        {
+            GetPanelComponents(panel, out Slider slider, out TextMeshProUGUI text, out CanvasGroup cg);
+            if (cg != null) cg.alpha = 1f;
+            panel.SetActive(true);
+            panel.transform.SetAsLastSibling();
+
+            if (slider != null) slider.value = 0f;
+            if (text != null) text.text = GetRandomTip();
+
+            StartCoroutine(FakeProgressCoroutine(slider));
+        }
+    }
+
+    private IEnumerator FakeProgressCoroutine(Slider slider)
+    {
+        float fakeProgress = 0;
+        while (fakeProgress < 0.9f)
+        {
+            fakeProgress += Time.unscaledDeltaTime * 0.5f;
+            if (slider != null) slider.value = fakeProgress;
+            yield return null;
+        }
+    }
+
+    public void FinishLoadingUI()
+    {
+        StopAllCoroutines();
+        StartCoroutine(FadeOutCoroutine());
+    }
+
+    private IEnumerator FadeOutCoroutine()
+    {
+        GameObject panel = _loadingPanelShownThisTransition;
+        if (panel == null) panel = FindLoadingPanelForFadeOrCleanup();
+
+        if (panel != null)
+        {
+            GetPanelComponents(panel, out Slider slider, out TextMeshProUGUI text, out CanvasGroup cg);
+            
+            panel.SetActive(true);
+            panel.transform.SetAsLastSibling();
+
+            if (slider != null) slider.value = 1f;
+            if (cg != null) cg.alpha = 1f;
+
+            yield return new WaitForSecondsRealtime(0.5f);
+
+            if (cg != null)
+            {
+                while (cg.alpha > 0f)
+                {
+                    cg.alpha -= Time.unscaledDeltaTime * fadeSpeed;
+                    yield return null;
+                }
+                cg.alpha = 0f;
+            }
+            panel.SetActive(false);
+        }
+
+        HideLoadingPanelIfAny();
+        isTransitioning = false;
+        Debug.Log("[SceneTransition] Hoàn tất load qua Fusion.");
+    }
+
     // ===== CLEANUP =====
 
     private void OnDestroy()

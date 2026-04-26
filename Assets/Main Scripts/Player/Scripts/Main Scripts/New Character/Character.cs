@@ -1,6 +1,8 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
-public class Character : MonoBehaviour
+using Fusion;
+public enum CharacterStateSync { Standing, Jumping, Crouching, Sprinting, Dash, HardStop, DrawWeapon, SheathWeapon, CombatMove, Attack, GetHit, Die }
+public class Character : NetworkBehaviour
 {
     [Header("Controls")]
     public float playerSpeed = 5.0f;
@@ -71,6 +73,13 @@ public class Character : MonoBehaviour
     public Vector3 cachedPlanarRight;
 
     public State currentLocomotionState;
+    public static Character LocalCharacter;
+    [Networked] public CharacterStateSync NetworkedState { get; set; }
+    private ChangeDetector _changeDetector;
+    public NetworkInputData previousInput;
+    public NetworkInputData currentInput;
+    public Vector3 CalculatedVelocity;
+    
     public State lastStateBeforeHit; // Track state before getting hit
     public float lastAttackInputTime; // Track when attack was last pressed
 
@@ -111,12 +120,29 @@ public class Character : MonoBehaviour
 
     private int originalLayer; // Store original layer before dash
 
+    private void Awake()
+    {
+        // Lấy bộ điều khiển vật lý ở Root
+        controller = GetComponent<CharacterController>(); 
+        // (Nếu ở các bước trước bạn đổi tên biến thành _cc thì dùng _cc nhé)
+
+        // Lấy bộ thu tín hiệu ở Root
+        playerInput = GetComponent<PlayerInput>();
+
+        // Lấy hình hài ở cục Con
+        animator = GetComponentInChildren<Animator>();
+    }
     // Start is called before the first frame update
+    public override void Spawned()
+    {
+        if (HasInputAuthority) LocalCharacter = this;
+        _changeDetector = GetChangeDetector(ChangeDetector.Source.SimulationState);
+        
+        CalculatedVelocity = Vector3.zero; // Reset v?n t?c ngay khi sinh ra
+    }
+    
     private void Start()
     {
-        controller = GetComponent<CharacterController>();
-        animator = GetComponent<Animator>();
-        playerInput = GetComponent<PlayerInput>();
 
         // Load saved key binding overrides từ Settings
         InputRebindHelper.LoadBindingOverrides(playerInput);
@@ -166,13 +192,12 @@ public class Character : MonoBehaviour
         originalLayer = gameObject.layer;
 
         // Reset dash cooldown when game starts (important for Editor play/stop/play)
-        DashState.ResetDashCooldown();
+        dashing.ResetDashCooldown();
 
         // Add stuck detection if not present
         if (GetComponent<StuckDetection>() == null)
         {
             gameObject.AddComponent<StuckDetection>();
-            Debug.Log("[Character] Added StuckDetection component");
         }
 
         // Subscribe to weapon change events to update speed multipliers
@@ -191,7 +216,7 @@ public class Character : MonoBehaviour
         // Apply initial speed multipliers
         UpdateSpeedWithGems();
 
-        lastLocomotionMoveTime = Time.time;
+        lastLocomotionMoveTime = Runner.SimulationTime;
     }
 
     private void OnEquipmentChanged()
@@ -200,27 +225,79 @@ public class Character : MonoBehaviour
         UpdateSpeedWithGems();
     }
 
-    private void Update()
+    public override void FixedUpdateNetwork()
     {
         if (movementSM == null || movementSM.currentState == null) return;
-
+        
+        if (GetInput<NetworkInputData>(out var input))
+        {
+            previousInput = currentInput;
+            currentInput = input;
+        }
+        else
+        {
+            previousInput = currentInput;
+            currentInput = default;
+        }
+        
         UpdateGroundedAndJumpBuffer();
         movementSM.currentState.HandleInput();
-
         movementSM.currentState.LogicUpdate();
+
+        CalculatedVelocity = Vector3.zero;
+        movementSM.currentState.PhysicsUpdate(); // C�c State gi? CH? t�nh v?n t?c X, Z
+        
+        if (controller != null && controller.enabled) 
+        {
+            // 1. Gi? nh�n v?t b�m s�n n?u dang d?ng tr�n d?t
+            if (controller.isGrounded && playerVelocity.y < 0)
+            {
+                playerVelocity.y = -2f; 
+            }
+
+            // 2. T�ch luy tr?ng l?c (N?u kh�ng ph?i dang Dash)
+            if (!IsDashing)
+            {
+                playerVelocity.y += gravityValue * Runner.DeltaTime;
+            }
+
+            // 3. G?p v?n t?c d?c (Tr?ng l?c/Nh?y) v�o v?n t?c ngang (FSM)
+            CalculatedVelocity.y = playerVelocity.y;
+
+            // 4. L?nh di chuy?n v?t l� cu?i c�ng
+            controller.Move(CalculatedVelocity * Runner.DeltaTime);
+        }
+    }
+    
+    public override void Render()
+    {
+        foreach (var change in _changeDetector.DetectChanges(this))
+        {
+            if (change == nameof(NetworkedState))
+            {
+                // Proxy animation handling can go here
+            }
+        }
+    }
+    
+    private void Update()
+    {
+        if (!HasStateAuthority && !HasInputAuthority) return;
+        
+        // Gi? nguy�n code x? l� UI, cooldown timers, ho?c Animation cu c?a b?n ? d�y...
     }
 
     void UpdateGroundedAndJumpBuffer()
     {
         CachedGroundedFeet = ComputeGroundedFeetRays();
         if (CachedGroundedFeet)
-            lastGroundedFeetTime = Time.time;
+            lastGroundedFeetTime = Runner.SimulationTime;
 
-        if (jumpActionCache != null && jumpActionCache.triggered
+        if ((currentInput.buttons.IsSet(NetworkInputButtons.Jump) && !previousInput.buttons.IsSet(NetworkInputButtons.Jump))
             && (!TutorialInputGate.IsActive || TutorialInputGate.Allows(TutorialInputMask.Jump)))
             jumpBufferRemaining = jumpBufferDuration;
         else
-            jumpBufferRemaining = Mathf.Max(0f, jumpBufferRemaining - Time.deltaTime);
+            jumpBufferRemaining = Mathf.Max(0f, jumpBufferRemaining - Runner.DeltaTime);
 
         // Không giữ buffer trong phase bay lên (tránh spam Space tích buffer rồi chạm đất là nhảy lại ngay).
         if (controller != null && controller.velocity.y > 0.25f)
@@ -246,7 +323,7 @@ public class Character : MonoBehaviour
     {
         if (CachedGroundedFeet) return true;
         if (coyoteTime <= 0f) return false;
-        if (Time.time - lastGroundedFeetTime > coyoteTime) return false;
+        if (Runner.SimulationTime - lastGroundedFeetTime > coyoteTime) return false;
         return controller != null && controller.velocity.y <= coyoteMaxUpSpeed;
     }
 
@@ -254,14 +331,14 @@ public class Character : MonoBehaviour
     public void NotifyJumpImpulseStarted()
     {
         jumpBufferRemaining = 0f;
-        jumpAllowedAfterTime = Time.time + Mathf.Max(0f, jumpCooldownSeconds);
+        jumpAllowedAfterTime = Runner.SimulationTime + Mathf.Max(0f, jumpCooldownSeconds);
     }
 
     /// <summary>Consume một lần nhảy đã buffer khi được phép và đang grounded/coyote.</summary>
     public bool TryConsumeJumpBuffered(bool canJump)
     {
         if (!canJump || jumpBufferRemaining <= 0f) return false;
-        if (Time.time < jumpAllowedAfterTime) return false;
+        if (Runner.SimulationTime < jumpAllowedAfterTime) return false;
         if (!IsGroundedForJump()) return false;
         jumpBufferRemaining = 0f;
         return true;
@@ -277,26 +354,22 @@ public class Character : MonoBehaviour
         float threshold = Mathf.Max(1e-4f, locomotionIdleMoveThreshold);
 
         if (targetMagnitude >= threshold)
-            lastLocomotionMoveTime = Time.time;
+            lastLocomotionMoveTime = Runner.SimulationTime;
 
         if (targetMagnitude < threshold)
         {
-            if (Time.time - lastLocomotionMoveTime >= locomotionIdleSnapAfterSeconds)
+            if (Runner.SimulationTime - lastLocomotionMoveTime >= locomotionIdleSnapAfterSeconds)
                 animator.SetFloat("speed", 0f);
             else
-                animator.SetFloat("speed", targetMagnitude, speedDampTime, Time.deltaTime);
+                animator.SetFloat("speed", targetMagnitude, speedDampTime, Runner.DeltaTime);
         }
         else
         {
-            animator.SetFloat("speed", targetMagnitude, speedDampTime, Time.deltaTime);
+            animator.SetFloat("speed", targetMagnitude, speedDampTime, Runner.DeltaTime);
         }
     }
 
-    private void FixedUpdate()
-    {
-        if (movementSM == null || movementSM.currentState == null) return;
-        movementSM.currentState.PhysicsUpdate();
-    }
+    
 
     /// <summary>
     /// Update speed values based on equipped gems and equipment: speed = baseSpeed + (baseSpeed × gem%) + (baseSpeed × equipment%)
@@ -358,30 +431,6 @@ public class Character : MonoBehaviour
     #region Animation Events - Dash
 
     /// <summary>
-    /// Animation Event: Start dash movement
-    /// Call this from dash animation at the frame where dash movement should begin
-    /// </summary>
-    public void AE_StartDashMovement()
-    {
-        if (dashing != null)
-        {
-            dashing.AE_StartDashMovement();
-        }
-    }
-
-    /// <summary>
-    /// Animation Event: Stop dash movement
-    /// Call this from dash animation at the frame where dash movement should end
-    /// </summary>
-    public void AE_StopDashMovement()
-    {
-        if (dashing != null)
-        {
-            dashing.AE_StopDashMovement();
-        }
-    }
-
-    /// <summary>
     /// Animation Event: Enable dash invincibility frame
     /// Sets player layer to "Nothing" to prevent raycast detection and damage
     /// Call this from dash animation at the exact frame where invincibility should start
@@ -415,8 +464,6 @@ public class Character : MonoBehaviour
             int ignoreRaycastLayer = LayerMask.NameToLayer("Ignore Raycast");
             controller.excludeLayers |= (1 << enemyLayer) | (1 << hurtboxLayer) | (1 << ignoreRaycastLayer);
         }
-
-        Debug.Log($"[Character] AE_EnableDashInvincibility - Đã đổi layer sang {LayerMask.LayerToName(dashLayer)}");
     }
 
     /// <summary>
@@ -441,8 +488,6 @@ public class Character : MonoBehaviour
             int ignoreRaycastLayer = LayerMask.NameToLayer("Ignore Raycast");
             controller.excludeLayers &= ~((1 << enemyLayer) | (1 << hurtboxLayer) | (1 << ignoreRaycastLayer));
         }
-
-        Debug.Log($"[Character] AE_DisableDashInvincibility - Dash iframe disabled (layer restored to {originalLayer})");
     }
 
     /// <summary>
@@ -458,3 +503,13 @@ public class Character : MonoBehaviour
     }
     #endregion
 }
+
+
+
+
+
+
+
+
+
+

@@ -5,38 +5,28 @@ public class State
 {
     public Character character;
     public StateMachine stateMachine;
-
-    protected Vector3 gravityVelocity;
     protected Vector3 velocity;
     protected Vector2 input;
+    protected bool JumpTriggered => character.currentInput.buttons.IsSet(NetworkInputButtons.Jump) && !character.previousInput.buttons.IsSet(NetworkInputButtons.Jump);
+    protected bool DashTriggered => character.currentInput.buttons.IsSet(NetworkInputButtons.Dash) && !character.previousInput.buttons.IsSet(NetworkInputButtons.Dash);
+    protected bool ToggleWeaponTriggered => character.currentInput.buttons.IsSet(NetworkInputButtons.ToggleWeapon) && !character.previousInput.buttons.IsSet(NetworkInputButtons.ToggleWeapon);
+    protected bool AttackTriggered => character.currentInput.buttons.IsSet(NetworkInputButtons.Attack) && !character.previousInput.buttons.IsSet(NetworkInputButtons.Attack);
+    protected bool CrouchTriggered => character.currentInput.buttons.IsSet(NetworkInputButtons.Crouch) && !character.previousInput.buttons.IsSet(NetworkInputButtons.Crouch);
+    
+    protected bool SprintPressed => character.currentInput.buttons.IsSet(NetworkInputButtons.Sprint);
+    protected bool AttackPressed => character.currentInput.buttons.IsSet(NetworkInputButtons.Attack);
+    protected Vector2 MoveInput => character.currentInput.movementInput;
 
-    public InputAction moveAction;
-    public InputAction lookAction;
-    public InputAction jumpAction;
-    public InputAction crouchAction;
-    public InputAction sprintAction;
-    public InputAction dashAction;
-    public InputAction toggleWeaponAction;
-    public InputAction attackAction;
 
     public State(Character _character, StateMachine _stateMachine)
     {
         character = _character;
         stateMachine = _stateMachine;
 
-        moveAction = character.playerInput.actions["Move"];
-        lookAction = character.playerInput.actions["Look"];
-        jumpAction = character.playerInput.actions["Jump"];
-        crouchAction = character.playerInput.actions["Crouch"];
-        sprintAction = character.playerInput.actions["Sprint"];
-        dashAction = character.playerInput.actions["Dash"];
-        toggleWeaponAction = character.playerInput.actions["ToggleWeapon"];
-        attackAction = character.playerInput.actions["Attack"];
     }
 
     public virtual void Enter()
     {
-        Debug.Log("enter state: " + this.ToString());
     }
 
     public virtual void HandleInput()
@@ -94,3 +84,7 @@ public class State
         character.cachedPlanarRight = camRight;
     }
 }
+
+
+
+

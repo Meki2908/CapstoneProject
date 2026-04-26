@@ -27,7 +27,6 @@ public class SprintState : State
         input = Vector2.zero;
         velocity = Vector3.zero;
         currentVelocity = Vector3.zero;
-        gravityVelocity.y = 0;
 
         playerSpeed = character.sprintSpeed;
         grounded = character.controller.isGrounded;
@@ -39,7 +38,7 @@ public class SprintState : State
     public override void HandleInput()
     {
         base.HandleInput();
-        input = moveAction.ReadValue<Vector2>();
+        input = MoveInput;
         velocity = new Vector3(input.x, 0, input.y);
 
         GetPlanarCameraBasis(out Vector3 camForward, out Vector3 camRight);
@@ -48,7 +47,7 @@ public class SprintState : State
         if (velocity.sqrMagnitude > 1f) velocity.Normalize();
         velocity.y = 0f;
 
-        bool sprintButtonHeld = sprintAction.IsPressed();
+        bool sprintButtonHeld = SprintPressed;
 
         // Sprint is active if: sprint button is held AND there is movement input
         if (sprintButtonHeld && input.sqrMagnitude > 0f)
@@ -64,7 +63,7 @@ public class SprintState : State
         {
             sprintJump = true;
         }
-        if (dashAction.triggered)
+        if (DashTriggered)
         {
             dash = true;
         }
@@ -116,12 +115,8 @@ public class SprintState : State
 
         // Guard: skip nếu CharacterController bị disable (vd: đang teleport)
         if (character.controller == null || !character.controller.enabled) return;
-
-        gravityVelocity.y += gravityValue * Time.deltaTime;
         grounded = character.controller.isGrounded;
-        if (grounded && gravityVelocity.y < 0)
         {
-            gravityVelocity.y = 0f;
         }
         currentVelocity = Vector3.SmoothDamp(currentVelocity, velocity, ref cVelocity, character.velocityDampTime);
 
@@ -132,12 +127,15 @@ public class SprintState : State
         {
             speedMultiplier = WeaponGemManager.Instance.GetMovementSpeedMultiplier(wc.GetCurrentWeapon().weaponType);
         }
-        character.controller.Move(currentVelocity * Time.deltaTime * (playerSpeed * speedMultiplier) + gravityVelocity * Time.deltaTime);
+        character.CalculatedVelocity = currentVelocity * (playerSpeed * speedMultiplier);
 
 
         if (velocity.sqrMagnitude > 0)
         {
-            character.transform.rotation = Quaternion.Slerp(character.transform.rotation, Quaternion.LookRotation(velocity), character.rotationDampTime);
+            Quaternion targetRotation = Quaternion.LookRotation(velocity);
+            targetRotation.x = 0;
+            targetRotation.z = 0;
+            character.transform.rotation = Quaternion.Slerp(character.transform.rotation, targetRotation, character.rotationDampTime);
         }
     }
     public override void Exit()
@@ -145,3 +143,6 @@ public class SprintState : State
         base.Exit();
     }
 }
+
+
+

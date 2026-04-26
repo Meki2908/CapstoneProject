@@ -103,7 +103,15 @@ namespace Artsystack.ArtsystackGui
         public void OnNewGameClicked()
         {
             DeleteAllSaveData();
-            StartCoroutine(LoadGameScene());
+            
+            if (Artsystack.ArtsystackGui.FusionConnectionManager.Instance != null)
+            {
+                Artsystack.ArtsystackGui.FusionConnectionManager.Instance.StartSinglePlayer("Map_Chinh");
+            }
+            else
+            {
+                StartCoroutine(LoadGameScene());
+            }
         }
 
         /// <summary>
@@ -111,7 +119,14 @@ namespace Artsystack.ArtsystackGui
         /// </summary>
         public void OnContinueClicked_MainMenu()
         {
-            StartCoroutine(LoadGameScene());
+            if (Artsystack.ArtsystackGui.FusionConnectionManager.Instance != null)
+            {
+                Artsystack.ArtsystackGui.FusionConnectionManager.Instance.StartSinglePlayer("Map_Chinh");
+            }
+            else
+            {
+                StartCoroutine(LoadGameScene());
+            }
         }
 
         /// <summary>
@@ -332,7 +347,7 @@ namespace Artsystack.ArtsystackGui
             "QUEST_5", "QUEST_5_STEP"
         };
 
-        bool HasSaveData()
+        public bool HasSaveData()
         {
             string dir = Application.persistentDataPath;
             foreach (var f in saveFileNames)

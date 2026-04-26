@@ -56,7 +56,7 @@ public class AttackState : State
         nextAttackBuffered = false;
 
         // Track attack input time for resuming after hit
-        character.lastAttackInputTime = Time.time;
+        character.lastAttackInputTime = character.Runner.SimulationTime;
 
         character.animator.applyRootMotion = false;
         timePassed = 0f;
@@ -113,8 +113,8 @@ public class AttackState : State
     {
         base.HandleInput();
 
-        movementInput = moveAction.ReadValue<Vector2>();
-        if (allowNewAttack && attackAction.triggered)
+        movementInput = MoveInput;
+        if (allowNewAttack && AttackTriggered)
         {
             attack = true;
             pressedSinceLastCheck = true;
@@ -123,7 +123,7 @@ public class AttackState : State
         {
             jump = true;
         }
-        if (dashAction.triggered)
+        if (DashTriggered)
         {
             dash = true;
         }
@@ -142,7 +142,7 @@ public class AttackState : State
     {
         base.LogicUpdate();
 
-        timePassed += Time.deltaTime;
+        timePassed += character.Runner.DeltaTime;
         
         // Get the correct weapon layer index based on current weapon
         int weaponLayerIndex = GetWeaponLayerIndex();
@@ -407,3 +407,4 @@ public class AttackState : State
         return Mathf.Lerp(maxChainPoint, minChainPoint, t);
     }
 }
+

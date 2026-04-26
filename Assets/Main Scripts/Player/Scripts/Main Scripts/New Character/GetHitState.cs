@@ -33,9 +33,8 @@ public class GetHitState : State
         hitTimer = hitDuration;
 
         // === FIX: Clear buffered dash input để tránh auto-dash khi exit GetHitState ===
-        if (dashAction != null && dashAction.triggered)
+        if (character.currentInput.buttons.IsSet(NetworkInputButtons.Dash))
         {
-            Debug.Log("[GetHitState] Consumed buffered dash input");
         }
 
         if (weaponController == null)
@@ -59,7 +58,7 @@ public class GetHitState : State
         // The user reported player auto-dashes when hit - this should only happen with right mouse button
         // For now, disable dash input during hit to prevent auto-dash
         // Re-enable this if you want dash during hit:
-        // if (dashAction.triggered)
+        // if (DashTriggered)
         // {
         //     dash = true;
         // }
@@ -70,7 +69,7 @@ public class GetHitState : State
         }
 
         // NEW: cho phép rút/cất/đổi vũ khí khi đang bị đánh
-        if (toggleWeaponAction.triggered)
+        if (ToggleWeaponTriggered)
         {
             toggleWeapon = true;
         }
@@ -81,7 +80,7 @@ public class GetHitState : State
         base.LogicUpdate();
 
         // Update timer
-        hitTimer -= Time.deltaTime;
+        hitTimer -= character.Runner.DeltaTime;
 
         // Allow transition to base move after hit duration
         if (hitTimer <= 0)
@@ -122,7 +121,7 @@ public class GetHitState : State
         {
             // Khi thoát khỏi GetHit, tạm thời khóa dash trong một khoảng rất ngắn
             // để tránh việc input dash bị buffer khiến player auto-dash
-            character.dashLockUntil = Time.time + 0.1f; // 0.1s sau khi hết hit mới cho phép dash lại
+            character.dashLockUntil = character.Runner.SimulationTime + 0.1f; // 0.1s sau khi hết hit mới cho phép dash lại
 
             // Try to resume attack state if we were attacking before getting hit
             if (ShouldResumeAttack())
@@ -142,13 +141,12 @@ public class GetHitState : State
         // Resume attack if we were in attack state and still have attack input buffered
         // Also resume if we were attacking and the attack wasn't interrupted by something else
         return (character.lastStateBeforeHit == character.attacking) &&
-               (Time.time - character.lastAttackInputTime < 1.0f || // Within 1 second
+               (character.Runner.SimulationTime - character.lastAttackInputTime < 1.0f || // Within 1 second
                 (character.attacking != null && character.movementSM.currentState == character.attacking));
     }
 
     private void ResumeAttackState()
     {
-        Debug.Log("[GetHitState] Resuming attack after hit animation");
         stateMachine.ChangeState(character.attacking);
     }
 
@@ -158,3 +156,6 @@ public class GetHitState : State
         // Weapon layers are no longer manipulated by GetHitState
     }
 }
+
+
+

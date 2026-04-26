@@ -177,7 +177,6 @@ public class WeaponMasteryManager : MonoBehaviour
         if (!_tutorialMasterySessionActive) return;
         _tutorialMasterySessionActive = false;
         LoadMasteryData();
-        Debug.Log("[WeaponMasteryManager] Tutorial mastery session ended — reloaded from disk");
     }
 
     // Save/Load
@@ -197,7 +196,6 @@ public class WeaponMasteryManager : MonoBehaviour
         try
         {
             File.WriteAllText(filePath, json);
-            Debug.Log($"[WeaponMasteryManager] Saved mastery data to {filePath}");
         }
         catch (Exception e)
         {
@@ -211,7 +209,6 @@ public class WeaponMasteryManager : MonoBehaviour
 
         if (!File.Exists(filePath))
         {
-            Debug.Log($"[WeaponMasteryManager] No save file found at {filePath}, using default data");
             InitializeMasteryData();
             return;
         }
@@ -227,7 +224,6 @@ public class WeaponMasteryManager : MonoBehaviour
                 {
                     masteryData[mastery.weaponType] = mastery;
                 }
-                Debug.Log($"[WeaponMasteryManager] Loaded mastery data from {filePath}");
             }
         }
         catch (Exception e)
@@ -240,7 +236,7 @@ public class WeaponMasteryManager : MonoBehaviour
     {
         InitializeMasteryData();
         SaveMasteryData();
-        Debug.Log("[WeaponMasteryManager] Reset all mastery data");
     }
 }
+
 

@@ -1,0 +1,56 @@
+using Fusion;
+using UnityEngine;
+using UnityEngine.InputSystem;
+
+public class PlayerNetworkInput : NetworkBehaviour
+{
+    public static PlayerNetworkInput LocalInstance;
+    private PlayerInput playerInput;
+
+    private void Awake()
+    {
+        playerInput = GetComponent<PlayerInput>();
+    }
+
+    public override void Spawned()
+    {
+        if (HasInputAuthority) LocalInstance = this;
+    }
+
+    public override void Despawned(NetworkRunner runner, bool hasState)
+    {
+        if (HasInputAuthority && LocalInstance == this) LocalInstance = null;
+    }
+
+    public NetworkInputData GetLocalInput()
+    {
+        NetworkInputData data = new NetworkInputData();
+
+        if (playerInput != null && playerInput.actions != null)
+        {
+            data.movementInput = playerInput.actions["Move"].ReadValue<Vector2>();
+
+            bool isJump = playerInput.actions["Jump"].triggered || playerInput.actions["Jump"].IsPressed();
+            bool isDash = playerInput.actions["Dash"].triggered;
+            bool isCrouch = playerInput.actions["Crouch"].IsPressed();
+            bool isSprint = playerInput.actions["Sprint"].IsPressed();
+            bool isAttack = playerInput.actions["Attack"].triggered;
+            bool isToggleWeapon = playerInput.actions["ToggleWeapon"].triggered;
+
+            data.buttons.Set(NetworkInputButtons.Jump, isJump);
+            data.buttons.Set(NetworkInputButtons.Dash, isDash);
+            data.buttons.Set(NetworkInputButtons.Crouch, isCrouch);
+            data.buttons.Set(NetworkInputButtons.Sprint, isSprint);
+            data.buttons.Set(NetworkInputButtons.Attack, isAttack);
+            data.buttons.Set(NetworkInputButtons.ToggleWeapon, isToggleWeapon);
+            
+            // --- LOG FLOW ---
+            if (playerInput.actions["Move"].triggered) Debug.Log($"[FLOW INPUT] B?t d?u di chuy?n: {data.movementInput}");
+            if (playerInput.actions["Jump"].triggered) Debug.Log("[FLOW INPUT] Th?c hi?n Nh?y (Jump)");
+            if (isDash) Debug.Log("[FLOW INPUT] Th?c hi?n Lu?t (Dash)");
+            if (isAttack) Debug.Log("[FLOW INPUT] Th?c hi?n Ðánh (Attack)");
+        }
+
+        return data;
+    }
+}

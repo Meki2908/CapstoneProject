@@ -3,7 +3,6 @@ using UnityEngine;
 public class SprintJumpState : State
 {
     private Vector3 horizontalDirection;
-    private float verticalVelocity;
     private bool hasLeftGround;
     private bool landingTriggered;
 
@@ -27,10 +26,10 @@ public class SprintJumpState : State
 
         // Initialize jump impulse (use dedicated sprint-jump height, fallback to normal jump height)
         float sprintJumpHeight = character.sprintJumpHeight > 0f ? character.sprintJumpHeight : character.jumpHeight;
-        verticalVelocity = Mathf.Sqrt(sprintJumpHeight * -2.0f * character.gravityValue);
+        character.playerVelocity.y = Mathf.Sqrt(sprintJumpHeight * -2.0f * character.gravityValue);
 
         // Initialize horizontal movement based on current move input, fallback to facing direction
-        Vector2 moveInput = moveAction.ReadValue<Vector2>();
+        Vector2 moveInput = MoveInput;
         GetPlanarCameraBasis(out Vector3 camForward, out Vector3 camRight);
         horizontalDirection = (camRight * moveInput.x + camForward * moveInput.y).normalized;
         if (horizontalDirection.sqrMagnitude < 0.0001f)
@@ -51,7 +50,7 @@ public class SprintJumpState : State
             hasLeftGround = true;
         }
 
-        if (grounded && hasLeftGround && verticalVelocity <= 0f)
+        if (grounded && hasLeftGround && character.playerVelocity.y <= 0f)
         {
             if (!landingTriggered)
             {
@@ -59,10 +58,10 @@ public class SprintJumpState : State
                 landingTriggered = true;
             }
 
-            Vector2 moveInput = moveAction.ReadValue<Vector2>();
+            Vector2 moveInput = MoveInput;
             if (TutorialInputGate.IsActive && (TutorialInputGate.EffectiveMask & TutorialInputMask.Move) == 0)
                 moveInput = Vector2.zero;
-            bool keepSprinting = sprintAction.IsPressed() && moveInput.sqrMagnitude > 0f
+            bool keepSprinting = SprintPressed && moveInput.sqrMagnitude > 0f
                 && (!TutorialInputGate.IsActive || TutorialInputGate.Allows(TutorialInputMask.Sprint));
             stateMachine.ChangeState(keepSprinting ? character.sprinting : character.currentLocomotionState);
             character.animator.SetTrigger("move");
@@ -73,7 +72,7 @@ public class SprintJumpState : State
     {
         base.PhysicsUpdate();
 
-        Vector2 moveInput = moveAction.ReadValue<Vector2>();
+        Vector2 moveInput = MoveInput;
         if (TutorialInputGate.IsActive && (TutorialInputGate.EffectiveMask & TutorialInputMask.Move) == 0)
             moveInput = Vector2.zero;
         GetPlanarCameraBasis(out Vector3 camForward, out Vector3 camRight);
@@ -86,16 +85,13 @@ public class SprintJumpState : State
             horizontalDirection.Normalize();
         }
 
-        if (character.controller.isGrounded && verticalVelocity < 0f)
+        if (character.controller.isGrounded && character.playerVelocity.y < 0f)
         {
-            verticalVelocity = 0f;
         }
 
-        verticalVelocity += character.gravityValue * Time.fixedDeltaTime;
-
         Vector3 horizontalVelocity = horizontalDirection * character.sprintSpeed;
-        Vector3 movement = horizontalVelocity * Time.fixedDeltaTime + Vector3.up * (verticalVelocity * Time.fixedDeltaTime);
-        character.controller.Move(movement);
+        Vector3 movement = horizontalVelocity;
+        character.CalculatedVelocity = movement;
 
         if (horizontalVelocity.sqrMagnitude > 0.0001f)
         {
@@ -117,3 +113,7 @@ public class SprintJumpState : State
         character.animator.SetFloat("speed", 1f);
     }
 }
+
+
+
+

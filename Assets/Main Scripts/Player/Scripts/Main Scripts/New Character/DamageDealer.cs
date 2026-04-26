@@ -188,3 +188,4 @@ public class DamageDealer : MonoBehaviour
         hasPlayedHitSfxInCurrentSwing = true;
     }
 }
+

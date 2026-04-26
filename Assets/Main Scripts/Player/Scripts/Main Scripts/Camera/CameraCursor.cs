@@ -165,9 +165,6 @@ namespace MovementSystem
                     }
                     ctrlStatus = sb.ToString();
                 }
-                Debug.Log($"[CameraCursor] IsGameplayCursorLocked={mlm?.IsGameplayCursorLocked} | " +
-                    $"Cursor.visible={Cursor.visible} | _lastCinemachineEnabled={_lastCinemachineEnabled} | " +
-                    $"Controllers={ctrlStatus}");
             }
             #endif
 
@@ -343,8 +340,6 @@ namespace MovementSystem
 
             var gs = GameSettings.Instance;
             if (gs == null) return;
-
-            Debug.Log($"[CameraCursor] Camera speed setting: MouseSpeed={gs.cameraMouseSpeed:F2} (not yet applied)");
         }
 
         /// <summary>
@@ -394,7 +389,6 @@ namespace MovementSystem
                 if (inputAxisControllers[i].SuppressInputWhileBlending)
                 {
                     inputAxisControllers[i].SuppressInputWhileBlending = false;
-                    Debug.Log($"[CameraCursor] SuppressInputWhileBlending disabled on '{inputAxisControllers[i].gameObject.name}' (soft-cursor compat fix).");
                 }
             }
         }

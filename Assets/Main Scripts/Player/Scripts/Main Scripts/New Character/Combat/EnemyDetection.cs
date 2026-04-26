@@ -189,13 +189,11 @@ public class EnemyDetection : MonoBehaviour
     private void EnterCombat()
     {
         isInCombat = true;
-        Debug.Log("[EnemyDetection] Entered Combat - Enemy detected player");
     }
 
     private void ExitCombat()
     {
         isInCombat = false;
-        Debug.Log("[EnemyDetection] Exited Combat - No enemy or enemy lost player");
     }
 
     // Public method for enemies to call when they detect player
@@ -266,12 +264,10 @@ public class EnemyDetection : MonoBehaviour
     // Animation Event: Smart rotation - enemy priority over movement input
     public void AE_SmartRotate()
     {
-        Debug.Log("[EnemyDetection] AE_SmartRotate called");
 
         // Priority 1: Rotate to enemy if available
         if (nearestEnemy != null)
         {
-            Debug.Log("[EnemyDetection] Rotating to enemy");
             // Disable root motion when enemy is present (manual rotation)
             if (animator != null)
             {
@@ -282,7 +278,6 @@ public class EnemyDetection : MonoBehaviour
         // Priority 2: Rotate to movement input if no enemy
         else
         {
-            Debug.Log("[EnemyDetection] Rotating to movement input - enabling root motion");
             // Enable root motion when no enemy (for normal attack movement)
             if (animator != null && useRootMotionWhenNoEnemy)
             {
@@ -343,11 +338,9 @@ public class EnemyDetection : MonoBehaviour
     // Animation Event: Move toward enemy during attack
     public void AE_MoveTowardEnemy()
     {
-        Debug.Log("[EnemyDetection] AE_MoveTowardEnemy called");
 
         if (nearestEnemy == null || controller == null)
         {
-            Debug.Log("[EnemyDetection] No enemy or controller");
             return;
         }
 
@@ -359,7 +352,6 @@ public class EnemyDetection : MonoBehaviour
         if (attackRange <= 0f) attackRange = mageAttackRange; // Fallback
 
         float distanceToEnemy = Vector3.Distance(transform.position, nearestEnemy.position);
-        Debug.Log($"[EnemyDetection] Distance to enemy: {distanceToEnemy}, Attack range: {attackRange}");
 
         // Only move if enemy is beyond attack range
         if (distanceToEnemy > attackRange)
@@ -372,11 +364,9 @@ public class EnemyDetection : MonoBehaviour
 
             // Start smooth movement coroutine
             smoothMovementCoroutine = StartCoroutine(SmoothMoveTowardEnemy(0.2f));
-            Debug.Log("[EnemyDetection] Starting smooth movement toward enemy");
         }
         else
         {
-            Debug.Log("[EnemyDetection] Enemy within attack range, no movement needed");
         }
     }
 
@@ -402,7 +392,6 @@ public class EnemyDetection : MonoBehaviour
             float currentDistance = Vector3.Distance(transform.position, nearestEnemy.position);
             if (currentDistance <= attackRange)
             {
-                Debug.Log("[EnemyDetection] Reached attack range, stopping movement");
                 break;
             }
 
@@ -417,7 +406,6 @@ public class EnemyDetection : MonoBehaviour
         }
 
         smoothMovementCoroutine = null;
-        Debug.Log("[EnemyDetection] Smooth movement completed");
     }
 
     // Get attack range from current weapon
@@ -575,3 +563,4 @@ public class EnemyDetection : MonoBehaviour
     }
     #endregion
 }
+

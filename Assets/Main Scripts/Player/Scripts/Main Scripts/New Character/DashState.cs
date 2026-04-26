@@ -2,17 +2,16 @@ using UnityEngine;
 
 public class DashState : State
 {
-    private float dashTimer;
+    private float elapsedTime;
     private Vector3 dashDirection;
 
     // Dash cooldown and chain tracking
     private int currentDashCount = 0; // Current number of consecutive dashes
-    private bool isDashMovementActive = false; // Whether dash movement is currently active (set by Animation Event)
 
     // Static variables to persist across state instances
-    private static int staticDashCount = 0;
-    private static float staticLastDashTime = 0f;
-    private static float staticDashChainEndTime = 0f;
+    private int dashCount = 0;
+    private float lastDashTime = 0f;
+    private float dashChainEndTime = 0f;
 
     public DashState(Character _character, StateMachine _stateMachine) : base(_character, _stateMachine)
     {
@@ -21,6 +20,7 @@ public class DashState : State
     public override void Enter()
     {
         base.Enter();
+        character.playerVelocity.y = 0f;
 
         // Get dash settings from Character
         float dashCooldown = character.dashCooldown;
@@ -28,57 +28,44 @@ public class DashState : State
         int maxConsecutiveDashes = character.maxConsecutiveDashes;
 
         // Check if dash is on cooldown
-        float currentTime = Time.time;
+        float currentTime = character.Runner.SimulationTime;
 
-        // Safety check: If staticDashChainEndTime is way too large (likely from previous play session),
-        // or if staticLastDashTime is way too large, reset everything
-        // This handles the case when Unity Editor stops and plays again
-        if (staticDashChainEndTime > currentTime + 100f || staticLastDashTime > currentTime + 100f)
+        if (dashChainEndTime > currentTime + 100f || lastDashTime > currentTime + 100f)
         {
             ResetDashCooldown();
         }
 
-        // Check if we're in dash chain cooldown (after max consecutive dashes)
-        if (currentTime < staticDashChainEndTime)
+        if (currentTime < dashChainEndTime)
         {
-            // Still in cooldown, return to previous state
             stateMachine.ChangeState(character.currentLocomotionState);
             return;
         }
 
-        // Check if we need to reset dash count (enough time has passed since last dash)
-        // Also reset if staticLastDashTime is 0 (initialized) or negative (invalid)
-        if (staticLastDashTime <= 0 || currentTime - staticLastDashTime > dashCooldown)
+        if (lastDashTime <= 0 || currentTime - lastDashTime > dashCooldown)
         {
-            staticDashCount = 0; // Reset dash count if cooldown period has passed
+            dashCount = 0;
         }
 
-        // Check if we've reached max consecutive dashes
-        if (staticDashCount >= maxConsecutiveDashes)
+        if (dashCount >= maxConsecutiveDashes)
         {
-            // Start chain cooldown
-            staticDashChainEndTime = currentTime + dashChainCooldown;
-            staticDashCount = 0; // Reset count
-            // Return to previous state
+            dashChainEndTime = currentTime + dashChainCooldown;
+            dashCount = 0;
             stateMachine.ChangeState(character.currentLocomotionState);
             return;
         }
 
-        // Increment dash count and update last dash time
-        staticDashCount++;
-        staticLastDashTime = currentTime;
-        currentDashCount = staticDashCount;
+        dashCount++;
+        lastDashTime = currentTime;
+        currentDashCount = dashCount;
 
-        // Set the dash timer
-        dashTimer = character.dashDuration;
+        // Reset the timer
+        elapsedTime = 0f;
 
         // Calculate the dash direction based on input
-        Vector2 input = moveAction.ReadValue<Vector2>();
+        Vector2 input = MoveInput;
         GetPlanarCameraBasis(out Vector3 forward, out Vector3 right);
-
         dashDirection = (forward * input.y + right * input.x).normalized;
 
-        // If no input, dash forward
         if (dashDirection == Vector3.zero)
         {
             dashDirection = forward;
@@ -88,19 +75,14 @@ public class DashState : State
         // Rotate the character to face the dash direction
         character.transform.rotation = Quaternion.LookRotation(dashDirection);
 
-        // NGAY LẬP TỨC: Bật cờ cho phép di chuyển lướt (không đợi Animation Event nữa)
-        isDashMovementActive = true;
+        // B?t I-frame v� d?i Layer t�ng h�nh
+        character.IsDashing = true;
+        character.AE_EnableDashInvincibility();
 
-        // Trigger dash animation if available
+        // Ph�t animation l?n v�ng
         if (character.animator)
         {
             character.animator.SetTrigger("dash");
-        }
-
-        // Fix: Bỏ qua va chạm ngay lập tức khi bấm nút (không đợi Animation Event) để tránh bị kẹt momentum ở vài frame đầu
-        if (character != null)
-        {
-            character.AE_EnableDashInvincibility();
         }
 
         if(character.TryGetComponent(out StuckDetection stuck)){
@@ -114,14 +96,14 @@ public class DashState : State
     {
         base.LogicUpdate();
 
-        // Decrease the dash timer
-        dashTimer -= Time.deltaTime;
+        // T�ch luy th?i gian
+        elapsedTime += character.Runner.DeltaTime;
 
-        // Transition back to StandingState when dash ends
-        if (dashTimer <= 0)
+        // N?u th?i gian lu?t d� vu?t qua dashDuration
+        if (elapsedTime >= character.dashDuration)
         {
-            isDashMovementActive = false; // Stop dash movement
-            stateMachine.ChangeState(character.currentLocomotionState);
+            // Chuy?n v? tr?ng th�i d?ng y�n
+            stateMachine.ChangeState(character.standing);
         }
     }
 
@@ -129,33 +111,27 @@ public class DashState : State
     {
         base.PhysicsUpdate();
 
-        // Only apply dash movement if Animation Event has activated it
-        if (isDashMovementActive)
-        {
-            character.controller.Move(dashDirection * character.dashSpeed * Time.deltaTime);
-        }
+        // Lao di v?i t?c d? dashSpeed (Kh�ng c?n di?u ki?n if(isDashMoving) t? AE n?a)
+        character.CalculatedVelocity = character.transform.forward * character.dashSpeed;
     }
 
     public override void Exit()
     {
         base.Exit();
 
-        // Stop dash movement
-        isDashMovementActive = false;
-        
-        // Failsafe: Ensure iframe and layer collision are restored if state exits early (e.g., interrupted by hit/stun)
-        if (character != null && character.IsDashing)
+        // T?t I-frame, tr? l?i Layer b�nh thu?ng
+        character.IsDashing = false;
+        if (character != null)
         {
             character.AE_DisableDashInvincibility();
         }
 
-        // Reset dash-related variables if needed
         dashDirection = Vector3.zero;
 
-        // Snap blend "speed" theo input hiện tại — tránh damp + drift làm para dao động sau dash khi đứng yên.
+        // Snap blend "speed" theo input hi?n t?i
         if (character != null)
         {
-            Vector2 m = moveAction.ReadValue<Vector2>();
+            Vector2 m = MoveInput;
             character.SetAnimatorLocomotionSpeed(m.magnitude);
         }
 
@@ -164,65 +140,30 @@ public class DashState : State
         }
     }
 
-    #region Animation Events
-
-    /// <summary>
-    /// Animation Event: Start dash movement
-    /// Call this from dash animation at the frame where dash movement should begin
-    /// </summary>
-    public void AE_StartDashMovement()
-    {
-        isDashMovementActive = true;
-        Debug.Log($"[DashState] AE_StartDashMovement - Dash movement started (Dash {currentDashCount}/{character.maxConsecutiveDashes})");
-    }
-
-    /// <summary>
-    /// Animation Event: Stop dash movement
-    /// Call this from dash animation at the frame where dash movement should end
-    /// </summary>
-    public void AE_StopDashMovement()
-    {
-        isDashMovementActive = false;
-        Debug.Log("[DashState] AE_StopDashMovement - Dash movement stopped");
-    }
-
-    #endregion
-
     #region Public Methods for Cooldown Checking
 
-    /// <summary>
-    /// Reset all dash cooldown and count variables
-    /// Call this when game starts or restarts
-    /// </summary>
-    public static void ResetDashCooldown()
+    public void ResetDashCooldown()
     {
-        staticDashCount = 0;
-        staticLastDashTime = 0f;
-        staticDashChainEndTime = 0f;
-        Debug.Log("[DashState] ResetDashCooldown - All dash cooldown variables reset");
+        dashCount = 0;
+        lastDashTime = 0f;
+        dashChainEndTime = 0f;
     }
 
-    /// <summary>
-    /// Check if dash can be performed (not on cooldown)
-    /// </summary>
-    public static bool CanDash(float dashCooldown, float dashChainCooldown, int maxConsecutiveDashes)
+    public bool CanDash()
     {
-        float currentTime = Time.time;
+        float currentTime = character.Runner.SimulationTime;
 
-        // Check if in chain cooldown
-        if (currentTime < staticDashChainEndTime)
+        if (currentTime < dashChainEndTime)
         {
             return false;
         }
 
-        // Check if we need to reset dash count
-        if (currentTime - staticLastDashTime > dashCooldown)
+        if (currentTime - lastDashTime > character.dashCooldown)
         {
-            staticDashCount = 0;
+            dashCount = 0;
         }
 
-        // Check if we've reached max consecutive dashes
-        if (staticDashCount >= maxConsecutiveDashes)
+        if (dashCount >= character.maxConsecutiveDashes)
         {
             return false;
         }
@@ -230,13 +171,10 @@ public class DashState : State
         return true;
     }
 
-    /// <summary>
-    /// Get remaining cooldown time
-    /// </summary>
-    public static float GetRemainingCooldown(float dashCooldown, float dashChainCooldown)
+    public float GetRemainingCooldown()
     {
-        float currentTime = Time.time;
-        float chainCooldownRemaining = staticDashChainEndTime - currentTime;
+        float currentTime = character.Runner.SimulationTime;
+        float chainCooldownRemaining = dashChainEndTime - currentTime;
 
         if (chainCooldownRemaining > 0)
         {

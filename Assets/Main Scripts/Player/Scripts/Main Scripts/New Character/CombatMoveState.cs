@@ -32,7 +32,7 @@ public class CombatMoveState : BaseMoveState
         if (skillLock != null && skillLock.isPerformingSkill)
             return;
 
-        attack = attackAction.triggered;
+        attack = AttackTriggered;
         if (TutorialInputGate.IsActive && (TutorialInputGate.EffectiveMask & TutorialInputMask.Attack) == 0)
             attack = false;
     }
@@ -46,14 +46,14 @@ public class CombatMoveState : BaseMoveState
             return;
 
         // Kiểm tra cooldown trước khi xử lý toggle vũ khí
-        if (Time.time - lastToggleTime < toggleCooldown)
+        if (character.Runner.SimulationTime - lastToggleTime < toggleCooldown)
         {
             return;
         }
 
         if (sheathWeapon && character.isWeaponDrawn)
         {
-            lastToggleTime = Time.time;
+            lastToggleTime = character.Runner.SimulationTime;
 
             // reset cờ để không loop
             sheathWeapon = false;
@@ -90,3 +90,4 @@ public class CombatMoveState : BaseMoveState
         character.animator.ResetTrigger("attack"); // Đặt lại trigger để tránh dư thừa
     }
 }
+

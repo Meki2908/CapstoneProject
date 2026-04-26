@@ -62,7 +62,6 @@ public class StuckDetection : MonoBehaviour
                 {
                     isStuck = true;
                     lastStuckTime = Time.time;
-                    Debug.Log($"[StuckDetection] Player stuck between {nearbyEnemies} enemies for {timeStuck:F1}s");
                 }
             }
         }
@@ -110,8 +109,6 @@ public class StuckDetection : MonoBehaviour
             isStuck = false;
             timeStuck = 0f;
             lastAutoDashTime = Time.time;
-
-            Debug.Log($"[StuckDetection] Auto-dash triggered to escape stuck condition");
         }
     }
 
@@ -181,3 +178,5 @@ public class StuckDetection : MonoBehaviour
         }
     }
 }
+
+

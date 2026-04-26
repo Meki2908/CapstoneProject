@@ -2957,6 +2957,7 @@ GameObject:
   - component: {fileID: 6974512757666048725}
   - component: {fileID: 4326883820152807762}
   - component: {fileID: 5825221275108076859}
+  - component: {fileID: 9100236957028932469}
   m_Layer: 0
   m_Name: UI_HP+Invetory_1.0
   m_TagString: HUD
@@ -3286,6 +3287,19 @@ MonoBehaviour:
   axeCritPrefab: {fileID: 4894818167331348376, guid: ee08b55704aea744a94865f79c8f700a, type: 3}
   mageNormalPrefab: {fileID: 4450794733605708888, guid: d37774f5f39746848a87ae303aaf4f80, type: 3}
   mageCritPrefab: {fileID: 7880013531466083177, guid: f95138bf7dfd39448b260e2ca636efbf, type: 3}
+--- !u!114 &9100236957028932469
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2016107385648365335}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dcdbfd64bf80f8540b1a1bdb58903daf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  healthText: {fileID: 525828953248956310}
 --- !u!1 &2074542185294460895
 GameObject:
   m_ObjectHideFlags: 0
@@ -12517,7 +12531,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 732707928021067893, guid: 3feb0ea71f170b449bc250e50f8dd711, type: 3}
       propertyPath: m_fontSize
-      value: 20
+      value: 34.1
       objectReference: {fileID: 0}
     - target: {fileID: 732707928021067893, guid: 3feb0ea71f170b449bc250e50f8dd711, type: 3}
       propertyPath: m_fontSizeBase

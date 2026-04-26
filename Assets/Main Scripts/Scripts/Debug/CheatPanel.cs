@@ -32,6 +32,17 @@ public class CheatPanel : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.F1))
         {
+            // Kiểm tra phân quyền: Chỉ Server (Host/SinglePlayer) mới được bật Cheat
+            if (Artsystack.ArtsystackGui.FusionConnectionManager.Instance != null && 
+                Artsystack.ArtsystackGui.FusionConnectionManager.Instance.Runner != null)
+            {
+                if (!Artsystack.ArtsystackGui.FusionConnectionManager.Instance.Runner.IsServer)
+                {
+                    Debug.LogWarning("[CheatPanel] Bạn không phải là Host. Lệnh Cheat bị từ chối!");
+                    return;
+                }
+            }
+
             _show = !_show;
 
             if (_show)

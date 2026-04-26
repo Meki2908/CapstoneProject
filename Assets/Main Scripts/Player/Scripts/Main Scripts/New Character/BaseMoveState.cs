@@ -36,7 +36,6 @@ public class BaseMoveState : State
         // FIX: Bỏ reset velocity ở đây để giữ lại gia tốc (momentum) của nhân vật
         // khi chuyển từ GetHitState hoặc các state khác quay lại BaseMove,
         // giúp nhân vật không bị khựng (stutter) rồi phải tăng tốc lại từ đầu.
-        gravityVelocity.y = 0;
 
         playerSpeed = character.playerSpeed;
         grounded = character.controller.isGrounded;
@@ -51,7 +50,7 @@ public class BaseMoveState : State
 
         // Read input first before checking sprint condition
         // Read input and calculate movement direction relative to the camera
-        input = moveAction.ReadValue<Vector2>();
+        input = MoveInput;
         velocity = new Vector3(input.x, 0, input.y);
 
         // Align movement direction with stable planar camera basis (ignore camera pitch)
@@ -73,13 +72,13 @@ public class BaseMoveState : State
         {
             jump = true;
         }
-        if (crouchAction.triggered)
+        if (CrouchTriggered)
         {
             crouch = true;
         }
         // Check if sprint button is being held (IsPressed) AND there is movement input
         // This ensures sprint activates immediately when Shift is held while moving
-        if (sprintAction.IsPressed() && input.sqrMagnitude > 0f)
+        if (SprintPressed && input.sqrMagnitude > 0f)
         {
             sprint = true;
         }
@@ -90,18 +89,17 @@ public class BaseMoveState : State
 
         // Safety: nếu vì lý do nào đó dashLockUntil bị set quá xa trong tương lai
         // (ví dụ sau khi load scene / editor play-stop-play), thì reset về 0 để tránh khóa dash vĩnh viễn
-        if (character.dashLockUntil > Time.time + 5f)
+        if (character.dashLockUntil > character.Runner.SimulationTime + 5f)
         {
             character.dashLockUntil = 0f;
         }
 
         // Dash chỉ được phép khi không bị khóa (vd: ngay sau khi thoát GetHitState)
-        if (Time.time >= character.dashLockUntil && dashAction.triggered)
+        if (character.Runner.SimulationTime >= character.dashLockUntil && DashTriggered)
         {
             dash = true;
-            Debug.Log("[BaseMoveState] Dash input TRIGGERED, dashLockUntil: " + character.dashLockUntil + ", Time= " + Time.time);
         }
-        if (toggleWeaponAction.triggered)
+        if (ToggleWeaponTriggered)
         {
             if (character.isWeaponDrawn)
             {
@@ -144,15 +142,12 @@ public class BaseMoveState : State
 
         // Guard: skip nếu CharacterController bị disable (vd: đang teleport)
         if (character.controller == null || !character.controller.enabled) return;
-
-        gravityVelocity.y += gravityValue * Time.deltaTime;
         grounded = character.controller.isGrounded;
-        if (grounded && gravityVelocity.y < 0) gravityVelocity.y = 0f;
 
         // NEW: đang skill -> chỉ gravity Y
         if (skillLock != null && skillLock.isPerformingSkill)
         {
-            character.controller.Move(new Vector3(0f, gravityVelocity.y, 0f) * Time.deltaTime);
+            character.CalculatedVelocity = Vector3.zero;
             return;
         }
 
@@ -164,11 +159,13 @@ public class BaseMoveState : State
         {
             speedMultiplier = WeaponGemManager.Instance.GetMovementSpeedMultiplier(wc.GetCurrentWeapon().weaponType);
         }
-        character.controller.Move(currentVelocity * Time.deltaTime * (playerSpeed * speedMultiplier) + gravityVelocity * Time.deltaTime);
+        character.CalculatedVelocity = currentVelocity * (playerSpeed * speedMultiplier);
 
         if (velocity.sqrMagnitude > 0)
         {
             Quaternion targetRotation = Quaternion.LookRotation(velocity);
+            targetRotation.x = 0;
+            targetRotation.z = 0;
             character.transform.rotation = Quaternion.Slerp(character.transform.rotation, targetRotation, character.rotationDampTime);
         }
     }
@@ -199,13 +196,18 @@ public class BaseMoveState : State
     public override void Exit()
     {
         base.Exit();
-
-        gravityVelocity.y = 0f;
         character.playerVelocity = new Vector3(input.x, 0, input.y);
 
         if (velocity.sqrMagnitude > 0)
         {
-            character.transform.rotation = Quaternion.LookRotation(velocity);
+            Quaternion targetRotation = Quaternion.LookRotation(velocity);
+            targetRotation.x = 0;
+            targetRotation.z = 0;
+            character.transform.rotation = targetRotation;
         }
     }
 }
+
+
+
+

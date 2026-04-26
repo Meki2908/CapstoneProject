@@ -30,7 +30,6 @@ public class CrouchingState : State
         character.animator.SetBool("isCrouch", true);
         belowCeiling = false;
         crouchHeld = false;
-        gravityVelocity.y = 0;
 
         playerSpeed = character.crouchSpeed;
 
@@ -51,8 +50,6 @@ public class CrouchingState : State
         // Restore the original height and center of the CharacterController
         character.controller.height = originalHeight;
         character.controller.center = originalCenter;
-
-        gravityVelocity.y = 0f;
         character.playerVelocity = new Vector3(input.x, 0, input.y);
         character.animator.SetBool("isCrouch", false);
     }
@@ -60,11 +57,11 @@ public class CrouchingState : State
     public override void HandleInput()
     {
         base.HandleInput();
-        if (crouchAction.triggered && !belowCeiling)
+        if (CrouchTriggered && !belowCeiling)
         {
             crouchHeld = true;
         }
-        input = moveAction.ReadValue<Vector2>();
+        input = MoveInput;
         velocity = new Vector3(input.x, 0, input.y);
 
         GetPlanarCameraBasis(out Vector3 camForward, out Vector3 camRight);
@@ -84,7 +81,7 @@ public class CrouchingState : State
     {
         base.LogicUpdate();
 
-        if (crouchHeld || crouchAction.triggered)
+        if (crouchHeld || CrouchTriggered)
         {
             stateMachine.ChangeState(character.currentLocomotionState);
         }
@@ -94,19 +91,19 @@ public class CrouchingState : State
     {
         base.PhysicsUpdate();
         belowCeiling = CheckCollisionOverlap(character.transform.position + Vector3.up * character.normalColliderHeight);
-        gravityVelocity.y += gravityValue * Time.deltaTime;
         grounded = character.controller.isGrounded;
-        if (grounded && gravityVelocity.y < 0)
         {
-            gravityVelocity.y = 0f;
         }
         currentVelocity = Vector3.Lerp(currentVelocity, velocity, character.velocityDampTime);
 
-        character.controller.Move(currentVelocity * Time.deltaTime * playerSpeed + gravityVelocity * Time.deltaTime);
+        character.CalculatedVelocity = (currentVelocity * playerSpeed);
 
         if (velocity.magnitude > 0)
         {
-            character.transform.rotation = Quaternion.Slerp(character.transform.rotation, Quaternion.LookRotation(velocity), character.rotationDampTime);
+            Quaternion targetRotation = Quaternion.LookRotation(velocity);
+            targetRotation.x = 0;
+            targetRotation.z = 0;
+            character.transform.rotation = Quaternion.Slerp(character.transform.rotation, targetRotation, character.rotationDampTime);
         }
     }
 
@@ -129,3 +126,7 @@ public class CrouchingState : State
         }
     }
 }
+
+
+
+

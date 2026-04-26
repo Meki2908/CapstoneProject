@@ -46,7 +46,6 @@ public class QuestDirectionTracker : MonoBehaviour
         _player = playerTransform != null ? playerTransform : FindPlayer();
         CreateUI();
         FindActiveMarker();
-        Debug.Log($"[Tracker] START! player={_player != null}, gắn trên='{gameObject.name}'");
 
         SceneManager.sceneLoaded += OnSceneLoaded;
         QuestManager.OnQuestAccepted += OnQuestChanged;
@@ -120,9 +119,6 @@ public class QuestDirectionTracker : MonoBehaviour
         dir.Normalize();
 
         // Debug mỗi 2 giây
-        if (Time.frameCount % 120 == 0)
-            Debug.Log($"[Tracker] Pointing to '{_target.name}' pos={_target.position}, player={_player.position}, dir={dir}, angle={Mathf.Atan2(dir.x, dir.z) * Mathf.Rad2Deg:F1}°");
-
         // ── Arrow: di chuyển xa gần + xoay về target ──
         float bob = Mathf.Sin(Time.time * arrowMoveSpeed) * arrowMoveAmount;
         float arrowDist = circleRadius + 0.05f + arrowBaseDistance + bob;
@@ -321,7 +317,6 @@ public class QuestDirectionTracker : MonoBehaviour
                     if (bestTarget != null)
                     {
                         _target = bestTarget;
-                        Debug.Log($"[Tracker] Matched targetTag '{activeStep.targetTag}' -> {_target.name}");
                         return;
                     }
                 }
@@ -360,7 +355,6 @@ public class QuestDirectionTracker : MonoBehaviour
         if (bestTarget != null)
         {
             _target = bestTarget;
-            Debug.Log($"[Tracker] Matched quest={matchedQuestID}, closest marker='{bestTarget.name}' at {bestTarget.position} (dist: {closestDist:F1})");
         }
     }
 
@@ -370,3 +364,5 @@ public class QuestDirectionTracker : MonoBehaviour
         return go != null ? go.transform : null;
     }
 }
+
+

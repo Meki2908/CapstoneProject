@@ -27,7 +27,6 @@ public class JumpingState : State
         gravityValue = character.gravityValue;
         jumpHeight = character.jumpHeight;
         playerSpeed = character.playerSpeed;
-        gravityVelocity.y = 0;
 
         character.animator.SetFloat("speed", 0);
         character.animator.SetTrigger("jump");
@@ -39,7 +38,7 @@ public class JumpingState : State
     {
         base.HandleInput();
 
-        input = moveAction.ReadValue<Vector2>();
+        input = MoveInput;
         // Trong state này không xét jump; Space không đổi Y — impulse đã được gán trong Enter().
         if (TutorialInputGate.IsActive && (TutorialInputGate.EffectiveMask & TutorialInputMask.Move) == 0)
             input = Vector2.zero;
@@ -79,16 +78,17 @@ public class JumpingState : State
             airVelocity = airVelocity.x * camRight + airVelocity.z * camForward;
             if (airVelocity.sqrMagnitude > 1f) airVelocity.Normalize();
             airVelocity.y = 0f;
-            character.controller.Move(gravityVelocity * Time.deltaTime + (airVelocity * character.airControl + velocity * (1 - character.airControl)) * playerSpeed * Time.deltaTime);
+            character.CalculatedVelocity = (airVelocity * character.airControl + velocity * (1 - character.airControl)) * playerSpeed;
         }
-
-        gravityVelocity.y += gravityValue * Time.deltaTime;
         grounded = character.controller.isGrounded;
     }
 
     void Jump()
     {
-        gravityVelocity.y += Mathf.Sqrt(jumpHeight * -3.0f * gravityValue);
+        character.playerVelocity.y = Mathf.Sqrt(jumpHeight * -2.0f * gravityValue);
     }
 
 }
+
+
+

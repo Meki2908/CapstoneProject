@@ -25,7 +25,7 @@ public class StandingState : BaseMoveState
     {
         base.HandleInput();
 
-        if (toggleWeaponAction.triggered
+        if (ToggleWeaponTriggered
             && (!TutorialInputGate.IsActive || TutorialInputGate.Allows(TutorialInputMask.ToggleWeapon)))
         {
             drawWeapon = true;
@@ -46,14 +46,14 @@ public class StandingState : BaseMoveState
         base.LogicUpdate();
 
         // Ensure cooldown before processing input
-        if (Time.time - lastToggleTime < toggleCooldown)
+        if (character.Runner.SimulationTime - lastToggleTime < toggleCooldown)
         {
             return; // Wait for cooldown to finish
         }
 
         if (drawWeapon && !character.isWeaponDrawn) // Transition to DrawWeaponState
         {
-            lastToggleTime = Time.time; // Update the last toggle time
+            lastToggleTime = character.Runner.SimulationTime; // Update the last toggle time
 
             character.isWeaponDrawn = true;
             character.currentLocomotionState = character.combatMove;
@@ -73,3 +73,4 @@ public class StandingState : BaseMoveState
         base.Exit();
     }
 }
+

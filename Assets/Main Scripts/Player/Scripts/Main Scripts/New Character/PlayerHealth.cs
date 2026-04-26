@@ -1,11 +1,14 @@
 using UnityEngine;
 using TMPro;
+using Fusion;
 
-public class PlayerHealth : MonoBehaviour
+public class PlayerHealth : NetworkBehaviour
 {
     [Header("Health Settings")]
     [SerializeField] private float maxHealth = 5f;
-    [SerializeField] private float currentHealth;
+    [Networked] public float currentHealth { get; set; }
+
+    private ChangeDetector _changeDetector;
 
     [Header("Components")]
     private Character character;
@@ -37,11 +40,16 @@ public class PlayerHealth : MonoBehaviour
 
     public bool IsInvulnerable() => isInvulnerable;
 
-    void Start()
+    public override void Spawned()
     {
+        _changeDetector = GetChangeDetector(ChangeDetector.Source.SimulationState);
         baseMaxHealth = maxHealth;
         UpdateMaxHealthWithEquipment();
-        currentHealth = maxHealth;
+        
+        if (HasStateAuthority)
+        {
+            currentHealth = maxHealth;
+        }
         character = GetComponent<Character>();
         animator = GetComponent<Animator>();
 
@@ -56,16 +64,27 @@ public class PlayerHealth : MonoBehaviour
             EquipmentManager.Instance.OnEquipmentChanged += OnEquipmentChanged;
         }
 
-        // Auto-find health text if not assigned
-        if (autoFindHealthText && healthText == null)
-        {
-            FindHealthText();
-        }
-
-        // Update health text
+        // Auto-find health text logic removed in favor of GameUIManager MVC architecture.
         UpdateHealthText();
+    }
 
-        Debug.Log($"[PlayerHealth] Player initialized with {maxHealth} HP");
+    public override void Render()
+    {
+        foreach (var change in _changeDetector.DetectChanges(this))
+        {
+            switch (change)
+            {
+                case nameof(currentHealth):
+                    OnHPChanged();
+                    break;
+            }
+        }
+    }
+
+    private void OnHPChanged()
+    {
+        OnHealthChanged?.Invoke(currentHealth);
+        UpdateHealthText();
     }
 
     /// <summary>
@@ -87,7 +106,6 @@ public class PlayerHealth : MonoBehaviour
                 if (tName.Contains("health") || tName.Contains("hp") || tName.Contains("value") || tName.Contains("text"))
                 {
                     healthText = txt;
-                    Debug.Log($"[PlayerHealth] Found health text '{txt.name}' from HealthBarUI");
                     return;
                 }
             }
@@ -106,7 +124,6 @@ public class PlayerHealth : MonoBehaviour
                 if (tName == "health text" || tName == "hp text" || tName == "healthvalue" || tName == "hpvalue")
                 {
                     healthText = txt;
-                    Debug.Log($"[PlayerHealth] Found health text by exact name: {txt.name}");
                     return;
                 }
             }
@@ -169,9 +186,13 @@ public class PlayerHealth : MonoBehaviour
     /// </summary>
     public void TakeDamage(float damage, Vector3 hitPosition, bool forceHitAnimation)
     {
+        if (!HasStateAuthority)
+        {
+            return;
+        }
+
         if (!IsAlive)
         {
-            Debug.Log("[PlayerHealth] BLOCK: Already dead, ignoring damage");
             return;
         }
 
@@ -186,7 +207,6 @@ public class PlayerHealth : MonoBehaviour
             }
             else
             {
-                Debug.Log("[PlayerHealth] BLOCK: Shield active — damage blocked!");
                 return;
             }
         }
@@ -194,21 +214,18 @@ public class PlayerHealth : MonoBehaviour
         // === INVULNERABLE CHECK (+ anti-stuck safety) ===
         if (isInvulnerable && !forceHitAnimation)
         {
-            Debug.Log("[PlayerHealth] BLOCK: Player is invulnerable — damage ignored");
             return;
         }
 
         // === DIE STATE CHECK ===
         if (character != null && character.movementSM != null && character.movementSM.currentState == character.dieState)
         {
-            Debug.Log("[PlayerHealth] BLOCK: Already in DieState — damage ignored");
             return;
         }
 
         // === DASH INVINCIBILITY CHECK ===
         if (character != null && character.IsDashing && !forceHitAnimation)
         {
-            Debug.Log("[PlayerHealth] BLOCK: Dash invincibility — damage ignored!");
             return;
         }
 
@@ -221,7 +238,6 @@ public class PlayerHealth : MonoBehaviour
             float maxReduction = damage * 0.8f; // Defense chặn TỐI ĐA 80% damage
             float reduced = Mathf.Min(defense, maxReduction);
             finalDamage = damage - reduced;
-            Debug.Log($"[PlayerHealth] Defense calc: original={damage}, defense={defense}, reduced={reduced}, maxReduction={maxReduction}, final={finalDamage}");
         }
 
         // Đảm bảo minimum damage = 1 (không bao giờ = 0 nếu có damage đầu vào)
@@ -237,8 +253,6 @@ public class PlayerHealth : MonoBehaviour
         OnHealthChanged?.Invoke(currentHealth);
         UpdateHealthText();
 
-        Debug.Log($"[PlayerHealth] DAMAGE APPLIED: {finalDamage} (original: {damage}) | HP: {hpBefore} → {currentHealth}/{maxHealth}");
-
         // Check if player died BEFORE triggering get hit animation
         if (currentHealth <= 0f)
         {
@@ -251,7 +265,6 @@ public class PlayerHealth : MonoBehaviour
         // Player có thể tiếp tục đánh/di chuyển bình thường
         if (Time.time - lastHitTime < hitCooldown)
         {
-            Debug.Log($"[PlayerHealth] Hit cooldown active ({hitCooldown - (Time.time - lastHitTime):F1}s left) — damage applied but no stun");
             return; // Đã trừ máu ở trên, nhưng không dừng hành động player
         }
 
@@ -261,7 +274,6 @@ public class PlayerHealth : MonoBehaviour
         if (character != null && character.movementSM != null &&
             character.movementSM.currentState == character.attacking)
         {
-            Debug.Log("[PlayerHealth] Player đang attack → skip GetHitState, giữ combo");
             lastHitTime = Time.time; // Vẫn ghi nhận hit để cooldown hoạt động
             return;
         }
@@ -277,7 +289,6 @@ public class PlayerHealth : MonoBehaviour
         // Chuyển sang GetHitState (chỉ khi KHÔNG đang attack)
         if (character != null && character.movementSM != null && character.movementSM.currentState != character.dieState)
         {
-            Debug.Log($"[PlayerHealth] Changing state to GetHitState. Next hit stun in {hitCooldown}s");
             character.movementSM.ChangeState(character.getHit);
         }
         else
@@ -295,8 +306,6 @@ public class PlayerHealth : MonoBehaviour
         // Calculate total damage from DungeonMania's damage struct
         int totalDamage = damageStruct.damage + damageStruct.damageElemental + damageStruct.crit;
         
-        Debug.Log($"[PlayerHealth] PlayerDamage called: total={totalDamage}, base={damageStruct.damage}, elemental={damageStruct.damageElemental}, crit={damageStruct.crit}, isBow={damageStruct.isBow}");
-        
         // Call main TakeDamage — forceHitAnimation = false để tôn trọng dash invincibility
         // Nếu player đang dash, sẽ không bị damage
         TakeDamage(totalDamage, Vector3.zero, false);
@@ -304,7 +313,6 @@ public class PlayerHealth : MonoBehaviour
 
     private void Die()
     {
-        Debug.Log("[PlayerHealth] Player died!");
 
         // Notify listeners
         OnPlayerDied?.Invoke();
@@ -325,7 +333,6 @@ public class PlayerHealth : MonoBehaviour
 
         OnHealthChanged?.Invoke(currentHealth);
         UpdateHealthText();
-        Debug.Log($"[PlayerHealth] Player healed for {amount}! Current HP: {currentHealth}/{maxHealth}");
     }
 
     public void ResetHealth()
@@ -333,23 +340,16 @@ public class PlayerHealth : MonoBehaviour
         currentHealth = maxHealth;
         OnHealthChanged?.Invoke(currentHealth);
         UpdateHealthText();
-        Debug.Log($"[PlayerHealth] Player health reset to {maxHealth}");
     }
 
     /// <summary>
-    /// Update health text to display "Current/Max HP"
+    /// Update health text via centralized GameUIManager
     /// </summary>
     private void UpdateHealthText()
     {
-        // Tự tìm lại healthText nếu bị null (sau scene transition)
-        if (healthText == null && autoFindHealthText)
+        if (HasInputAuthority && GameUIManager.Instance != null)
         {
-            FindHealthText();
-        }
-        
-        if (healthText != null)
-        {
-            healthText.text = $"{Mathf.CeilToInt(currentHealth)}/{Mathf.CeilToInt(maxHealth)}";
+            GameUIManager.Instance.UpdateHP(currentHealth, maxHealth);
         }
     }
 
@@ -368,10 +368,8 @@ public class PlayerHealth : MonoBehaviour
     System.Collections.IEnumerator InvulnerabilityCoroutine(float duration)
     {
         isInvulnerable = true;
-        Debug.Log($"[PlayerHealth] Invulnerability started for {duration} seconds");
         yield return new WaitForSeconds(duration);
         isInvulnerable = false;
-        Debug.Log("[PlayerHealth] Invulnerability ended");
     }
 
     // Set invulnerability state directly (used for skill lock duration)
@@ -380,7 +378,8 @@ public class PlayerHealth : MonoBehaviour
         // Stop any timed invulnerability when explicitly setting
         try { StopCoroutine("InvulnerabilityCoroutine"); } catch { }
         isInvulnerable = value;
-        Debug.Log($"[PlayerHealth] SetInvulnerable -> {value}");
     }
 }
+
+
 

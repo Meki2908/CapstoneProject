@@ -57,8 +57,6 @@ public class DieState : State
                 character.animator.SetTrigger("die");
             }
         }
-
-        Debug.Log("[DieState] Player entered death state - all controls disabled");
     }
 
     private void DisableWeaponLayersForBaseDie()
@@ -101,7 +99,7 @@ public class DieState : State
         base.LogicUpdate();
 
         // Update timer (though player can't do anything)
-        dieTimer -= Time.deltaTime;
+        dieTimer -= character.Runner.DeltaTime;
 
         // Optionally, you can add respawn logic here after dieTimer <= 0
         // For now, player stays dead
@@ -114,16 +112,11 @@ public class DieState : State
         if (!character.controller.enabled || !character.controller.gameObject.activeInHierarchy) return;
 
         // Only apply gravity - no movement allowed
-        gravityVelocity.y += character.gravityValue * Time.deltaTime;
 
         // Keep player grounded
-        if (character.controller.isGrounded && gravityVelocity.y < 0)
-        {
-            gravityVelocity.y = 0f;
-        }
 
         // Only move downward due to gravity (if not grounded)
-        character.controller.Move(gravityVelocity * Time.deltaTime);
+        character.CalculatedVelocity = Vector3.zero;
     }
 
     public override void Exit()
@@ -135,8 +128,10 @@ public class DieState : State
         {
             character.playerInput.enabled = true;
         }
-
-        Debug.Log("[DieState] Player exited death state");
     }
 }
+
+
+
+
 

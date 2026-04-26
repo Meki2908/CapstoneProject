@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 public class HardStopState : State
 {
@@ -37,7 +37,7 @@ public class HardStopState : State
         base.LogicUpdate();
 
         // Decrease the stop timer
-        stopTimer -= Time.deltaTime;
+        stopTimer -= character.Runner.DeltaTime;
 
         // Transition back to StandingState when the stop animation is complete
         if (stopTimer <= 0)
@@ -51,10 +51,10 @@ public class HardStopState : State
         base.PhysicsUpdate();
 
         // Gradually reduce the player's velocity to simulate momentum
-        decelerationVelocity = Vector3.Lerp(decelerationVelocity, Vector3.zero, Time.deltaTime / stopDuration);
+        decelerationVelocity = Vector3.Lerp(decelerationVelocity, Vector3.zero, character.Runner.DeltaTime / stopDuration);
 
         // Apply the deceleration to the player's movement
-        character.controller.Move(decelerationVelocity * Time.deltaTime);
+        character.controller.Move(decelerationVelocity * character.Runner.DeltaTime);
 
         // Keep the character facing the initial direction during the hard stop
         character.transform.rotation = initialFacingDirection;
@@ -71,3 +71,4 @@ public class HardStopState : State
         character.transform.rotation = initialFacingDirection;
     }
 }
+
