@@ -224,7 +224,9 @@ public class BaseMoveState : State
 
         if (velocity.sqrMagnitude > 0.1f)
         {
-            Quaternion targetRotation = Quaternion.LookRotation(new Vector3(velocity.x, 0, velocity.z));
+            Quaternion targetRotation = Quaternion.LookRotation(velocity);
+            targetRotation.x = 0;
+            targetRotation.z = 0;
             character.transform.rotation = targetRotation;
         }
     }

@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.InputSystem;
 using Fusion;
 public enum CharacterStateSync { Standing, Jumping, Crouching, Sprinting, Dash, HardStop, DrawWeapon, SheathWeapon, CombatMove, Attack, GetHit, Die }
@@ -151,6 +151,7 @@ public class Character : NetworkBehaviour
         if (animator != null)
         {
             animator.transform.localPosition = initialModelLocalPosition;
+            animator.transform.localRotation = Quaternion.identity;
         }
     }
     // Start is called before the first frame update

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.IO;
 using UnityEngine;
@@ -151,6 +151,12 @@ public class MapChinhPlayerPositionPersistence : MonoBehaviour
         var ch = GetComponentInChildren<Character>(true);
         if (ch != null)
             ch.playerVelocity = Vector3.zero;
+
+        var enemyDetection = GetComponentInChildren<EnemyDetection>(true);
+        if (enemyDetection != null && enemyDetection.cnCamera != null)
+        {
+            enemyDetection.cnCamera.ForceCameraPosition(transform.position, transform.rotation);
+        }
     }
 
     void TrySave()
