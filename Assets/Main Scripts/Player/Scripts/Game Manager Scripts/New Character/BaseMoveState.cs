@@ -1,4 +1,4 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public class BaseMoveState : State
 {
@@ -31,7 +31,7 @@ public class BaseMoveState : State
 
         jump = false;
         
-        // 2. CH? L?Y "Ð? L?N" T?C Ð? HI?N T?I Ð? KHÔNG B? VANG SAU KHI DASH
+        // 2. CH? L?Y "ï¿½? L?N" T?C ï¿½? HI?N T?I ï¿½? KHï¿½NG B? VANG SAU KHI DASH
         currentSpeed = new Vector3(character.CalculatedVelocity.x, 0, character.CalculatedVelocity.z).magnitude;
         crouch = false;
         sprint = false;
@@ -171,14 +171,14 @@ public class BaseMoveState : State
         camRight.y = 0f;
         camRight.Normalize();
 
-        // 3. HU?NG T?I: C?p nh?t t?c thì 100% theo phím b?m (KHÔNG LERP HU?NG)
+        // 3. HU?NG T?I: C?p nh?t t?c thï¿½ 100% theo phï¿½m b?m (KHï¿½NG LERP HU?NG)
         Vector3 targetDirection = (camForward * input.y + camRight * input.x).normalized;
 
-        // 4. T?C Ð?: Làm mu?t t?c d?.
+        // 4. T?C ï¿½?: Lï¿½m mu?t t?c d?.
         float targetSpeed = input.sqrMagnitude > 0.01f ? (character.playerSpeed * speedMultiplier) : 0f;
         currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, 15f * character.Runner.DeltaTime);
 
-        // 5. V?N T?C = HU?NG T?C TH?I * T?C Ð? MU?T
+        // 5. V?N T?C = HU?NG T?C TH?I * T?C ï¿½? MU?T
         velocity = targetDirection * currentSpeed;
 
         character.CalculatedVelocity.x = velocity.x;
@@ -222,7 +222,7 @@ public class BaseMoveState : State
         base.Exit();
         character.playerVelocity = new Vector3(input.x, 0, input.y);
 
-        if (velocity.sqrMagnitude > 0)
+        if (velocity.sqrMagnitude > 0.1f)
         {
             Quaternion targetRotation = Quaternion.LookRotation(velocity);
             targetRotation.x = 0;

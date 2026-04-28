@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 public class SprintState : State
 {
     float gravityValue;
@@ -94,7 +94,7 @@ public class SprintState : State
         {
             character.SetAnimatorLocomotionSpeed(input.magnitude + 0.5f);
         }
-        else if (input.sqrMagnitude == 0f) // chỉ khi buông hết phím di chuyển mới HardStop
+        else if (input.sqrMagnitude == 0f) // chá»‰ khi buÃ´ng háº¿t phÃ­m di chuyá»ƒn má»›i HardStop
         {
             stateMachine.ChangeState(character.hardStop);
         }
@@ -113,7 +113,7 @@ public class SprintState : State
     {
         base.PhysicsUpdate();
 
-        // Guard: skip nếu CharacterController bị disable (vd: đang teleport)
+        // Guard: skip náº¿u CharacterController bá»‹ disable (vd: Ä‘ang teleport)
         if (character.controller == null || !character.controller.enabled) return;
         grounded = character.controller.isGrounded;
         {
@@ -130,11 +130,9 @@ public class SprintState : State
         character.CalculatedVelocity = currentVelocity * (playerSpeed * speedMultiplier);
 
 
-        if (velocity.sqrMagnitude > 0)
+        if (velocity.sqrMagnitude > 0.1f)
         {
-            Quaternion targetRotation = Quaternion.LookRotation(velocity);
-            targetRotation.x = 0;
-            targetRotation.z = 0;
+            Quaternion targetRotation = Quaternion.LookRotation(new Vector3(velocity.x, 0, velocity.z));
             character.transform.rotation = Quaternion.Slerp(character.transform.rotation, targetRotation, character.rotationDampTime);
         }
     }
@@ -143,6 +141,7 @@ public class SprintState : State
         base.Exit();
     }
 }
+
 
 
 

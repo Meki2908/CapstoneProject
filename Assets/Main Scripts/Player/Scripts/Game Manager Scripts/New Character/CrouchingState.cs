@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public class CrouchingState : State
 {
@@ -98,11 +98,9 @@ public class CrouchingState : State
 
         character.CalculatedVelocity = (currentVelocity * playerSpeed);
 
-        if (velocity.magnitude > 0)
+        if (velocity.sqrMagnitude > 0.1f)
         {
-            Quaternion targetRotation = Quaternion.LookRotation(velocity);
-            targetRotation.x = 0;
-            targetRotation.z = 0;
+            Quaternion targetRotation = Quaternion.LookRotation(new Vector3(velocity.x, 0, velocity.z));
             character.transform.rotation = Quaternion.Slerp(character.transform.rotation, targetRotation, character.rotationDampTime);
         }
     }
@@ -126,6 +124,7 @@ public class CrouchingState : State
         }
     }
 }
+
 
 
 
