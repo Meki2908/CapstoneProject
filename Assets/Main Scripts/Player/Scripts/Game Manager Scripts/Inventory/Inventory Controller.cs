@@ -41,55 +41,39 @@ public class InventoryController : MonoBehaviour
 
     private void OnInventoryPerformed(InputAction.CallbackContext ctx) => ToggleInventory();
 
-    // Snapshot camera Cinemachine (cursor do CursorUIPriority quản lý)
+    // Snapshot camera Cinemachine (cursor do CursorUIPriority qu?n l�)
     private bool cameraLookWasEnabledBeforeInventory;
     private bool cameraZoomWasEnabledBeforeInventory;
 
-    void Awake()
+    private void Update()
     {
-        SceneManager.sceneLoaded += OnSceneLoaded;
-    }
-
-    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
-    {
-        // Player prefab spawn sau scene load — gán lại Character/PlayerInput (HUD DontDestroyOnLoad).
-        StopCoroutine(nameof(RebindPlayerInputAfterSceneLoad));
-        StartCoroutine(RebindPlayerInputAfterSceneLoad());
-    }
-
-    private IEnumerator RebindPlayerInputAfterSceneLoad()
-    {
-        yield return null;
-        yield return null;
-        SetupPlayerInputBinding();
-    }
-
-    /// <summary>
-    /// Gỡ subscription cũ rồi tìm player hiện tại và gắn lại action Inventory (I).
-    /// </summary>
-    private void SetupPlayerInputBinding()
-    {
-        if (inventoryToggleAction != null)
+        // Rình Local Player xuất hiện
+        if (character == null && Character.LocalCharacter != null)
         {
-            inventoryToggleAction.performed -= OnInventoryPerformed;
-            inventoryToggleAction = null;
+            character = Character.LocalCharacter;
+            
+            // Tìm PlayerInput
+            playerInput = character.playerInput != null ? character.playerInput : character.GetComponent<PlayerInput>();
+
+            if (playerInput != null && playerInput.actions != null)
+            {
+                // Tìm action "Inventory"
+                inventoryToggleAction = playerInput.actions.FindAction("Inventory");
+                
+                if (inventoryToggleAction != null)
+                {
+                    // Đăng ký sự kiện bấm phím
+                    inventoryToggleAction.performed += OnInventoryPerformed;
+                    Debug.Log("<color=green>[Inventory]</color> Đã gán thành công nút I vào Local Player!");
+                }
+            }
         }
-
-        character = FindFirstObjectByType<Character>();
-        playerInput = character != null && character.playerInput != null
-            ? character.playerInput
-            : FindFirstObjectByType<PlayerInput>();
-
-        if (playerInput != null && playerInput.actions != null)
+        // Chỉ dùng legacy Input khi Input System action "Inventory" KHÔNG tồn tại
+        // Nếu cả 2 cùng chạy → double toggle → mở rồi đóng ngay
+        if (inventoryToggleAction == null && Input.GetKeyDown(KeyCode.I))
         {
-            inventoryToggleAction = playerInput.actions.FindAction("Inventory");
-            if (inventoryToggleAction != null)
-                inventoryToggleAction.performed += OnInventoryPerformed;
-            else
-                Debug.LogWarning("[InventoryController] 'Inventory' action not found in PlayerInput. Please add it to your Input Actions asset.");
+            ToggleInventory();
         }
-        else
-            Debug.LogWarning("[InventoryController] No PlayerInput after scene load — inventory hotkey disabled until player exists.");
     }
 
     void Start()
@@ -97,8 +81,6 @@ public class InventoryController : MonoBehaviour
         inventory.SetActive(false);
         isInventoryOpen = false;
         isRemoveModeActive = false;
-
-        SetupPlayerInputBinding();
 
         // Setup remove mode button
         if (removeModeButton != null)
@@ -142,16 +124,6 @@ public class InventoryController : MonoBehaviour
         else
         {
             Debug.LogError("[InventoryController] InventoryManager.Instance still null after 3s!");
-        }
-    }
-
-    void Update()
-    {
-        // Chỉ dùng legacy Input khi Input System action "Inventory" KHÔNG tồn tại
-        // Nếu cả 2 cùng chạy → double toggle → mở rồi đóng ngay
-        if (inventoryToggleAction == null && Input.GetKeyDown(KeyCode.I))
-        {
-            ToggleInventory();
         }
     }
 
@@ -570,8 +542,6 @@ public class InventoryController : MonoBehaviour
 
     private void OnDestroy()
     {
-        SceneManager.sceneLoaded -= OnSceneLoaded;
-
         if (inventoryToggleAction != null)
             inventoryToggleAction.performed -= OnInventoryPerformed;
 
@@ -584,3 +554,5 @@ public class InventoryController : MonoBehaviour
 
     #endregion
 }
+
+

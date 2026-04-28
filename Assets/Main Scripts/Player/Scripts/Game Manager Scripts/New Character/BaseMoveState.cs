@@ -15,7 +15,8 @@ public class BaseMoveState : State
 
     Vector3 cVelocity;
 
-    private SkillLock skillLock; // NEW
+    private SkillLock skillLock;
+    private float currentSpeed;
 
     public BaseMoveState(Character _character, StateMachine _stateMachine) : base(_character, _stateMachine)
     {
@@ -29,6 +30,9 @@ public class BaseMoveState : State
         base.Enter();
 
         jump = false;
+        
+        // 2. CH? L?Y "Ð? L?N" T?C Ð? HI?N T?I Ð? KHÔNG B? VANG SAU KHI DASH
+        currentSpeed = new Vector3(character.CalculatedVelocity.x, 0, character.CalculatedVelocity.z).magnitude;
         crouch = false;
         sprint = false;
         dash = false; // Initialize dash to false
@@ -151,7 +155,6 @@ public class BaseMoveState : State
             return;
         }
 
-        currentVelocity = Vector3.SmoothDamp(currentVelocity, velocity, ref cVelocity, character.velocityDampTime);
         // Apply movement speed multiplier from equipped gems
         float speedMultiplier = 1f;
         var wc = character.GetComponent<WeaponController>();
@@ -159,14 +162,35 @@ public class BaseMoveState : State
         {
             speedMultiplier = WeaponGemManager.Instance.GetMovementSpeedMultiplier(wc.GetCurrentWeapon().weaponType);
         }
-        character.CalculatedVelocity = currentVelocity * (playerSpeed * speedMultiplier);
 
-        if (velocity.sqrMagnitude > 0)
+        Vector3 camForward = character.cameraTransform.forward;
+        camForward.y = 0f;
+        camForward.Normalize();
+
+        Vector3 camRight = character.cameraTransform.right;
+        camRight.y = 0f;
+        camRight.Normalize();
+
+        // 3. HU?NG T?I: C?p nh?t t?c thì 100% theo phím b?m (KHÔNG LERP HU?NG)
+        Vector3 targetDirection = (camForward * input.y + camRight * input.x).normalized;
+
+        // 4. T?C Ð?: Làm mu?t t?c d?.
+        float targetSpeed = input.sqrMagnitude > 0.01f ? (character.playerSpeed * speedMultiplier) : 0f;
+        currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, 15f * character.Runner.DeltaTime);
+
+        // 5. V?N T?C = HU?NG T?C TH?I * T?C Ð? MU?T
+        velocity = targetDirection * currentSpeed;
+
+        character.CalculatedVelocity.x = velocity.x;
+        character.CalculatedVelocity.z = velocity.z;
+
+        // Xoay model
+        if (velocity.sqrMagnitude > 0.1f)
         {
-            Quaternion targetRotation = Quaternion.LookRotation(velocity);
+            Quaternion targetRotation = Quaternion.LookRotation(new Vector3(velocity.x, 0, velocity.z));
             targetRotation.x = 0;
             targetRotation.z = 0;
-            character.transform.rotation = Quaternion.Slerp(character.transform.rotation, targetRotation, character.rotationDampTime);
+            character.transform.rotation = Quaternion.Slerp(character.transform.rotation, targetRotation, character.rotationSpeed * character.Runner.DeltaTime);
         }
     }
 
@@ -207,6 +231,8 @@ public class BaseMoveState : State
         }
     }
 }
+
+
 
 
 

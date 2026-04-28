@@ -78,7 +78,15 @@ public class JumpingState : State
             airVelocity = airVelocity.x * camRight + airVelocity.z * camForward;
             if (airVelocity.sqrMagnitude > 1f) airVelocity.Normalize();
             airVelocity.y = 0f;
-            character.CalculatedVelocity = (airVelocity * character.airControl + velocity * (1 - character.airControl)) * playerSpeed;
+            Vector3 movement = (airVelocity * character.airControl + velocity * (1 - character.airControl)) * playerSpeed;
+            character.CalculatedVelocity.x = movement.x;
+            character.CalculatedVelocity.z = movement.z;
+
+            if (movement.sqrMagnitude > 0.1f)
+            {
+                Quaternion targetRotation = Quaternion.LookRotation(new Vector3(movement.x, 0, movement.z));
+                character.transform.rotation = Quaternion.Slerp(character.transform.rotation, targetRotation, character.rotationDampTime);
+            }
         }
         grounded = character.controller.isGrounded;
     }
@@ -89,6 +97,7 @@ public class JumpingState : State
     }
 
 }
+
 
 
 

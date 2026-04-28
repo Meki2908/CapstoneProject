@@ -12,7 +12,7 @@ public class EnemyDetection : MonoBehaviour
     [SerializeField] private float detectionUpdateInterval = 0.1f; // Update detection every 0.1 seconds instead of every frame
 
     [Header("Camera Settings")]
-    [SerializeField] private CinemachineCamera cnCamera;
+    public CinemachineCamera cnCamera;
     [SerializeField] private float combatCameraDistance = 9f;
     [SerializeField] private float normalCameraDistance = 5f;
     [SerializeField] private float cameraTransitionSpeed = 2f;
@@ -61,9 +61,6 @@ public class EnemyDetection : MonoBehaviour
         animator = GetComponent<Animator>();
         controller = GetComponent<CharacterController>();
 
-        if (!cnCamera)
-            cnCamera = GetComponent<CinemachineCamera>();
-
         // Cache squared radii for faster distance checks
         detectionRadiusSquared = detectionRadius * detectionRadius;
         autoTargetRadiusSquared = autoTargetRadius * autoTargetRadius;
@@ -86,6 +83,11 @@ public class EnemyDetection : MonoBehaviour
         {
             UpdateEnemyDetection();
             lastDetectionTime = Time.time;
+        }
+        // Tự tìm đến cinemachine camera cho player khi mất dấu
+        if (cnCamera == null && Character.LocalCharacter != null)
+        {
+            cnCamera = Character.LocalCharacter.GetComponentInChildren<CinemachineCamera>();
         }
 
         UpdateCameraSystem();
@@ -563,4 +565,5 @@ public class EnemyDetection : MonoBehaviour
     }
     #endregion
 }
+
 

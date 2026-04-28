@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.InputSystem;
 using System.Collections.Generic;
 using UnityEngine.Playables;
@@ -17,8 +17,8 @@ public class SwordSkills : MonoBehaviour
     public string skillIndexParam = "skillIndex";
     public float vfxDuration = 0.5f;
     public float maxSkillLockSeconds = 3f;
-    [SerializeField] private int swordLayerIndex = 1;      // NEW: layer index cho Sword
-    [SerializeField] private string skillStateTag = "SwordSkill"; // NEW: tag state skill của Sword
+    [SerializeField] private int swordLayerIndex = 1;
+    [SerializeField] private string skillStateTag = "SwordSkill";
 
     private float skillLockExpireAt = 0f;
     private Animator animator;
@@ -27,7 +27,6 @@ public class SwordSkills : MonoBehaviour
 
     private readonly Dictionary<AbilityInput, AbilitySO> abilityMap = new();
 
-    // Debounce
     private readonly Dictionary<int, float> lastVfxSpawnTime = new();
     [SerializeField] private float vfxMinInterval = 0.05f;
 
@@ -38,17 +37,14 @@ public class SwordSkills : MonoBehaviour
     public void SetForwardAnchor(Transform t) => forwardAnchor = t;
     public void SetDefaultVfxSpawn(Transform t) => defaultVfxSpawn = t;
 
-    // Animation Event: Trigger cooldown for specific ability
     public void AE_TriggerCooldown(int inputIndex)
     {
-        var abilityIconManager = FindFirstObjectByType<AbilityIconManager>();
-        if (abilityIconManager != null)
+        if (AbilityIconManager.Instance != null) 
         {
-            abilityIconManager.AE_TriggerCooldown(inputIndex);
+            AbilityIconManager.Instance.AE_TriggerCooldown(inputIndex);
         }
     }
 
-    // Specific AE methods for each ability (easier to use in animations)
     public void AE_TriggerECooldown() => AE_TriggerCooldown((int)AbilityInput.E);
     public void AE_TriggerRCooldown() => AE_TriggerCooldown((int)AbilityInput.R);
     public void AE_TriggerTCooldown() => AE_TriggerCooldown((int)AbilityInput.T);
@@ -56,10 +52,14 @@ public class SwordSkills : MonoBehaviour
 
     private void Awake()
     {
-        animator = GetComponent<Animator>();
-        character = GetComponent<Character>();
-        skillLock = GetComponent<SkillLock>();
-        if (equipment == null) equipment = GetComponent<EquipmentSystem>();
+        animator = GetComponentInChildren<Animator>();
+        Debug.Log($"<color=green>[SwordSkills]</color> Animator: {animator}");
+        character = GetComponentInParent<Character>();
+        Debug.Log($"<color=green>[SwordSkills]</color> Character: {character}");
+        skillLock = GetComponentInChildren<SkillLock>();
+        Debug.Log($"<color=green>[SwordSkills]</color> SkillLock: {skillLock}");
+        equipment = GetComponentInChildren<EquipmentSystem>();
+        Debug.Log($"<color=green>[SwordSkills]</color> Equipment: {equipment}");
     }
 
     private void OnEnable()
@@ -71,41 +71,30 @@ public class SwordSkills : MonoBehaviour
             wc.OnWeaponChanged -= OnWeaponChangedHandler;
             wc.OnWeaponChanged += OnWeaponChangedHandler;
         }
-
-        // Don't auto-refresh here, let Animation Events control it
-        Debug.Log("[SwordSkills] OnEnable - Script enabled");
     }
 
     private void OnDisable()
     {
-        // Unsubscribe from events
         var wc = GetComponent<WeaponController>();
-        if (wc != null)
-        {
-            wc.OnWeaponChanged -= OnWeaponChangedHandler;
-        }
+        if (wc != null) wc.OnWeaponChanged -= OnWeaponChangedHandler;
 
-        // Cancel ultimate timeline if playing (e.g. scene transition)
         if (ultimateDirector != null && ultimateDirector.state == UnityEngine.Playables.PlayState.Playing)
-        {
             ultimateDirector.Stop();
-        }
+            
         if (skillLock != null) skillLock.EndSkillRootMotion(animator);
-
-        Debug.Log("[SwordSkills] OnDisable - Script disabled");
     }
+
     private void OnWeaponChangedHandler(WeaponSO so)
     {
         RebuildAbilityMap();
-        // Don't auto-refresh here, let Animation Events control it
     }
-
-
 
     public void RebuildAbilityMap()
     {
         abilityMap.Clear();
-        var weapon = equipment != null ? equipment.GetCurrentWeapon() : null;
+        var wc = GetComponent<WeaponController>();
+        var weapon = wc != null ? wc.GetCurrentWeapon() : null;
+        
         if (weapon == null || weapon.abilities == null) return;
 
         foreach (var ab in weapon.abilities)
@@ -117,47 +106,60 @@ public class SwordSkills : MonoBehaviour
 
     private void Update()
     {
-        if (Keyboard.current == null) return;
-
-        if (Keyboard.current.eKey.wasPressedThisFrame && TutorialInputGate.AllowsSkill(AbilityInput.E)) TryUse(AbilityInput.E);
-        if (Keyboard.current.rKey.wasPressedThisFrame && TutorialInputGate.AllowsSkill(AbilityInput.R)) TryUse(AbilityInput.R);
-        if (Keyboard.current.tKey.wasPressedThisFrame && TutorialInputGate.AllowsSkill(AbilityInput.T)) TryUse(AbilityInput.T);
-        if (Keyboard.current.qKey.wasPressedThisFrame && TutorialInputGate.AllowsSkill(AbilityInput.Q_Ultimate)) TryUse(AbilityInput.Q_Ultimate);
+        // CHỈ LÀM NHIỆM VỤ CỨU HỘ, TUYỆT ĐỐI KHÔNG NHẬN INPUT Ở ĐÂY
+        if (skillLock != null && skillLock.isPerformingSkill)
+        {
+            if (Time.time > skillLockExpireAt)
+            {
+                Debug.LogWarning($"<color=red>[Failsafe]</color> Phá vỡ khóa Skill do kẹt quá {maxSkillLockSeconds} giây!");
+                skillLock.EndSkillRootMotion(animator);
+                
+                if (ultimateDirector != null && ultimateDirector.state == PlayState.Playing)
+                {
+                    ultimateDirector.Stop();
+                }
+            }
+        }
     }
 
     public void TryUse(AbilityInput input)
     {
-        var weapon = equipment != null ? equipment.GetCurrentWeapon() : null;
-        bool inCombat = character != null && character.movementSM != null
-                                          && character.movementSM.currentState == character.combatMove;
-        bool drawn = character != null && character.isWeaponDrawn;
-        if (weapon == null || weapon.weaponType != WeaponType.Sword || !inCombat || !drawn)
-            return;
-        if (!abilityMap.TryGetValue(input, out var ability)) return;
+        if (abilityMap.Count == 0) RebuildAbilityMap();
 
-        // Check if skill is unlocked
-        if (WeaponMasteryManager.Instance != null)
+        var wc = GetComponent<WeaponController>();
+        var weapon = wc != null ? wc.GetCurrentWeapon() : null;
+        
+        bool drawn = character != null && character.isWeaponDrawn;
+        
+        if (weapon == null || weapon.weaponType != WeaponType.Sword || !drawn)
         {
-            if (!WeaponMasteryManager.Instance.IsSkillUnlocked(WeaponType.Sword, input))
-            {
-                Debug.Log($"[SwordSkills] {input} is locked! Mastery level required.");
-                return;
-            }
+            Debug.Log($"<color=orange>[SwordSkills]</color> Xịt: Sai vũ khí hoặc chưa rút kiếm!");
+            return;
         }
 
-        // Check cooldown
-        var abilityIconManager = FindFirstObjectByType<AbilityIconManager>();
-        if (abilityIconManager != null && abilityIconManager.IsOnCooldown(input))
+        if (!abilityMap.TryGetValue(input, out var ability)) 
         {
-            Debug.Log($"[SwordSkills] {input} is on cooldown!");
+            Debug.Log($"<color=red>[SwordSkills]</color> Xịt: Không tìm thấy Data của nút {input}!");
+            return;
+        }
+
+        if (WeaponMasteryManager.Instance != null && !WeaponMasteryManager.Instance.IsSkillUnlocked(WeaponType.Sword, input))
+        {
+            Debug.Log($"<color=yellow>[SwordSkills]</color> Skill {input} bị khóa do chưa đủ Mastery!");
+            return;
+        }
+
+        if (AbilityIconManager.Instance != null && AbilityIconManager.Instance.IsOnCooldown(input))
+        {
+            Debug.Log($"<color=grey>[SwordSkills]</color> Skill {input} đang trong thời gian hồi chiêu!");
             return;
         }
 
         int idx = input switch { AbilityInput.E => 0, AbilityInput.R => 1, AbilityInput.T => 2, AbilityInput.Q_Ultimate => 3, _ => 0 };
         animator.SetInteger(skillIndexParam, idx);
         animator.SetTrigger(skillTriggerParam);
-
-        // Cooldown will be triggered by Animation Event in the skill animation
+        
+        Debug.Log($"<color=cyan>[SwordSkills]</color> Kích hoạt THÀNH CÔNG Skill {input}!");
 
         if (skillLock != null) skillLock.BeginSkillRootMotion(animator);
         skillLockExpireAt = Time.time + maxSkillLockSeconds;
@@ -171,16 +173,12 @@ public class SwordSkills : MonoBehaviour
         TutorialTextDisplay.NotifySkillActivatedFromGameplay(input);
     }
 
-    // AE-only spawn
     public void AE_PlaySkillVFXByEvent(int eventIndex)
     {
-        // Guard: chỉ xử lý nếu đang cầm Sword
-        var weapon = equipment != null ? equipment.GetCurrentWeapon() : null;
+        var wc = GetComponent<WeaponController>();
+        var weapon = wc != null ? wc.GetCurrentWeapon() : null;
         if (weapon == null || weapon.weaponType != WeaponType.Sword) return;
-
-        // Guard-2: đúng animator state/tag/layer của Sword
         if (!IsInSkillState()) return;
-
         if (!animator) return;
 
         int skillIdx = animator.GetInteger(skillIndexParam);
@@ -199,8 +197,8 @@ public class SwordSkills : MonoBehaviour
         if (prefab == null) return;
 
         var (pos, rot, scl) = BuildSpawnTransform(ev.spawnRule);
-        var v = Instantiate(prefab, pos, rot); // world-space
-        // ProjectileDamage no longer needs Initialize - effects handled by separate scripts
+        var v = Instantiate(prefab, pos, rot);
+        
         if (ev.spawnRule.extraEulerOffset != Vector3.zero) v.transform.rotation *= Quaternion.Euler(ev.spawnRule.extraEulerOffset);
         v.transform.localScale = Vector3.Scale(v.transform.localScale, scl);
 
@@ -212,16 +210,11 @@ public class SwordSkills : MonoBehaviour
         }
 
         Destroy(v, ability.vfxDuration > 0 ? ability.vfxDuration : vfxDuration);
-        // Effects now handled by separate effect scripts attached to VFX prefabs
     }
 
-    // DelayedStartEffect method removed - effects now handled by separate scripts
-
-    // Damage AEs
     public void AE_StartDamage() => equipment?.StartDealDamage();
     public void AE_EndDamage() => equipment?.EndDealDamage();
 
-    // NEW: Check state theo layer/tag để AE chỉ chạy đúng lúc
     private bool IsInSkillState()
     {
         if (!animator) return false;
@@ -254,3 +247,4 @@ public class SwordSkills : MonoBehaviour
         var cam = Camera.main ? Camera.main.transform : null; Vector3 fwd = cam ? cam.forward : (character ? character.transform.forward : transform.forward); fwd.y = 0f; return fwd.normalized;
     }
 }
+

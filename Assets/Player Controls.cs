@@ -141,7 +141,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""name"": ""Jump"",
                     ""type"": ""Button"",
                     ""id"": ""f1ba0d36-48eb-4cd5-b651-1c94a6531f70"",
-                    ""expectedControlType"": ""Button"",
+                    ""expectedControlType"": """",
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
@@ -168,7 +168,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""name"": ""Sprint"",
                     ""type"": ""Button"",
                     ""id"": ""641cd816-40e6-41b4-8c3d-04687c349290"",
-                    ""expectedControlType"": ""Button"",
+                    ""expectedControlType"": """",
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
@@ -177,7 +177,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""name"": ""Dash"",
                     ""type"": ""Button"",
                     ""id"": ""d5e6f7a8-b9c0-4d1e-a2b3-c4d5e6f78901"",
-                    ""expectedControlType"": ""Button"",
+                    ""expectedControlType"": """",
                     ""processors"": """",
                     ""interactions"": ""Tap"",
                     ""initialStateCheck"": false
@@ -186,7 +186,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""name"": ""Inventory"",
                     ""type"": ""Button"",
                     ""id"": ""a1b2c3d4-e5f6-7890-abcd-ef1234567890"",
-                    ""expectedControlType"": ""Button"",
+                    ""expectedControlType"": """",
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
@@ -223,6 +223,42 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""type"": ""Button"",
                     ""id"": ""e5f6a7b8-9012-cdef-3456-789012345abc"",
                     ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Ability E"",
+                    ""type"": ""Button"",
+                    ""id"": ""f5cafc62-2c18-48ba-b4d7-3b7b08a8b0e6"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Ability R"",
+                    ""type"": ""Button"",
+                    ""id"": ""b436ed82-fe43-4fd9-a181-db4945b203e5"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Ability T"",
+                    ""type"": ""Button"",
+                    ""id"": ""efb0baf0-dc3d-463e-84d6-42bfdd4d2bf0"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Ability Ultimate"",
+                    ""type"": ""Button"",
+                    ""id"": ""e48243cc-ed58-4dc4-87b5-a748aac3ec66"",
+                    ""expectedControlType"": """",
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
@@ -677,6 +713,50 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""groups"": ""Keyboard&Mouse"",
                     ""action"": ""OpenMenu"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""ddcce039-afde-4a32-962d-ba5f2a763f0e"",
+                    ""path"": ""<Keyboard>/e"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": "";Keyboard&Mouse"",
+                    ""action"": ""Ability E"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""92de46c8-a40e-425e-8b73-a8ad4ec27163"",
+                    ""path"": ""<Keyboard>/r"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": "";Keyboard&Mouse"",
+                    ""action"": ""Ability R"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""01deaf1d-7c63-4aee-837d-5f56dd60a0d5"",
+                    ""path"": ""<Keyboard>/t"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": "";Keyboard&Mouse"",
+                    ""action"": ""Ability T"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""e46e791b-d169-4acd-b6ae-02541ff9eea6"",
+                    ""path"": ""<Keyboard>/q"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": "";Keyboard&Mouse"",
+                    ""action"": ""Ability Ultimate"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }
@@ -1279,6 +1359,10 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         m_Player_Cursortoggle = m_Player.FindAction("Cursor toggle", throwIfNotFound: true);
         m_Player_CameraZoom = m_Player.FindAction("CameraZoom", throwIfNotFound: true);
         m_Player_OpenMenu = m_Player.FindAction("OpenMenu", throwIfNotFound: true);
+        m_Player_AbilityE = m_Player.FindAction("Ability E", throwIfNotFound: true);
+        m_Player_AbilityR = m_Player.FindAction("Ability R", throwIfNotFound: true);
+        m_Player_AbilityT = m_Player.FindAction("Ability T", throwIfNotFound: true);
+        m_Player_AbilityUltimate = m_Player.FindAction("Ability Ultimate", throwIfNotFound: true);
         // UI
         m_UI = asset.FindActionMap("UI", throwIfNotFound: true);
         m_UI_Navigate = m_UI.FindAction("Navigate", throwIfNotFound: true);
@@ -1387,6 +1471,10 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
     private readonly InputAction m_Player_Cursortoggle;
     private readonly InputAction m_Player_CameraZoom;
     private readonly InputAction m_Player_OpenMenu;
+    private readonly InputAction m_Player_AbilityE;
+    private readonly InputAction m_Player_AbilityR;
+    private readonly InputAction m_Player_AbilityT;
+    private readonly InputAction m_Player_AbilityUltimate;
     /// <summary>
     /// Provides access to input actions defined in input action map "Player".
     /// </summary>
@@ -1459,6 +1547,22 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// </summary>
         public InputAction @OpenMenu => m_Wrapper.m_Player_OpenMenu;
         /// <summary>
+        /// Provides access to the underlying input action "Player/AbilityE".
+        /// </summary>
+        public InputAction @AbilityE => m_Wrapper.m_Player_AbilityE;
+        /// <summary>
+        /// Provides access to the underlying input action "Player/AbilityR".
+        /// </summary>
+        public InputAction @AbilityR => m_Wrapper.m_Player_AbilityR;
+        /// <summary>
+        /// Provides access to the underlying input action "Player/AbilityT".
+        /// </summary>
+        public InputAction @AbilityT => m_Wrapper.m_Player_AbilityT;
+        /// <summary>
+        /// Provides access to the underlying input action "Player/AbilityUltimate".
+        /// </summary>
+        public InputAction @AbilityUltimate => m_Wrapper.m_Player_AbilityUltimate;
+        /// <summary>
         /// Provides access to the underlying input action map instance.
         /// </summary>
         public InputActionMap Get() { return m_Wrapper.m_Player; }
@@ -1529,6 +1633,18 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
             @OpenMenu.started += instance.OnOpenMenu;
             @OpenMenu.performed += instance.OnOpenMenu;
             @OpenMenu.canceled += instance.OnOpenMenu;
+            @AbilityE.started += instance.OnAbilityE;
+            @AbilityE.performed += instance.OnAbilityE;
+            @AbilityE.canceled += instance.OnAbilityE;
+            @AbilityR.started += instance.OnAbilityR;
+            @AbilityR.performed += instance.OnAbilityR;
+            @AbilityR.canceled += instance.OnAbilityR;
+            @AbilityT.started += instance.OnAbilityT;
+            @AbilityT.performed += instance.OnAbilityT;
+            @AbilityT.canceled += instance.OnAbilityT;
+            @AbilityUltimate.started += instance.OnAbilityUltimate;
+            @AbilityUltimate.performed += instance.OnAbilityUltimate;
+            @AbilityUltimate.canceled += instance.OnAbilityUltimate;
         }
 
         /// <summary>
@@ -1585,6 +1701,18 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
             @OpenMenu.started -= instance.OnOpenMenu;
             @OpenMenu.performed -= instance.OnOpenMenu;
             @OpenMenu.canceled -= instance.OnOpenMenu;
+            @AbilityE.started -= instance.OnAbilityE;
+            @AbilityE.performed -= instance.OnAbilityE;
+            @AbilityE.canceled -= instance.OnAbilityE;
+            @AbilityR.started -= instance.OnAbilityR;
+            @AbilityR.performed -= instance.OnAbilityR;
+            @AbilityR.canceled -= instance.OnAbilityR;
+            @AbilityT.started -= instance.OnAbilityT;
+            @AbilityT.performed -= instance.OnAbilityT;
+            @AbilityT.canceled -= instance.OnAbilityT;
+            @AbilityUltimate.started -= instance.OnAbilityUltimate;
+            @AbilityUltimate.performed -= instance.OnAbilityUltimate;
+            @AbilityUltimate.canceled -= instance.OnAbilityUltimate;
         }
 
         /// <summary>
@@ -1990,6 +2118,34 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnOpenMenu(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "Ability E" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnAbilityE(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "Ability R" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnAbilityR(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "Ability T" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnAbilityT(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "Ability Ultimate" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnAbilityUltimate(InputAction.CallbackContext context);
     }
     /// <summary>
     /// Interface to implement callback methods for all input action callbacks associated with input actions defined by "UI" which allows adding and removing callbacks.

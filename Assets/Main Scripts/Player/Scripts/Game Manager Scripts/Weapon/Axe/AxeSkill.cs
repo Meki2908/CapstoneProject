@@ -23,6 +23,8 @@ public class AxeSkill : MonoBehaviour
 
     private Character character;
     private SkillLock skillLock;
+    public float maxSkillLockSeconds = 3f;
+    private float skillLockExpireAt = 0f;
 
     private readonly Dictionary<AbilityInput, AbilitySO> abilityMap = new();
     // Debounce VFX
@@ -32,10 +34,14 @@ public class AxeSkill : MonoBehaviour
 
     private void Awake()
     {
-        character = GetComponent<Character>();
-        if (!animator) animator = GetComponent<Animator>();
-        if (!equipment) equipment = GetComponent<EquipmentSystem>();
-        skillLock = GetComponent<SkillLock>();
+        character = GetComponentInParent<Character>();
+        Debug.Log($"<color=green>[AxeSkill]</color> Character: {character}");
+        if (!animator) animator = GetComponentInChildren<Animator>();
+        Debug.Log($"<color=green>[AxeSkill]</color> Animator: {animator}");
+        if (!equipment) equipment = GetComponentInChildren<EquipmentSystem>();
+        Debug.Log($"<color=green>[AxeSkill]</color> Equipment: {equipment}");
+        skillLock = GetComponentInChildren<SkillLock>();
+        Debug.Log($"<color=green>[AxeSkill]</color> SkillLock: {skillLock}");
     }
 
     public void SetForwardAnchor(Transform t) { forwardAnchor = t; }
@@ -80,8 +86,11 @@ public class AxeSkill : MonoBehaviour
     public void RebuildAbilityMap()
     {
         abilityMap.Clear();
-        var weapon = equipment != null ? equipment.GetCurrentWeapon() : null;
+        var wc = GetComponent<WeaponController>();
+        var weapon = wc != null ? wc.GetCurrentWeapon() : null;
+        
         if (weapon == null || weapon.abilities == null) return;
+
         foreach (var ab in weapon.abilities)
         {
             if (ab == null || ab.input == AbilityInput.None) continue;
@@ -89,88 +98,75 @@ public class AxeSkill : MonoBehaviour
         }
     }
 
+
+
     private void Update()
     {
-        if (Keyboard.current == null) return;
-        if (Keyboard.current.eKey.wasPressedThisFrame && TutorialInputGate.AllowsSkill(AbilityInput.E)) TryUse(AbilityInput.E);
-        if (Keyboard.current.rKey.wasPressedThisFrame && TutorialInputGate.AllowsSkill(AbilityInput.R)) TryUse(AbilityInput.R);
-        if (Keyboard.current.tKey.wasPressedThisFrame && TutorialInputGate.AllowsSkill(AbilityInput.T)) TryUse(AbilityInput.T);
-        if (Keyboard.current.qKey.wasPressedThisFrame && TutorialInputGate.AllowsSkill(AbilityInput.Q_Ultimate)) TryUse(AbilityInput.Q_Ultimate);
+        // CH? L�M NHI?M V? C?U H?, TUY?T �?I KH�NG NH?N INPUT ? ��Y
+        if (skillLock != null && skillLock.isPerformingSkill)
+        {
+            if (Time.time > skillLockExpireAt)
+            {
+                Debug.LogWarning($"<color=red>[Failsafe]</color> Ph� v? kh�a Skill do k?t qu� {maxSkillLockSeconds} gi�y!");
+                skillLock.EndSkillRootMotion(animator);
+                
+                if (ultimateDirector != null && ultimateDirector.state == PlayState.Playing)
+                {
+                    ultimateDirector.Stop();
+                }
+            }
+        }
     }
 
     public void TryUse(AbilityInput input)
     {
-        Debug.Log($"[AxeSkill.TryUse] key={input} pressed");
+        if (abilityMap.Count == 0) RebuildAbilityMap();
 
-        var weapon = equipment != null ? equipment.GetCurrentWeapon() : null;
-
-        bool inCombat = character != null && character.movementSM != null
-                        && character.movementSM.currentState == character.combatMove;
+        var wc = GetComponent<WeaponController>();
+        var weapon = wc != null ? wc.GetCurrentWeapon() : null;
         bool drawn = character != null && character.isWeaponDrawn;
-        string weaponName = weapon != null ? weapon.weaponName : "None";
-        Debug.Log($"[AxeSkill.TryUse] weapon={weaponName}, typeOK={(weapon != null && weapon.weaponType == WeaponType.Axe)}, inCombat={inCombat}, drawn={drawn}, isLock={skillLock != null && skillLock.isPerformingSkill}");
-
-        if (weapon == null || weapon.weaponType != WeaponType.Axe || !inCombat || !drawn)
-            return;
-
-        if (skillLock != null && skillLock.isPerformingSkill) return;
-        if (!abilityMap.TryGetValue(input, out var ability) || ability == null)
-            return;
-
-        // Check if skill is unlocked
-        if (WeaponMasteryManager.Instance != null)
+        
+        if (weapon == null || weapon.weaponType != WeaponType.Axe || !drawn)
         {
-            if (!WeaponMasteryManager.Instance.IsSkillUnlocked(WeaponType.Axe, input))
-            {
-                Debug.Log($"[AxeSkill.TryUse] {input} is locked! Mastery level required.");
-                return;
-            }
-        }
-
-        // Check cooldown
-        var abilityIconManager = FindFirstObjectByType<AbilityIconManager>();
-        if (abilityIconManager != null && abilityIconManager.IsOnCooldown(input))
-        {
-            Debug.Log($"[AxeSkill.TryUse] {input} is on cooldown!");
+            Debug.Log($"<color=orange>[AxeSkill]</color> X?t: Sai vu kh� ho?c chua r�t R�u!");
             return;
         }
 
-        int idx = InputToIndex(input);
+        if (!abilityMap.TryGetValue(input, out var ability)) 
+        {
+            Debug.Log($"<color=red>[AxeSkill]</color> X?t: Kh�ng t�m th?y Data c?a n�t {input} trong WeaponSO!");
+            return;
+        }
+
+        if (WeaponMasteryManager.Instance != null && !WeaponMasteryManager.Instance.IsSkillUnlocked(WeaponType.Axe, input))
+        {
+            Debug.Log($"<color=yellow>[AxeSkill]</color> Skill {input} b? kh�a do chua d? Mastery!");
+            return;
+        }
+
+        if (AbilityIconManager.Instance != null && AbilityIconManager.Instance.IsOnCooldown(input))
+        {
+            Debug.Log($"<color=grey>[AxeSkill]</color> Skill {input} dang trong th?i gian h?i chi�u!");
+            return;
+        }
+
+        int idx = input switch { AbilityInput.E => 0, AbilityInput.R => 1, AbilityInput.T => 2, AbilityInput.Q_Ultimate => 3, _ => 0 };
         animator.SetInteger(skillIndexParam, idx);
         animator.SetTrigger(skillTriggerParam);
+        
+        Debug.Log($"<color=cyan>[AxeSkill]</color> K�ch ho?t TH�NH C�NG Skill {input}!");
+
+        if (skillLock != null) skillLock.BeginSkillRootMotion(animator);
+        skillLockExpireAt = Time.time + maxSkillLockSeconds;
 
         TutorialTextDisplay.NotifySkillActivatedFromGameplay(input);
-
-        // if (skillLock == null)
-        // {
-        //     Debug.LogWarning("[AxeSkill] SkillLock is null -> cannot lock movement/root motion");
-        // }
-        // else
-        // {
-        //     Debug.Log("[AxeSkill] BeginSkillRootMotion");
-        //     skillLock.BeginSkillRootMotion(animator, enableRootMotionDuringSkill);
-        // }
-        // skillLockExpireAt = Time.time + maxSkillLockSeconds;
-
-        if (input == AbilityInput.Q_Ultimate && ultimateDirector != null)
-        {
-            // Lock skill immediately and start timeline
-            skillLock?.BeginSkillRootMotion(animator, true);
-            ultimateDirector.time = 0;
-            ultimateDirector.Play();
-        }
     }
 
-    // ===================== Animation Events (AE-driven) =====================
-
-    public void AE_StartDamage() => equipment?.StartDealDamage();
-    public void AE_EndDamage() => equipment?.EndDealDamage();
-
-    // Chỉ dùng AE_PlaySkillVFXByEvent
     public void AE_PlaySkillVFXByEvent(int eventIndex)
     {
         // Guard-1: đúng weapon type
-        var weapon = equipment != null ? equipment.GetCurrentWeapon() : null;
+        var wc = GetComponent<WeaponController>();
+        var weapon = wc != null ? wc.GetCurrentWeapon() : null;
         if (weapon == null || weapon.weaponType != WeaponType.Axe) return;
 
         // Guard-2: đúng animator state/tag/layer của Axe
@@ -285,10 +281,9 @@ public class AxeSkill : MonoBehaviour
     // Animation Event: Trigger cooldown for specific ability
     public void AE_TriggerCooldown(int inputIndex)
     {
-        var abilityIconManager = FindFirstObjectByType<AbilityIconManager>();
-        if (abilityIconManager != null)
+        if (AbilityIconManager.Instance != null) 
         {
-            abilityIconManager.AE_TriggerCooldown(inputIndex);
+            AbilityIconManager.Instance.AE_TriggerCooldown(inputIndex);
         }
     }
 
@@ -307,3 +302,18 @@ public class AxeSkill : MonoBehaviour
         skillLock?.EndSkillRootMotion(animator);
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

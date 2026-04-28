@@ -18,7 +18,7 @@ public class PlayerNetworkSetup : NetworkBehaviour
 
         if (HasInputAuthority)
         {
-            SetupLocalCamera();
+            SetupCamera();
         }
         else
         {
@@ -26,7 +26,7 @@ public class PlayerNetworkSetup : NetworkBehaviour
         }
     }
 
-    private void SetupLocalCamera()
+    public void SetupCamera()
     {
         if (playerCameraPrefab == null)
         {
@@ -46,6 +46,10 @@ public class PlayerNetworkSetup : NetworkBehaviour
             Transform target = cameraLookPoint != null ? cameraLookPoint : this.transform;
             cvc.Follow = target;
             cvc.LookAt = target;
+            
+            _spawnedCamera.transform.position = target.position;
+            _spawnedCamera.transform.rotation = target.rotation;
+
             cvc.PreviousStateIsValid = false;
         }
         else
@@ -64,5 +68,7 @@ public class PlayerNetworkSetup : NetworkBehaviour
         base.Despawned(runner, hasState);
     }
 }
+
+
 
 

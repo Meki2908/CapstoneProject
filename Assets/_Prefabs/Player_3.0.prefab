@@ -50462,7 +50462,7 @@ MonoBehaviour:
       m_Calls: []
   m_ActionEvents: []
   m_NeverAutoSwitchControlSchemes: 0
-  m_DefaultControlScheme: Keyboard&Mouse
+  m_DefaultControlScheme: 
   m_DefaultActionMap: Player
   m_SplitScreenIndex: -1
   m_Camera: {fileID: 0}
@@ -50548,13 +50548,13 @@ MonoBehaviour:
   jumpHeight: 2
   sprintJumpHeight: 2
   gravityMultiplier: 2
-  rotationSpeed: 5
+  rotationSpeed: 10
   crouchColliderHeight: 1.35
   dashDuration: 0.5
   maxConsecutiveDashes: 2
   dashCooldown: 1
   dashChainCooldown: 2.5
-  speedDampTime: 0.1
+  speedDampTime: 0.05
   velocityDampTime: 0.1
   rotationDampTime: 0.2
   airControl: 0.064
@@ -50643,10 +50643,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Animator: {fileID: 7101454677325079267}
   ApplyTiming: 2
-  SyncSettings: 79
+  SyncSettings: -1
   StateHashes: 0000000077eb4a19d86b6d8aac5102fbd4ef0a9a4278b79961c8b43f0dda2c773e6909408b1f5424a8af57823e725c3b6c282312d245800df1f583ab70231b2543903e12105d7ec2844d79f0601fd8d6a40d4a7f0c695d405da7d3b44faf2313e340bb0fa6fdefe98a8a9336684390526e0fcb465c14a283a76828fb78c352bafe32fcd20d286c409ac2295a2a909f72d49d400cbca0980542ad477bc1edf7d4bc806ddcd930e5c3cf309e99fa2f4b3eec2f30648bf5b048c6a5e0bfc47fa302d27fd858d470e7cc92038799d6af5958ae0b4aab1ae183754a8e12db93b0f6ae83e9f166db5f9b5cdab3254f1614ba26e141c6f47771c18306f1919ccd20c81a8e4f377e4a62ae707fcbdac7bbe643c958fbb5fb9cd62cf5e5e55e82ed13fbc0f21c4cf7faeae9b53919f597e906f61d5afdfc76f96347c1c9396a13be05a910f8d036f677624aadbd2715322e389e840577b03e5a80f160da1964c890c196ebf6786a2660486d5119ce499b37e4f40de84aa422c66019b4cf7acb1ee1507688287f612962dfe39dc0471ee0a6fee22d256165f61f736cc976ba89bc4d221bfe911f70f193de93fa512bf97590195e8c52ec3403
   TriggerHashes: 00000000874303a7c6fab1d2940292181606b3a7d8d500a878373eeff25465e600dd6e9be5389559dc6a000f5e26def13b2dc047e4ae2fb4d7ff7839
-  TotalWords: 10
+  TotalWords: 20
 --- !u!1 &3762816990167538178
 GameObject:
   m_ObjectHideFlags: 0
@@ -85111,6 +85111,7 @@ MonoBehaviour:
   skillStateTag: AxeSkill
   useInputDirection: 1
   forwardAnchor: {fileID: 789048961051014707}
+  maxSkillLockSeconds: 3
   vfxMinInterval: 0.03
 --- !u!114 &4639706910774603103
 MonoBehaviour:
@@ -85142,6 +85143,7 @@ MonoBehaviour:
   enableUltimateVfxPool: 1
   ultimatePoolPrewarm: 2
   ultimatePoolMaxPerPrefab: 8
+  maxSkillLockSeconds: 3
 --- !u!114 &4293190242617863170
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -85209,7 +85211,7 @@ MonoBehaviour:
   detectionUpdateInterval: 0.1
   cnCamera: {fileID: 0}
   combatCameraDistance: 9
-  normalCameraDistance: 5
+  normalCameraDistance: 7
   cameraTransitionSpeed: 2
   combatMoveSpeed: 5
   smoothRotationDuration: 0.3

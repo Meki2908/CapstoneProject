@@ -48,38 +48,29 @@ public class WeaponSwapper : MonoBehaviour
 
     private WeaponType pendingWeaponType;
 
-    private void Awake()
-    {
-        RefreshPlayerReferences();
-        SceneManager.sceneLoaded += OnSceneLoaded;
-    }
-
-    private void OnDestroy()
-    {
-        SceneManager.sceneLoaded -= OnSceneLoaded;
-    }
-
-    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
-    {
-        // Player mới spawn sau load scene — gán lại (HUD DontDestroyOnLoad giữ reference cũ = null).
-        RefreshPlayerReferences();
-    }
-
-    /// <summary>
-    /// Luôn lấy instance player hiện tại trong scene (sau dungeon / teleport).
-    /// </summary>
-    public void RefreshPlayerReferences()
-    {
-        weaponController = FindFirstObjectByType<WeaponController>();
-        character = FindFirstObjectByType<Character>();
-        enemyDetection = FindFirstObjectByType<EnemyDetection>();
-    }
-
     private void Start()
     {
         SetupButtons();
         SetupConfirmationDialog();
         SetupUpgradeButtons();
+    }
+
+    private void Update()
+    {
+        // Rình cho đến khi Local Player xuất hiện thì tóm lấy 1 lần duy nhất
+        if (character == null && Character.LocalCharacter != null)
+        {
+            // 1. Gán thẳng, không cần GetComponent
+            character = Character.LocalCharacter; 
+            
+            // 2. Móc túi lấy WeaponController từ chính nhân vật này
+            weaponController = character.GetComponentInChildren<WeaponController>();
+            
+            // 3. Móc túi lấy EnemyDetection (TUYỆT ĐỐI KHÔNG DÙNG FindFirst)
+            enemyDetection = character.GetComponentInChildren<EnemyDetection>();
+            
+            Debug.Log("<color=cyan>[WeaponSwapper]</color> Đã kết nối thành công với Local Player!");
+        }
     }
 
     private void SetupUpgradeButtons()
@@ -317,3 +308,5 @@ public class WeaponSwapper : MonoBehaviour
         }
     }
 }
+
+

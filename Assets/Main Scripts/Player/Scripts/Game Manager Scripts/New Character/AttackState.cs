@@ -267,6 +267,25 @@ public class AttackState : State
             }
         }
 
+        // Xoay người theo Camera khi chém
+        if (movementInput.sqrMagnitude > 0.01f)
+        {
+            Vector3 camForward = character.cameraTransform.forward;
+            camForward.y = 0f;
+            camForward.Normalize();
+
+            Vector3 camRight = character.cameraTransform.right;
+            camRight.y = 0f;
+            camRight.Normalize();
+
+            Vector3 targetDirection = (camForward * movementInput.y + camRight * movementInput.x).normalized;
+            if (targetDirection != Vector3.zero)
+            {
+                Quaternion targetRotation = Quaternion.LookRotation(targetDirection);
+                character.transform.rotation = Quaternion.Slerp(character.transform.rotation, targetRotation, character.rotationSpeed * character.Runner.DeltaTime);
+            }
+        }
+
         character.animator.SetFloat("speed", movementInput.magnitude);
     }
 
@@ -407,4 +426,5 @@ public class AttackState : State
         return Mathf.Lerp(maxChainPoint, minChainPoint, t);
     }
 }
+
 

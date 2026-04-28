@@ -120,22 +120,53 @@ public class Character : NetworkBehaviour
 
     private int originalLayer; // Store original layer before dash
 
+    private Vector3 initialModelLocalPosition;
+
     private void Awake()
     {
-        // Lấy bộ điều khiển vật lý ở Root
+        // L?y b? di?u khi?n v?t l� ? Root
         controller = GetComponent<CharacterController>(); 
-        // (Nếu ở các bước trước bạn đổi tên biến thành _cc thì dùng _cc nhé)
+        // (N?u ? c�c bu?c tru?c b?n d?i t�n bi?n th�nh _cc th� d�ng _cc nh�)
 
-        // Lấy bộ thu tín hiệu ở Root
+        // L?y b? thu t�n hi?u ? Root
         playerInput = GetComponent<PlayerInput>();
 
-        // Lấy hình hài ở cục Con
+        // L?y h�nh h�i ? c�c Con
         animator = GetComponentInChildren<Animator>();
+
+        if (animator != null)
+        {
+            // Luu l?i t?a d? g?c c?a Model (Thu?ng l� 0, -1, 0)
+            initialModelLocalPosition = animator.transform.localPosition;
+            
+            // ��ng dinh t?t Root Motion m?t l?n v� m�i m�i
+            animator.applyRootMotion = false;
+        }
+    }
+
+    private void LateUpdate()
+    {
+        // H�m n�y ch?y sau c�ng m?i frame. 
+        // B?t k? Animation n�o c? t�nh k�o Model di l?ch, ta d?u gi?t n� v? l?i v? tr� trung t�m c?a Root.
+        if (animator != null)
+        {
+            animator.transform.localPosition = initialModelLocalPosition;
+        }
     }
     // Start is called before the first frame update
     public override void Spawned()
     {
-        if (HasInputAuthority) LocalCharacter = this;
+        if (HasInputAuthority) 
+        {
+            LocalCharacter = this;
+            
+            // GI?I THI?U V?I UI:
+            if (AbilityIconManager.Instance != null)
+            {
+                var wc = GetComponent<WeaponController>();
+                AbilityIconManager.Instance.BindToLocalPlayer(wc);
+            }
+        }
         _changeDetector = GetChangeDetector(ChangeDetector.Source.SimulationState);
         
         CalculatedVelocity = Vector3.zero; // Reset v?n t?c ngay khi sinh ra
@@ -171,7 +202,7 @@ public class Character : NetworkBehaviour
         combatMove = new CombatMoveState(this, movementSM);
         attacking = new AttackState(this, movementSM);
         getHit = new GetHitState(this, movementSM);
-        dieState = new DieState(this, movementSM);
+        dieState = new DieState(this, movementSM);        
 
         currentLocomotionState = standing;
         movementSM.Initialize(currentLocomotionState);
@@ -503,6 +534,10 @@ public class Character : NetworkBehaviour
     }
     #endregion
 }
+
+
+
+
 
 
 

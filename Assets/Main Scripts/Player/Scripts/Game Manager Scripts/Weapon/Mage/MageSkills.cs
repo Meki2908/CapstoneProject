@@ -32,6 +32,8 @@ public class MageSkills : MonoBehaviour
 
     private Character character;
     private SkillLock skillLock;
+    public float maxSkillLockSeconds = 3f;
+    private float skillLockExpireAt = 0f;
     private GameObject currentWeapon;
     private readonly Dictionary<AbilityInput, AbilitySO> abilityMap = new();
     private readonly Dictionary<int, float> lastVfxSpawnTime = new();
@@ -41,10 +43,14 @@ public class MageSkills : MonoBehaviour
 
     private void Awake()
     {
-        character = GetComponent<Character>();
-        if (!animator) animator = GetComponent<Animator>();
-        if (!equipment) equipment = GetComponent<EquipmentSystem>();
-        skillLock = GetComponent<SkillLock>();
+        character = GetComponentInParent<Character>();
+        Debug.Log($"<color=green>[MageSkills]</color> Character: {character}");
+        if (!animator) animator = GetComponentInChildren<Animator>();
+        Debug.Log($"<color=green>[MageSkills]</color> Animator: {animator}");
+        if (!equipment) equipment = GetComponentInChildren<EquipmentSystem>();
+        Debug.Log($"<color=green>[MageSkills]</color> Equipment: {equipment}");
+        skillLock = GetComponentInChildren<SkillLock>();
+        Debug.Log($"<color=green>[MageSkills]</color> SkillLock: {skillLock}");
     }
 
     public void SetForwardAnchor(Transform t) { forwardAnchor = t; }
@@ -95,8 +101,11 @@ public class MageSkills : MonoBehaviour
     public void RebuildAbilityMap()
     {
         abilityMap.Clear();
-        var weapon = equipment != null ? equipment.GetCurrentWeapon() : null;
+        var wc = GetComponent<WeaponController>();
+        var weapon = wc != null ? wc.GetCurrentWeapon() : null;
+        
         if (weapon == null || weapon.abilities == null) return;
+
         foreach (var ab in weapon.abilities)
         {
             if (ab == null || ab.input == AbilityInput.None) continue;
@@ -104,75 +113,75 @@ public class MageSkills : MonoBehaviour
         }
     }
 
+
+
     private void Update()
     {
-        if (Keyboard.current == null) return;
-        if (Keyboard.current.eKey.wasPressedThisFrame && TutorialInputGate.AllowsSkill(AbilityInput.E)) TryUse(AbilityInput.E);
-        if (Keyboard.current.rKey.wasPressedThisFrame && TutorialInputGate.AllowsSkill(AbilityInput.R)) TryUse(AbilityInput.R);
-        if (Keyboard.current.tKey.wasPressedThisFrame && TutorialInputGate.AllowsSkill(AbilityInput.T)) TryUse(AbilityInput.T);
-        if (Keyboard.current.qKey.wasPressedThisFrame && TutorialInputGate.AllowsSkill(AbilityInput.Q_Ultimate)) TryUse(AbilityInput.Q_Ultimate);
+        // CH? L�M NHI?M V? C?U H?, TUY?T �?I KH�NG NH?N INPUT ? ��Y
+        if (skillLock != null && skillLock.isPerformingSkill)
+        {
+            if (Time.time > skillLockExpireAt)
+            {
+                Debug.LogWarning($"<color=red>[Failsafe]</color> Ph� v? kh�a Skill do k?t qu� {maxSkillLockSeconds} gi�y!");
+                skillLock.EndSkillRootMotion(animator);
+                
+                if (ultimateDirector != null && ultimateDirector.state == PlayState.Playing)
+                {
+                    ultimateDirector.Stop();
+                }
+            }
+        }
     }
 
     public void TryUse(AbilityInput input)
     {
-        var weapon = equipment != null ? equipment.GetCurrentWeapon() : null;
+        if (abilityMap.Count == 0) RebuildAbilityMap();
 
-        bool inCombat = character != null && character.movementSM != null
-                        && character.movementSM.currentState == character.combatMove;
-
-        // Mage không cần drawn (Wand do WeaponController quản lý)
-        if (weapon == null || weapon.weaponType != WeaponType.Mage || !inCombat)
-            return;
-
-        if (skillLock != null && skillLock.isPerformingSkill) return;
-        if (!abilityMap.TryGetValue(input, out var ability) || ability == null)
-            return;
-
-        // Check if skill is unlocked
-        if (WeaponMasteryManager.Instance != null)
+        var wc = GetComponent<WeaponController>();
+        var weapon = wc != null ? wc.GetCurrentWeapon() : null;
+        bool drawn = character != null && character.isWeaponDrawn;
+        
+        if (weapon == null || weapon.weaponType != WeaponType.Mage || !drawn)
         {
-            if (!WeaponMasteryManager.Instance.IsSkillUnlocked(WeaponType.Mage, input))
-            {
-                Debug.Log($"[MageSkills.TryUse] {input} is locked! Mastery level required.");
-                return;
-            }
+            Debug.Log($"<color=orange>[MageSkills]</color> X?t: Sai vu kh� ho?c chua r�t G?y Ph�p!");
+            return;
         }
 
-        // Check cooldown
-        var abilityIconManager = FindFirstObjectByType<AbilityIconManager>();
-        if (abilityIconManager != null && abilityIconManager.IsOnCooldown(input))
+        if (!abilityMap.TryGetValue(input, out var ability)) 
         {
-            Debug.Log($"[MageSkills.TryUse] {input} is on cooldown!");
+            Debug.Log($"<color=red>[MageSkills]</color> X?t: Kh�ng t�m th?y Data c?a n�t {input} trong WeaponSO!");
+            return;
+        }
+
+        if (WeaponMasteryManager.Instance != null && !WeaponMasteryManager.Instance.IsSkillUnlocked(WeaponType.Mage, input))
+        {
+            Debug.Log($"<color=yellow>[MageSkills]</color> Skill {input} b? kh�a do chua d? Mastery!");
+            return;
+        }
+
+        if (AbilityIconManager.Instance != null && AbilityIconManager.Instance.IsOnCooldown(input))
+        {
+            Debug.Log($"<color=grey>[MageSkills]</color> Skill {input} dang trong th?i gian h?i chi�u!");
             return;
         }
 
         int idx = input switch { AbilityInput.E => 0, AbilityInput.R => 1, AbilityInput.T => 2, AbilityInput.Q_Ultimate => 3, _ => 0 };
         animator.SetInteger(skillIndexParam, idx);
         animator.SetTrigger(skillTriggerParam);
+        
+        Debug.Log($"<color=cyan>[MageSkills]</color> K�ch ho?t TH�NH C�NG Skill {input}!");
 
-        if (input == AbilityInput.Q_Ultimate && ultimateDirector != null)
-        {
-            PrewarmUltimateVfxPool(ability);
-            // Lock skill immediately and start timeline
-            skillLock?.BeginSkillRootMotion(animator, true);
-            ultimateDirector.time = 0;
-            ultimateDirector.Play();
-        }
+        if (skillLock != null) skillLock.BeginSkillRootMotion(animator);
+        skillLockExpireAt = Time.time + maxSkillLockSeconds;
 
         TutorialTextDisplay.NotifySkillActivatedFromGameplay(input);
     }
-    // Mage giờ dùng logic VFX như Sword/Axe - loại bỏ projectile methods thừa
 
-    // ===================== Animation Events =====================
-
-    public void AE_StartDamage() => equipment?.StartDealDamage();
-    public void AE_EndDamage() => equipment?.EndDealDamage();
-
-    // CHUẨN HÓA: chỉ dùng AE_PlaySkillVFXByEvent để spawn VFX
     public void AE_PlaySkillVFXByEvent(int eventIndex)
     {
         // Guard-1: đúng weapon type
-        var weapon = equipment != null ? equipment.GetCurrentWeapon() : null;
+        var wc = GetComponent<WeaponController>();
+        var weapon = wc != null ? wc.GetCurrentWeapon() : null;
         if (weapon == null || weapon.weaponType != WeaponType.Mage) return;
         Debug.Log($"[MageSkills.AE_PlaySkillVFXByEvent] weapon={weapon.weaponName}, typeOK={(weapon != null && weapon.weaponType == WeaponType.Mage)}");
 
@@ -413,10 +422,9 @@ public class MageSkills : MonoBehaviour
     // Animation Event: Trigger cooldown for specific ability
     public void AE_TriggerCooldown(int inputIndex)
     {
-        var abilityIconManager = FindFirstObjectByType<AbilityIconManager>();
-        if (abilityIconManager != null)
+        if (AbilityIconManager.Instance != null) 
         {
-            abilityIconManager.AE_TriggerCooldown(inputIndex);
+            AbilityIconManager.Instance.AE_TriggerCooldown(inputIndex);
         }
     }
 
@@ -544,3 +552,18 @@ public class MageSkills : MonoBehaviour
         pool.Enqueue(instance);
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -27,13 +27,6 @@ public class WeaponForgeUI : MonoBehaviour
 
     private void Awake()
     {
-        if (weaponController == null)
-        {
-            weaponController = FindFirstObjectByType<WeaponController>();
-        }
-
-
-
         // Setup gem slot drop zones
         for (int i = 0; i < gemSlotDropZones.Length && i < 3; i++)
         {
@@ -51,6 +44,15 @@ public class WeaponForgeUI : MonoBehaviour
         if (forgePanel != null)
         {
             forgePanel.SetActive(false);
+        }
+    }
+
+    private void Update()
+    {
+        if (Character.LocalCharacter != null && weaponController == null)
+        {
+            weaponController = Character.LocalCharacter.GetComponentInChildren<WeaponController>();
+            Subscribe();
         }
     }
 

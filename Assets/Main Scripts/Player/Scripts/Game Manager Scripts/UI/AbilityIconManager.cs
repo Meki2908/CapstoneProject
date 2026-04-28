@@ -56,10 +56,12 @@ public class AbilityIconManager : MonoBehaviour
     // Store current abilities to refresh cooldown when gems change
     private AbilitySO[] currentAbilities;
 
+    public static AbilityIconManager Instance { get; private set; }
+
     private void Awake()
     {
-        if (weaponController == null)
-            weaponController = FindFirstObjectByType<WeaponController>();
+        if (Instance == null) Instance = this;
+        else { Destroy(gameObject); return; }
 
         // Initialize with default icons
         SetDefaultIcons();
@@ -91,7 +93,7 @@ public class AbilityIconManager : MonoBehaviour
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         // WeaponController trên player mới — không giữ reference prefab/scene cũ
-        weaponController = FindFirstObjectByType<WeaponController>();
+        weaponController = Character.LocalCharacter.GetComponentInChildren<WeaponController>();
         AE_ClearAbilityIcons();
     }
 
@@ -107,6 +109,11 @@ public class AbilityIconManager : MonoBehaviour
 
     private void Update()
     {
+        if (weaponController == null && Character.LocalCharacter != null)
+        {
+            BindToLocalPlayer(Character.LocalCharacter.GetComponentInChildren<WeaponController>());
+        }
+
         UpdateCooldownUI();
         UpdateSkillLockOverlays();
     }
@@ -212,6 +219,27 @@ public class AbilityIconManager : MonoBehaviour
     }
 
     // Animation Event: Set ability icons when weapon is drawn
+    // H�m d? Local Player "dang k�" b?n th�n v?i UI
+    public void BindToLocalPlayer(WeaponController wc)
+    {
+        this.weaponController = wc; 
+        
+        if (wc != null && Character.LocalCharacter != null && Character.LocalCharacter.isWeaponDrawn)
+        {
+            if (wc.GetCurrentWeapon() != null)
+            {
+                SetCurrentWeaponType(wc.GetCurrentWeapon().weaponType);
+                AE_SetAbilityIcons(wc.GetCurrentWeapon().abilities);
+            }
+        }
+        else 
+        {
+            AE_ClearAbilityIcons();
+        }
+        
+        Debug.Log("<color=green>[UI]</color> �� k?t n?i v?i WeaponController c?a Local Player!");
+    }
+
     public void AE_SetAbilityIcons(AbilitySO[] abilities)
     {
         Debug.Log($"[AbilityIconManager] AE_SetAbilityIcons called with {abilities?.Length ?? 0} abilities");
@@ -450,3 +478,9 @@ public class AbilityIconManager : MonoBehaviour
     }
 
 }
+
+
+
+
+
+
