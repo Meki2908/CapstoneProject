@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using Fusion;
 using Unity.Cinemachine;
 
@@ -50,7 +50,7 @@ public class PlayerNetworkSetup : NetworkBehaviour
             _spawnedCamera.transform.position = target.position;
             _spawnedCamera.transform.rotation = target.rotation;
 
-            cvc.PreviousStateIsValid = false;
+            cvc.PreviousStateIsValid = false; cvc.ForceCameraPosition(target.position, target.rotation); if (Camera.main != null) { Camera.main.transform.position = target.position; Camera.main.transform.rotation = target.rotation; }
         }
         else
         {
