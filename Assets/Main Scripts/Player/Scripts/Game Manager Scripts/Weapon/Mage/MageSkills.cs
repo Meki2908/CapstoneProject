@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Playables;
@@ -53,28 +53,37 @@ public class MageSkills : MonoBehaviour
         Debug.Log($"<color=green>[MageSkills]</color> SkillLock: {skillLock}");
     }
 
+    private void Start()
+    {
+        // Lắng nghe sự kiện đổi vũ khí từ khi bắt đầu game
+        var wc = GetComponent<WeaponController>();
+        if (wc != null)
+        {
+            wc.OnWeaponChanged += OnWeaponChangedHandler;
+        }
+
+        // Cập nhật trạng thái bật/tắt lần đầu tiên
+        RefreshActiveForCurrentWeapon();
+    }
+
+    private void OnDestroy()
+    {
+        // Chỉ hủy lắng nghe khi cục Player này hoàn toàn bị xóa khỏi map
+        var wc = GetComponent<WeaponController>();
+        if (wc != null) wc.OnWeaponChanged -= OnWeaponChangedHandler;
+    }
+
     public void SetForwardAnchor(Transform t) { forwardAnchor = t; }
     public void SetDefaultVfxSpawn(Transform t) { defaultVfxSpawn = t; }
 
     private void OnEnable()
     {
         RebuildAbilityMap();
-
-        var wc = GetComponent<WeaponController>();
-        if (wc != null)
-        {
-            wc.OnWeaponChanged -= OnWeaponChangedHandler;
-            wc.OnWeaponChanged += OnWeaponChangedHandler;
-        }
-
-        RefreshActiveForCurrentWeapon(); // NEW: tự bật/tắt theo weapon hiện tại
+        RefreshActiveForCurrentWeapon(); 
     }
 
     private void OnDisable()
     {
-        var wc = GetComponent<WeaponController>();
-        if (wc != null) wc.OnWeaponChanged -= OnWeaponChangedHandler;
-
         // Cancel ultimate timeline if playing (e.g. scene transition)
         CancelSkill();
 

@@ -1,11 +1,14 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class RandomEnemy : MonoBehaviour{
+using Fusion;
+public class RandomEnemy : NetworkBehaviour{
     int childNumber;
     public ParticleSystem pentagram;
     int index;
+    [Networked, OnChangedRender(nameof(OnEnemyIndexChanged))]
+    public int NetworkedEnemyIndex { get; set; } = -1;
     public GameObject[] enemys;
     public bool firstEnable;
     Vector3 newPos;
@@ -61,6 +64,7 @@ public class RandomEnemy : MonoBehaviour{
     /// </summary>
     public void EnableSpecificType(int typeIndex)
     {
+        if (!HasStateAuthority) return;
         if (enemys == null || enemys.Length == 0)
         {
             Debug.LogError("[RandomEnemy] enemys array is null or empty!");
@@ -69,7 +73,7 @@ public class RandomEnemy : MonoBehaviour{
         
         index = Mathf.Clamp(typeIndex, 0, enemys.Length - 1);
         Debug.Log($"[RandomEnemy] EnableSpecificType: index={index} on {gameObject.name}");
-        SetEnemy();
+        NetworkedEnemyIndex = index;
     }
     
     // Hệ thống wave mới
@@ -99,6 +103,7 @@ public class RandomEnemy : MonoBehaviour{
     void EnemyChooseNewWave(int skeletCount, int monsterCount, int lichCount, int demonCount,
         int stoneogreCount, int golemCount, int minotaurCount, int ifritCount)
     {
+        if (!HasStateAuthority) return;
         // Kiểm tra bounds cho mảng enemy trước
         if (enemys == null || enemys.Length == 0) {
             Debug.LogError("[RandomEnemy] enemys array is null or empty!");
@@ -174,11 +179,12 @@ public class RandomEnemy : MonoBehaviour{
         // Đảm bảo index nằm trong bounds
         index = Mathf.Clamp(index, 0, enemys.Length - 1);
 
-        SetEnemy();
+        NetworkedEnemyIndex = index;
     }
     
     // Hệ thống cũ - giữ nguyên để tương thích
     void EnemyChoose(int archers, int monsters, int lichCount, int bossCount, int demonCount) {
+        if (!HasStateAuthority) return;
         // Sửa: Kiểm tra bounds cho mảng enemy trước
         if (enemys == null || enemys.Length == 0) {
             Debug.LogError("[RandomEnemy] enemys array is null or empty!");
@@ -237,7 +243,7 @@ public class RandomEnemy : MonoBehaviour{
         // Đảm bảo index nằm trong bounds
         index = Mathf.Clamp(index, 0, enemys.Length - 1);
 
-        SetEnemy();
+        NetworkedEnemyIndex = index;
     }
     void Disable(){
         if (enemys == null || index < 0 || index >= enemys.Length) return;
@@ -245,41 +251,39 @@ public class RandomEnemy : MonoBehaviour{
             enemys[index].SetActive(false);
         }
     }
-    void SetEnemy(){
-        if (enemys == null || index < 0 || index >= enemys.Length) {
-            Debug.LogError($"[RandomEnemy] Invalid index {index} or null array!");
-            return;
+    public void OnEnemyIndexChanged()
+    {
+        if (NetworkedEnemyIndex < 0 || NetworkedEnemyIndex >= enemys.Length) return;
+
+        // Tắt hết quái đi cho chắc ăn
+        foreach (var enemy in enemys)
+        {
+            if (enemy != null) enemy.SetActive(false);
         }
+
+        // Bật đúng con quái mà Server đã chốt
+        GameObject activeEnemy = enemys[NetworkedEnemyIndex];
 
         newPos = SelectEnemyPos.SelectNewPos(childNumber);
 
         // Kiểm tra nếu vị trí hợp lệ
         if (newPos == Vector3.zero) {
-            Debug.LogWarning("[RandomEnemy] Invalid spawn position!");
-            // Thử vị trí hiện tại của transform
             newPos = transform.position;
         }
+
+        activeEnemy.transform.position = newPos;
+        activeEnemy.SetActive(true);
 
         if (pentagram != null) {
             pentagram.transform.position = newPos;
             pentagram.Play();
         }
 
-        if (enemys[index] != null) {
-            // Cập nhật vị trí và kích hoạt enemy
-            enemys[index].transform.position = newPos;
-            enemys[index].SetActive(true);
-            
-            // Cập nhật specific enemy type cho EnemyScript
-            EnemyScript enemyScript = enemys[index].GetComponent<EnemyScript>();
-            if (enemyScript != null)
-            {
-                enemyScript.SetSpecificEnemyType(index);
-                // Áp dụng lại giá trị từ Inspector sau khi đã set specific type
-                enemyScript.ApplyInspectorValuesManual();
-            }
-        } else {
-            Debug.LogError($"[RandomEnemy] Enemy at index {index} is null!");
+        EnemyScript enemyScript = activeEnemy.GetComponent<EnemyScript>();
+        if (enemyScript != null)
+        {
+            enemyScript.SetSpecificEnemyType(NetworkedEnemyIndex);
+            enemyScript.ApplyInspectorValuesManual();
         }
     }
 }

@@ -1,8 +1,9 @@
-using System;
+﻿using System;
 using UnityEngine;
+using Fusion;
 using DamageNumbersPro;
 
-public class TakeDamageTest : MonoBehaviour
+public class TakeDamageTest : NetworkBehaviour
 {
     public event Action OnEnemyDied;
 
@@ -43,7 +44,14 @@ public class TakeDamageTest : MonoBehaviour
 
     [Header("Enemy Health Settings")]
     [SerializeField] private float maxHealth = 100f;
-    [SerializeField] private float currentHealth;
+    // [SerializeField] private float CurrentHealth; // Removed for Fusion
+    [Networked, OnChangedRender(nameof(OnHPChanged))]
+    public float CurrentHealth { get; set; }
+
+    public override void Spawned()
+    {
+        if (HasStateAuthority) CurrentHealth = maxHealth;
+    }
     [SerializeField] private bool isAlive = true;
 
     [Header("Health Bar Settings")]
@@ -76,7 +84,7 @@ public class TakeDamageTest : MonoBehaviour
     void Start()
     {
         // Initialize health
-        currentHealth = maxHealth;
+        CurrentHealth = maxHealth;
         isAlive = true;
 
         // Cache squared ranges for faster distance checks
@@ -489,8 +497,11 @@ public class TakeDamageTest : MonoBehaviour
         }
 
         // Apply damage
-        currentHealth -= damage;
-        currentHealth = Mathf.Max(0f, currentHealth);
+          if (HasStateAuthority) 
+          { 
+              CurrentHealth -= damage; 
+              CurrentHealth = Mathf.Max(0f, CurrentHealth);
+          }
 
         // Visual feedback
         if (hitEffect != null)
@@ -518,7 +529,7 @@ public class TakeDamageTest : MonoBehaviour
         }
 
         // Play hit animation if still alive (non-lethal hit)
-        if (currentHealth > 0f)
+        if (CurrentHealth > 0f)
         {
             PlayHitAnimation(isSkill);
             // === ENEMY HIT SOUND ===
@@ -526,13 +537,22 @@ public class TakeDamageTest : MonoBehaviour
         }
 
         // Check for death
-        if (currentHealth <= 0f && isAlive)
+        if (CurrentHealth <= 0f && isAlive)
         {
             Die();
         }
         else if (showDebugInfo)
         {
-            Debug.Log($"[TakeDamageTest] {gameObject.name} took {damage} damage (weapon: {weaponType}, crit: {isCrit}). HP: {currentHealth}/{maxHealth}");
+            Debug.Log($"[TakeDamageTest] {gameObject.name} took {damage} damage (weapon: {weaponType}, crit: {isCrit}). HP: {CurrentHealth}/{maxHealth}");
+        }
+    }
+
+    public void OnHPChanged()
+    {
+        if (hitEffect != null)
+        {
+            var hit = Instantiate(hitEffect, transform.position + Vector3.up * 1.2f, Quaternion.identity);
+            Destroy(hit, hitEffectLifetime);
         }
     }
 
@@ -541,7 +561,7 @@ public class TakeDamageTest : MonoBehaviour
         if (!isAlive) return; // Already dead
 
         isAlive = false;
-        currentHealth = 0f;
+        if (HasStateAuthority) CurrentHealth = 0f;
         OnEnemyDied?.Invoke();
 
         // === ENEMY DIE SOUND ===
@@ -652,10 +672,10 @@ public class TakeDamageTest : MonoBehaviour
     }
 
     // Health API
-    public float GetCurrentHealth() => currentHealth;
+    public float GetCurrentHealth() => CurrentHealth;
     public float GetMaxHealth() => maxHealth;
     public bool IsAlive() => isAlive;
-    public float GetHealthPercentage() => maxHealth > 0 ? currentHealth / maxHealth : 0f;
+    public float GetHealthPercentage() => maxHealth > 0 ? CurrentHealth / maxHealth : 0f;
 
     // Health Bar API (for boss enemies) - Added for Golem boss compatibility
     public bool UseHealthBar
@@ -673,11 +693,7 @@ public class TakeDamageTest : MonoBehaviour
         get => maxHealth;
         set => maxHealth = value;
     }
-    public float CurrentHealth
-    {
-        get => currentHealth;
-        set => currentHealth = value;
-    }
+
     public Color HealthBarColor
     {
         get => healthBarColor;
@@ -692,7 +708,7 @@ public class TakeDamageTest : MonoBehaviour
     public void HealHealth(float amount)
     {
         if (!isAlive || amount <= 0f) return;
-        currentHealth = Mathf.Min(currentHealth + amount, maxHealth);
+        if (HasStateAuthority) CurrentHealth = Mathf.Min(CurrentHealth + amount, maxHealth);
     }
 
     #endregion

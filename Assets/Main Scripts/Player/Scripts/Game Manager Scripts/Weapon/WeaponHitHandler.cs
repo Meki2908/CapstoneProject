@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using UnityEngine;
 
 public class WeaponHitRunner : MonoBehaviour
@@ -16,7 +16,7 @@ public class WeaponHitRunner : MonoBehaviour
     [Tooltip("Auto-destroy spawned VFX after seconds.")]
     public float vfxLifetime = 2f;
 
-    private Coroutine hitRoutine;
+    // (Coroutine removed in favor of Animation Events)
     private int currentHitIndex = 0; // Track current hit index
 
     public void Bind(WeaponSO weaponSO, EquipmentSystem equip, Transform spawnPoint, Transform hand, Transform root)
@@ -36,67 +36,25 @@ public class WeaponHitRunner : MonoBehaviour
         currentHitIndex = hitIndex; // Store current hit index
         Debug.Log($"StartHit: hitIndex={hitIndex}, currentHitIndex={currentHitIndex}");
 
-        if (hitRoutine != null) StopCoroutine(hitRoutine);
-        hitRoutine = StartCoroutine(RunHitRoutine(hitIndex));
+        // HỦY BỎ COROUTINE TẠI ĐÂY - Hãy để Animation Event (AE_StartHitbox / AE_PlayNormalVFX) tự làm việc của nó!
     }
 
     public void CancelCurrentHit()
     {
-        if (hitRoutine != null)
-        {
-            StopCoroutine(hitRoutine);
-            hitRoutine = null;
-        }
+        // Coroutine removed
         equipment?.EndDealDamage();
     }
 
-    private IEnumerator RunHitRoutine(int hitIndex)
+    // Gắn Event này vào đầu frame vung kiếm trúng đích
+    public void AE_StartHitbox()
     {
-        var timing = weapon.hitTimings[hitIndex];
-
-        // Wait until damage window start
-        if (timing.windowStart > 0f)
-            yield return new WaitForSeconds(timing.windowStart);
-
         equipment?.StartDealDamage();
-
-        // Wait until VFX moment
-        float vfxDelay = Mathf.Max(0f, timing.vfxTime - timing.windowStart);
-        if (vfxDelay > 0f)
-            yield return new WaitForSeconds(vfxDelay);
-
-        // Only spawn VFX if weapon is set to use Script for VFX
-        if (weapon.normalVfxSpawnMode == WeaponSO.VfxSpawnMode.Script)
-        {
-            SpawnVfxForHit(hitIndex);
-        }
-
-        // Wait until window end
-        float remain = Mathf.Max(0f, timing.windowEnd - Mathf.Max(timing.vfxTime, timing.windowStart));
-        if (remain > 0f)
-            yield return new WaitForSeconds(remain);
-
-        equipment?.EndDealDamage();
-        hitRoutine = null;
     }
 
-    private void SpawnVfxForHit(int hitIndex)
+    // Gắn Event này vào cuối frame vung kiếm
+    public void AE_EndHitbox()
     {
-        if (weapon.normalHitVfx == null || hitIndex >= weapon.normalHitVfx.Length) return;
-        var prefab = weapon.normalHitVfx[hitIndex];
-        if (prefab == null) return;
-
-        var timing = weapon.hitTimings[hitIndex];
-        var (pos, rot, scl) = BuildSpawnTransform(timing);
-
-        var vfx = Instantiate(prefab, pos, rot);
-        // Apply extra per-hit rotation AFTER base rotation for final alignment (e.g., fix -90° issue)
-        if (timing.spawnRule.extraEulerOffset != Vector3.zero)
-        {
-            vfx.transform.rotation = vfx.transform.rotation * Quaternion.Euler(timing.spawnRule.extraEulerOffset);
-        }
-        vfx.transform.localScale = Vector3.Scale(vfx.transform.localScale, scl);
-        if (vfxLifetime > 0f) Destroy(vfx, vfxLifetime);
+        equipment?.EndDealDamage();
     }
 
     private (Vector3 pos, Quaternion rot, Vector3 scl) BuildSpawnTransform(HitTiming timing)
@@ -114,10 +72,10 @@ public class WeaponHitRunner : MonoBehaviour
         Quaternion rollRot = Quaternion.AngleAxis(rule.rollOffset, baseForward);
         Quaternion finalRot = Quaternion.LookRotation(baseForward) * yawRot * pitchRot * rollRot;
 
-        // Anchor selection (hand -> vfxSpawn -> character root -> self)
+        // Anchor selection (vfxSpawn -> hand -> character root -> self)
         Transform anchor =
-            (handReference != null ? handReference :
             (vfxSpawn != null ? vfxSpawn :
+            (handReference != null ? handReference :
             (characterRoot != null ? characterRoot : transform)));
 
         Vector3 worldOffset = finalRot * rule.localOffset;
@@ -209,114 +167,45 @@ public class WeaponHitRunner : MonoBehaviour
         return null;
     }
 
-    // Animation Event methods - ORIGINAL SIMPLE VERSION
-    public void AE_PlayNormalVFX()
+    // Animation Event methods - FOOLPROOF VERSION
+    public void AE_PlayNormalVFX_Current()
     {
-        // Only spawn VFX if weapon is set to use Animation Events for VFX
-        if (weapon == null || weapon.normalVfxSpawnMode != WeaponSO.VfxSpawnMode.AnimationEvent) return;
-        if (weapon.normalHitVfx == null || weapon.normalHitVfx.Length == 0) return;
-
-        // Use current hit index
-        if (currentHitIndex >= weapon.normalHitVfx.Length) return;
-
-        var prefab = weapon.normalHitVfx[currentHitIndex];
-        if (prefab == null) return;
-
-        // ALWAYS use BuildSpawnTransform for proper spawn rules
-        if (weapon.hitTimings != null && currentHitIndex < weapon.hitTimings.Length)
-        {
-            var timing = weapon.hitTimings[currentHitIndex];
-            var (pos, rot, scl) = BuildSpawnTransform(timing);
-
-            Debug.Log($"AE_PlayNormalVFX: hitIndex={currentHitIndex}, pos={pos}, rot={rot}, scl={scl}");
-
-            var vfx = Instantiate(prefab, pos, rot);
-            vfx.transform.localScale = Vector3.Scale(vfx.transform.localScale, scl);
-
-            // Apply extra rotation if needed
-            if (timing.spawnRule.extraEulerOffset != Vector3.zero)
-            {
-                vfx.transform.rotation = vfx.transform.rotation * Quaternion.Euler(timing.spawnRule.extraEulerOffset);
-            }
-
-            Debug.Log($"AE_PlayNormalVFX: Final VFX rotation={vfx.transform.rotation}");
-
-            // Auto-destroy after lifetime
-            if (vfxLifetime > 0f) Destroy(vfx, vfxLifetime);
-        }
-        else
-        {
-            // ALWAYS use BuildSpawnTransform even for fallback
-            var (pos, rot, scl) = BuildSpawnTransform(new HitTiming
-            {
-                spawnRule = new VfxSpawnRule
-                {
-                    localOffset = Vector3.zero,
-                    yawOffset = 0f,
-                    pitchOffset = 0f,
-                    rollOffset = 0f,
-                    scale = 1f
-                }
-            });
-
-            Debug.Log($"AE_PlayNormalVFX FALLBACK: pos={pos}, rot={rot}, scl={scl}");
-
-            var vfx = Instantiate(prefab, pos, rot);
-            vfx.transform.localScale = Vector3.Scale(vfx.transform.localScale, scl);
-            if (vfxLifetime > 0f) Destroy(vfx, vfxLifetime);
-        }
+        AE_PlayNormalVFX_Index(currentHitIndex);
     }
 
-    public void AE_PlayNormalVFX(int hitIndex)
+    public void AE_PlayNormalVFX_Index(int hitIndex)
     {
-        // Only spawn VFX if weapon is set to use Animation Events for VFX
         if (weapon == null || weapon.normalVfxSpawnMode != WeaponSO.VfxSpawnMode.AnimationEvent) return;
-        if (weapon.normalHitVfx == null || hitIndex >= weapon.normalHitVfx.Length) return;
+        
+        // Bảo hiểm 1: Nếu user quên đổi parameter trong Animation Event (để nguyên số 0 cho đòn 2, 3)
+        if (hitIndex == 0 && currentHitIndex > 0)
+        {
+            hitIndex = currentHitIndex;
+        }
 
-        var prefab = weapon.normalHitVfx[hitIndex];
+        if (weapon.normalHitVfx == null || weapon.normalHitVfx.Length == 0) return;
+
+        // Bảo hiểm 2: Nếu user chỉ nhét đúng 1 VFX vào mảng nhưng có 3 đòn đánh, thì xài lại VFX đó
+        int prefabIndex = Mathf.Min(hitIndex, weapon.normalHitVfx.Length - 1);
+        var prefab = weapon.normalHitVfx[prefabIndex];
         if (prefab == null) return;
 
-        // ALWAYS use BuildSpawnTransform for proper spawn rules
-        if (weapon.hitTimings != null && hitIndex < weapon.hitTimings.Length)
+        // Bảo hiểm 3: Rút đúng thông số Timing (localOffset, yawOffset) của đòn đánh đó để tránh sai lệch Y/Rotation
+        if (weapon.hitTimings != null && weapon.hitTimings.Length > 0)
         {
-            var timing = weapon.hitTimings[hitIndex];
+            int timingIndex = Mathf.Min(hitIndex, weapon.hitTimings.Length - 1);
+            var timing = weapon.hitTimings[timingIndex];
+            
             var (pos, rot, scl) = BuildSpawnTransform(timing);
-
-            Debug.Log($"AE_PlayNormalVFX({hitIndex}): pos={pos}, rot={rot}, scl={scl}");
 
             var vfx = Instantiate(prefab, pos, rot);
             vfx.transform.localScale = Vector3.Scale(vfx.transform.localScale, scl);
 
-            // Apply extra rotation if needed
             if (timing.spawnRule.extraEulerOffset != Vector3.zero)
             {
                 vfx.transform.rotation = vfx.transform.rotation * Quaternion.Euler(timing.spawnRule.extraEulerOffset);
             }
 
-            Debug.Log($"AE_PlayNormalVFX({hitIndex}): Final VFX rotation={vfx.transform.rotation}");
-
-            // Auto-destroy after lifetime
-            if (vfxLifetime > 0f) Destroy(vfx, vfxLifetime);
-        }
-        else
-        {
-            // ALWAYS use BuildSpawnTransform even for fallback
-            var (pos, rot, scl) = BuildSpawnTransform(new HitTiming
-            {
-                spawnRule = new VfxSpawnRule
-                {
-                    localOffset = Vector3.zero,
-                    yawOffset = 0f,
-                    pitchOffset = 0f,
-                    rollOffset = 0f,
-                    scale = 1f
-                }
-            });
-
-            Debug.Log($"AE_PlayNormalVFX({hitIndex}) FALLBACK: pos={pos}, rot={rot}, scl={scl}");
-
-            var vfx = Instantiate(prefab, pos, rot);
-            vfx.transform.localScale = Vector3.Scale(vfx.transform.localScale, scl);
             if (vfxLifetime > 0f) Destroy(vfx, vfxLifetime);
         }
     }

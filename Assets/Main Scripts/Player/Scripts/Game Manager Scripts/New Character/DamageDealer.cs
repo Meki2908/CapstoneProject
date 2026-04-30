@@ -170,6 +170,30 @@ public class DamageDealer : MonoBehaviour
             TryPlayWeaponHitSfx(currentWeaponType);
             if (isCrit) Debug.Log($"[DamageDealer] Critical hit! Damage: {finalDamage} (multiplier: {critDamageMultiplier:F2}x)");
         }
+
+        // 4) Kiểm tra xem có trúng Dummy Multiplayer (NetworkHealth) không
+        var netHealth = targetTransform.GetComponentInParent<NetworkHealth>();
+        if (netHealth != null)
+        {
+            // Tránh chém 1 nhát mà quái dính 2, 3 lần damage (nếu quái có nhiều collider)
+            int rootId = netHealth.gameObject.GetInstanceID();
+            if (_hitRootIds.Contains(rootId)) return;
+            _hitRootIds.Add(rootId);
+
+            // Tính sát thương tạm thời (Bạn có thể áp dụng Crit vào đây sau)
+            int finalDamage = Mathf.RoundToInt(weaponDamage * CheatPanel.DamageMultiplier);
+            
+            // Gọi lệnh trừ máu trên mạng (Chỉ Host mới có quyền thực thi lệnh này)
+            netHealth.TakeDamage(finalDamage);
+
+            // Chạy âm thanh chém trúng thịt
+            WeaponType currentWeaponType = WeaponType.None;
+            var wc2 = GetComponentInParent<WeaponController>();
+            if (wc2 != null && wc2.GetCurrentWeapon() != null) currentWeaponType = wc2.GetCurrentWeapon().weaponType;
+            TryPlayWeaponHitSfx(currentWeaponType);
+            
+            return;
+        }
     }
 
     private void TryPlayWeaponHitSfx(WeaponType weaponType)

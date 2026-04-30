@@ -1,9 +1,11 @@
-using UnityEngine;
+﻿using UnityEngine;
 using Unity.Cinemachine;
 using System.Collections;
 using System.Linq;
 
-public class EnemyDetection : MonoBehaviour
+using Fusion;
+
+public class EnemyDetection : NetworkBehaviour
 {
     [Header("Detection Settings")]
     [SerializeField] private float detectionRadius = 10f;
@@ -33,6 +35,7 @@ public class EnemyDetection : MonoBehaviour
     [SerializeField] private float mageAttackRange = 7f;
 
     // Private variables
+    private EquipmentSystem equipment;
     private Character character;
     private Animator animator;
     private CharacterController controller;
@@ -57,9 +60,10 @@ public class EnemyDetection : MonoBehaviour
 
     private void Awake()
     {
-        character = GetComponent<Character>();
-        animator = GetComponent<Animator>();
-        controller = GetComponent<CharacterController>();
+        character = GetComponentInParent<Character>();
+        animator = GetComponentInParent<Animator>();
+        controller = GetComponentInParent<CharacterController>();
+        equipment = GetComponentInParent<EquipmentSystem>();
 
         // Cache squared radii for faster distance checks
         detectionRadiusSquared = detectionRadius * detectionRadius;
@@ -260,170 +264,158 @@ public class EnemyDetection : MonoBehaviour
     }
     #endregion
 
-    #region Combat Movement (Animation Event Controlled)
-    // REMOVED: Auto-rotation logic - now controlled by Animation Events
+    // 2. SỬA 3 BIẾN NÀY THÀNH BIẾN MẠNG
+    [Networked] private float _moveTowardTimer { get; set; }
+    [Networked] private float _rotateTimer { get; set; }
+    [Networked] private Vector3 _targetRotation { get; set; }
 
-    // Animation Event: Smart rotation - enemy priority over movement input
+    // HÀM MỚI: Xử lý di chuyển chuẩn mạng
+    private Vector3 _rootMotionDeltaPosition;
+
+    // Lấy Root Motion từ Animator để đồng bộ với Fusion
+    private void OnAnimatorMove()
+    {
+        if (animator == null || !animator.applyRootMotion) return;
+        
+        // Cộng dồn Root Motion sinh ra trong Update
+        _rootMotionDeltaPosition += animator.deltaPosition;
+    }
+
+    // HÀM MỚI: Xử lý di chuyển chuẩn mạng
+    public override void FixedUpdateNetwork()
+    {
+        // Chỉ cho phép di chuyển nếu bạn là người đang bấm nút (Input) hoặc là Server (State)
+        if (!HasStateAuthority && !HasInputAuthority) return;
+
+        // 1. Xử lý Root Motion (Khi không có quái)
+        if (animator != null && animator.applyRootMotion && _rootMotionDeltaPosition.sqrMagnitude > 0)
+        {
+            controller.Move(_rootMotionDeltaPosition);
+            _rootMotionDeltaPosition = Vector3.zero; // Xóa sau khi dùng
+        }
+        else
+        {
+            _rootMotionDeltaPosition = Vector3.zero; // Xóa rác nếu không dùng
+        }
+
+        // 2. Xử lý bước tới và xoay (Chỉ chạy khi tiến về phía trước, bỏ qua Resimulation để không bị trừ lố giờ)
+        if (Runner.IsForward)
+        {
+            // Xử lý xoay mượt theo Tick mạng (Runner.DeltaTime)
+            if (_rotateTimer > 0)
+            {
+                _rotateTimer -= Runner.DeltaTime;
+                Quaternion targetRot = Quaternion.LookRotation(_targetRotation);
+                character.transform.rotation = Quaternion.Slerp(character.transform.rotation, targetRot, 15f * Runner.DeltaTime);
+            }
+
+            // Xử lý bước tới chém theo Tick mạng
+            if (_moveTowardTimer > 0 && nearestEnemy != null)
+            {
+                _moveTowardTimer -= Runner.DeltaTime;
+                
+                // 1. Lấy tầm đánh của vũ khí hiện tại
+                float attackRange = GetCurrentWeaponAttackRange();
+
+                // 2. Tính khoảng cách thực tế đến quái (bỏ qua trục Y để tính trên mặt phẳng ngang)
+                Vector3 vectorToEnemy = nearestEnemy.position - transform.position;
+                vectorToEnemy.y = 0;
+                float currentDistance = vectorToEnemy.magnitude;
+
+                // 3. Nếu vẫn còn ở xa hơn tầm đánh thì mới được phép lướt tới
+                if (currentDistance > attackRange)
+                {
+                    Vector3 direction = vectorToEnemy.normalized;
+                    float moveStep = combatMoveSpeed * Runner.DeltaTime;
+
+                    // TÍNH NĂNG CHỐNG LỐ (Anti-Overshoot): 
+                    // Nếu bước nhảy tiếp theo làm nhân vật đâm xuyên qua ranh giới tầm đánh,
+                    // thì bóp ngắn khoảng cách lướt lại cho vừa chạm mép ranh giới.
+                    if (currentDistance - moveStep < attackRange)
+                    {
+                        moveStep = currentDistance - attackRange;
+                    }
+
+                    controller.Move(direction * moveStep);
+                }
+                else
+                {
+                    // Đã vào đúng tầm chém! Dừng ngay công tắc lướt lại để đứng yên múa kiếm
+                    _moveTowardTimer = 0f;
+                }
+            }
+        }
+    }
+
+    #region Combat Movement (Animation Event Controlled)
+
+    // CÔNG TẮC 1: Xoay thông minh (Có quái thì hút, không quái thì xoay theo phím)
     public void AE_SmartRotate()
     {
-
-        // Priority 1: Rotate to enemy if available
         if (nearestEnemy != null)
         {
-            // Disable root motion when enemy is present (manual rotation)
-            if (animator != null)
+            if (animator != null) animator.applyRootMotion = false; 
+
+            // Tính hướng chuẩn xác và an toàn
+            Vector3 dir = nearestEnemy.position - transform.position;
+            dir.y = 0; // Khóa trục Y
+
+            if (dir.sqrMagnitude > 0.01f)
             {
-                animator.applyRootMotion = false;
+                _targetRotation = dir.normalized;
+                _rotateTimer = smoothRotationDuration; // Bật công tắc xoay về quái
             }
-            AE_RotateToEnemy();
         }
-        // Priority 2: Rotate to movement input if no enemy
         else
         {
-            // Enable root motion when no enemy (for normal attack movement)
-            if (animator != null && useRootMotionWhenNoEnemy)
-            {
-                animator.applyRootMotion = true;
-            }
-            AE_RotateToMovementInput();
+            if (animator != null && useRootMotionWhenNoEnemy) animator.applyRootMotion = true;
+            AE_RotateToMovementInput(); 
         }
     }
 
-    // Animation Event: Rotate to face nearest enemy
-    public void AE_RotateToEnemy()
-    {
-        if (nearestEnemy == null) return;
-
-        Vector3 directionToEnemy = (nearestEnemy.position - transform.position).normalized;
-        directionToEnemy.y = 0; // Keep rotation on horizontal plane
-
-        if (directionToEnemy.magnitude > 0.1f)
-        {
-            // Cancel previous rotation if any
-            if (smoothRotationCoroutine != null)
-            {
-                StopCoroutine(smoothRotationCoroutine);
-            }
-
-            // Start smooth rotation coroutine
-            smoothRotationCoroutine = StartCoroutine(SmoothRotateToEnemy(directionToEnemy));
-        }
-    }
-
-    // Smooth rotation coroutine for better visual effect
-    private System.Collections.IEnumerator SmoothRotateToEnemy(Vector3 directionToEnemy)
-    {
-        Quaternion startRotation = transform.rotation;
-        Quaternion targetRotation = Quaternion.LookRotation(directionToEnemy);
-
-        float elapsed = 0f;
-
-        while (elapsed < smoothRotationDuration)
-        {
-            float progress = elapsed / smoothRotationDuration;
-            // Use smooth step for more natural rotation
-            float smoothProgress = Mathf.SmoothStep(0f, 1f, progress);
-
-            transform.rotation = Quaternion.Slerp(startRotation, targetRotation, smoothProgress);
-
-            elapsed += Time.deltaTime;
-            yield return null;
-        }
-
-        // Ensure final rotation is exact
-        transform.rotation = targetRotation;
-
-        // Clear coroutine reference
-        smoothRotationCoroutine = null;
-    }
-
-    // Animation Event: Move toward enemy during attack
+    // CÔNG TẮC 2: Bước tới chém
     public void AE_MoveTowardEnemy()
     {
-
-        if (nearestEnemy == null || controller == null)
-        {
-            return;
-        }
-
-        // Get current weapon's attack range
+        if (nearestEnemy == null) return;
+        
         float attackRange = GetCurrentWeaponAttackRange();
-        if (attackRange <= 0f) attackRange = autoTargetRadius; // Fallback
-        if (attackRange <= 0f) attackRange = swordAttackRange; // Fallback
-        if (attackRange <= 0f) attackRange = axeAttackRange; // Fallback
-        if (attackRange <= 0f) attackRange = mageAttackRange; // Fallback
-
-        float distanceToEnemy = Vector3.Distance(transform.position, nearestEnemy.position);
-
-        // Only move if enemy is beyond attack range
-        if (distanceToEnemy > attackRange)
+        float dist = Vector3.Distance(transform.position, nearestEnemy.position);
+        
+        if (dist > attackRange)
         {
-            // Stop any existing movement coroutine
-            if (smoothMovementCoroutine != null)
-            {
-                StopCoroutine(smoothMovementCoroutine);
-            }
-
-            // Start smooth movement coroutine
-            smoothMovementCoroutine = StartCoroutine(SmoothMoveTowardEnemy(0.2f));
-        }
-        else
-        {
+            _moveTowardTimer = 0.2f; // BẬT CÔNG TẮC BƯỚC TỚI (0.2 giây)
         }
     }
 
-    // Smooth movement toward enemy over duration
-    private IEnumerator SmoothMoveTowardEnemy(float duration)
+    // Hàm xoay theo phím (Chỉ gọi khi không có quái) - ĐÃ CẬP NHẬT CHUẨN MẠNG
+    public void AE_RotateToMovementInput()
     {
-        if (nearestEnemy == null || controller == null) yield break;
+        if (character == null) return;
 
-        float elapsed = 0f;
-        Vector3 startPosition = transform.position;
+        Vector2 movementInput = character.playerInput.actions["Move"].ReadValue<Vector2>();
 
-        // Calculate target position (stop at attack range)
-        float attackRange = GetCurrentWeaponAttackRange();
-        Vector3 directionToEnemy = (nearestEnemy.position - transform.position).normalized;
-        directionToEnemy.y = 0;
-        Vector3 targetPosition = nearestEnemy.position - (directionToEnemy * attackRange);
-
-        while (elapsed < duration && nearestEnemy != null)
+        if (movementInput.sqrMagnitude > 0.01f)
         {
-            elapsed += Time.deltaTime;
+            Vector3 moveDirection = new Vector3(movementInput.x, 0, movementInput.y);
+            moveDirection = character.cameraTransform.TransformDirection(moveDirection);
+            moveDirection.y = 0; // Khóa Y để không bị xoay ngửa lên trời
 
-            // Check if we've reached attack range
-            float currentDistance = Vector3.Distance(transform.position, nearestEnemy.position);
-            if (currentDistance <= attackRange)
+            if (moveDirection.sqrMagnitude > 0.01f)
             {
-                break;
+                _targetRotation = moveDirection.normalized;
+                _rotateTimer = smoothRotationDuration;
             }
-
-            // Move toward enemy with controlled speed (reuse directionToEnemy variable)
-            directionToEnemy = (nearestEnemy.position - transform.position).normalized;
-            directionToEnemy.y = 0; // Keep on horizontal plane
-
-            Vector3 movement = directionToEnemy * combatMoveSpeed * Time.deltaTime;
-            controller.Move(movement);
-
-            yield return null;
         }
-
-        smoothMovementCoroutine = null;
     }
 
     // Get attack range from current weapon
     private float GetCurrentWeaponAttackRange()
     {
-        if (character == null) return 0f;
-
-        var equipment = character.GetComponent<EquipmentSystem>();
-        if (equipment == null) return 0f;
+        if (character == null || equipment == null) return swordAttackRange;
 
         var weapon = equipment.GetCurrentWeapon();
-        if (weapon == null) return 0f;
+        if (weapon == null) return swordAttackRange;
 
-        // Check if weapon has attack range data
-        // You may need to add attackRange field to WeaponSO
-        // For now, return a default value based on weapon type
         return weapon.weaponType switch
         {
             WeaponType.Sword => swordAttackRange,
@@ -431,29 +423,6 @@ public class EnemyDetection : MonoBehaviour
             WeaponType.Mage => mageAttackRange,
             _ => swordAttackRange
         };
-    }
-
-    // Animation Event: Rotate to movement input direction
-    public void AE_RotateToMovementInput()
-    {
-        if (character == null) return;
-
-        // Get current movement input
-        Vector2 movementInput = character.playerInput.actions["Move"].ReadValue<Vector2>();
-
-        if (movementInput.magnitude > 0.1f)
-        {
-            Vector3 moveDirection = new Vector3(movementInput.x, 0, movementInput.y);
-            moveDirection = character.cameraTransform.TransformDirection(moveDirection);
-            moveDirection.y = 0;
-            moveDirection.Normalize();
-
-            if (moveDirection.magnitude > 0.1f)
-            {
-                Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
-                transform.rotation = targetRotation; // Instant rotation for AE
-            }
-        }
     }
     #endregion
 
@@ -534,7 +503,7 @@ public class EnemyDetection : MonoBehaviour
             directionToEnemy.y = 0;
             if (directionToEnemy.magnitude > 0.1f)
             {
-                transform.rotation = Quaternion.LookRotation(directionToEnemy);
+                character.transform.rotation = Quaternion.LookRotation(directionToEnemy);
             }
         }
     }

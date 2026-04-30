@@ -69,6 +69,19 @@ public abstract class BaseEffectScript : MonoBehaviour
         TakeDamageTest enemy = other.GetComponent<TakeDamageTest>();
         if (enemy == null) enemy = other.GetComponentInParent<TakeDamageTest>();
         if (enemy != null) ProcessHit(enemy);
+
+        // KẾT NỐI VỚI DUMMY MẠNG
+        NetworkHealth netHealth = other.GetComponent<NetworkHealth>();
+        if (netHealth == null) netHealth = other.GetComponentInParent<NetworkHealth>();
+        
+        if (netHealth != null)
+        {
+            UpdateDamageWithGems();
+            int finalDamage = Mathf.RoundToInt(damage);
+
+            // Kỹ năng chạm quái mạng -> Trừ máu
+            netHealth.TakeDamage(finalDamage);
+        }
     }
 
     protected virtual void OnCollisionEnter(Collision collision)
@@ -77,6 +90,19 @@ public abstract class BaseEffectScript : MonoBehaviour
         TakeDamageTest enemy = collision.collider.GetComponent<TakeDamageTest>();
         if (enemy == null) enemy = collision.collider.GetComponentInParent<TakeDamageTest>();
         if (enemy != null) ProcessHit(enemy);
+
+        // KẾT NỐI VỚI DUMMY MẠNG
+        NetworkHealth netHealth = collision.gameObject.GetComponent<NetworkHealth>();
+        if (netHealth == null) netHealth = collision.collider.GetComponentInParent<NetworkHealth>();
+        
+        if (netHealth != null)
+        {
+            UpdateDamageWithGems();
+            int finalDamage = Mathf.RoundToInt(damage);
+
+            // Kỹ năng chạm quái mạng -> Trừ máu
+            netHealth.TakeDamage(finalDamage);
+        }
     }
 
     // ── Core processing ───────────────────────────────────────────────────────

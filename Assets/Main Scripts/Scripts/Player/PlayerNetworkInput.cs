@@ -36,7 +36,7 @@ public class PlayerNetworkInput : NetworkBehaviour
             bool isSprint = playerInput.actions["Sprint"].IsPressed();
             bool isAttack = playerInput.actions["Attack"].triggered;
             bool isToggleWeapon = playerInput.actions["ToggleWeapon"].triggered;
-            // D�NG TR?C TI?P KEYBOARD �? B?T PH�M CHO NHANH V� CH?NG L?I (Bypass Input System)
+            // D�NG TR?C TI?P KEYBOARD �? BẮT PHÍM CHO NHANH VÀ CHỐNG LỖI (Bypass Input System)
             bool isSwordSkillE = Keyboard.current != null && Keyboard.current.eKey.isPressed;
             bool isSwordSkillR = Keyboard.current != null && Keyboard.current.rKey.isPressed;
             bool isSwordSkillT = Keyboard.current != null && Keyboard.current.tKey.isPressed;
@@ -54,10 +54,10 @@ public class PlayerNetworkInput : NetworkBehaviour
             data.buttons.Set(NetworkInputButtons.Skill_Q, isSwordSkillQ);
             
             // --- LOG FLOW ---
-            if (playerInput.actions["Move"].triggered) Debug.Log($"[FLOW INPUT] B?t d?u di chuy?n: {data.movementInput}");
-            if (playerInput.actions["Jump"].triggered) Debug.Log("[FLOW INPUT] Th?c hi?n Nh?y (Jump)");
-            if (isDash) Debug.Log("[FLOW INPUT] Th?c hi?n Lu?t (Dash)");
-            if (isAttack) Debug.Log("[FLOW INPUT] Th?c hi?n ��nh (Attack)");
+            // if (playerInput.actions["Move"].triggered) Debug.Log($"[FLOW INPUT] Bắt đầu di chuyển: {data.movementInput}");
+            // if (playerInput.actions["Jump"].triggered) Debug.Log("[FLOW INPUT] Thực hiện Nhảy (Jump)");
+            // if (isDash) Debug.Log("[FLOW INPUT] Thực hiện Lướt (Dash)");
+            // if (isAttack) Debug.Log("[FLOW INPUT] Thực hiện Đánh (Attack)");
         }
 
         return data;

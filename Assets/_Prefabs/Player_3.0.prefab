@@ -50489,6 +50489,7 @@ MonoBehaviour:
   - {fileID: 5527963292950010670}
   - {fileID: 285859869794557710}
   - {fileID: 3426306601166599555}
+  - {fileID: 1834641077948493616}
   ForceRemoteRenderTimeframe: 0
 --- !u!114 &5495140691655858426
 MonoBehaviour:
@@ -50850,7 +50851,7 @@ Transform:
   m_GameObject: {fileID: 3965546979340072480}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.667, z: 0.08}
+  m_LocalPosition: {x: 0, y: 0.65, z: 0.08}
   m_LocalScale: {x: 0.80000025, y: 0.80000037, z: 0.8000004}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -84936,7 +84937,6 @@ GameObject:
   - component: {fileID: 4293190242617863170}
   - component: {fileID: 6390718960956896405}
   - component: {fileID: 1149101755078166837}
-  - component: {fileID: 1834641077948493616}
   - component: {fileID: 4792827371751194196}
   - component: {fileID: 1451174208957592841}
   - component: {fileID: 8818341064173951405}
@@ -84945,6 +84945,7 @@ GameObject:
   - component: {fileID: 4574784741352068433}
   - component: {fileID: 8743291056284716390}
   - component: {fileID: 6483693973549639778}
+  - component: {fileID: 1834641077948493616}
   m_Layer: 8
   m_Name: player
   m_TagString: Player
@@ -85035,8 +85036,8 @@ MonoBehaviour:
   equipment: {fileID: 9113710843612948326}
   vfxSpawn: {fileID: 7442102893236942789}
   handReference: {fileID: 789048960497740084}
-  characterRoot: {fileID: 4443364280475888411}
-  useInputDirection: 1
+  characterRoot: {fileID: 1245353089643615957}
+  useInputDirection: 0
   vfxLifetime: 1.5
 --- !u!114 &9068402693794656822
 MonoBehaviour:
@@ -85184,41 +85185,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   equipment: {fileID: 9113710843612948326}
   defaultVfxSpawn: {fileID: 5323140124051252252}
-  animator: {fileID: 0}
+  animator: {fileID: 7101454677325079267}
   enemyLayerMask:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 64
   autoAimRange: 15
   comboParam: attack
   comboResetTime: 1.5
---- !u!114 &1834641077948493616
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5966522928997625730}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ffeb11c3b05bc7f468f0cc0da9a4efdd, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  detectionRadius: 10
-  enemyLayer:
-    serializedVersion: 2
-    m_Bits: 576
-  autoTargetRadius: 6
-  detectionUpdateInterval: 0.1
-  cnCamera: {fileID: 0}
-  combatCameraDistance: 9
-  normalCameraDistance: 7
-  cameraTransitionSpeed: 2
-  combatMoveSpeed: 5
-  smoothRotationDuration: 0.3
-  useRootMotionWhenNoEnemy: 1
-  swordAttackRange: 2.7
-  axeAttackRange: 3
-  mageAttackRange: 8
 --- !u!114 &4792827371751194196
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -85443,6 +85416,34 @@ MonoBehaviour:
   color: {r: 1, g: 1, b: 0, a: 1}
   hideDistance: 3
   searchInterval: 1
+--- !u!114 &1834641077948493616
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5966522928997625730}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ffeb11c3b05bc7f468f0cc0da9a4efdd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  detectionRadius: 10
+  enemyLayer:
+    serializedVersion: 2
+    m_Bits: 576
+  autoTargetRadius: 6
+  detectionUpdateInterval: 0.1
+  cnCamera: {fileID: 0}
+  combatCameraDistance: 12
+  normalCameraDistance: 6
+  cameraTransitionSpeed: 3
+  combatMoveSpeed: 5
+  smoothRotationDuration: 0.3
+  useRootMotionWhenNoEnemy: 1
+  swordAttackRange: 2.7
+  axeAttackRange: 3
+  mageAttackRange: 8
 --- !u!1 &6046149470515190070
 GameObject:
   m_ObjectHideFlags: 0

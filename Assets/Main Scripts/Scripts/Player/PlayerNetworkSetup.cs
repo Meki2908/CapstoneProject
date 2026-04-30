@@ -51,6 +51,23 @@ public class PlayerNetworkSetup : NetworkBehaviour
             _spawnedCamera.transform.rotation = target.rotation;
 
             cvc.PreviousStateIsValid = false;
+
+            // KIỂM SOÁT TỐI CAO: Ép Main Camera nhảy thẳng tới vị trí nhân vật ngay lập tức
+            // Tránh việc CinemachineBrain "blend" từ một góc nhìn xa (như gốc toạ độ) tới nhân vật
+            Camera mainCam = Camera.main;
+            if (mainCam != null)
+            {
+                mainCam.transform.position = target.position;
+                mainCam.transform.rotation = target.rotation;
+                
+                var brain = mainCam.GetComponent<CinemachineBrain>();
+                if (brain != null)
+                {
+                    // Mẹo Unity: Tắt/Bật CinemachineBrain sẽ buộc nó reset toàn bộ các hiệu ứng blend đang tính toán
+                    brain.enabled = false;
+                    brain.enabled = true;
+                }
+            }
         }
         else
         {

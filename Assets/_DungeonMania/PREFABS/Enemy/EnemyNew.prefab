@@ -4703,6 +4703,8 @@ GameObject:
   - component: {fileID: 1976825276289276082}
   - component: {fileID: 1939341774609372650}
   - component: {fileID: 1979783443647161851}
+  - component: {fileID: 3875534916962104350}
+  - component: {fileID: 2863503752157664122}
   m_Layer: 0
   m_Name: EnemyNew
   m_TagString: Untagged
@@ -4750,6 +4752,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   pentagram: {fileID: 6229473821784698197}
+  _NetworkedEnemyIndex: -1
   enemys:
   - {fileID: 1981453739218914787}
   - {fileID: 1981453737633395161}
@@ -4804,6 +4807,54 @@ MonoBehaviour:
   skullSound: {fileID: 8300000, guid: c11f0a8d1670c2f48b887c5f046f5aab, type: 3}
   goldSound: {fileID: 8300000, guid: 5aa39cb1b4fa0d847b1c54bf6ffcbe26, type: 3}
   hitSkillAudio: {fileID: 0}
+--- !u!114 &3875534916962104350
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1979783443647161850}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  SortKey: 2227649266
+  ObjectInterest: 1
+  Flags: 262145
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 1939341774609372650}
+  - {fileID: 2863503752157664122}
+  - {fileID: 4382482920575776645}
+  - {fileID: 2598618395471517768}
+  - {fileID: 1236016989435016665}
+  - {fileID: 1335145691378686894}
+  - {fileID: 1926857875272125556}
+  - {fileID: 9075823082147508602}
+  - {fileID: 1288842173575675012}
+  - {fileID: 3818340757877286388}
+  - {fileID: 6833920111012319328}
+  - {fileID: 9200383593638890085}
+  - {fileID: 1234853421690215536}
+  ForceRemoteRenderTimeframe: 0
+--- !u!114 &2863503752157664122
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1979783443647161850}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
 --- !u!1 &1980525484139725894
 GameObject:
   m_ObjectHideFlags: 0
@@ -34108,7 +34159,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1105744175950014511, guid: b7e0655ac6ffc92418e550a06001dd34, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -34125,6 +34176,17 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 1105744175949853711, guid: b7e0655ac6ffc92418e550a06001dd34, type: 3}
   m_PrefabInstance: {fileID: 1452390905191753164}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &4382482920575776645 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2951644644755427913, guid: b7e0655ac6ffc92418e550a06001dd34, type: 3}
+  m_PrefabInstance: {fileID: 1452390905191753164}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1981453739218914787}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 19c1d4ae4a02ff743952d6f5e7c17df8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &1981453737284801951
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -34610,7 +34672,7 @@ MonoBehaviour:
   damageInterval: 2
   enableRaycastDamage: 0
   maxHealth: 100
-  currentHealth: 0
+  _CurrentHealth: 0
   isAlive: 1
   useHealthBar: 0
   bossName: 
@@ -35544,7 +35606,7 @@ MonoBehaviour:
   damageInterval: 2
   enableRaycastDamage: 0
   maxHealth: 100
-  currentHealth: 0
+  _CurrentHealth: 0
   isAlive: 1
   useHealthBar: 0
   bossName: 
@@ -36097,7 +36159,7 @@ MonoBehaviour:
   damageInterval: 2
   enableRaycastDamage: 0
   maxHealth: 100
-  currentHealth: 0
+  _CurrentHealth: 0
   isAlive: 1
   useHealthBar: 0
   bossName: 
@@ -38470,7 +38532,7 @@ MonoBehaviour:
   damageInterval: 2
   enableRaycastDamage: 0
   maxHealth: 200
-  currentHealth: 0
+  _CurrentHealth: 0
   isAlive: 1
   useHealthBar: 0
   bossName: 
@@ -38998,7 +39060,7 @@ MonoBehaviour:
   damageInterval: 2
   enableRaycastDamage: 0
   maxHealth: 100
-  currentHealth: 0
+  _CurrentHealth: 0
   isAlive: 1
   useHealthBar: 0
   bossName: 
@@ -40839,7 +40901,7 @@ MonoBehaviour:
   damageInterval: 2
   enableRaycastDamage: 0
   maxHealth: 200
-  currentHealth: 0
+  _CurrentHealth: 0
   isAlive: 1
   useHealthBar: 0
   bossName: 
@@ -43452,7 +43514,7 @@ MonoBehaviour:
   damageInterval: 2
   enableRaycastDamage: 0
   maxHealth: 200
-  currentHealth: 0
+  _CurrentHealth: 0
   isAlive: 1
   useHealthBar: 0
   bossName: 
@@ -43722,6 +43784,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: f1873437b2d97fe41aa955087047982f, type: 3}
+--- !u!114 &1234853421690215536 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1077076178720830802, guid: f1873437b2d97fe41aa955087047982f, type: 3}
+  m_PrefabInstance: {fileID: 2292789293790652706}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 19c1d4ae4a02ff743952d6f5e7c17df8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1909327859705600764 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 409497873877021662, guid: f1873437b2d97fe41aa955087047982f, type: 3}
@@ -43993,6 +44066,17 @@ MonoBehaviour:
     NearLimit: 5
     FarLimit: 30
     MaxQualityBoost: 0.2
+--- !u!114 &9075823082147508602 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4397696924408593742, guid: 29e3d8521a2be704ca92cfc9151717f5, type: 3}
+  m_PrefabInstance: {fileID: 4680382458678660148}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 19c1d4ae4a02ff743952d6f5e7c17df8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &6963402362154909803
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -45939,3 +46023,14 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4469523544793556960, guid: 83c30fc4cf94ceb4783c197f2c122d3b, type: 3}
   m_PrefabInstance: {fileID: 7945749845679509188}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &9200383593638890085 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1291034746905298081, guid: 83c30fc4cf94ceb4783c197f2c122d3b, type: 3}
+  m_PrefabInstance: {fileID: 7945749845679509188}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 19c1d4ae4a02ff743952d6f5e7c17df8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

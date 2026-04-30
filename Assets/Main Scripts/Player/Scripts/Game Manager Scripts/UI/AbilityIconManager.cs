@@ -93,7 +93,7 @@ public class AbilityIconManager : MonoBehaviour
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         // WeaponController trên player mới — không giữ reference prefab/scene cũ
-        weaponController = Character.LocalCharacter.GetComponentInChildren<WeaponController>();
+        weaponController = Character.LocalCharacter?.GetComponentInChildren<WeaponController>();
         AE_ClearAbilityIcons();
     }
 
