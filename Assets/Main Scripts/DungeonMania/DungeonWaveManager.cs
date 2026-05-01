@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -261,77 +261,32 @@ public class DungeonWaveManager : MonoBehaviour
             Instance = null;
     }
 
-    void Start()
+    IEnumerator Start()
     {
-        // Tìm player TRƯỚC KHI làm gì khác
-        if (player == null)
-        {
-            // Thử tìm bằng tag "Player" trước (project của bạn dùng tag)
-            GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
-            
-            // Nếu không có tag, thử tìm bằng tên "Player" hoặc "player"
-            if (playerObj == null)
-                playerObj = GameObject.Find("Player");
-            if (playerObj == null)
-                playerObj = GameObject.Find("player");
-                
-            if (playerObj != null)
-            {
-                player = playerObj.transform;
-                Debug.Log($"[DungeonWave] Found player: {playerObj.name}");
-            }
-            else
-            {
-                Debug.LogError("[DungeonWave] PLAYER NOT FOUND! Enemy sẽ không tìm được target!");
-            }
-        }
+        Debug.Log("<color=orange>[DungeonWave]</color> Đang chờ DungeonPlayerSpawner đẻ Player...");
 
-        // LOG: Kiểm tra tất cả references
-        Debug.Log($"[DungeonWave] === REFERENCE CHECK ===\n" +
-            $"  player: {(player != null ? player.name : "NULL!")}\n" +
-            $"  enemyNewPrefab: {(enemyNewPrefab != null ? enemyNewPrefab.name : "NULL!")}\n" +
-            $"  waveNotificationUI: {(waveNotificationUI != null ? "OK" : "NULL")}\n" +
-            $"  waveNameText: {(waveNameText != null ? "OK" : "NULL")}\n" +
-            $"  countdownUI: {(countdownUI != null ? "OK" : "NULL")}\n" +
-            $"  countdownText: {(countdownText != null ? "OK" : "NULL")}\n" +
-            $"  statusText: {(statusText != null ? "OK" : "NULL")}");
+        // 1. NGƯNG ĐỌNG THỜI GIAN: Chờ cho đến khi biến player không còn null
+        // (Biến này sẽ được DungeonPlayerSpawner tự động gán vào sau khi đẻ)
+        yield return new WaitUntil(() => player != null);
 
-        // === APPLY BALANCE DATA TỪ DungeonConfig ===
+        Debug.Log($"<color=green>[DungeonWave]</color> Đã nhận được Player: {player.name}. Bắt đầu setup Dungeon!");
+
+        // 2. SETUP CÁC THỨ CÒN LẠI
         ApplyBalanceConfig();
-        
-        // Tính tổng số enemy mỗi wave
         CalculateTotalEnemiesPerWave();
-
-        // THIẾT LẬP CÁC REFERENCES CẦN THIẾT CHO DUNGEONMANIA (SAU KHI TÌM ĐƯỢC PLAYER)
         SetupPlayerReference();
-
-        // ĐẢM BẢO tất cả parent objects của UI đều active (GUI_Dungeon có thể bị tắt mặc định)
         EnsureUIParentsActive();
-
-        // XÓA CursorUiOverlayWhenActive khỏi các panel gameplay-only (wave notification,
-        // countdown, status, waveFrame, complete/failed). Các panel này KHÔNG cần hiện
-        // cursor — chúng chỉ hiển thị thông tin. Nếu để nguyên, ShowCountdown/ShowWaveNotification
-        // gọi SetActive(true) → OnEnable() → BeginUiOverlay() → cursor hiện → CN IAC bị tắt.
         StripCursorOverlayFromGameplayPanels();
 
-        // Đảm bảo ItemPickupNotification tồn tại cho item drops (Genshin-style notification)
         if (ItemPickupNotification.Instance == null)
         {
             var notifGO = new GameObject("ItemPickupNotification");
             notifGO.AddComponent<ItemPickupNotification>();
-            Debug.Log("[DungeonWave] Created ItemPickupNotification singleton");
         }
 
-        // Ẩn tất cả UI
         HideAllUI();
-
-        // Reset toàn bộ cursor priority stack — EnsureUIParentsActive() có thể đã
-        // kích hoạt OnEnable() của CursorUiOverlayWhenActive trên các parent objects,
-        // làm CursorUIPriority._depth bị dương. Vì HideAllUI() chỉ tắt các panel con
-        // (không tắt parent), stack cần được reset thủ công ở đây.
         CursorUIPriority.EndAllUiOverlays();
 
-        // Reset reward tracking cho dungeon mới
         if (DungeonRewardUI.Instance != null)
         {
             DungeonRewardUI.Instance.ClearTrackedItems();
@@ -1304,6 +1259,9 @@ public class DungeonWaveManager : MonoBehaviour
     /// Spawn 1 enemy từ EnemyNew prefab
     /// FIX: Không dùng static event broadcast nữa — gọi trực tiếp trên instance
     /// </summary>
+    /// <summary>
+    /// Spawn 1 enemy từ EnemyNew prefab (ĐÃ NÂNG CẤP CHUẨN FUSION v2)
+    /// </summary>
     private bool SpawnEnemyFromEnemyNew()
     {
         if (enemyNewPrefab == null || player == null)
@@ -1312,10 +1270,21 @@ public class DungeonWaveManager : MonoBehaviour
             return false;
         }
 
+        // Tìm NetworkRunner hiện tại
+        var runner = FindFirstObjectByType<Fusion.NetworkRunner>();
+        if (runner == null || !runner.IsServer)
+        {
+            Debug.LogWarning("[DungeonWave] Lỗi: Không tìm thấy NetworkRunner hoặc bạn không phải Server!");
+            return false;
+        }
+
         Vector3 spawnPos = GetRandomSpawnPosition();
 
-        // Instantiate EnemyNew
-        GameObject enemy = Instantiate(enemyNewPrefab, spawnPos, Quaternion.identity);
+        // [QUAN TRỌNG NHẤT]: Dùng runner.Spawn thay vì Instantiate
+        Fusion.NetworkObject enemyNetObj = runner.Spawn(enemyNewPrefab, spawnPos, Quaternion.identity, null);
+        
+        if (enemyNetObj == null) return false;
+        GameObject enemy = enemyNetObj.gameObject;
         
         // === QUAN TRỌNG: Tắt tất cả enemy con trong prefab ===
         DisableAllChildEnemies(enemy);
@@ -1327,33 +1296,29 @@ public class DungeonWaveManager : MonoBehaviour
         EnemyWaveTracker tracker = enemy.AddComponent<EnemyWaveTracker>();
         tracker.waveManager = this;
         
-        // === FIX: GỌI TRỰC TIẾP trên instance, KHÔNG broadcast static event ===
-        // Static event EnemyEvent.EnemyEventSystem(0/2) sẽ fire trên TẤT CẢ enemy đã subscribe
-        // Điều này khiến enemy trước đó bị re-trigger Enable() → reset vị trí, animation
+        // Gọi Enable trực tiếp trên instance này
         RandomEnemy randomEnemy = enemy.GetComponent<RandomEnemy>();
         if (randomEnemy != null)
         {
-            // Gọi Enable trực tiếp trên instance này (không broadcast)
             randomEnemy.EnableDirect();
         }
 
         // SAU KHI enemy bên trong đã được kích hoạt
-        // Thêm EnemyDeathBridge vào enemy bên TRONG (không phải EnemyNew parent)
         AddEnemyDeathBridgeToActiveEnemy(enemy);
 
-        // === Set player target + Start Chase trực tiếp cho enemy ===
+        // Set player target + Start Chase
         SetPlayerTargetAndChaseForActiveEnemy(enemy);
 
-        // === APPLY DIFFICULTY STATS cho enemy vừa spawn ===
+        // APPLY DIFFICULTY STATS
         ApplyDifficultyStats(enemy);
 
-        // === BOSS HEALTH BAR — hiện thanh máu boss ===
+        // BOSS HEALTH BAR
         ShowBossHealthBarIfNeeded(enemy);
 
         if (DungeonOSTManager.Instance != null)
             DungeonOSTManager.Instance.ScheduleBossPresenceCheckForSpawnedRoot(enemy);
 
-        Debug.Log($"[DungeonWave] Spawned EnemyNew at {spawnPos} - AI activated (direct call)");
+        Debug.Log($"<color=green>[DungeonWave]</color> Đã Spawn Network Enemy tại {spawnPos}");
         return true;
     }
 
@@ -1907,7 +1872,7 @@ public class DungeonWaveManager : MonoBehaviour
         CursorUIPriority.BeginUiOverlay();
 
         // FREEZE GAME — quái dừng tấn công, animation dừng
-        Time.timeScale = 0f;
+
 
         // Cursor được xử lý bởi CursorUIPriority.BeginUiOverlay() ở trên
         GameCursorManager.TryApplyNormalCursorTextureFromScene();
@@ -1945,7 +1910,7 @@ public class DungeonWaveManager : MonoBehaviour
         CursorUIPriority.BeginUiOverlay();
 
         // FREEZE GAME — quái dừng tấn công, animation dừng
-        Time.timeScale = 0f;
+
 
         // Cursor được xử lý bởi CursorUIPriority.BeginUiOverlay() ở trên
         GameCursorManager.TryApplyNormalCursorTextureFromScene();

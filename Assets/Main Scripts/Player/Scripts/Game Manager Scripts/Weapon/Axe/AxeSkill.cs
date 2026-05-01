@@ -47,42 +47,40 @@ public class AxeSkill : MonoBehaviour
     public void SetForwardAnchor(Transform t) { forwardAnchor = t; }
     public void SetDefaultVfxSpawn(Transform t) { defaultVfxSpawn = t; }
 
-    private void OnEnable()
+    private void Start()
     {
-        RebuildAbilityMap();
-
         var wc = GetComponent<WeaponController>();
         if (wc != null)
         {
-            wc.OnWeaponChanged -= OnWeaponChangedHandler;
+            // Lắng nghe sự kiện đổi vũ khí
             wc.OnWeaponChanged += OnWeaponChangedHandler;
         }
 
-        RefreshActiveForCurrentWeapon(); // NEW
+        RebuildAbilityMap();
+        RefreshActiveForCurrentWeapon();
+    }
+
+    private void OnDestroy()
+    {
+        // Gỡ lắng nghe khi script bị hủy
+        var wc = GetComponent<WeaponController>();
+        if (wc != null) wc.OnWeaponChanged -= OnWeaponChangedHandler;
+
+        CancelSkill();
     }
 
     private void OnWeaponChangedHandler(WeaponSO so)
     {
         RebuildAbilityMap();
-        RefreshActiveForCurrentWeapon(); // NEW
+        RefreshActiveForCurrentWeapon();
     }
 
-    private void RefreshActiveForCurrentWeapon() // NEW
+    private void RefreshActiveForCurrentWeapon()
     {
         var w = equipment != null ? equipment.GetCurrentWeapon() : null;
-        // Bật script chỉ khi đang cầm Axe
-        enabled = (w != null && w.weaponType == WeaponType.Axe);
+        // FIX: Không tự disable script nữa để hàm Update (Failsafe) luôn được chạy!
+        // enabled = (w != null && w.weaponType == WeaponType.Axe);
     }
-
-    private void OnDisable()
-    {
-        var wc = GetComponent<WeaponController>();
-        if (wc != null) wc.OnWeaponChanged -= OnWeaponChangedHandler;
-
-        // Cancel ultimate timeline if playing (e.g. scene transition)
-        CancelSkill();
-    }
-
     public void RebuildAbilityMap()
     {
         abilityMap.Clear();

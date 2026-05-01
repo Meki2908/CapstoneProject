@@ -103,7 +103,8 @@ public class DashState : State
         if (elapsedTime >= character.dashDuration)
         {
             // Chuy?n v? tr?ng thái d?ng yên
-            stateMachine.ChangeState(character.standing);
+            State nextState = character.currentLocomotionState != null ? character.currentLocomotionState : character.standing;
+            stateMachine.ChangeState(nextState);
         }
     }
 

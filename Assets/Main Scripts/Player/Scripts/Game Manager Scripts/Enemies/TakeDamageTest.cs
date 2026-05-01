@@ -83,7 +83,7 @@ public class TakeDamageTest : NetworkBehaviour
 
     void Start()
     {
-        // Initialize health
+// Initialize health
         CurrentHealth = maxHealth;
         isAlive = true;
 

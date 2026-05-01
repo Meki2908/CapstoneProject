@@ -13792,7 +13792,7 @@ ParticleSystem:
     radiusScale: 1
     collidesWith:
       serializedVersion: 2
-      m_Bits: 64
+      m_Bits: 512
     maxCollisionShapes: 256
     quality: 0
     voxelSize: 0.5
@@ -14853,7 +14853,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   damage: 200
   debugMode: 0
+  damageInterval: 0.5
+  maxHitsPerEnemy: 2
   thrownAwayForce: 5
+  throwDuration: 0.25
+  throwLiftHeight: 0.2
 --- !u!1 &1498669351088472
 GameObject:
   m_ObjectHideFlags: 0
@@ -14865,7 +14869,6 @@ GameObject:
   - component: {fileID: 4245754740409124}
   - component: {fileID: 198125505626300548}
   - component: {fileID: 199466927122764318}
-  - component: {fileID: 7375044888147607541}
   m_Layer: 13
   m_Name: Slash
   m_TagString: Untagged
@@ -19767,21 +19770,6 @@ ParticleSystemRenderer:
   m_MeshWeighting2: 1
   m_MeshWeighting3: 1
   m_MaskInteraction: 0
---- !u!114 &7375044888147607541
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1498669351088472}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 477b2aa446724bfe84ff0faa74eea1e6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  damage: 50
-  debugMode: 0
-  impactAudioSource: {fileID: 0}
 --- !u!1 &1968206364353110
 GameObject:
   m_ObjectHideFlags: 0

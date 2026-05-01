@@ -48130,7 +48130,7 @@ ParticleSystem:
     radiusScale: 2
     collidesWith:
       serializedVersion: 2
-      m_Bits: 64
+      m_Bits: 512
     maxCollisionShapes: 256
     quality: 0
     voxelSize: 0.5
@@ -49191,6 +49191,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   damage: 70
   debugMode: 0
+  damageInterval: 0.5
+  maxHitsPerEnemy: 1
   knockupHeight: 3
   horizontalPush: 0
   riseDuration: 0.5

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Playables;
@@ -7,7 +7,7 @@ public class MageSkills : MonoBehaviour
 {
     [Header("Refs")]
     [SerializeField] private EquipmentSystem equipment;
-    [SerializeField] private Transform defaultVfxSpawn;     // vị trí spawn VFX mặc định (hand)
+    [SerializeField] private Transform defaultVfxSpawn;     // v? tr� spawn VFX m?c d?nh (hand)
     [SerializeField] private Animator animator;
     [SerializeField] private PlayableDirector ultimateDirector;  // Timeline for Q (optional)
 
@@ -18,8 +18,8 @@ public class MageSkills : MonoBehaviour
     [SerializeField] private string skillStateTag = "MageSkill";
 
     [Header("Mage-Specific")]
-    [SerializeField] private Transform weaponSummonPoint;    // điểm summon weapon từ xa
-    [SerializeField] private Transform weaponSheathPoint;    // điểm ném weapon ra sau
+    [SerializeField] private Transform weaponSummonPoint;    // di?m summon weapon t? xa
+    [SerializeField] private Transform weaponSheathPoint;    // di?m n�m weapon ra sau
     [SerializeField] private MageNormalAttack normalAttack;  // normal attack system
     [SerializeField] private Transform forwardAnchor;
     [SerializeField] private bool useInputDirection = false;
@@ -55,20 +55,20 @@ public class MageSkills : MonoBehaviour
 
     private void Start()
     {
-        // Lắng nghe sự kiện đổi vũ khí từ khi bắt đầu game
+        // L?ng nghe s? ki?n d?i vu kh� t? khi b?t d?u game
         var wc = GetComponent<WeaponController>();
         if (wc != null)
         {
             wc.OnWeaponChanged += OnWeaponChangedHandler;
         }
 
-        // Cập nhật trạng thái bật/tắt lần đầu tiên
+        // C?p nh?t tr?ng th�i b?t/t?t l?n d?u ti�n
         RefreshActiveForCurrentWeapon();
     }
 
     private void OnDestroy()
     {
-        // Chỉ hủy lắng nghe khi cục Player này hoàn toàn bị xóa khỏi map
+        // Ch? h?y l?ng nghe khi c?c Player n�y ho�n to�n b? x�a kh?i map
         var wc = GetComponent<WeaponController>();
         if (wc != null) wc.OnWeaponChanged -= OnWeaponChangedHandler;
     }
@@ -100,11 +100,12 @@ public class MageSkills : MonoBehaviour
         RefreshActiveForCurrentWeapon(); // NEW
     }
 
-    // NEW: chỉ bật script khi đang cầm vũ khí Mage
+    // NEW: ch? b?t script khi dang c?m vu kh� Mage
     private void RefreshActiveForCurrentWeapon()
     {
         var w = equipment != null ? equipment.GetCurrentWeapon() : null;
-        enabled = (w != null && w.weaponType == WeaponType.Mage);
+        // FIX: Kh�ng t? disable script n?a d? h�m Update (Failsafe) lu�n du?c ch?y!
+        // enabled = (w != null && w.weaponType == WeaponType.Mage);
     }
 
     public void RebuildAbilityMap()
@@ -126,12 +127,12 @@ public class MageSkills : MonoBehaviour
 
     private void Update()
     {
-        // CH? L�M NHI?M V? C?U H?, TUY?T �?I KH�NG NH?N INPUT ? ��Y
+        // CH? L?M NHI?M V? C?U H?, TUY?T ??I KH?NG NH?N INPUT ? ??Y
         if (skillLock != null && skillLock.isPerformingSkill)
         {
             if (Time.time > skillLockExpireAt)
             {
-                Debug.LogWarning($"<color=red>[Failsafe]</color> Ph� v? kh�a Skill do k?t qu� {maxSkillLockSeconds} gi�y!");
+                Debug.LogWarning($"<color=red>[Failsafe]</color> Ph? v? kh?a Skill do k?t qu? {maxSkillLockSeconds} gi?y!");
                 skillLock.EndSkillRootMotion(animator);
                 
                 if (ultimateDirector != null && ultimateDirector.state == PlayState.Playing)
@@ -152,25 +153,25 @@ public class MageSkills : MonoBehaviour
         
         if (weapon == null || weapon.weaponType != WeaponType.Mage || !drawn)
         {
-            Debug.Log($"<color=orange>[MageSkills]</color> X?t: Sai vu kh� ho?c chua r�t G?y Ph�p!");
+            Debug.Log($"<color=orange>[MageSkills]</color> X?t: Sai vu kh? ho?c chua r?t G?y Ph?p!");
             return;
         }
 
         if (!abilityMap.TryGetValue(input, out var ability)) 
         {
-            Debug.Log($"<color=red>[MageSkills]</color> X?t: Kh�ng t�m th?y Data c?a n�t {input} trong WeaponSO!");
+            Debug.Log($"<color=red>[MageSkills]</color> X?t: Kh?ng t?m th?y Data c?a n?t {input} trong WeaponSO!");
             return;
         }
 
         if (WeaponMasteryManager.Instance != null && !WeaponMasteryManager.Instance.IsSkillUnlocked(WeaponType.Mage, input))
         {
-            Debug.Log($"<color=yellow>[MageSkills]</color> Skill {input} b? kh�a do chua d? Mastery!");
+            Debug.Log($"<color=yellow>[MageSkills]</color> Skill {input} b? kh?a do chua d? Mastery!");
             return;
         }
 
         if (AbilityIconManager.Instance != null && AbilityIconManager.Instance.IsOnCooldown(input))
         {
-            Debug.Log($"<color=grey>[MageSkills]</color> Skill {input} dang trong th?i gian h?i chi�u!");
+            Debug.Log($"<color=grey>[MageSkills]</color> Skill {input} dang trong th?i gian h?i chi?u!");
             return;
         }
 
@@ -178,7 +179,7 @@ public class MageSkills : MonoBehaviour
         animator.SetInteger(skillIndexParam, idx);
         animator.SetTrigger(skillTriggerParam);
         
-        Debug.Log($"<color=cyan>[MageSkills]</color> K�ch ho?t TH�NH C�NG Skill {input}!");
+        Debug.Log($"<color=cyan>[MageSkills]</color> K?ch ho?t TH?NH C?NG Skill {input}!");
 
         if (skillLock != null) skillLock.BeginSkillRootMotion(animator);
         skillLockExpireAt = Time.time + maxSkillLockSeconds;
@@ -188,13 +189,13 @@ public class MageSkills : MonoBehaviour
 
     public void AE_PlaySkillVFXByEvent(int eventIndex)
     {
-        // Guard-1: đúng weapon type
+        // Guard-1: d�ng weapon type
         var wc = GetComponent<WeaponController>();
         var weapon = wc != null ? wc.GetCurrentWeapon() : null;
         if (weapon == null || weapon.weaponType != WeaponType.Mage) return;
         Debug.Log($"[MageSkills.AE_PlaySkillVFXByEvent] weapon={weapon.weaponName}, typeOK={(weapon != null && weapon.weaponType == WeaponType.Mage)}");
 
-        // Guard-2: đúng animator state/tag/layer của Mage
+        // Guard-2: d�ng animator state/tag/layer c?a Mage
         if (!IsInSkillState()) return;
         Debug.Log($"[MageSkills.AE_PlaySkillVFXByEvent] isInSkillState={IsInSkillState()}");
         if (!animator) return;
@@ -233,13 +234,13 @@ public class MageSkills : MonoBehaviour
         // Handle follow vs world space based on ability flag
         if (ability.isFollowPlayer)
         {
-            // Attach FollowPlayer component để follow player
+            // Attach FollowPlayer component d? follow player
             var follow = v.GetComponent<FollowPlayer>();
             if (follow == null) follow = v.AddComponent<FollowPlayer>();
             follow.offset = ev.spawnRule.localOffset; // Use spawn offset as follow offset
-            // ShieldActivate trên prefab tự quản lý NavMeshObstacle + chặn damage
+            // ShieldActivate tr�n prefab t? qu?n l� NavMeshObstacle + ch?n damage
 
-            // Destroy sau duration (ShieldActivate.OnDestroy sẽ reset IsShieldActive)
+            // Destroy sau duration (ShieldActivate.OnDestroy s? reset IsShieldActive)
             float life = ability.vfxDuration > 0 ? ability.vfxDuration : vfxDuration;
             if (usePool) ScheduleReturnToUltimatePool(prefab as GameObject, v, life);
             else Destroy(v, life);
@@ -261,13 +262,13 @@ public class MageSkills : MonoBehaviour
         }
     }
 
-    // NEW: overload không tham số – an toàn cho clip cũ gọi AE_PlaySkillVFXByEvent()
+    // NEW: overload kh�ng tham s? � an to�n cho clip cu g?i AE_PlaySkillVFXByEvent()
     public void AE_PlaySkillVFXByEvent()
     {
         AE_PlaySkillVFXByEvent(0);
     }
 
-    // NEW: Check state theo layer/tag để AE chỉ chạy đúng lúc
+    // NEW: Check state theo layer/tag d? AE ch? ch?y d�ng l�c
     private bool IsInSkillState()
     {
         if (!animator) return false;
@@ -314,9 +315,9 @@ public class MageSkills : MonoBehaviour
         return fwd.normalized;
     }
 
-    // ===================== Mage-Specific Logic (public để WeaponController gọi) =====================
+    // ===================== Mage-Specific Logic (public d? WeaponController g?i) =====================
 
-    // THÊM: Overload với callback cho async complete
+    // TH�M: Overload v?i callback cho async complete
     public void SummonWeapon(System.Action<GameObject> onComplete = null)
     {
         var weapon = equipment?.GetCurrentWeapon();
@@ -340,11 +341,11 @@ public class MageSkills : MonoBehaviour
             ApplySocket(currentWeapon.transform, weapon.handSocket);
             // isSheathing = false; // Variable removed
 
-            onComplete?.Invoke(currentWeapon); // THÊM: Callback return instance
+            onComplete?.Invoke(currentWeapon); // TH�M: Callback return instance
         }));
     }
 
-    // THÊM: Overload với callback cho async complete
+    // TH�M: Overload v?i callback cho async complete
     public void SheathWeapon(System.Action onComplete = null)
     {
         if (currentWeapon == null)
@@ -377,7 +378,7 @@ public class MageSkills : MonoBehaviour
         {
             Destroy(currentWeapon);
             currentWeapon = null;
-            onComplete?.Invoke(); // THÊM: Callback khi hoàn tất
+            onComplete?.Invoke(); // TH�M: Callback khi ho�n t?t
         }));
     }
 

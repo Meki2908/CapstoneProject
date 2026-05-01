@@ -1,12 +1,10 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.UI;
-using TMPro;
+using Fusion; // 1. BẮT BUỘC THÊM THƯ VIỆN NÀY
 
 /// <summary>
-/// Portal chuyển scene (Phiên bản cải tiến)
-/// Khi player lại gần -> Hiện Canvas chọn Scene.
-/// Các nút trên Canvas sẽ gọi hàm LoadSelectedScene() để chuyển vùng.
+/// Portal chuyển scene (Phiên bản chuẩn mạng Fusion)
 /// </summary>
 public class ScenePortal : MonoBehaviour
 {
@@ -28,18 +26,9 @@ public class ScenePortal : MonoBehaviour
 
     void Start()
     {
-        // Ẩn Canvas lúc đầu
-        if (portalCanvas != null)
-        {
-            portalCanvas.SetActive(false);
-        }
+        if (portalCanvas != null) portalCanvas.SetActive(false);
+        if (portalEffect != null) portalEffect.Play();
 
-        if (portalEffect != null)
-        {
-            portalEffect.Play();
-        }
-
-        // Tự động thiết lập Trigger nếu chưa có
         Collider col = GetComponent<Collider>();
         if (col != null) col.isTrigger = true;
     }
@@ -68,12 +57,6 @@ public class ScenePortal : MonoBehaviour
         {
             CursorUIPriority.BeginUiOverlay();
             portalCanvas.SetActive(true);
-            
-            // Cursor được xử lý bởi CursorUIPriority.BeginUiOverlay() ở trên
-        }
-        else
-        {
-            Debug.LogWarning("[ScenePortal] Chưa gán portalCanvas trong Inspector!");
         }
     }
 
@@ -86,17 +69,13 @@ public class ScenePortal : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Hàm này để gán vào OnClick() của các Button trên Canvas.
-    /// Truyền tên Scene vào tham số của hàm trong Inspector.
-    /// </summary>
     public void LoadSelectedScene(string sceneName)
     {
-        Debug.Log($"[ScenePortal] Đang chuyển đến Scene: {sceneName}");
+        Debug.Log($"[ScenePortal] Đang chuyển đến Scene: {sceneName} bằng hệ thống Mạng!");
         
         if (Application.CanStreamedLevelBeLoaded(sceneName))
         {
-            Time.timeScale = 1f; // Đảm bảo game không bị pause khi chuyển
+            Time.timeScale = 1f; 
             StartCoroutine(TeleportRoutine(sceneName));
         }
         else
@@ -105,18 +84,36 @@ public class ScenePortal : MonoBehaviour
         }
     }
 
-    private System.Collections.IEnumerator TeleportRoutine(string sceneName)
+    private IEnumerator TeleportRoutine(string sceneName)
     {
-        if (SceneTransitionManager.Instance != null)
+        // 1. Ẩn UI Cổng
+        ClosePortalUI();
+
+        // 2. Tạm thời Delay để màn hình/UI có thời gian phản hồi
+        // LƯU Ý: Tạm thời chúng ta KHÔNG gọi SceneTransitionManager.Instance.GoToScene nữa 
+        // vì nó dùng SceneManager thuần gây đứt mạng. (Chúng ta sẽ sửa nó sau nếu cần thiết)
+        yield return new WaitForSeconds(teleportDelay);
+
+        // 3. TÌM TRÁI TIM MẠNG (NETWORK RUNNER)
+        NetworkRunner runner = FindFirstObjectByType<NetworkRunner>();
+
+        if (runner != null && runner.IsServer) // Singleplayer luôn là Server
         {
-            // Ẩn portal UI trước khi chuyển
-            ClosePortalUI();
-            // SceneTransitionManager tự có fade → không cần delay thêm
-            SceneTransitionManager.Instance.GoToScene(sceneName, "Đang chuyển vùng...");
+            // Lấy mã số của Scene (Build Index) dựa vào tên Scene
+            int buildIndex = SceneUtility.GetBuildIndexByScenePath(sceneName);
+            if (buildIndex >= 0)
+            {
+                // LỆNH CHUYỂN SCENE CHUẨN FUSION
+                runner.LoadScene(SceneRef.FromIndex(buildIndex)); 
+            }
+            else
+            {
+                Debug.LogError($"[ScenePortal] Không tìm thấy Build Index cho Scene: {sceneName}");
+            }
         }
         else
         {
-            yield return new WaitForSeconds(teleportDelay);
+            // FALLBACK: Đề phòng lúc bạn dev test Offline chay không bật Fusion
             SceneManager.LoadScene(sceneName);
         }
     }

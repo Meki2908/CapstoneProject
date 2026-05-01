@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 3040785727729074503}
   - component: {fileID: 997544894451840397}
   - component: {fileID: 3753922943430002576}
-  m_Layer: 0
+  m_Layer: 20
   m_Name: Void sword
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -117,7 +117,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3963212640385939410}
-  m_Layer: 0
+  m_Layer: 20
   m_Name: Aura
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -150,7 +150,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7242655243165382114}
   - component: {fileID: 3292458453341752517}
-  m_Layer: 0
+  m_Layer: 20
   m_Name: DmgDealer
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -189,7 +189,7 @@ MonoBehaviour:
   hitRadius: 0.5
   targetLayer:
     serializedVersion: 2
-    m_Bits: 64
+    m_Bits: 512
   hitAudioSource: {fileID: 0}
   debugDamage: 0
 --- !u!1001 &1392282344995459655
@@ -200,18 +200,34 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 3963212640385939410}
     m_Modifications:
+    - target: {fileID: 1492397577271802437, guid: 158e426725463794cae0a836b2491d0b, type: 3}
+      propertyPath: m_Layer
+      value: 20
+      objectReference: {fileID: 0}
     - target: {fileID: 1492397577271802456, guid: 158e426725463794cae0a836b2491d0b, type: 3}
       propertyPath: ShapeModule.m_MeshRenderer
       value: 
       objectReference: {fileID: 997544894451840397}
+    - target: {fileID: 1492397577603916660, guid: 158e426725463794cae0a836b2491d0b, type: 3}
+      propertyPath: m_Layer
+      value: 20
+      objectReference: {fileID: 0}
     - target: {fileID: 1492397577603916663, guid: 158e426725463794cae0a836b2491d0b, type: 3}
       propertyPath: ShapeModule.m_MeshRenderer
       value: 
       objectReference: {fileID: 997544894451840397}
+    - target: {fileID: 1492397577755101363, guid: 158e426725463794cae0a836b2491d0b, type: 3}
+      propertyPath: m_Layer
+      value: 20
+      objectReference: {fileID: 0}
     - target: {fileID: 1492397577755101366, guid: 158e426725463794cae0a836b2491d0b, type: 3}
       propertyPath: ShapeModule.m_MeshRenderer
       value: 
       objectReference: {fileID: 997544894451840397}
+    - target: {fileID: 1492397578118093335, guid: 158e426725463794cae0a836b2491d0b, type: 3}
+      propertyPath: m_Layer
+      value: 20
+      objectReference: {fileID: 0}
     - target: {fileID: 1492397578118093354, guid: 158e426725463794cae0a836b2491d0b, type: 3}
       propertyPath: ShapeModule.m_MeshRenderer
       value: 
@@ -220,9 +236,17 @@ PrefabInstance:
       propertyPath: ShapeModule.m_MeshRenderer
       value: 
       objectReference: {fileID: 997544894451840397}
+    - target: {fileID: 1492397578550410959, guid: 158e426725463794cae0a836b2491d0b, type: 3}
+      propertyPath: m_Layer
+      value: 20
+      objectReference: {fileID: 0}
     - target: {fileID: 6098213378169517917, guid: 158e426725463794cae0a836b2491d0b, type: 3}
       propertyPath: m_Name
       value: Dark Lvl 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 6098213378169517917, guid: 158e426725463794cae0a836b2491d0b, type: 3}
+      propertyPath: m_Layer
+      value: 20
       objectReference: {fileID: 0}
     - target: {fileID: 6911587736581598695, guid: 158e426725463794cae0a836b2491d0b, type: 3}
       propertyPath: m_LocalPosition.x

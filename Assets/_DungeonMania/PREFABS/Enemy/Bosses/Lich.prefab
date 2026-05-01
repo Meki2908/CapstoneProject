@@ -11,13 +11,13 @@ GameObject:
   - component: {fileID: 6089846374273038610}
   - component: {fileID: 2340634980751190764}
   - component: {fileID: 1847362910573826492}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Lich
   m_TagString: Boss
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &6089846374273038610
 Transform:
   m_ObjectHideFlags: 0
@@ -174,7 +174,8 @@ GameObject:
   - component: {fileID: 4018330613180946268}
   - component: {fileID: 689069011058378327}
   - component: {fileID: 8459342611833107982}
-  m_Layer: 0
+  - component: {fileID: 3725371425009335272}
+  m_Layer: 6
   m_Name: Pre-spawn camera
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -274,6 +275,45 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &3725371425009335272
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1775404536997310882}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dbe43d662878a7c43bcd44d43c9e2094, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  CollideAgainst:
+    serializedVersion: 2
+    m_Bits: 8
+  IgnoreTag: 
+  TransparentLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  MinimumDistanceFromTarget: 0.3
+  AvoidObstacles:
+    Enabled: 1
+    DistanceLimit: 0
+    MinimumOcclusionTime: 0
+    CameraRadius: 0.4
+    UseFollowTarget:
+      Enabled: 0
+      YOffset: 0
+    Strategy: 0
+    MaximumEffort: 4
+    SmoothingTime: 0
+    Damping: 0.4
+    DampingWhenOccluded: 0.2
+  ShotQualityEvaluation:
+    Enabled: 0
+    OptimalDistance: 10
+    NearLimit: 5
+    FarLimit: 30
+    MaxQualityBoost: 0.2
 --- !u!1 &1862391086246546284
 GameObject:
   m_ObjectHideFlags: 0
@@ -284,7 +324,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1715948072569811981}
   - component: {fileID: 7771434071882487585}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Spline
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -396,7 +436,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5009755888168703819}
   - component: {fileID: 2377336411741847633}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Timeline holder
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -474,7 +514,8 @@ GameObject:
   - component: {fileID: 6444625148412083947}
   - component: {fileID: 146778931187409673}
   - component: {fileID: 2586560806810876968}
-  m_Layer: 0
+  - component: {fileID: 4588930082882310811}
+  m_Layer: 6
   m_Name: Lich finale camera
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -608,6 +649,45 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   LookAtOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &4588930082882310811
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4197033928682822385}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dbe43d662878a7c43bcd44d43c9e2094, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  CollideAgainst:
+    serializedVersion: 2
+    m_Bits: 8
+  IgnoreTag: 
+  TransparentLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  MinimumDistanceFromTarget: 0.3
+  AvoidObstacles:
+    Enabled: 1
+    DistanceLimit: 0
+    MinimumOcclusionTime: 0
+    CameraRadius: 0.4
+    UseFollowTarget:
+      Enabled: 0
+      YOffset: 0
+    Strategy: 0
+    MaximumEffort: 4
+    SmoothingTime: 0
+    Damping: 0.4
+    DampingWhenOccluded: 0.2
+  ShotQualityEvaluation:
+    Enabled: 0
+    OptimalDistance: 10
+    NearLimit: 5
+    FarLimit: 30
+    MaxQualityBoost: 0.2
 --- !u!1 &6596514105449347084
 GameObject:
   m_ObjectHideFlags: 0
@@ -5588,7 +5668,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1906630584951256985}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: LookPoint
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -5618,6 +5698,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 6089846374273038610}
     m_Modifications:
+    - target: {fileID: 598700046604129598, guid: f9d9793366789ae48a7e1b0692763acc, type: 3}
+      propertyPath: m_Layer
+      value: 6
+      objectReference: {fileID: 0}
     - target: {fileID: 2003628781529242846, guid: f9d9793366789ae48a7e1b0692763acc, type: 3}
       propertyPath: randomSeed
       value: 4668
@@ -5689,6 +5773,10 @@ PrefabInstance:
     - target: {fileID: 6526302276393259002, guid: f9d9793366789ae48a7e1b0692763acc, type: 3}
       propertyPath: m_Name
       value: Smoke vortex
+      objectReference: {fileID: 0}
+    - target: {fileID: 6526302276393259002, guid: f9d9793366789ae48a7e1b0692763acc, type: 3}
+      propertyPath: m_Layer
+      value: 6
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -6380,7 +6468,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 100086, guid: 2579ec83d296f564381920e405d36f54, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 100088, guid: 2579ec83d296f564381920e405d36f54, type: 3}
       propertyPath: m_Layer
@@ -7830,6 +7918,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 100082, guid: 2579ec83d296f564381920e405d36f54, type: 3}
       insertIndex: -1
       addedObject: {fileID: 5748555227496620702}
+    - targetCorrespondingSourceObject: {fileID: 100086, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3879513559348616872}
   m_SourcePrefab: {fileID: 100100000, guid: 2579ec83d296f564381920e405d36f54, type: 3}
 --- !u!1 &6596514106577753363 stripped
 GameObject:
@@ -7897,6 +7988,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   distance: 0
   isStop: 0
+  isCastingSkill: 0
+  skillCastDirection: {x: 0, y: 0, z: 0}
 --- !u!195 &6596514106888298920
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -7936,7 +8029,7 @@ MonoBehaviour:
   delay: 0
   wait: 0
   alive: 0
-  enemyName: Ignazar
+  enemyName: Malachar
   attackDamage: 50
   armorValue: 5
   magicValue: 290
@@ -7944,8 +8037,11 @@ MonoBehaviour:
   accuracy: 50
   goldReward: 10
   scoreReward: 100
-  attackDistanceOverride: 6
+  attackDistanceOverride: 8
   moveSpeed: 3.5
+  rotationSpeed: 8
+  minRangedDistance: 2
+  skillWarningDuration: 1.2
   isBoss: 1
   enemyType: 4
   specificEnemyType: 5
@@ -7961,12 +8057,14 @@ MonoBehaviour:
   - {fileID: 0}
   skillScript: {fileID: 0}
   skillVfxPrefab: {fileID: 4060967071236614201, guid: 3d164b7d14e44244589693d586e6a368, type: 3}
-  skillVfxRadius: 6
+  skillVfxRadius: 8
   skillIsDirectional: 0
   skillAngle: 90
   skillDistance: 5
-  skillCooldown: 8
+  skillCooldown: 15
   skillDamageMultiplier: 2
+  skillRepeatCount: 1
+  skillRepeatDelay: 1
   spawnVfxPrefab: {fileID: 0}
   spawnVfxDuration: 1
   lastSkillTime: -999
@@ -8011,9 +8109,9 @@ MonoBehaviour:
   projectileMagicDamage: 5
   canSummon: 1
   summonAvailablePhase1: 1
-  summonSkeletCount: 5
+  summonSkeletCount: 4
   summonMonsterCount: 0
-  summonCooldown: 20
+  summonCooldown: 60
   summonInitialDelay: 10
   summonSubBosses: 0
   enemyNewPrefab: {fileID: 0}
@@ -8052,8 +8150,8 @@ MonoBehaviour:
   damagePerHit: 1
   damageInterval: 2
   enableRaycastDamage: 0
-  maxHealth: 1000
-  currentHealth: 0
+  maxHealth: 1000000
+  _CurrentHealth: 0
   isAlive: 1
   useHealthBar: 0
   bossName: 
@@ -8102,8 +8200,36 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 16
+  m_Constraints: 80
   m_CollisionDetection: 0
+--- !u!1 &6596514106577753367 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 100086, guid: 2579ec83d296f564381920e405d36f54, type: 3}
+  m_PrefabInstance: {fileID: 6596514106577654753}
+  m_PrefabAsset: {fileID: 0}
+--- !u!136 &3879513559348616872
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6596514106577753367}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.5
+  m_Height: 3
+  m_Direction: 2
+  m_Center: {x: 0, y: 0.05, z: 0}
 --- !u!4 &6596514106577783091 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 400082, guid: 2579ec83d296f564381920e405d36f54, type: 3}
@@ -8906,12 +9032,24 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2940440395887999768, guid: 79ae3d8e50d3edc4180e470844648e69, type: 3}
+      propertyPath: m_Layer
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 2940440395887999768, guid: 79ae3d8e50d3edc4180e470844648e69, type: 3}
       propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5395987810416698136, guid: 79ae3d8e50d3edc4180e470844648e69, type: 3}
+      propertyPath: m_Layer
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 5395987810416698136, guid: 79ae3d8e50d3edc4180e470844648e69, type: 3}
       propertyPath: m_IsActive
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5944282390722050428, guid: 79ae3d8e50d3edc4180e470844648e69, type: 3}
+      propertyPath: m_Layer
+      value: 6
       objectReference: {fileID: 0}
     - target: {fileID: 5944282390722050428, guid: 79ae3d8e50d3edc4180e470844648e69, type: 3}
       propertyPath: m_IsActive
@@ -8964,6 +9102,10 @@ PrefabInstance:
     - target: {fileID: 8375571103419234062, guid: 79ae3d8e50d3edc4180e470844648e69, type: 3}
       propertyPath: m_Name
       value: mDAX_Fire_Cyclone_HL_01
+      objectReference: {fileID: 0}
+    - target: {fileID: 8375571103419234062, guid: 79ae3d8e50d3edc4180e470844648e69, type: 3}
+      propertyPath: m_Layer
+      value: 6
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

@@ -175,11 +175,40 @@ public class Character : NetworkBehaviour
     
     private void Start()
     {
+        // Kiểm tra an toàn: Nếu chưa có PlayerInput, báo lỗi ngay lập tức thay vì để Crash
+        if (playerInput == null)
+        {
+            Debug.LogError("<color=red>[Character]</color> LỖI CỰC NẶNG: Không tìm thấy component PlayerInput trên Prefab! Hãy mở Prefab Player và thêm nó vào!");
+            return; // Thoát ngang hàm Start để tránh Crash các dòng bên dưới
+        }
 
         // Load saved key binding overrides từ Settings
         InputRebindHelper.LoadBindingOverrides(playerInput);
-        jumpActionCache = playerInput.actions["Jump"];
-        cameraTransform = Camera.main.transform;
+        
+        // Kiểm tra an toàn trước khi gán Jump
+        if (playerInput.actions != null)
+        {
+            jumpActionCache = playerInput.actions["Jump"];
+        }
+        // Thay vì gán thẳng, chúng ta check null và tìm đường vòng
+        if (Camera.main != null)
+        {
+            cameraTransform = Camera.main.transform;
+        }
+        else
+        {
+            // Fallback: Tìm bừa 1 cái Camera bất kỳ trong scene nếu lỡ quên tag
+            Camera fallbackCam = FindFirstObjectByType<Camera>();
+            if (fallbackCam != null)
+            {
+                cameraTransform = fallbackCam.transform;
+                Debug.LogWarning("<color=yellow>[Character]</color> Camera.main bị null (Chưa gắn tag MainCamera). Đã tự động lấy Camera khác thay thế!");
+            }
+            else
+            {
+                Debug.LogError("<color=red>[Character]</color> BÁO ĐỘNG: Không có bất kỳ Camera nào trong Scene!");
+            }
+        }
         cachedPlanarForward = transform.forward;
         cachedPlanarForward.y = 0f;
         if (cachedPlanarForward.sqrMagnitude < 0.0001f) cachedPlanarForward = Vector3.forward;

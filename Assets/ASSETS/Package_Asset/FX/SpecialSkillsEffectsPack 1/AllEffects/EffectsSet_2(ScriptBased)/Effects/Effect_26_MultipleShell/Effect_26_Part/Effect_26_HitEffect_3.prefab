@@ -28498,7 +28498,7 @@ ParticleSystem:
     radiusScale: 1
     collidesWith:
       serializedVersion: 2
-      m_Bits: 64
+      m_Bits: 512
     maxCollisionShapes: 256
     quality: 0
     voxelSize: 0.5
@@ -29559,7 +29559,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   damage: 60
   debugMode: 0
-  knockupForce: 6
+  knockupHeight: 3
+  horizontalPush: 0.35
+  riseDuration: 0.18
+  fallDuration: 0.4
 --- !u!1 &5530139088414182005
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System; // thêm để dùng Action
 
 [RequireComponent(typeof(Animator))]
@@ -155,6 +155,7 @@ public class WeaponController : MonoBehaviour
             if (currentWeapon != null && currentWeapon.weaponPrefab && handHolder)
             {
                 currentHeldInstance = Instantiate(currentWeapon.weaponPrefab, handHolder, false);
+                StripPhysicalColliders(currentHeldInstance);
                 ApplySocket(currentHeldInstance.transform, currentWeapon.handSocket);
 
                 // Bind Aura (nếu có)
@@ -202,6 +203,7 @@ public class WeaponController : MonoBehaviour
         if (currentWeapon != null && currentWeapon.weaponPrefab && sheathHolder)
         {
             currentSheathInstance = Instantiate(currentWeapon.weaponPrefab, sheathHolder, false);
+            StripPhysicalColliders(currentSheathInstance);
             ApplySocket(currentSheathInstance.transform, currentWeapon.sheathSocket);
         }
     }
@@ -369,6 +371,7 @@ public class WeaponController : MonoBehaviour
         if (currentHeldInstance == null && currentWeapon != null && currentWeapon.weaponPrefab)
         {
             currentHeldInstance = Instantiate(currentWeapon.weaponPrefab, handHolder, false);
+                StripPhysicalColliders(currentHeldInstance);
             ApplySocket(currentHeldInstance.transform, currentWeapon.handSocket);
 
             // THÊM: Bind Aura cho Wand như Axe/Sword
@@ -567,4 +570,22 @@ public class WeaponController : MonoBehaviour
             Debug.Log($"[WeaponController] Skipped Ultimate shader assignment for {weaponType} (Ultimate on cooldown)");
         }
     }
+
+    // === FIX FUSION PHYSICS BUG ===
+    // Xóa tất cả Collider cứng (không phải Trigger) khỏi prefab vũ khí khi Spawn
+    // Để tránh việc kiếm đập trúng Player hoặc quái gây nổ physics, văng khỏi map
+    private void StripPhysicalColliders(GameObject obj)
+    {
+        if (obj == null) return;
+        Collider[] cols = obj.GetComponentsInChildren<Collider>(true);
+        foreach (var c in cols)
+        {
+            // Chỉ xóa các Collider vật lý, giữ lại các Trigger nếu có (mặc dù DamageDealer dùng SphereCast)
+            if (c != null && !c.isTrigger) 
+            {
+                c.enabled = false; // Tắt ngay lập tức để tránh nổ Physics trong frame đầu tiên
+            }
+        }
+    }
+
 }

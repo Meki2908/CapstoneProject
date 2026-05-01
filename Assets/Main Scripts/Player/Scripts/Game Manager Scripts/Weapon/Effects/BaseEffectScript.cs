@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 public abstract class BaseEffectScript : MonoBehaviour
 {
@@ -6,22 +7,22 @@ public abstract class BaseEffectScript : MonoBehaviour
     [SerializeField] protected float damage = 10f;
     [SerializeField] protected bool debugMode = false;
 
+    [Header("Damage Tick Settings")]
+    [Tooltip("Thời gian giãn cách giữa 2 lần nhận sát thương. (Ví dụ: 0.5 = nửa giây giật máu 1 lần. Đặt = 0 nếu chiêu chỉ đánh 1 phát duy nhất).")]
+    [SerializeField] protected float damageInterval = 0.5f;
+
+    [Tooltip("Số lần tối đa 1 kẻ địch có thể nhận damage từ skill này (0 = không giới hạn). Dùng để tránh boss ăn full combo lốc xoáy từ đầu đến cuối.")]
+    [SerializeField] protected int maxHitsPerEnemy = 0;
+
     private float baseDamage;
     private WeaponController weaponController;
     private EquipmentSystem equipmentSystem;
 
     private const float BASE_CRIT_MULTIPLIER = 1.5f;
 
-    // ── Dedup per-frame ───────────────────────────────────────────────────────
-    // Vargr / boss có nhiều bone collider → OnParticleCollision / OnCollisionEnter
-    // có thể fire nhiều lần trong cùng 1 frame cho cùng 1 enemy.
-    // Dùng HashSet<int> (InstanceID của TakeDamageTest.gameObject) để chỉ
-    // apply damage + hiệu ứng đúng 1 lần mỗi frame.
-    private readonly System.Collections.Generic.HashSet<int> _hitThisFrame
-        = new System.Collections.Generic.HashSet<int>();
-    private int _lastResetFrame = -1;
-
-    // ─────────────────────────────────────────────────────────────────────────
+    // BỘ NHỚ LƯU TRỮ LỊCH SỬ CHỊU ĐÒN CỦA TỪNG KẺ ĐỊCH
+    private readonly Dictionary<int, float> _lastHitTime = new Dictionary<int, float>();
+    private readonly Dictionary<int, int> _hitCount = new Dictionary<int, int>();
 
     protected virtual void Awake()
     {
@@ -65,71 +66,77 @@ public abstract class BaseEffectScript : MonoBehaviour
 
     protected virtual void OnParticleCollision(GameObject other)
     {
-        // Tìm TakeDamageTest: trực tiếp → parent (bone-child của Vargr/boss)
-        TakeDamageTest enemy = other.GetComponent<TakeDamageTest>();
-        if (enemy == null) enemy = other.GetComponentInParent<TakeDamageTest>();
-        if (enemy != null) ProcessHit(enemy);
-
-        // KẾT NỐI VỚI DUMMY MẠNG
-        NetworkHealth netHealth = other.GetComponent<NetworkHealth>();
-        if (netHealth == null) netHealth = other.GetComponentInParent<NetworkHealth>();
-        
-        if (netHealth != null)
-        {
-            UpdateDamageWithGems();
-            int finalDamage = Mathf.RoundToInt(damage);
-
-            // Kỹ năng chạm quái mạng -> Trừ máu
-            netHealth.TakeDamage(finalDamage);
-        }
+        HandleCollision(other);
     }
 
     protected virtual void OnCollisionEnter(Collision collision)
     {
-        // Tương tự — leo lên parent nếu hit bone-child
-        TakeDamageTest enemy = collision.collider.GetComponent<TakeDamageTest>();
-        if (enemy == null) enemy = collision.collider.GetComponentInParent<TakeDamageTest>();
-        if (enemy != null) ProcessHit(enemy);
+        HandleCollision(collision.gameObject);
+    }
 
-        // KẾT NỐI VỚI DUMMY MẠNG
-        NetworkHealth netHealth = collision.gameObject.GetComponent<NetworkHealth>();
-        if (netHealth == null) netHealth = collision.collider.GetComponentInParent<NetworkHealth>();
+    /// <summary>
+    /// Xử lý va chạm chung cho cả hạt và vật lý
+    /// </summary>
+    private void HandleCollision(GameObject other)
+    {
+        // 1. Xác định đối tượng bị trúng đòn
+        TakeDamageTest enemy = other.GetComponent<TakeDamageTest>();
+        if (enemy == null) enemy = other.GetComponentInParent<TakeDamageTest>();
+
+        NetworkHealth netHealth = other.GetComponent<NetworkHealth>();
+        if (netHealth == null) netHealth = other.GetComponentInParent<NetworkHealth>();
+
+        if (enemy == null && netHealth == null) return;
+
+        // 2. Lấy ID duy nhất của cục quái (Tránh bị tính là 2 kẻ địch nếu nó có 2 cục xương)
+        int targetId = enemy != null ? enemy.gameObject.GetInstanceID() : netHealth.gameObject.GetInstanceID();
+
+        // 3. KIỂM TRA SỐ LẦN HIT TỐI ĐA
+        if (maxHitsPerEnemy > 0)
+        {
+            if (_hitCount.TryGetValue(targetId, out int hits) && hits >= maxHitsPerEnemy)
+                return; // Đã dính đủ đòn, miễn nhiễm luôn
+        }
+
+        // 4. KIỂM TRA GIÃN CÁCH (COOLDOWN)
+        if (damageInterval <= 0f)
+        {
+            // Nếu Interval = 0, Skill này chỉ gây sát thương ĐÚNG 1 LẦN trong đời (như hất tung)
+            if (_lastHitTime.ContainsKey(targetId)) return;
+        }
+        else
+        {
+            // Nếu có Interval, kiểm tra xem đã qua đủ thời gian chưa
+            if (_lastHitTime.TryGetValue(targetId, out float lastTime))
+            {
+                if (Time.time - lastTime < damageInterval) return; // Vẫn đang trong thời gian invul, bỏ qua
+            }
+        }
+
+        // --- NẾU VƯỢT QUA ĐƯỢC CÁC BƯỚC TRÊN ---
+        // Cập nhật lại lịch sử ăn đòn
+        _lastHitTime[targetId] = Time.time;
+        if (_hitCount.ContainsKey(targetId)) _hitCount[targetId]++;
+        else _hitCount[targetId] = 1;
+
+        // Thực thi Damage & Hiệu ứng
+        if (enemy != null) ProcessHit(enemy);
         
         if (netHealth != null)
         {
             UpdateDamageWithGems();
             int finalDamage = Mathf.RoundToInt(damage);
-
-            // Kỹ năng chạm quái mạng -> Trừ máu
             netHealth.TakeDamage(finalDamage);
         }
     }
 
     // ── Core processing ───────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Áp dụng damage + effect lên enemy, với per-frame dedup để tránh
-    /// nhiều bone collider của boss kích hoạt nhiều lần trong 1 frame.
-    /// </summary>
     private void ProcessHit(TakeDamageTest enemy)
     {
-        // Reset bộ lọc khi bước sang frame mới
-        int frame = Time.frameCount;
-        if (frame != _lastResetFrame)
-        {
-            _hitThisFrame.Clear();
-            _lastResetFrame = frame;
-        }
-
-        // Dedup: chỉ xử lý mỗi enemy 1 lần mỗi frame
-        int id = enemy.gameObject.GetInstanceID();
-        if (_hitThisFrame.Contains(id)) return;
-        _hitThisFrame.Add(id);
-
         // Cập nhật damage theo gem (vũ khí có thể đổi trong runtime)
         UpdateDamageWithGems();
 
-        // Weapon type
         WeaponType weaponType = WeaponType.None;
         if (weaponController != null && weaponController.GetCurrentWeapon() != null)
             weaponType = weaponController.GetCurrentWeapon().weaponType;
@@ -151,11 +158,10 @@ public abstract class BaseEffectScript : MonoBehaviour
         if (debugMode)
             Debug.Log($"[{GetType().Name}] Hit {enemy.name} for {finalDamage:F1} (crit:{isCrit}, weapon:{weaponType})");
 
-        // Gửi skill damage (isSkill=true → boss nhận đúng, không bị block)
-        enemy.TakeSkillDamage(finalDamage * CheatPanel.DamageMultiplier, weaponType, isCrit);
+        // Gửi skill damage
+        enemy.TakeSkillDamage(finalDamage, weaponType, isCrit);
 
-        // CC / hiệu ứng đặc biệt: KHÔNG áp lên boss
-        // (boss có EnemyScript.isBoss = true → immune CC, chỉ nhận damage)
+        // Phân biệt Boss và lính lác để gọi CC (Hất tung, Kéo...)
         var enemyScriptComp = enemy.GetComponent<EnemyScript>();
         if (enemyScriptComp == null) enemyScriptComp = enemy.GetComponentInParent<EnemyScript>();
         bool isBoss = enemyScriptComp != null && enemyScriptComp.isBoss;
