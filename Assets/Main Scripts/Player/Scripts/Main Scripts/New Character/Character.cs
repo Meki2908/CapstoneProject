@@ -116,9 +116,12 @@ public class Character : MonoBehaviour
     // Start is called before the first frame update
     private void Start()
     {
-        controller = GetComponent<CharacterController>();
-        animator = GetComponent<Animator>();
-        playerInput = GetComponent<PlayerInput>();
+        // Kiểm tra an toàn: Nếu chưa có PlayerInput, báo lỗi ngay lập tức thay vì để Crash
+        if (playerInput == null)
+        {
+            Debug.LogError("<color=red>[Character]</color> LỖI CỰC NẶNG: Không tìm thấy component PlayerInput trên Prefab! Hãy mở Prefab Player và thêm nó vào!");
+            return; // Thoát ngang hàm Start để tránh Crash các dòng bên dưới
+        }
 
         // ─── MULTIPLAYER: chờ NetworkPlayerLocalOwnership xử lý trước ───
         // NetworkPlayerLocalOwnership.Spawned() chạy khi NetworkObject spawns (trước frame đầu tiên).
@@ -160,25 +163,31 @@ public class Character : MonoBehaviour
     {
         // Load saved key binding overrides từ Settings
         InputRebindHelper.LoadBindingOverrides(playerInput);
-        jumpActionCache = playerInput.actions["Jump"];
+        
+        // Kiểm tra an toàn trước khi gán Jump
+        if (playerInput.actions != null)
+        {
+            jumpActionCache = playerInput.actions["Jump"];
+        }
+        // Thay vì gán thẳng, chúng ta check null và tìm đường vòng
         if (Camera.main != null)
         {
             cameraTransform = Camera.main.transform;
-            if (playerInput != null) playerInput.camera = Camera.main; // Cấp quyền Camera cho InputSystem
         }
         else
         {
-            Debug.LogWarning($"[Character] Camera.main is NULL during InitCharacter! Attempting fallback search.");
-            var fallbackCam = FindFirstObjectByType<Camera>();
+            // Fallback: Tìm bừa 1 cái Camera bất kỳ trong scene nếu lỡ quên tag
+            Camera fallbackCam = FindFirstObjectByType<Camera>();
             if (fallbackCam != null)
             {
                 cameraTransform = fallbackCam.transform;
-                if (playerInput != null) playerInput.camera = fallbackCam;
+                Debug.LogWarning("<color=yellow>[Character]</color> Camera.main bị null (Chưa gắn tag MainCamera). Đã tự động lấy Camera khác thay thế!");
             }
             else
-                cameraTransform = this.transform; // Tránh Crash NullReferenceException
+            {
+                Debug.LogError("<color=red>[Character]</color> BÁO ĐỘNG: Không có bất kỳ Camera nào trong Scene!");
+            }
         }
-
         cachedPlanarForward = transform.forward;
         cachedPlanarForward.y = 0f;
         if (cachedPlanarForward.sqrMagnitude < 0.0001f) cachedPlanarForward = Vector3.forward;

@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.InputSystem;
 using System.Collections.Generic;
 using UnityEngine.Playables;
@@ -64,42 +64,52 @@ public class SwordSkills : MonoBehaviour
         if (equipment == null) equipment = GetComponent<EquipmentSystem>();
     }
 
-    private void OnEnable()
+    private void Start()
     {
-        RebuildAbilityMap();
+        // Lắng nghe sự kiện đổi vũ khí từ khi bắt đầu game
         var wc = GetComponent<WeaponController>();
         if (wc != null)
         {
-            wc.OnWeaponChanged -= OnWeaponChangedHandler;
             wc.OnWeaponChanged += OnWeaponChangedHandler;
         }
 
-        // Don't auto-refresh here, let Animation Events control it
-        Debug.Log("[SwordSkills] OnEnable - Script enabled");
+        // Cập nhật lại bản đồ kỹ năng lần đầu
+        RebuildAbilityMap();
+        RefreshActiveForCurrentWeapon(); // Thêm hàm này để đồng bộ với cơ chế mới
     }
 
-    private void OnDisable()
+    private void OnDestroy()
     {
-        // Unsubscribe from events
+        // Chỉ hủy lắng nghe khi cục Player này bị xóa
         var wc = GetComponent<WeaponController>();
-        if (wc != null)
-        {
-            wc.OnWeaponChanged -= OnWeaponChangedHandler;
-        }
-
-        // Cancel ultimate timeline if playing (e.g. scene transition)
-        if (ultimateDirector != null && ultimateDirector.state == UnityEngine.Playables.PlayState.Playing)
-        {
-            ultimateDirector.Stop();
-        }
-        if (skillLock != null) skillLock.EndSkillRootMotion(animator);
+        if (wc != null) wc.OnWeaponChanged -= OnWeaponChangedHandler;
+        
+        // Hủy cutscene nếu có
+        CancelSkill();
+    }
 
         Debug.Log("[SwordSkills] OnDisable - Script disabled");
     }
     private void OnWeaponChangedHandler(WeaponSO so)
     {
         RebuildAbilityMap();
-        // Don't auto-refresh here, let Animation Events control it
+        RefreshActiveForCurrentWeapon();
+    }
+
+    // Hàm tự bật/tắt script theo vũ khí đang cầm
+    private void RefreshActiveForCurrentWeapon()
+    {
+        var w = equipment != null ? equipment.GetCurrentWeapon() : null;
+        // FIX: Không tự disable script nữa để hàm Update (Failsafe) luôn được chạy!
+        // enabled = (w != null && w.weaponType == WeaponType.Sword);
+    }
+    
+    public void CancelSkill()
+    {
+        if (ultimateDirector != null && ultimateDirector.state == UnityEngine.Playables.PlayState.Playing)
+            ultimateDirector.Stop();
+            
+        if (skillLock != null) skillLock.EndSkillRootMotion(animator);
     }
 
 

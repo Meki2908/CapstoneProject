@@ -32,6 +32,8 @@ public class SkillLock : MonoBehaviour
         isPerformingSkill = false;
         var anim = animator != null ? animator : _animator;
         if (anim) anim.applyRootMotion = false;
+        if (_controller != null) _controller.enabled = true;
+        UnlockPosition();
         // Remove invulnerability when skill ends
         var ph = GetComponent<PlayerHealth>();
         ph?.SetInvulnerable(false);

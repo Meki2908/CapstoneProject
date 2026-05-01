@@ -3857,7 +3857,7 @@ ParticleSystem:
     radiusScale: 1
     collidesWith:
       serializedVersion: 2
-      m_Bits: 64
+      m_Bits: 512
     maxCollisionShapes: 256
     quality: 0
     voxelSize: 0.5
@@ -28781,7 +28781,7 @@ ParticleSystem:
     radiusScale: 1
     collidesWith:
       serializedVersion: 2
-      m_Bits: 64
+      m_Bits: 512
     maxCollisionShapes: 256
     quality: 0
     voxelSize: 0.5
@@ -29842,7 +29842,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   damage: 120
   debugMode: 0
-  knockupForce: 6
+  damageInterval: 0.5
+  maxHitsPerEnemy: 1
+  knockupHeight: 3
+  horizontalPush: 0.35
+  riseDuration: 0.18
+  fallDuration: 0.4
 --- !u!1 &8669547504849457348
 GameObject:
   m_ObjectHideFlags: 0
@@ -33700,7 +33705,7 @@ ParticleSystem:
     radiusScale: 1
     collidesWith:
       serializedVersion: 2
-      m_Bits: 64
+      m_Bits: 512
     maxCollisionShapes: 256
     quality: 0
     voxelSize: 0.5

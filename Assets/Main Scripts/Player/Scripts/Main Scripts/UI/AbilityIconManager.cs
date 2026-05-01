@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using System.Collections.Generic;
@@ -90,8 +90,15 @@ public class AbilityIconManager : MonoBehaviour
     /// </summary>
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        // WeaponController trên player mới — không giữ reference prefab/scene cũ
-        weaponController = FindFirstObjectByType<WeaponController>();
+        // Check null kiểu cổ điển để né Fake Null của Unity
+        if (Character.LocalCharacter != null) 
+        {
+            weaponController = Character.LocalCharacter.GetComponentInChildren<WeaponController>();
+        }
+        else 
+        {
+            weaponController = null;
+        }
         AE_ClearAbilityIcons();
     }
 

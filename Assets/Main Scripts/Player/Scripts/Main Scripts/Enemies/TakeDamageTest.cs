@@ -94,8 +94,8 @@ public class TakeDamageTest : MonoBehaviour
 
     void Start()
     {
-        // Initialize health
-        currentHealth = maxHealth;
+// Initialize health
+        CurrentHealth = maxHealth;
         isAlive = true;
 
         // Cache squared ranges for faster distance checks

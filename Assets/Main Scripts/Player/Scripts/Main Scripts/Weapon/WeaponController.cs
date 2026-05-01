@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System; // thêm để dùng Action
 
 [RequireComponent(typeof(Animator))]
@@ -167,6 +167,7 @@ public class WeaponController : MonoBehaviour
             if (currentWeapon != null && currentWeapon.weaponPrefab && handHolder)
             {
                 currentHeldInstance = Instantiate(currentWeapon.weaponPrefab, handHolder, false);
+                StripPhysicalColliders(currentHeldInstance);
                 ApplySocket(currentHeldInstance.transform, currentWeapon.handSocket);
 
                 // Bind Aura (nếu có)
@@ -214,6 +215,7 @@ public class WeaponController : MonoBehaviour
         if (currentWeapon != null && currentWeapon.weaponPrefab && sheathHolder)
         {
             currentSheathInstance = Instantiate(currentWeapon.weaponPrefab, sheathHolder, false);
+            StripPhysicalColliders(currentSheathInstance);
             ApplySocket(currentSheathInstance.transform, currentWeapon.sheathSocket);
         }
     }
@@ -384,6 +386,7 @@ public class WeaponController : MonoBehaviour
         if (currentHeldInstance == null && currentWeapon != null && currentWeapon.weaponPrefab)
         {
             currentHeldInstance = Instantiate(currentWeapon.weaponPrefab, handHolder, false);
+                StripPhysicalColliders(currentHeldInstance);
             ApplySocket(currentHeldInstance.transform, currentWeapon.handSocket);
 
             // THÊM: Bind Aura cho Wand như Axe/Sword
@@ -585,24 +588,21 @@ public class WeaponController : MonoBehaviour
         }
     }
 
-    const float MeleeVfxDefaultLifetime = 2f;
-
-    /// <summary>Spawn melee VFX locally (Fusion: replicate sau).</summary>
-    public void BroadcastMeleeVfx(Vector3 pos, Quaternion rot, Vector3 scale, int hitIndex, WeaponType weaponType)
+    // === FIX FUSION PHYSICS BUG ===
+    // Xóa tất cả Collider cứng (không phải Trigger) khỏi prefab vũ khí khi Spawn
+    // Để tránh việc kiếm đập trúng Player hoặc quái gây nổ physics, văng khỏi map
+    private void StripPhysicalColliders(GameObject obj)
     {
-        var so = WeaponSelectionPersistence.ResolveWeaponSO(weaponType);
-        if (so == null || so.normalHitVfx == null || hitIndex >= so.normalHitVfx.Length) return;
-        var prefab = so.normalHitVfx[hitIndex];
-        if (prefab == null) return;
-
-        var vfx = Instantiate(prefab, pos, rot);
-        if (so.hitTimings != null && hitIndex < so.hitTimings.Length)
+        if (obj == null) return;
+        Collider[] cols = obj.GetComponentsInChildren<Collider>(true);
+        foreach (var c in cols)
         {
-            var timing = so.hitTimings[hitIndex];
-            if (timing.spawnRule.extraEulerOffset != Vector3.zero)
-                vfx.transform.rotation *= Quaternion.Euler(timing.spawnRule.extraEulerOffset);
+            // Chỉ xóa các Collider vật lý, giữ lại các Trigger nếu có (mặc dù DamageDealer dùng SphereCast)
+            if (c != null && !c.isTrigger) 
+            {
+                c.enabled = false; // Tắt ngay lập tức để tránh nổ Physics trong frame đầu tiên
+            }
         }
-        vfx.transform.localScale = Vector3.Scale(vfx.transform.localScale, scale);
-        Destroy(vfx, MeleeVfxDefaultLifetime);
     }
+
 }
