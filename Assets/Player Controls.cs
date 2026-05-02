@@ -201,10 +201,10 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""initialStateCheck"": false
                 },
                 {
-                    ""name"": ""Cursor toggle"",
+                    ""name"": ""CameraToggle"",
                     ""type"": ""Button"",
                     ""id"": ""a1b2c3d4-5678-9abc-def0-123456789abc"",
-                    ""expectedControlType"": """",
+                    ""expectedControlType"": ""Button"",
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
@@ -654,7 +654,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": ""Keyboard&Mouse"",
-                    ""action"": ""Cursor toggle"",
+                    ""action"": ""CameraToggle"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -1276,7 +1276,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         m_Player_Dash = m_Player.FindAction("Dash", throwIfNotFound: true);
         m_Player_Inventory = m_Player.FindAction("Inventory", throwIfNotFound: true);
         m_Player_ToggleWeapon = m_Player.FindAction("ToggleWeapon", throwIfNotFound: true);
-        m_Player_Cursortoggle = m_Player.FindAction("Cursor toggle", throwIfNotFound: true);
+        m_Player_CameraToggle = m_Player.FindAction("CameraToggle", throwIfNotFound: true);
         m_Player_CameraZoom = m_Player.FindAction("CameraZoom", throwIfNotFound: true);
         m_Player_OpenMenu = m_Player.FindAction("OpenMenu", throwIfNotFound: true);
         // UI
@@ -1384,7 +1384,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
     private readonly InputAction m_Player_Dash;
     private readonly InputAction m_Player_Inventory;
     private readonly InputAction m_Player_ToggleWeapon;
-    private readonly InputAction m_Player_Cursortoggle;
+    private readonly InputAction m_Player_CameraToggle;
     private readonly InputAction m_Player_CameraZoom;
     private readonly InputAction m_Player_OpenMenu;
     /// <summary>
@@ -1447,9 +1447,9 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// </summary>
         public InputAction @ToggleWeapon => m_Wrapper.m_Player_ToggleWeapon;
         /// <summary>
-        /// Provides access to the underlying input action "Player/Cursortoggle".
+        /// Provides access to the underlying input action "Player/CameraToggle".
         /// </summary>
-        public InputAction @Cursortoggle => m_Wrapper.m_Player_Cursortoggle;
+        public InputAction @CameraToggle => m_Wrapper.m_Player_CameraToggle;
         /// <summary>
         /// Provides access to the underlying input action "Player/CameraZoom".
         /// </summary>
@@ -1520,9 +1520,9 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
             @ToggleWeapon.started += instance.OnToggleWeapon;
             @ToggleWeapon.performed += instance.OnToggleWeapon;
             @ToggleWeapon.canceled += instance.OnToggleWeapon;
-            @Cursortoggle.started += instance.OnCursortoggle;
-            @Cursortoggle.performed += instance.OnCursortoggle;
-            @Cursortoggle.canceled += instance.OnCursortoggle;
+            @CameraToggle.started += instance.OnCameraToggle;
+            @CameraToggle.performed += instance.OnCameraToggle;
+            @CameraToggle.canceled += instance.OnCameraToggle;
             @CameraZoom.started += instance.OnCameraZoom;
             @CameraZoom.performed += instance.OnCameraZoom;
             @CameraZoom.canceled += instance.OnCameraZoom;
@@ -1576,9 +1576,9 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
             @ToggleWeapon.started -= instance.OnToggleWeapon;
             @ToggleWeapon.performed -= instance.OnToggleWeapon;
             @ToggleWeapon.canceled -= instance.OnToggleWeapon;
-            @Cursortoggle.started -= instance.OnCursortoggle;
-            @Cursortoggle.performed -= instance.OnCursortoggle;
-            @Cursortoggle.canceled -= instance.OnCursortoggle;
+            @CameraToggle.started -= instance.OnCameraToggle;
+            @CameraToggle.performed -= instance.OnCameraToggle;
+            @CameraToggle.canceled -= instance.OnCameraToggle;
             @CameraZoom.started -= instance.OnCameraZoom;
             @CameraZoom.performed -= instance.OnCameraZoom;
             @CameraZoom.canceled -= instance.OnCameraZoom;
@@ -1970,12 +1970,12 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnToggleWeapon(InputAction.CallbackContext context);
         /// <summary>
-        /// Method invoked when associated input action "Cursor toggle" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// Method invoked when associated input action "CameraToggle" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>
         /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
-        void OnCursortoggle(InputAction.CallbackContext context);
+        void OnCameraToggle(InputAction.CallbackContext context);
         /// <summary>
         /// Method invoked when associated input action "CameraZoom" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>

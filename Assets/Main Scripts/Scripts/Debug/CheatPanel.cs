@@ -19,7 +19,9 @@ public class CheatPanel : MonoBehaviour
 
     // Cache
     private AbilityIconManager _aimCache;
-    // (Không cần backup/restore — MouseLockManager quản lý trạng thái)
+    // Cursor state backup
+    private bool _cursorWasVisible;
+    private CursorLockMode _cursorWasLockMode;
 
     void Awake()
     {
@@ -36,13 +38,19 @@ public class CheatPanel : MonoBehaviour
 
             if (_show)
             {
-                // Show cursor via MouseLockManager
-                MouseLockManager.Instance?.SetGameplayCursorLocked(false);
+                // Backup cursor state
+                _cursorWasVisible = Cursor.visible;
+                _cursorWasLockMode = Cursor.lockState;
+
+                // Show and unlock cursor
+                Cursor.visible = true;
+                Cursor.lockState = CursorLockMode.None;
             }
             else
             {
-                // Hide cursor via MouseLockManager
-                MouseLockManager.Instance?.SetGameplayCursorLocked(true);
+                // Restore cursor state
+                Cursor.visible = _cursorWasVisible;
+                Cursor.lockState = _cursorWasLockMode;
             }
         }
 

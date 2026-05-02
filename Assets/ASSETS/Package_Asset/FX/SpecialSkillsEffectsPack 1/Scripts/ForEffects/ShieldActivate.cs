@@ -5,32 +5,32 @@ using UnityEngine;
 
 public class ShieldActivate : MonoBehaviour
 {
+    static int s_activeInstances;
+
+    public static bool IsShieldActive => s_activeInstances > 0;
+
+    public static void ForceReset()
+    {
+        s_activeInstances = 0;
+    }
+
+    void OnEnable()
+    {
+        s_activeInstances++;
+    }
+
+    void OnDisable()
+    {
+        if (s_activeInstances > 0)
+            s_activeInstances--;
+    }
+
     public float ImpactLife;
     Vector4[] points;
     Material m_material;
     List<Vector4> Hitpoints;
     MeshRenderer m_meshRenderer;
     float time;
-    
-    // ── SHIELD STATE (Global flag for PlayerHealth) ──────────────────────────
-    public static bool IsShieldActive { get; private set; }
-    
-    public static void ForceReset() => IsShieldActive = false;
-    
-    // ──────────────────────────────────────────────────────────────────────────
-
-    void OnEnable()
-    {
-        IsShieldActive = true;
-    }
-
-    void OnDisable()
-    {
-        // Chỉ reset nếu không còn ShieldActivate nào khác đang active (trường hợp nhiều shield)
-        // Tuy nhiên thường shield player chỉ có 1 cái active.
-        // Để an toàn, ta có thể dùng counter hoặc đơn giản là check scene.
-        IsShieldActive = false;
-    }
 
     void Start()
     {
@@ -72,10 +72,5 @@ public class ShieldActivate : MonoBehaviour
     public void AddEmpty()
     {
         Hitpoints.Add(new Vector4(0, 0, 0, 0));
-    }
-
-    private void OnDestroy()
-    {
-        IsShieldActive = false;
     }
 }

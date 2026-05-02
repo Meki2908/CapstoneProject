@@ -49,13 +49,15 @@ public class QuestJournalUI : MonoBehaviour
 
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        // Luôn đóng journal khi scene mới load
+        // Luôn đóng journal khi scene mới load — tránh bị mở tự động
         if (rootPanel && rootPanel.activeSelf)
         {
             rootPanel.SetActive(false);
-            if (_isOpen) CursorUIPriority.EndUiOverlay();
             _isOpen = false;
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
         }
+        // Refresh text nhưng KHÔNG mở panel
         RefreshUI(0);
     }
 
@@ -91,18 +93,11 @@ public class QuestJournalUI : MonoBehaviour
     public void ToggleJournal()
     {
         if (rootPanel == null) return;
-        _isOpen = !rootPanel.activeSelf;
+        _isOpen = !rootPanel.activeSelf; // luôn đọc từ panel để tránh lệch state
         rootPanel.SetActive(_isOpen);
-
-        if (_isOpen)
-        {
-            CursorUIPriority.BeginUiOverlay();
-            RefreshUI(0);
-        }
-        else
-        {
-            CursorUIPriority.EndUiOverlay();
-        }
+        Cursor.visible   = _isOpen;
+        Cursor.lockState = _isOpen ? CursorLockMode.None : CursorLockMode.Locked;
+        if (_isOpen) RefreshUI(0);
     }
 
     // ── Core ──────────────────────────────────────────────────────────────

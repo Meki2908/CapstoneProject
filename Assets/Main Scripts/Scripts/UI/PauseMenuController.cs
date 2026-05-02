@@ -319,7 +319,12 @@ public class PauseMenuController : MonoBehaviour
         
         menuCanvas.SetActive(true);
         
-        // Hiện cursor — xử lý bởi CursorUIPriority.BeginUiOverlay() ở trên
+        // Hiện cursor
+        if (showCursor)
+        {
+            Cursor.visible = true;
+            Cursor.lockState = CursorLockMode.None;
+        }
         
         // Pause
         if (pauseOnOpen)

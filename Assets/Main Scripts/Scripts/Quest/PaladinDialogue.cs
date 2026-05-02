@@ -130,8 +130,8 @@ public class PaladinDialogue : MonoBehaviour
         // Re-set tên NPC khi mở, tránh bị script khác ghi đè
         SetText(npcNameTMP, npcNameLegacy, "Paladin");
 
-        // Cursor được xử lý bời CursorUIPriority.BeginUiOverlay()
-        CursorUIPriority.BeginUiOverlay();
+        Cursor.visible   = true;
+        Cursor.lockState = CursorLockMode.None;
         DialogueNextButton.Register(OnNextClicked);
         ShowLine(0);
     }
@@ -190,8 +190,8 @@ public class PaladinDialogue : MonoBehaviour
         DialogueNextButton.Unregister();
         if (dialoguePanel)  dialoguePanel.SetActive(false);
         if (dialogueCanvas) dialogueCanvas.gameObject.SetActive(false);
-        // Cursor được xử lý bời CursorUIPriority.EndUiOverlay()
-        CursorUIPriority.EndUiOverlay();
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible   = false;
         if (EventSystem.current) EventSystem.current.SetSelectedGameObject(null);
     }
 

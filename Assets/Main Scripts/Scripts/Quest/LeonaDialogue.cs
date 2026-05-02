@@ -229,8 +229,8 @@ public class LeonaDialogue : MonoBehaviour
         // Re-set tên NPC khi mở, tránh bị script khác ghi đè trước đó
         SetText(npcNameTMP, npcNameLegacy, "Leona");
 
-        // Cursor được xử lý bời CursorUIPriority.BeginUiOverlay()
-        CursorUIPriority.BeginUiOverlay();
+        Cursor.visible   = true;
+        Cursor.lockState = CursorLockMode.None;
 
         DialogueNextButton.Register(OnNextClicked);
         ShowLine(0);
@@ -418,8 +418,8 @@ public class LeonaDialogue : MonoBehaviour
         _isOpen = false;
         DialogueNextButton.Unregister();
         if (dialoguePanel) dialoguePanel.SetActive(false);
-        // Cursor được xử lý bời CursorUIPriority.EndUiOverlay()
-        CursorUIPriority.EndUiOverlay();
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible   = false;
         if (EventSystem.current != null)
             EventSystem.current.SetSelectedGameObject(null);
     }

@@ -11,38 +11,6 @@ public class SoundsSO : ScriptableObject
     [Header("Scene-specific footsteps")]
     public SceneFootstepEntry[] sceneFootsteps;
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  VARGR BOSS SFX
-    // ─────────────────────────────────────────────────────────────────────────
-
-    [Header("── Vargr Boss SFX ──")]
-
-    [Tooltip("Âm thanh đòn Normal Attack của Vargr (vuốt móng).")]
-    public SoundList vargrNa;
-
-    [Tooltip("Âm thanh Roar khi Vargr vào Phase 2.")]
-    public SoundList vargrRoar;
-
-    [Tooltip("Âm thanh Ultimate / triệu hồi Fang của Vargr.")]
-    public SoundList vargrUltimate;
-
-    [Tooltip("Âm thanh tiếng bước chân Vargr ở Phase 1 (bước bình thường).")]
-    public SoundList vargrFootstepNormal;
-
-    [Tooltip("Âm thanh tiếng bước chân Vargr ở Phase 2 (chạy nhanh / nặng hơn).")]
-    public SoundList vargrFootstepPhase2;
-
-    [Tooltip("Âm thanh khi Vargr bị Stun (ngã / rên).")]
-    public SoundList vargrStun;
-
-    [Tooltip("Âm thanh khi Vargr chết.")]
-    public SoundList vargrDie;
-
-    [Header("── Vargr Fang SFX ──")]
-
-    [Tooltip("Âm thanh khi Fang (nanh sói) bị tiêu diệt.")]
-    public SoundList vargrFangDie;
-
     public SoundList GetSound(SoundType soundType)
     {
         int index = (int)soundType;
