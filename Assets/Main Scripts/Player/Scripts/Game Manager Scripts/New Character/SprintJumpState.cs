@@ -12,7 +12,7 @@ public class SprintJumpState : State
     {
         base.Enter();
 
-        character.canStartJump = false;
+        character.lastJumpTime = character.Runner.SimulationTime; 
         character.NotifyJumpImpulseStarted();
 
         // Drive jump by physics so this state actually moves on Y.

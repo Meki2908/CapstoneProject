@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 public class SprintState : State
 {
     float gravityValue;
@@ -10,6 +10,8 @@ public class SprintState : State
     float playerSpeed;
     bool sprintJump;
     Vector3 cVelocity;
+    private float fallTimer = 0f;
+    private const float FallTimeout = 0.15f;
 
     public SprintState(Character _character, StateMachine _stateMachine) : base(_character, _stateMachine)
     {
@@ -32,7 +34,6 @@ public class SprintState : State
         grounded = character.controller.isGrounded;
         gravityValue = character.gravityValue;
 
-        character.canStartJump = true;
     }
 
     public override void HandleInput()
@@ -84,6 +85,22 @@ public class SprintState : State
 
     public override void LogicUpdate()
     {
+        // Fall Logic Timeout
+        if (!grounded && character.playerVelocity.y < 0f)
+        {
+            fallTimer += character.Runner.DeltaTime;
+            if (fallTimer >= FallTimeout)
+            {
+                fallTimer = 0f;
+                stateMachine.ChangeState(character.falling);
+                return;
+            }
+        }
+        else
+        {
+            fallTimer = 0f;
+        }
+
         if (sprintJump)
         {
             stateMachine.ChangeState(character.sprintjumping);
@@ -92,9 +109,9 @@ public class SprintState : State
 
         if (sprint)
         {
-            character.SetAnimatorLocomotionSpeed(input.magnitude + 0.5f);
+            character.SetAnimatorLocomotionSpeed(input.magnitude);
         }
-        else if (input.sqrMagnitude == 0f) // chá»‰ khi buÃ´ng háº¿t phÃ­m di chuyá»ƒn má»›i HardStop
+        else if (input.sqrMagnitude == 0f) // chỉ khi buông hết phím di chuyển mới HardStop
         {
             stateMachine.ChangeState(character.hardStop);
         }
@@ -113,7 +130,7 @@ public class SprintState : State
     {
         base.PhysicsUpdate();
 
-        // Guard: skip náº¿u CharacterController bá»‹ disable (vd: Ä‘ang teleport)
+        // Guard: skip nếu CharacterController bị disable (vd: đang teleport)
         if (character.controller == null || !character.controller.enabled) return;
         grounded = character.controller.isGrounded;
         {

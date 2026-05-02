@@ -102,29 +102,6 @@ public class CombatMoveState : BaseMoveState
         if (skillLock != null && skillLock.isPerformingSkill)
             return;
 
-        // Kiểm tra cooldown trước khi xử lý toggle vũ khí
-        if (character.Runner.SimulationTime - lastToggleTime < toggleCooldown)
-        {
-            return;
-        }
-
-        if (sheathWeapon && character.isWeaponDrawn)
-        {
-            lastToggleTime = character.Runner.SimulationTime;
-
-            // reset cờ để không loop
-            sheathWeapon = false;
-            character.isWeaponDrawn = false;
-            character.currentLocomotionState = character.standing;
-            TutorialTextDisplay.NotifyWeaponSheathedFromGameplay();
-
-            // Gọi đúng trigger và tránh double ChangeState
-            character.animator.ResetTrigger("drawWeapon");
-            character.animator.SetTrigger("sheathWeapon");
-
-            stateMachine.ChangeState(character.currentLocomotionState);
-            return;
-        }
 
         // Nếu nhấn nút tấn công, chuyển sang AttackState
         if (attack && stateMachine.currentState != character.attacking)

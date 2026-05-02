@@ -99,7 +99,12 @@ public class AttackState : State
 
         // Start first hit
         character.animator.SetTrigger("attack");
+        
+        // --- ĐOẠN NÀY LÀ CỨU TINH ĐÂY ---
         character.playerVelocity = Vector3.zero;
+        character.CalculatedVelocity = Vector3.zero; // THÊM DÒNG NÀY ĐỂ GIẾT CHẾT BÓNG MA QUÁN TÍNH!
+        // --------------------------------
+        
         character.animator.SetFloat("speed", 0f);
         TutorialTextDisplay.NotifyNormalAttackStartedFromGameplay();
 
@@ -205,66 +210,89 @@ public class AttackState : State
 
         // Adaptive chain window (70-80%): shorter clips need later chaining, longer clips can chain earlier.
         float chainPoint = GetAdaptiveChainPoint(clipDuration);
-        bool canTransitionNormal = !isInTransition && normalizedTime >= chainPoint;
+        // Thay vì dùng chung 1 mốc thời gian, ta tách làm 2 mốc riêng biệt:
+        bool canChain = !isInTransition && normalizedTime >= chainPoint;
 
-        if (canTransitionNormal)
+        // 1. Trường hợp có nhồi Input: Cho phép combo sớm (ở mốc chainPoint)
+        if (canChain && (nextAttackBuffered || attack))
         {
             timePassed = 0f;
 
-            if (nextAttackBuffered || attack)
-            {
-                if (currentWeapon != null && currentWeapon.hitTimings != null && currentWeapon.hitTimings.Length > 0)
-                    hitIndex = (hitIndex + 1) % currentWeapon.hitTimings.Length;
-                else
-                    hitIndex = 0;
-
-                // Reset trigger first to ensure clean transition
-                character.animator.ResetTrigger("attack");
-                character.animator.SetTrigger("attack");
-                attack = false;
-                allowNewAttack = true;
-                nextAttackBuffered = false;
-                pressedSinceLastCheck = false;
-
-                if (hitHandler != null && currentWeapon != null && currentWeapon.hitTimings != null && currentWeapon.hitTimings.Length > 0)
-                {
-                    hitHandler.StartHit(hitIndex);
-                }
-            }
+            if (currentWeapon != null && currentWeapon.hitTimings != null && currentWeapon.hitTimings.Length > 0)
+                hitIndex = (hitIndex + 1) % currentWeapon.hitTimings.Length;
             else
+                hitIndex = 0;
+
+            character.animator.ResetTrigger("attack");
+            character.animator.SetTrigger("attack");
+            
+            attack = false;
+            allowNewAttack = true;
+            nextAttackBuffered = false;
+            pressedSinceLastCheck = false;
+
+            if (hitHandler != null && currentWeapon != null && currentWeapon.hitTimings != null && currentWeapon.hitTimings.Length > 0)
             {
+                hitHandler.StartHit(hitIndex);
+            }
+        }
+        // 2. Giai đoạn thu chiêu (Recovery Phase): Khi đã qua chainPoint và KHÔNG đánh tiếp
+        else if (canChain && !nextAttackBuffered && !attack)
+        {
+            // TRƯỜNG HỢP A: Bấm phím di chuyển -> "Move Cancel" (Ngắt thu chiêu để chạy ngay lập tức)
+            if (movementInput.sqrMagnitude > 0.01f)
+            {
+                timePassed = 0f;
+                if (hitHandler != null) hitHandler.CancelCurrentHit();
+                
+                // Lệnh tối thượng: Ép Animator Weapon Layer cắt ngang hoạt ảnh, chui tọt về "None" (0.1s làm mượt)
+                if (weaponLayerIndex >= 0) 
+                {
+                    character.animator.CrossFade("None", 0.1f, weaponLayerIndex);
+                }
+                
+                // Trả quyền ngay cho CombatMoveState để lấy tốc độ chạy!
+                stateMachine.ChangeState(character.combatMove); 
+                return;
+            }
+            
+            // TRƯỜNG HỢP B: Buông tay khỏi bàn phím -> Chờ hết hoạt ảnh tự nhiên
+            // Dùng shortNameHash để bắt tên "None" chuẩn xác 100% không bị Unity chơi khăm
+            bool isActuallyNone = false;
+            if (weaponLayerIndex >= 0) 
+            {
+                var currState = character.animator.GetCurrentAnimatorStateInfo(weaponLayerIndex);
+                isActuallyNone = (currState.shortNameHash == Animator.StringToHash("None"));
+            }
+            
+            if (isActuallyNone || (!isInTransition && normalizedTime >= 0.95f))
+            {
+                timePassed = 0f;
                 if (hitHandler != null) hitHandler.CancelCurrentHit();
                 stateMachine.ChangeState(character.combatMove);
-                character.animator.SetTrigger("move");
                 return;
             }
         }
 
+        // -- BẮT SỰ KIỆN NGẮT CHIÊU (ANIMATION CANCELING) --
         if (jump)
         {
             if (hitHandler != null) hitHandler.CancelCurrentHit();
+            // Bắn trigger để kích hoạt AnyState -> None trong Animator
+            character.animator.SetTrigger("jump"); 
             stateMachine.ChangeState(character.jumping);
             return;
         }
 
         if (dash)
         {
-            // Chỉ cho phép dash trong một khoảng thời gian an toàn của đòn đánh
-            // để tránh trường hợp animator/state bị lệch khi spam input ở cuối animation
-            float safeDashStart = 0.1f; // bỏ qua vài frame đầu
-            float safeDashEnd = 0.6f;   // chỉ cho dash trong ~60% đầu của attack
-
-            if (normalizedTime >= safeDashStart && normalizedTime <= safeDashEnd)
-            {
-                if (hitHandler != null) hitHandler.CancelCurrentHit();
-                stateMachine.ChangeState(character.dashing);
-                return;
-            }
-            else
-            {
-                // Ngoài khoảng an toàn thì bỏ qua dash để không làm kẹt AttackState
-                dash = false;
-            }
+            // Bỏ qua cái safeDashStart/safeDashEnd phức tạp cũ đi. 
+            // Cứ bấm Dash là ngắt ngay lập tức!
+            if (hitHandler != null) hitHandler.CancelCurrentHit();
+            // Bắn trigger để kích hoạt AnyState -> None trong Animator
+            character.animator.SetTrigger("dash"); 
+            stateMachine.ChangeState(character.dashing);
+            return;
         }
 
         // Xoay người theo Camera khi chém

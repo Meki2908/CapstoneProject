@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 public class CrouchingState : State
 {
@@ -40,7 +40,6 @@ public class CrouchingState : State
         grounded = character.controller.isGrounded;
         gravityValue = character.gravityValue;
 
-        character.canStartJump = true;
     }
 
     public override void Exit()

@@ -1,17 +1,15 @@
 using UnityEngine;
 
-public class JumpingState : State
+public class FallingState : State
 {
-    bool grounded;
-    bool landTriggered;
-
     float gravityValue;
-    float jumpHeight;
     float playerSpeed;
-
     Vector3 airVelocity;
+    
+    // THÊM: Biến lưu thời điểm bắt đầu rơi
+    float fallStartTime; 
 
-    public JumpingState(Character _character, StateMachine _stateMachine) : base(_character, _stateMachine)
+    public FallingState(Character _character, StateMachine _stateMachine) : base(_character, _stateMachine)
     {
         character = _character;
         stateMachine = _stateMachine;
@@ -21,28 +19,21 @@ public class JumpingState : State
     {
         base.Enter();
 
-        grounded = false;
-        landTriggered = false;
-
-        // TH�M D�NG N�Y (C?c k? quan tr?ng d? b?t d?u t�nh Cooldown):
-        character.lastJumpTime = character.Runner.SimulationTime; 
-
         gravityValue = character.gravityValue;
-        jumpHeight = character.jumpHeight;
         playerSpeed = character.playerSpeed;
 
-        character.animator.SetFloat("speed", 0);
-        character.animator.SetTrigger("jump");
-        character.NotifyJumpImpulseStarted();
-        Jump();
-        TutorialTextDisplay.NotifyJumpStartedFromGameplay();
+        character.animator.applyRootMotion = false;
+        character.animator.SetBool("isGrounded", false);
+        
+        // THÊM: Ghi lại thời điểm bắt đầu rơi vào State này (Dùng Runner.SimulationTime cho chuẩn Fusion mạng)
+        fallStartTime = character.Runner.SimulationTime; 
     }
+
     public override void HandleInput()
     {
         base.HandleInput();
-
         input = MoveInput;
-        // Trong state này không xét jump; Space không đổi Y — impulse đã được gán trong Enter().
+        
         if (TutorialInputGate.IsActive && (TutorialInputGate.EffectiveMask & TutorialInputMask.Move) == 0)
             input = Vector2.zero;
     }
@@ -51,20 +42,32 @@ public class JumpingState : State
     {
         base.LogicUpdate();
 
-        // N?u v?n t?c tr?c Y b?t d?u �m (nghia l� dang roi xu?ng)
-        if (character.playerVelocity.y <= 0f)
+        if (character.CachedGroundedFeet || character.controller.isGrounded)
         {
-            // Nhu?ng s�n kh?u l?i cho FallingState
-            stateMachine.ChangeState(character.falling);
+            character.animator.SetBool("isGrounded", true); 
+
+            // THÊM LOGIC CỦA BẠN: Kiểm tra xem đã lơ lửng đủ lâu chưa (ví dụ 0.15 giây)
+            float timeInAir = character.Runner.SimulationTime - fallStartTime;
+            
+            // Nếu rơi lâu hơn 0.15s (Chắc chắn là do Jump hoặc rớt từ vách cao) mới cho nhún
+            if (timeInAir > 0.15f) 
+            {
+                character.NetworkedIsLanding = true; 
+                character.animator.SetTrigger("isLanding");
+            }
+            // Nếu nhỏ hơn 0.15s, hệ thống âm thầm bỏ qua cái Trigger Landing và chỉ chuyển State thôi!
+            
+            State nextState = character.currentLocomotionState != null ? character.currentLocomotionState : character.standing;
+            stateMachine.ChangeState(nextState);
         }
     }
 
     public override void PhysicsUpdate()
     {
         base.PhysicsUpdate();
-        if (!grounded)
-        {
 
+        if (!character.controller.isGrounded)
+        {
             velocity = character.playerVelocity;
             airVelocity = new Vector3(input.x, 0, input.y);
 
@@ -72,9 +75,11 @@ public class JumpingState : State
 
             velocity = velocity.x * camRight + velocity.z * camForward;
             velocity.y = 0f;
+            
             airVelocity = airVelocity.x * camRight + airVelocity.z * camForward;
             if (airVelocity.sqrMagnitude > 1f) airVelocity.Normalize();
             airVelocity.y = 0f;
+            
             Vector3 movement = (airVelocity * character.airControl + velocity * (1 - character.airControl)) * playerSpeed;
             character.CalculatedVelocity.x = movement.x;
             character.CalculatedVelocity.z = movement.z;
@@ -85,30 +90,5 @@ public class JumpingState : State
                 character.transform.rotation = Quaternion.Slerp(character.transform.rotation, targetRotation, character.rotationDampTime);
             }
         }
-        grounded = character.controller.isGrounded;
     }
-
-    void Jump()
-    {
-        character.playerVelocity.y = Mathf.Sqrt(jumpHeight * -2.0f * gravityValue);
-    }
-
-    public override void Exit()
-    {
-        base.Exit();
-        
-        // Snap blend "speed" theo input hi?n t?i gi?ng nhu Dash d? ti?p d?t mu?t m�
-        if (character != null)
-        {
-            Vector2 m = MoveInput;
-            float targetSpeed = m.magnitude;
-            if (character.currentLocomotionState == character.combatMove) targetSpeed *= 0.5f;
-            character.SetAnimatorLocomotionSpeed(targetSpeed);
-        }
-    }
-
 }
-
-
-
-

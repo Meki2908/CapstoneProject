@@ -45,25 +45,33 @@ public class StandingState : BaseMoveState
     {
         base.LogicUpdate();
 
-        // Ensure cooldown before processing input
         if (character.Runner.SimulationTime - lastToggleTime < toggleCooldown)
         {
-            return; // Wait for cooldown to finish
+            return;
         }
 
-        if (drawWeapon && !character.isWeaponDrawn) // Transition to DrawWeaponState
+        if (drawWeapon && !character.isWeaponDrawn) 
         {
-            lastToggleTime = character.Runner.SimulationTime; // Update the last toggle time
+            lastToggleTime = character.Runner.SimulationTime; 
+
+            // Cập nhật vũ khí hiện tại lên Animator trước khi rút
+            var wc = character.GetComponent<WeaponController>();
+            if (wc != null && wc.GetCurrentWeapon() != null)
+            {
+                int wepType = (int)wc.GetCurrentWeapon().weaponType;
+                // Cập nhật cả 2 parameter như mình bàn ở trước!
+                character.animator.SetInteger("weaponType", wepType);
+                character.animator.SetFloat("WeaponIndex", (float)wepType);
+                character.animator.SetBool("combatMove", true);
+            }
 
             character.isWeaponDrawn = true;
             character.currentLocomotionState = character.combatMove;
             TutorialTextDisplay.NotifyWeaponDrawnFromGameplay();
 
-            // Set the drawWeapon trigger and reset sheathWeapon
-            character.animator.SetTrigger("drawWeapon");
             character.animator.ResetTrigger("sheathWeapon");
+            character.animator.SetTrigger("drawWeapon");
 
-            // Change to CombatMoveState
             stateMachine.ChangeState(character.currentLocomotionState);
         }
     }

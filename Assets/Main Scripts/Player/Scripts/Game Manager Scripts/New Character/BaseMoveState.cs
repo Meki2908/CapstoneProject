@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 public class BaseMoveState : State
 {
@@ -17,6 +17,8 @@ public class BaseMoveState : State
 
     private SkillLock skillLock;
     private float currentSpeed;
+    private float fallTimer = 0f;
+    private const float FallTimeout = 0.15f;
 
     public BaseMoveState(Character _character, StateMachine _stateMachine) : base(_character, _stateMachine)
     {
@@ -45,7 +47,6 @@ public class BaseMoveState : State
         grounded = character.controller.isGrounded;
         gravityValue = character.gravityValue;
 
-        character.canStartJump = true;
     }
 
     public override void HandleInput()
@@ -197,7 +198,23 @@ public class BaseMoveState : State
     public override void LogicUpdate()
     {
         base.LogicUpdate();
-        character.SetAnimatorLocomotionSpeed(input.magnitude);
+
+        // 3. Kh?c ph?c l?i Flicker ? BaseMoveState b?ng Fall Timeout (Coyote Time)
+        if (!grounded && character.playerVelocity.y < 0f)
+        {
+            fallTimer += character.Runner.DeltaTime;
+            if (fallTimer >= FallTimeout)
+            {
+                fallTimer = 0f;
+                stateMachine.ChangeState(character.falling);
+                return;
+            }
+        }
+        else
+        {
+            fallTimer = 0f;
+        }
+        character.SetAnimatorLocomotionSpeed(input.magnitude * 0.5f);
 
         if (dash) // Transition to DashState if dash is triggered
         {
@@ -214,6 +231,26 @@ public class BaseMoveState : State
         else if (crouch) // Transition to CrouchingState
         {
             stateMachine.ChangeState(character.crouching);
+        }
+        
+        // Thêm đoạn này để bắt tín hiệu cất vũ khí từ Input
+        if (sheathWeapon && character.isWeaponDrawn)
+        {
+            // Reset cờ tránh loop
+            sheathWeapon = false; 
+            drawWeapon = false;
+            
+            character.isWeaponDrawn = false;
+            character.currentLocomotionState = character.standing;
+            TutorialTextDisplay.NotifyWeaponSheathedFromGameplay();
+
+            character.animator.SetBool("combatMove", false);
+
+            // Gửi lệnh lên Animator cho thân trên
+            character.animator.ResetTrigger("drawWeapon");
+            character.animator.SetTrigger("sheathWeapon");
+
+            stateMachine.ChangeState(character.currentLocomotionState);
         }
     }
 

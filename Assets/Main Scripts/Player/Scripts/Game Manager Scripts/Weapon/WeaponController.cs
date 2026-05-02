@@ -1,5 +1,5 @@
-﻿using UnityEngine;
-using System; // thêm để dùng Action
+using UnityEngine;
+using System; // th�m d? d�ng Action
 
 [RequireComponent(typeof(Animator))]
 public class WeaponController : MonoBehaviour
@@ -7,7 +7,7 @@ public class WeaponController : MonoBehaviour
     [Header("References")]
     [SerializeField] private Transform handHolder;
     [SerializeField] private Transform sheathHolder;
-    [SerializeField] private EquipmentSystem equipmentSystem; // chỉ dùng cho damage hooks nếu cần
+    [SerializeField] private EquipmentSystem equipmentSystem; // ch? d�ng cho damage hooks n?u c?n
 
     [Header("Animator Layers (indices)")]
     [Tooltip("Base=0, Sword=1, Axe=2, Mage=3, Arms=5 (adjust to your Animator)")]
@@ -29,7 +29,7 @@ public class WeaponController : MonoBehaviour
     [Header("Ability Management")]
     [SerializeField] private WeaponAbilityManager abilityManager;
 
-    // THÊM: Sự kiện bắn ra khi đổi vũ khí
+    // TH�M: S? ki?n b?n ra khi d?i vu kh�
     public event Action<WeaponSO> OnWeaponChanged;
 
     private Animator animator;
@@ -96,7 +96,7 @@ public class WeaponController : MonoBehaviour
             WeaponSelectionPersistence.Save(currentWeapon.weaponType);
     }
 
-    // THÊM: API set weapon từ pickup (có thể dùng chung)
+    // TH�M: API set weapon t? pickup (c� th? d�ng chung)
     public void SetCurrentWeapon(WeaponSO weapon)
     {
         EquipWeapon(weapon);
@@ -113,21 +113,21 @@ public class WeaponController : MonoBehaviour
         if (IsCurrentWand())
         {
             EnsureWandInstance();
-            SetWandActive(false); // sheath = ẩn
+            SetWandActive(false); // sheath = ?n
         }
         else
         {
             ShowWeaponInSheath();
         }
 
-        // Auto-bind và sync
+        // Auto-bind v� sync
         // WeaponHitRunner removed - effects handled by separate scripts
         SyncWithEquipmentSystem();
 
-        // Bật/tắt script theo weapon type mới
+        // B?t/t?t script theo weapon type m?i
         RefreshWeaponScripts();
 
-        // BẮN sự kiện cho tất cả consumer (Skills/HitRunner/UIs...)
+        // B?N s? ki?n cho t?t c? consumer (Skills/HitRunner/UIs...)
         OnWeaponChanged?.Invoke(currentWeapon);
 
         if (weapon != null)
@@ -136,7 +136,7 @@ public class WeaponController : MonoBehaviour
 
     public WeaponSO GetCurrentWeapon() => currentWeapon;
 
-    public void DrawWeaponVisual() // gọi từ Animation/State
+    public void DrawWeaponVisual() // g?i t? Animation/State
     {
         animator.ResetTrigger(sheathTrigger);
         animator.SetTrigger(drawTrigger);
@@ -158,24 +158,24 @@ public class WeaponController : MonoBehaviour
                 StripPhysicalColliders(currentHeldInstance);
                 ApplySocket(currentHeldInstance.transform, currentWeapon.handSocket);
 
-                // Bind Aura (nếu có)
+                // Bind Aura (n?u c�)
                 var auraCtrl = GetComponent<WeaponAuraController>();
                 if (auraCtrl != null) auraCtrl.BindAuraFrom(currentHeldInstance.transform, "Aura");
 
-                // Auto-bind WeaponHitRunner nếu có
+                // Auto-bind WeaponHitRunner n?u c�
                 // WeaponHitRunner removed - effects handled by separate scripts
 
-                // BẮN sự kiện vì instance thay đổi (nếu consumer cần rebind theo instance)
+                // B?N s? ki?n v� instance thay d?i (n?u consumer c?n rebind theo instance)
                 OnWeaponChanged?.Invoke(currentWeapon);
             }
         }
     }
 
-    public void SheathWeaponVisual() // gọi từ Animation/State
+    public void SheathWeaponVisual() // g?i t? Animation/State
     {
         animator.ResetTrigger(drawTrigger);
         animator.SetTrigger(sheathTrigger);
-        // Tắt Aura và unbind
+        // T?t Aura v� unbind
         var auraCtrl = GetComponent<WeaponAuraController>();
         if (auraCtrl != null) { auraCtrl.AE_AuraOff(); auraCtrl.UnbindAura(); }
 
@@ -183,7 +183,7 @@ public class WeaponController : MonoBehaviour
         {
             EnsureWandInstance();
             StartWandSheathTween();
-            // Không tạo sheath instance cho Wand; chỉ ẩn
+            // Kh�ng t?o sheath instance cho Wand; ch? ?n
         }
         else
         {
@@ -192,13 +192,13 @@ public class WeaponController : MonoBehaviour
             ShowWeaponInSheath();
         }
 
-        // BẮN sự kiện nếu consumer quan tâm trạng thái sheath
+        // B?N s? ki?n n?u consumer quan t�m tr?ng th�i sheath
         OnWeaponChanged?.Invoke(currentWeapon);
     }
 
     private void ShowWeaponInSheath()
     {
-        // Wand KHÔNG dùng sheathHolder, chỉ ẩn/hiện dưới handHolder
+        // Wand KH�NG d�ng sheathHolder, ch? ?n/hi?n du?i handHolder
         if (IsCurrentWand()) return;
         if (currentWeapon != null && currentWeapon.weaponPrefab && sheathHolder)
         {
@@ -208,7 +208,7 @@ public class WeaponController : MonoBehaviour
         }
     }
 
-    // Bật đúng script skill theo loại vũ khí, tắt các script còn lại
+    // B?t d�ng script skill theo lo?i vu kh�, t?t c�c script c�n l?i
     private void RefreshWeaponScripts()
     {
         bool isSword = currentWeapon != null && currentWeapon.weaponType == WeaponType.Sword;
@@ -233,7 +233,7 @@ public class WeaponController : MonoBehaviour
         instance.localRotation = Quaternion.Euler(s.localEuler);
         if (s.localScale != Vector3.zero) instance.localScale = s.localScale;
 #if UNITY_EDITOR
-        // Debug nhẹ để xác thực offset được áp
+        // Debug nh? d? x�c th?c offset du?c �p
         // Debug.Log($"ApplySocket pos={s.localPosition} euler={s.localEuler} scale={s.localScale}", instance);
 #endif
     }
@@ -259,13 +259,33 @@ public class WeaponController : MonoBehaviour
     private void ApplyWeaponLayersAndParams()
     {
         int typeInt = currentWeapon != null ? (int)currentWeapon.weaponType : (int)WeaponType.None;
+        
+        // 1. C?p nh?t Parameter cho Base Layer (Nested Blend Tree) v� UpperBody_Layer (GetHit)
         animator.SetInteger(weaponTypeParam, typeInt);
+        // TH�M: �?ng qu�n c?p nh?t WeaponIndex (Float) cho Blend Tree!
+        animator.SetFloat("WeaponIndex", (float)typeInt); 
 
+        // 2. Base Layer (0) v� UpperBody Layer (ArmsLayer - 5) lu�n s�ng d�n
         SetLayerWeightSafe(baseLayer, 1f);
         SetLayerWeightSafe(armsLayer, 1f);
-        SetLayerWeightSafe(swordLayer, (typeInt == (int)WeaponType.Sword) ? 1f : 0f);
-        SetLayerWeightSafe(axeLayer, (typeInt == (int)WeaponType.Axe) ? 1f : 0f);
-        SetLayerWeightSafe(mageLayer, (typeInt == (int)WeaponType.Mage) ? 1f : 0f);
+        
+        // 3. Quy t?c S�t th?: ��ng bang m?i layer vu kh� n?u chua r�t ra
+        // Tr?ng th�i n�y s? du?c g?i l?i b?i Animator Event sau khi DrawWeapon k?t th�c!
+        // T?m th?i ? d�y, n?u dang c?t vu kh� th� set b?ng 0 h?t.
+        bool isDrawn = animator.GetBool("combatMove"); // L?y tr?ng th�i r�t/c?t hi?n t?i
+
+        if (isDrawn)
+        {
+            SetLayerWeightSafe(swordLayer, (typeInt == (int)WeaponType.Sword) ? 1f : 0f);
+            SetLayerWeightSafe(axeLayer, (typeInt == (int)WeaponType.Axe) ? 1f : 0f);
+            SetLayerWeightSafe(mageLayer, (typeInt == (int)WeaponType.Mage) ? 1f : 0f);
+        }
+        else
+        {
+            SetLayerWeightSafe(swordLayer, 0f);
+            SetLayerWeightSafe(axeLayer, 0f);
+            SetLayerWeightSafe(mageLayer, 0f);
+        }
     }
 
     /// <summary>
@@ -298,7 +318,7 @@ public class WeaponController : MonoBehaviour
 
     private void SyncWithEquipmentSystem()
     {
-        // Tìm EquipmentSystem và sync weapon
+        // T�m EquipmentSystem v� sync weapon
         var equip = equipmentSystem;
         if (equip == null) equip = GetComponent<EquipmentSystem>();
 
@@ -356,6 +376,11 @@ public class WeaponController : MonoBehaviour
             shaderController.UnassignMaterial();
             Debug.Log("[WeaponController] Unassigned Ultimate shader material on sheath");
         }
+
+        // Áp tất cả các Layer vũ khí về 0 để Base/UpperBody tự do hoạt động
+        SetLayerWeightSafe(swordLayer, 0f);
+        SetLayerWeightSafe(axeLayer, 0f);
+        SetLayerWeightSafe(mageLayer, 0f);
     }
 
     // ===== Wand helpers (Mage) =====
@@ -374,7 +399,7 @@ public class WeaponController : MonoBehaviour
                 StripPhysicalColliders(currentHeldInstance);
             ApplySocket(currentHeldInstance.transform, currentWeapon.handSocket);
 
-            // THÊM: Bind Aura cho Wand như Axe/Sword
+            // TH�M: Bind Aura cho Wand nhu Axe/Sword
             var auraCtrl = GetComponent<WeaponAuraController>();
             if (auraCtrl != null) auraCtrl.BindAuraFrom(currentHeldInstance.transform, "Aura");
 
@@ -441,7 +466,7 @@ public class WeaponController : MonoBehaviour
     }
 
     // ========== Animation Event: Active weapon script by type ==========
-    // Gọi từ clip Draw: AE_ActiveWeaponScript((int)WeaponType.Axe | Sword | Mage)
+    // G?i t? clip Draw: AE_ActiveWeaponScript((int)WeaponType.Axe | Sword | Mage)
     public void AE_ActiveWeaponScript(int weaponTypeIndex)
     {
         var type = (WeaponType)weaponTypeIndex;
@@ -484,13 +509,13 @@ public class WeaponController : MonoBehaviour
         }
 
 
-        // Với Wand: đảm bảo instance dưới handHolder được bật khi kích hoạt bằng AE
+        // V?i Wand: d?m b?o instance du?i handHolder du?c b?t khi k�ch ho?t b?ng AE
         if (isMage)
         {
             EnsureWandInstance();
             SetWandActive(true);
 
-            // THÊM: Bind Aura khi AE_ActiveWeaponScript kích hoạt Mage
+            // TH�M: Bind Aura khi AE_ActiveWeaponScript k�ch ho?t Mage
             var auraCtrl = GetComponent<WeaponAuraController>();
             if (auraCtrl != null && currentHeldInstance != null)
                 auraCtrl.BindAuraFrom(currentHeldInstance.transform, "Aura");
@@ -536,6 +561,11 @@ public class WeaponController : MonoBehaviour
 
         // Handle Ultimate Icon Shader - only assign material if Ultimate is ready
         HandleUltimateIconShader(type);
+
+        // �?y layer vu kh� tuong ?ng l�n 1, d?p c�c layer kh�c v? 0
+        SetLayerWeightSafe(swordLayer, isSword ? 1f : 0f);
+        SetLayerWeightSafe(axeLayer, isAxe ? 1f : 0f);
+        SetLayerWeightSafe(mageLayer, isMage ? 1f : 0f);
     }
 
     // Handle Ultimate Icon Shader based on weapon type and cooldown state
@@ -572,18 +602,18 @@ public class WeaponController : MonoBehaviour
     }
 
     // === FIX FUSION PHYSICS BUG ===
-    // Xóa tất cả Collider cứng (không phải Trigger) khỏi prefab vũ khí khi Spawn
-    // Để tránh việc kiếm đập trúng Player hoặc quái gây nổ physics, văng khỏi map
+    // X�a t?t c? Collider c?ng (kh�ng ph?i Trigger) kh?i prefab vu kh� khi Spawn
+    // �? tr�nh vi?c ki?m d?p tr�ng Player ho?c qu�i g�y n? physics, vang kh?i map
     private void StripPhysicalColliders(GameObject obj)
     {
         if (obj == null) return;
         Collider[] cols = obj.GetComponentsInChildren<Collider>(true);
         foreach (var c in cols)
         {
-            // Chỉ xóa các Collider vật lý, giữ lại các Trigger nếu có (mặc dù DamageDealer dùng SphereCast)
+            // Ch? x�a c�c Collider v?t l�, gi? l?i c�c Trigger n?u c� (m?c d� DamageDealer d�ng SphereCast)
             if (c != null && !c.isTrigger) 
             {
-                c.enabled = false; // Tắt ngay lập tức để tránh nổ Physics trong frame đầu tiên
+                c.enabled = false; // T?t ngay l?p t?c d? tr�nh n? Physics trong frame d?u ti�n
             }
         }
     }

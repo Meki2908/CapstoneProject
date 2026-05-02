@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.InputSystem;
 using Fusion;
 public enum CharacterStateSync { Standing, Jumping, Crouching, Sprinting, Dash, HardStop, DrawWeapon, SheathWeapon, CombatMove, Attack, GetHit, Die }
@@ -40,14 +40,14 @@ public class Character : NetworkBehaviour
     public StateMachine movementSM;
     public BaseMoveState standing;
     public JumpingState jumping;
+    public FallingState falling;
     public CrouchingState crouching;
     public SprintState sprinting;
     public SprintJumpState sprintjumping;
     public DashState dashing;
     public HardStopState hardStop;
 
-    public DrawWeaponState drawWeapon;
-    public SheathWeaponState sheathWeapon;
+
     public CombatMoveState combatMove;
     public AttackState attacking;
     public GetHitState getHit;
@@ -71,10 +71,13 @@ public class Character : NetworkBehaviour
     public Vector3 cachedPlanarForward;
     [HideInInspector]
     public Vector3 cachedPlanarRight;
+    [HideInInspector]
+    public SkillLock skillLock;
 
     public State currentLocomotionState;
     public static Character LocalCharacter;
     [Networked] public CharacterStateSync NetworkedState { get; set; }
+    [Networked] public bool NetworkedIsLanding { get; set; }
     private ChangeDetector _changeDetector;
     public NetworkInputData previousInput;
     public NetworkInputData currentInput;
@@ -88,8 +91,10 @@ public class Character : NetworkBehaviour
     public bool IsDashing { get; set; } // For invincibility frame during dash
     public float dashLockUntil = 0f; // Thời điểm trước đó dash bị khóa (để tránh auto-dash sau khi bị hit)
 
+    public float lastJumpTime; 
+
     /// <summary> Khi false, bỏ qua input nhảy cho đến khi vào lại locomotion. Nhảy thật sự còn cần <see cref="TryConsumeJumpBuffered"/> (ray chân + buffer + coyote nhẹ). </summary>
-    public bool canStartJump = true;
+    public bool canStartJump => controller.isGrounded && (Runner.SimulationTime >= lastJumpTime + jumpCooldownSeconds);
 
     [Header("Jump — ground & buffer")]
     [Tooltip("Layer được coi là mặt đất cho 2 ray dưới chân. Để trống = mọi layer (DefaultRaycastLayers).")]
@@ -124,30 +129,31 @@ public class Character : NetworkBehaviour
 
     private void Awake()
     {
-        // L?y b? di?u khi?n v?t l� ? Root
+        // Lấy bộ điều khiển vật lý ở Root
         controller = GetComponent<CharacterController>(); 
-        // (N?u ? c�c bu?c tru?c b?n d?i t�n bi?n th�nh _cc th� d�ng _cc nh�)
+        // (Nếu ở các bước trước bạn đổi tên biến thành _cc thì dùng _cc nhé)
 
-        // L?y b? thu t�n hi?u ? Root
+        // Lấy bộ thu tín hiệu ở Root
         playerInput = GetComponent<PlayerInput>();
+        skillLock = GetComponentInChildren<SkillLock>();
 
-        // L?y h�nh h�i ? c�c Con
+        // Lấy animator ở các Con
         animator = GetComponentInChildren<Animator>();
 
         if (animator != null)
         {
-            // Luu l?i t?a d? g?c c?a Model (Thu?ng l� 0, -1, 0)
+            // Lưu lại tọa độ gốc của Model (Thường là 0, -1, 0)
             initialModelLocalPosition = animator.transform.localPosition;
             
-            // ��ng dinh t?t Root Motion m?t l?n v� m�i m�i
+            // Ng định tắt Root Motion một lần và mãi mãi
             animator.applyRootMotion = false;
         }
     }
 
     private void LateUpdate()
     {
-        // H�m n�y ch?y sau c�ng m?i frame. 
-        // B?t k? Animation n�o c? t�nh k�o Model di l?ch, ta d?u gi?t n� v? l?i v? tr� trung t�m c?a Root.
+        // Hàm này chạy sau cùng mọi frame.
+        // Bất kỳ Animation nào có tính kéo Model dịch chuyển, ta đều "giết" nó về lại vị trí trung tâm của Root.
         if (animator != null)
         {
             animator.transform.localPosition = initialModelLocalPosition;
@@ -222,13 +228,13 @@ public class Character : NetworkBehaviour
         movementSM = new StateMachine();
         standing = new StandingState(this, movementSM);
         jumping = new JumpingState(this, movementSM);
+        falling = new FallingState(this, movementSM);
         crouching = new CrouchingState(this, movementSM);
         sprinting = new SprintState(this, movementSM);
         sprintjumping = new SprintJumpState(this, movementSM);
         dashing = new DashState(this, movementSM);
         hardStop = new HardStopState(this, movementSM);
-        drawWeapon = new DrawWeaponState(this, movementSM);
-        sheathWeapon = new SheathWeaponState(this, movementSM);
+
         combatMove = new CombatMoveState(this, movementSM);
         attacking = new AttackState(this, movementSM);
         getHit = new GetHitState(this, movementSM);
@@ -306,26 +312,35 @@ public class Character : NetworkBehaviour
         movementSM.currentState.LogicUpdate();
 
         CalculatedVelocity = Vector3.zero;
-        movementSM.currentState.PhysicsUpdate(); // C�c State gi? CH? t�nh v?n t?c X, Z
+        movementSM.currentState.PhysicsUpdate(); // Các State CHỈ tính vận tốc X, Z
         
+        // === BẮT ĐẦU CÁI PHANH ===
+        // Nếu đang xài skill -> Ép vận tốc đi ngang (X, Z) về số 0 tròn trĩnh!
+        if (skillLock != null && skillLock.isPerformingSkill)
+        {
+            CalculatedVelocity.x = 0f;
+            CalculatedVelocity.z = 0f;
+        }
+        // === KẾT THÚC CÁI PHANH ===
+
         if (controller != null && controller.enabled) 
         {
-            // 1. Gi? nh�n v?t b�m s�n n?u dang d?ng tr�n d?t
+            // 1. Giữ nhân vật bấm sn nếu đang đứng trên đất
             if (controller.isGrounded && playerVelocity.y < 0)
             {
                 playerVelocity.y = -2f; 
             }
 
-            // 2. T�ch luy tr?ng l?c (N?u kh�ng ph?i dang Dash)
+            // 2. Tích luỹ trọng lực (Nếu không phải đang Dash)
             if (!IsDashing)
             {
                 playerVelocity.y += gravityValue * Runner.DeltaTime;
             }
 
-            // 3. G?p v?n t?c d?c (Tr?ng l?c/Nh?y) v�o v?n t?c ngang (FSM)
+            // 3. Gộp vận tốc dọc (Trọng lực/Nhảy) vào vận tốc ngang (FSM)
             CalculatedVelocity.y = playerVelocity.y;
 
-            // 4. L?nh di chuy?n v?t l� cu?i c�ng
+            // 4. Lệnh di chuyển vật lý cuối cùng
             controller.Move(CalculatedVelocity * Runner.DeltaTime);
         }
     }
@@ -345,7 +360,7 @@ public class Character : NetworkBehaviour
     {
         if (!HasStateAuthority && !HasInputAuthority) return;
         
-        // Gi? nguy�n code x? l� UI, cooldown timers, ho?c Animation cu c?a b?n ? d�y...
+        // Giữ nguyên code xử lý UI, cooldown timers, hoặc Animation cũ của bạn ở đây...
     }
 
     void UpdateGroundedAndJumpBuffer()
@@ -376,7 +391,7 @@ public class Character : NetworkBehaviour
         float dist = groundRayDistance + controller.skinWidth;
         bool hitL = Physics.Raycast(left, Vector3.down, out _, dist, mask, QueryTriggerInteraction.Ignore);
         bool hitR = Physics.Raycast(right, Vector3.down, out _, dist, mask, QueryTriggerInteraction.Ignore);
-        return hitL && hitR;
+        return hitL || hitR;
     }
 
     /// <summary>Đứng trên đất (2 ray) hoặc coyote ngắn sau khi rời mép; không dùng CC.isGrounded để tránh nhấp nháy.</summary>
