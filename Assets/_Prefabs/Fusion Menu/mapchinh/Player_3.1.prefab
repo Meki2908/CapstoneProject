@@ -20475,7 +20475,6 @@ GameObject:
   - component: {fileID: 7688063735651446003}
   - component: {fileID: 876315972023120670}
   - component: {fileID: 3371418561195043023}
-  - component: {fileID: 7438438907745588156}
   - component: {fileID: 5210192777364254063}
   - component: {fileID: 6355907827670356983}
   - component: {fileID: 4542938474151535010}
@@ -20989,23 +20988,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   playerHealth: {fileID: 876315972023120670}
   hitTriggerName: gethit
---- !u!114 &7438438907745588156
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1095473133592513688}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 716ecda890833f843b1eb238411b310b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  localSource: {fileID: 5210192777364254063}
-  weaponController: {fileID: 6660667421826194132}
-  footstepVfx: {fileID: 6355907827670356983}
-  fallbackWeaponType: 2
-  defaultVolume: 1
 --- !u!82 &5210192777364254063
 AudioSource:
   m_ObjectHideFlags: 0

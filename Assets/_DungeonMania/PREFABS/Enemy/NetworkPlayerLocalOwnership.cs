@@ -18,6 +18,23 @@ public class NetworkPlayerLocalOwnership : NetworkBehaviour
     private NetworkPlayerDeathManager _deathManager;
     private bool _lastSpectating;
 
+    private void Start()
+    {
+        // Chạy fallback nếu chạy trực tiếp Scene không qua NetworkRunner (chế độ chơi Offline/Single-player)
+        var runner = FindAnyObjectByType<NetworkRunner>();
+        if (runner == null)
+        {
+            Debug.Log("[LocalOwnership] Không tìm thấy NetworkRunner (Offline Mode). Tự động kích hoạt Local Ownership.");
+            ApplyLocalOwnership(true, false);
+        }
+    }
+
+    private bool IsOfflineOrSinglePlayer()
+    {
+        var runner = FindAnyObjectByType<NetworkRunner>();
+        return runner == null || runner.GameMode == GameMode.Single;
+    }
+
     public override void Spawned()
     {
         _deathManager = GetComponent<NetworkPlayerDeathManager>();
@@ -72,29 +89,66 @@ public class NetworkPlayerLocalOwnership : NetworkBehaviour
             ch.enabled = local;
 
         foreach (var cm in GetComponentsInChildren<CinemachineCamera>(true))
+        {
+            if (local) cm.gameObject.SetActive(true);
             cm.enabled = local;
+        }
 
         if (local)
         {
-            // Ưu tiên tìm đúng Camera mang tag MainCamera (tránh nhầm với Minimap Camera / UI Camera)
-            Camera mainCam = null;
-            var allCams = GetComponentsInChildren<Camera>(true);
-            foreach (var c in allCams)
+            // ═══════════════════════════════════════════════════════════════
+            // NGUYÊN NHÂN GỐC: Fusion Player Prefab KHÔNG chứa Main Camera 
+            // (chỉ có CinemachineCamera ảo như PlayerCamera, HandFollowCamera).
+            // Scene Map_Chinh có Main Camera nhưng KHÔNG gắn CinemachineBrain.
+            // → CinemachineCamera trên Player không có Brain nào lắng nghe
+            // → Camera đứng yên 1 chỗ mãi mãi.
+            //
+            // Giải pháp: Tìm Camera.main của SCENE, gắn CinemachineBrain
+            // vào nó nếu thiếu → Cinemachine điều khiển được Camera ngay.
+            // ═══════════════════════════════════════════════════════════════
+            
+            // 1. Tìm Main Camera — ưu tiên Camera.main (scene camera)
+            Camera mainCam = Camera.main;
+            if (mainCam == null)
             {
-                if (c.CompareTag("MainCamera"))
+                // Fallback: tìm trong children của Player (trường hợp prefab gốc có sẵn Main Camera)
+                var playerCams = GetComponentsInChildren<Camera>(true);
+                foreach (var c in playerCams)
                 {
-                    mainCam = c;
-                    break;
+                    if (c.CompareTag("MainCamera"))
+                    {
+                        mainCam = c;
+                        break;
+                    }
                 }
+                if (mainCam == null && playerCams.Length > 0) mainCam = playerCams[0];
             }
-            if (mainCam == null && allCams.Length > 0) mainCam = allCams[0]; // Fallback
 
             if (mainCam != null)
             {
-                mainCam.transform.SetParent(null);
-                mainCam.gameObject.name = "Global_MainCamera_Observer";
-                mainCam.gameObject.SetActive(true); // Kích hoạt GameObject (phòng khi user tắt trong Prefab)
+                // 2. ★ GẮN CinemachineBrain nếu Main Camera chưa có! ★
+                //    Đây là nguyên nhân chính khiến Camera đứng yên 1 chỗ.
+                var brain = mainCam.GetComponent<Unity.Cinemachine.CinemachineBrain>();
+                if (brain == null)
+                {
+                    brain = mainCam.gameObject.AddComponent<Unity.Cinemachine.CinemachineBrain>();
+                    Debug.Log($"[LocalOwnership] ★ Đã gắn CinemachineBrain vào '{mainCam.name}' — Camera sẽ follow Player!");
+                }
+                brain.enabled = true;
                 mainCam.enabled = true;
+                mainCam.gameObject.SetActive(true);
+
+                // 3. Multiplayer: tháo Camera khỏi Player để làm Spectator khi chết
+                //    Offline/Single: giữ nguyên
+                if (!IsOfflineOrSinglePlayer() && mainCam.transform.IsChildOf(this.transform))
+                {
+                    mainCam.transform.SetParent(null);
+                    mainCam.gameObject.name = "Global_MainCamera_Observer";
+                }
+            }
+            else
+            {
+                Debug.LogError("[LocalOwnership] KHÔNG tìm thấy Main Camera nào trong Scene lẫn Player Prefab!");
             }
 
             // Lobby đang mở: không gọi EndAllUiOverlays (sẽ xóa BeginUiOverlay của NetworkLobbyManager)
