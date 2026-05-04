@@ -2,12 +2,12 @@ using UnityEngine;
 
 public class FallingState : State
 {
-    float gravityValue;
+    const float MaxGroundRayDistance = 50f;
+
     float playerSpeed;
     Vector3 airVelocity;
-    
-    // THÊM: Biến lưu thời điểm bắt đầu rơi
-    float fallStartTime; 
+
+    private float maxDistanceToGroundRecord;
 
     public FallingState(Character _character, StateMachine _stateMachine) : base(_character, _stateMachine)
     {
@@ -19,21 +19,19 @@ public class FallingState : State
     {
         base.Enter();
 
-        gravityValue = character.gravityValue;
         playerSpeed = character.playerSpeed;
 
         character.animator.applyRootMotion = false;
         character.animator.SetBool("isGrounded", false);
-        
-        // THÊM: Ghi lại thời điểm bắt đầu rơi vào State này (Dùng Runner.SimulationTime cho chuẩn Fusion mạng)
-        fallStartTime = character.Runner.SimulationTime; 
+
+        maxDistanceToGroundRecord = 0f;
     }
 
     public override void HandleInput()
     {
         base.HandleInput();
         input = MoveInput;
-        
+
         if (TutorialInputGate.IsActive && (TutorialInputGate.EffectiveMask & TutorialInputMask.Move) == 0)
             input = Vector2.zero;
     }
@@ -42,21 +40,25 @@ public class FallingState : State
     {
         base.LogicUpdate();
 
+        LayerMask mask = character.GetGroundRaycastMask();
+        if (Physics.Raycast(character.transform.position, Vector3.down, out RaycastHit hit, MaxGroundRayDistance, mask, QueryTriggerInteraction.Ignore))
+        {
+            if (hit.distance > maxDistanceToGroundRecord)
+                maxDistanceToGroundRecord = hit.distance;
+        }
+
         if (character.CachedGroundedFeet || character.controller.isGrounded)
         {
-            character.animator.SetBool("isGrounded", true); 
+            character.animator.SetBool("isGrounded", true);
 
-            // THÊM LOGIC CỦA BẠN: Kiểm tra xem đã lơ lửng đủ lâu chưa (ví dụ 0.15 giây)
-            float timeInAir = character.Runner.SimulationTime - fallStartTime;
-            
-            // Nếu rơi lâu hơn 0.15s (Chắc chắn là do Jump hoặc rớt từ vách cao) mới cho nhún
-            if (timeInAir > 0.15f) 
+            if (character.requireLanding || maxDistanceToGroundRecord > character.minFallDistanceForLanding)
             {
-                character.NetworkedIsLanding = true; 
+                character.NetworkedIsLanding = true;
                 character.animator.SetTrigger("isLanding");
             }
-            // Nếu nhỏ hơn 0.15s, hệ thống âm thầm bỏ qua cái Trigger Landing và chỉ chuyển State thôi!
-            
+
+            character.requireLanding = false;
+
             State nextState = character.currentLocomotionState != null ? character.currentLocomotionState : character.standing;
             stateMachine.ChangeState(nextState);
         }
@@ -75,11 +77,11 @@ public class FallingState : State
 
             velocity = velocity.x * camRight + velocity.z * camForward;
             velocity.y = 0f;
-            
+
             airVelocity = airVelocity.x * camRight + airVelocity.z * camForward;
             if (airVelocity.sqrMagnitude > 1f) airVelocity.Normalize();
             airVelocity.y = 0f;
-            
+
             Vector3 movement = (airVelocity * character.airControl + velocity * (1 - character.airControl)) * playerSpeed;
             character.CalculatedVelocity.x = movement.x;
             character.CalculatedVelocity.z = movement.z;

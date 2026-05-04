@@ -26,6 +26,19 @@ public class Character : NetworkBehaviour
     [SerializeField] public int maxConsecutiveDashes = 2; // Maximum consecutive dashes allowed
     [SerializeField] public float dashCooldown = 1f; // Cooldown between consecutive dashes (seconds)
     [SerializeField] public float dashChainCooldown = 2.5f; // Cooldown after max consecutive dashes (seconds)
+    [Tooltip("Nhân dashSpeed theo tiến độ dash (0 = đầu, 1 = cuối).")]
+    [SerializeField] public AnimationCurve dashSpeedMultiplierOverTime = DefaultDashSpeedCurve();
+
+    static AnimationCurve DefaultDashSpeedCurve()
+    {
+        var c = new AnimationCurve(
+            new Keyframe(0f, 1.12f, 0f, -0.35f),
+            new Keyframe(0.22f, 1.02f, -0.15f, -0.12f),
+            new Keyframe(1f, 0.88f, -0.2f, 0f));
+        c.preWrapMode = WrapMode.ClampForever;
+        c.postWrapMode = WrapMode.ClampForever;
+        return c;
+    }
 
     [Header("Animation Smoothing")]
     [Range(0, 1)]
@@ -34,6 +47,11 @@ public class Character : NetworkBehaviour
     public float velocityDampTime = 0.9f;
     [Range(0, 1)]
     public float rotationDampTime = 0.2f;
+    
+    [Range(1f, 50f)]
+    [Tooltip("Tốc độ xoay người khi tung đòn đánh (Càng cao xoay càng nhanh). Khuyến nghị: 15-25")]
+    public float attackRotationSpeed = 20f;
+
     [Range(0, 1)]
     public float airControl = 0.5f;
 
@@ -55,6 +73,14 @@ public class Character : NetworkBehaviour
 
     [HideInInspector]
     public float gravityValue = -9.81f;
+
+    [Header("Landing & Fall Settings")]
+    [Tooltip("Khoảng cách rơi tối thiểu (mét) để bắt buộc chạy animation Land")]
+    public float minFallDistanceForLanding = 1.2f;
+
+    [HideInInspector]
+    public bool requireLanding;
+
     [HideInInspector]
     public float normalColliderHeight;
     [HideInInspector]
@@ -392,6 +418,12 @@ public class Character : NetworkBehaviour
         bool hitL = Physics.Raycast(left, Vector3.down, out _, dist, mask, QueryTriggerInteraction.Ignore);
         bool hitR = Physics.Raycast(right, Vector3.down, out _, dist, mask, QueryTriggerInteraction.Ignore);
         return hitL || hitR;
+    }
+
+    /// <summary>Mask giống ray chân — dùng cho FallingState đo khoảng cách xuống đất.</summary>
+    public LayerMask GetGroundRaycastMask()
+    {
+        return groundLayers.value == 0 ? Physics.DefaultRaycastLayers : groundLayers;
     }
 
     /// <summary>Đứng trên đất (2 ray) hoặc coyote ngắn sau khi rời mép; không dùng CC.isGrounded để tránh nhấp nháy.</summary>

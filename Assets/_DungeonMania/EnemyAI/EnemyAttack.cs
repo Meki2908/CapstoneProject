@@ -9,7 +9,8 @@ public class EnemyAttack : MonoBehaviour {
     // Cache bridge reference để không phải tìm lại mỗi lần attack
     private DungeonManiaPlayerBridge cachedBridge;
     private bool hasSearchedBridge = false;
-    
+    private BossMultiSkill cachedBossMultiSkill;
+
     private void Start(){
         enemyScript = GetComponent<EnemyScript> ();
         // Tìm EnemyAttackEffects
@@ -19,6 +20,14 @@ public class EnemyAttack : MonoBehaviour {
         
         // Cache bridge reference ngay từ Start
         FindAndCacheBridge();
+        CacheBossMultiSkill();
+    }
+
+    void CacheBossMultiSkill()
+    {
+        if (cachedBossMultiSkill != null) return;
+        cachedBossMultiSkill = GetComponent<BossMultiSkill>();
+        if (cachedBossMultiSkill == null) cachedBossMultiSkill = GetComponentInParent<BossMultiSkill>();
     }
     
     /// <summary>
@@ -28,6 +37,7 @@ public class EnemyAttack : MonoBehaviour {
     {
         cachedBridge = null;
         hasSearchedBridge = false;
+        cachedBossMultiSkill = null;
     }
     
     /// <summary>
@@ -132,11 +142,10 @@ public class EnemyAttack : MonoBehaviour {
         if(enemyScript == null) return;
 
         // === BOSS AoE SKILL SOUND ===
-        var bossSkill = GetComponent<BossMultiSkill>();
-        if (bossSkill == null) bossSkill = GetComponentInParent<BossMultiSkill>();
-        if (bossSkill != null)
+        if (cachedBossMultiSkill == null) CacheBossMultiSkill();
+        if (cachedBossMultiSkill != null)
         {
-            SoundManager.PlaySound(bossSkill.GetBossAoeSound(), null, 0.9f);
+            SoundManager.PlaySound(cachedBossMultiSkill.GetBossAoeSound(), null, 0.9f);
         }
         else
         {
@@ -239,11 +248,10 @@ public class EnemyAttack : MonoBehaviour {
         if(enemyScript == null) return;
 
         // === BOSS SKILL 1 SOUND ===
-        var bossSkill = GetComponent<BossMultiSkill>();
-        if (bossSkill == null) bossSkill = GetComponentInParent<BossMultiSkill>();
-        if (bossSkill != null)
+        if (cachedBossMultiSkill == null) CacheBossMultiSkill();
+        if (cachedBossMultiSkill != null)
         {
-            SoundManager.PlaySound(bossSkill.GetBossAoeSound(), null, 0.9f);
+            SoundManager.PlaySound(cachedBossMultiSkill.GetBossAoeSound(), null, 0.9f);
         }
         else if (enemyScript.isBoss)
         {

@@ -18,6 +18,9 @@ public class GameSettings : MonoBehaviour
     /// </summary>
     public static event System.Action OnSettingsChanged;
 
+    /// <summary>Gọi từ bên ngoài class (event không được Invoke trực tiếp ngoài type khai báo).</summary>
+    public static void RaiseSettingsChanged() => OnSettingsChanged?.Invoke();
+
     // ==================== AUDIO ====================
     [Header("Audio")]
     public float masterVolume = 0.75f;

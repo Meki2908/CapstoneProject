@@ -23,8 +23,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 7657bfc07d0611042b3eff8fe19f9922, type: 2}
   hitTimings:
   - windowStart: 0.33
-    vfxTime: 0.33
+    vfxTime: 0.2
     windowEnd: 0.42
+    chainPoint: 0.75
+    moveCancelPoint: 0.6
     spawnRule:
       localOffset: {x: 0, y: 0.6, z: 1}
       yawOffset: 0
@@ -33,8 +35,10 @@ MonoBehaviour:
       scale: 0
       extraEulerOffset: {x: 0, y: 0, z: 0}
   - windowStart: 0.4
-    vfxTime: 0.4
+    vfxTime: 0.2
     windowEnd: 0.49
+    chainPoint: 0.75
+    moveCancelPoint: 0.57
     spawnRule:
       localOffset: {x: 0, y: 1, z: 1}
       yawOffset: 0
@@ -43,8 +47,10 @@ MonoBehaviour:
       scale: 0
       extraEulerOffset: {x: 0, y: 0, z: 0}
   - windowStart: 0.42
-    vfxTime: 0.6
+    vfxTime: 0.3
     windowEnd: 0.88
+    chainPoint: 0.75
+    moveCancelPoint: 0.57
     spawnRule:
       localOffset: {x: 0, y: 0.8, z: 1}
       yawOffset: 0
@@ -56,7 +62,7 @@ MonoBehaviour:
   - {fileID: 200260720163327563, guid: c2e4c3a11539d3846b596533225ca57a, type: 3}
   - {fileID: 200260720163327563, guid: c2e4c3a11539d3846b596533225ca57a, type: 3}
   - {fileID: 3991123008155891939, guid: dccd395b6d4e2f943936338d91e899fa, type: 3}
-  normalVfxSpawnMode: 1
+  normalVfxSpawnMode: 0
   handSocket:
     localPosition: {x: 0, y: 0.468, z: 0}
     localEuler: {x: 0, y: 0, z: 0}

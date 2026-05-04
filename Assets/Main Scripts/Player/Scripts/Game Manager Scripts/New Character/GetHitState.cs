@@ -2,8 +2,6 @@ using UnityEngine;
 
 public class GetHitState : State
 {
-    private const float SheathedLayerWeight = 1f;
-
     bool dash;
     bool jump;
     bool toBaseMove;
@@ -15,7 +13,6 @@ public class GetHitState : State
     float hitTimer;
 
     private WeaponController weaponController;
-    private bool weaponLayersWereDisabled = false;
 
     public GetHitState(Character _character, StateMachine _stateMachine) : base(_character, _stateMachine)
     {
@@ -32,22 +29,16 @@ public class GetHitState : State
         toggleWeapon = false;
         hitTimer = hitDuration;
 
-        // === FIX: Clear buffered dash input để tránh auto-dash khi exit GetHitState ===
-        if (character.currentInput.buttons.IsSet(NetworkInputButtons.Dash))
-        {
-        }
-
         if (weaponController == null)
-        {
             weaponController = character.GetComponent<WeaponController>();
-        }
+
+        if (weaponController != null && !character.isWeaponDrawn)
+            weaponController.SetWeaponLayersForSheathedGetHit();
+        else if (weaponController != null)
+            weaponController.ReapplyWeaponLayers();
 
         if (character.animator != null)
-        {
-            // BỎ HẾT logic ép Weapon Layers = 1 vì user đã gộp GetHit vào UpperBody_Hit mask
-            // Chỉ cần set trigger, Layer UpperBody_Hit sẽ tự bắt (kể cả cầm hay cất vũ khí)
             character.animator.SetTrigger("gethit");
-        }
     }
 
     public override void HandleInput()
@@ -153,7 +144,8 @@ public class GetHitState : State
     public override void Exit()
     {
         base.Exit();
-        // Weapon layers are no longer manipulated by GetHitState
+        if (weaponController != null)
+            weaponController.ReapplyWeaponLayers();
     }
 }
 

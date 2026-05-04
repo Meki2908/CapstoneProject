@@ -20,14 +20,15 @@ public class MinimapCameraFollow : MonoBehaviour
     public GameObject minimapUIRoot;
 
     [Header("Brightness (Night Override)")]
-    [Tooltip("Bật để minimap luôn sáng như ban ngày.")]
-    public bool brightenMinimap = true;
+    [Tooltip("TẮT mặc định. Bật sẽ đổi RenderSettings.ambient mỗi lần render minimap — rất tốn trên URP. Nên dùng Volume riêng layer minimap.")]
+    public bool brightenMinimap = false;
     [Range(0.5f, 3f)] public float minimapAmbientIntensity = 1.5f;
 
     private Camera _minimapCamera;
     private Color _savedAmbientColor;
     private float _savedAmbientIntensity;
     private AmbientMode _savedAmbientMode;
+    private bool _brightnessHooksRegistered;
 
     void Start()
     {
@@ -66,20 +67,36 @@ public class MinimapCameraFollow : MonoBehaviour
         // Subscribe để cập nhật khi user đổi settings
         GameSettings.OnSettingsChanged += OnSettingsChanged;
 
-        // URP camera events cho brightness
-        RenderPipelineManager.beginCameraRendering += OnBeginCamera;
-        RenderPipelineManager.endCameraRendering += OnEndCamera;
+        RegisterBrightnessHooksIfNeeded();
     }
 
     void OnDestroy()
     {
         GameSettings.OnSettingsChanged -= OnSettingsChanged;
+        UnregisterBrightnessHooks();
+    }
+
+    void RegisterBrightnessHooksIfNeeded()
+    {
+        if (!brightenMinimap || _brightnessHooksRegistered) return;
+        RenderPipelineManager.beginCameraRendering += OnBeginCamera;
+        RenderPipelineManager.endCameraRendering += OnEndCamera;
+        _brightnessHooksRegistered = true;
+    }
+
+    void UnregisterBrightnessHooks()
+    {
+        if (!_brightnessHooksRegistered) return;
         RenderPipelineManager.beginCameraRendering -= OnBeginCamera;
         RenderPipelineManager.endCameraRendering -= OnEndCamera;
+        _brightnessHooksRegistered = false;
     }
 
     void LateUpdate()
     {
+        if (_minimapCamera != null && !_minimapCamera.enabled)
+            return;
+
         if (player == null)
         {
             GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
@@ -149,8 +166,6 @@ public class MinimapCameraFollow : MonoBehaviour
         // Tắt/bật UI panel
         if (minimapUIRoot != null)
             minimapUIRoot.SetActive(enabled);
-
-        Debug.Log($"[MinimapCameraFollow] Minimap {(enabled ? "ON" : "OFF")}");
     }
 
     /// <summary>

@@ -776,6 +776,14 @@ namespace Artsystack.ArtsystackGui
             miniMapEnabled = !miniMapEnabled;
             UpdateGameplayButtonTexts();
             MarkAsChanged();
+
+            // Áp dụng ngay lên GameSettings + thông báo (MinimapCameraFollow tắt Camera, không chờ Confirm)
+            var gs = GameSettings.Instance;
+            if (gs != null)
+            {
+                gs.miniMapEnabled = miniMapEnabled;
+                GameSettings.RaiseSettingsChanged();
+            }
         }
 
         // Voice Language - Prev/Next

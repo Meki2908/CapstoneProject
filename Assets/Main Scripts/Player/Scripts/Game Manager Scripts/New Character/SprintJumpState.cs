@@ -38,6 +38,8 @@ public class SprintJumpState : State
             horizontalDirection.y = 0f;
             horizontalDirection.Normalize();
         }
+
+        character.requireLanding = true;
     }
 
     public override void LogicUpdate()

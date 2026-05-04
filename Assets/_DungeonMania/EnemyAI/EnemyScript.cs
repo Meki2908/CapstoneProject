@@ -153,7 +153,6 @@ public class EnemyScript : MonoBehaviour {
     public delegate void WinAudio(int i);
     public static event WinAudio WinAudioEvent;
     Vector3 direction;
-    float _nextDistanceLogTime;
     public void RunWinAudio(int i){
         WinAudioEvent?.Invoke(i);
     }
@@ -510,80 +509,29 @@ public class EnemyScript : MonoBehaviour {
         Vector3 toTarget = target.position - transform.position;
         toTarget.y = 0f;
         enemyState.distance = toTarget.magnitude;
-
-        if (Time.time >= _nextDistanceLogTime)
-        {
-            _nextDistanceLogTime = Time.time + 0.5f;
-            #region agent log
-            AgentDebugLogger.Log(
-                "post-fix-3",
-                "H8",
-                "EnemyScript.cs:Distance",
-                "Computed planar distance for AI",
-                "{\"enemy\":\"" + gameObject.name + "\",\"target\":\"" + target.name + "\",\"planarDist\":" + enemyState.distance.ToString("F3") + ",\"rawDist\":" + Vector3.Distance(target.position, transform.position).ToString("F3") + ",\"dy\":" + (target.position.y - transform.position.y).ToString("F3") + "}");
-            #endregion
-        }
     }
 
     Transform FindBestPlayerTarget()
     {
-        // FIX BUG TARGET ẢO: Player thật có thể có component Character bị tắt (disabled)
-        // nhưng GameObject của player thật thì đang Active.
-        // Còn Dummy Player của Cutscene thì GameObject bị Inactive.
-        // Phải tìm TẤT CẢ Character (kể cả bị tắt), sau đó lọc ra GameObject đang Active!
+        Character local = Character.LocalCharacter;
+        if (local != null && local.gameObject.activeInHierarchy)
+            return local.transform;
+
+        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+        if (playerObj != null)
+            return playerObj.transform;
+
+        playerObj = GameObject.Find("player");
+        if (playerObj != null)
+            return playerObj.transform;
+
         Character[] characters = FindObjectsByType<Character>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         foreach (Character c in characters)
         {
             if (c != null && c.gameObject.activeInHierarchy)
-            {
-                #region agent log
-                AgentDebugLogger.Log(
-                    "post-fix-3",
-                    "H8",
-                    "EnemyScript.cs:FindBestPlayerTarget",
-                    "Target resolved via Character",
-                    "{\"enemy\":\"" + gameObject.name + "\",\"target\":\"" + c.name + "\"}");
-                #endregion
                 return c.transform;
-            }
         }
 
-        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
-        if (playerObj != null)
-        {
-            #region agent log
-            AgentDebugLogger.Log(
-                "post-fix-3",
-                "H8",
-                "EnemyScript.cs:FindBestPlayerTarget",
-                "Target resolved via tag Player",
-                "{\"enemy\":\"" + gameObject.name + "\",\"target\":\"" + playerObj.name + "\"}");
-            #endregion
-            return playerObj.transform;
-        }
-
-        playerObj = GameObject.Find("player");
-        if (playerObj != null)
-        {
-            #region agent log
-            AgentDebugLogger.Log(
-                "post-fix-3",
-                "H8",
-                "EnemyScript.cs:FindBestPlayerTarget",
-                "Target resolved via object name",
-                "{\"enemy\":\"" + gameObject.name + "\",\"target\":\"" + playerObj.name + "\"}");
-            #endregion
-            return playerObj.transform;
-        }
-
-        #region agent log
-        AgentDebugLogger.Log(
-            "post-fix-3",
-            "H8",
-            "EnemyScript.cs:FindBestPlayerTarget",
-            "Failed to resolve player target",
-            "{\"enemy\":\"" + gameObject.name + "\"}");
-        #endregion
         return null;
     }
 

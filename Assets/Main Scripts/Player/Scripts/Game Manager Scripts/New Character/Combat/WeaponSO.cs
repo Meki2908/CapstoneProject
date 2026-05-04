@@ -29,6 +29,13 @@ public struct HitTiming
     [Tooltip("Seconds from hit start when damage stops.")]
     public float windowEnd;
 
+    [Header("Combo Flow Controls")]
+    [Tooltip("Tỷ lệ % của Clip (0.0 -> 1.0) để MỞ KHÓA cho phép bấm Combo đòn tiếp theo.")]
+    [Range(0.1f, 1f)] public float chainPoint;
+
+    [Tooltip("Tỷ lệ % của Clip (0.0 -> 1.0) để CHO PHÉP người chơi di chuyển (Move Cancel) ngắt đòn.")]
+    [Range(0.1f, 1f)] public float moveCancelPoint;
+
     [Header("Dynamic VFX placement")]
     public VfxSpawnRule spawnRule;
 }

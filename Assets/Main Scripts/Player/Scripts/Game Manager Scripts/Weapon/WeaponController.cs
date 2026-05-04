@@ -297,6 +297,30 @@ public class WeaponController : MonoBehaviour
         ApplyWeaponLayersAndParams();
     }
 
+    /// <summary>
+    /// Khi đang cất vũ khí, <see cref="ApplyWeaponLayersAndParams"/> tắt hết Sword/Axe/Mage layer → GetHit trên layer đúng không chạy.
+    /// Gọi trước <c>SetTrigger("gethit")</c> để bật đúng layer theo vũ khí đang trang bị (vẫn giữ base + arms).
+    /// </summary>
+    public void SetWeaponLayersForSheathedGetHit()
+    {
+        if (animator == null)
+            animator = GetComponentInChildren<Animator>();
+
+        if (animator == null || currentWeapon == null) return;
+
+        int typeInt = (int)currentWeapon.weaponType;
+        if (typeInt == (int)WeaponType.None) return;
+
+        animator.SetInteger(weaponTypeParam, typeInt);
+        animator.SetFloat("WeaponIndex", typeInt);
+
+        SetLayerWeightSafe(baseLayer, 1f);
+        SetLayerWeightSafe(armsLayer, 1f);
+        SetLayerWeightSafe(swordLayer, typeInt == (int)WeaponType.Sword ? 1f : 0f);
+        SetLayerWeightSafe(axeLayer, typeInt == (int)WeaponType.Axe ? 1f : 0f);
+        SetLayerWeightSafe(mageLayer, typeInt == (int)WeaponType.Mage ? 1f : 0f);
+    }
+
     private void SetLayerWeightSafe(int layer, float weight)
     {
         if (layer >= 0 && layer < animator.layerCount)
@@ -389,6 +413,15 @@ public class WeaponController : MonoBehaviour
         return currentWeapon != null && currentWeapon.weaponType == WeaponType.Mage && handHolder != null;
     }
 
+    /// <summary>
+    /// Neo spawn VFX/projectile: instance vũ khí đang cầm (wand) hoặc <see cref="handHolder"/> — tránh spawn ở pivot chân nhân vật.
+    /// </summary>
+    public Transform GetHeldWeaponSpawnAnchor()
+    {
+        if (currentHeldInstance != null)
+            return currentHeldInstance.transform;
+        return handHolder;
+    }
 
     private void EnsureWandInstance()
     {

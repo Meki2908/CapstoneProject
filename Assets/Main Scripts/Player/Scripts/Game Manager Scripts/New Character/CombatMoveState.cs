@@ -10,6 +10,10 @@ public class CombatMoveState : BaseMoveState
     private SkillLock skillLock;
     private float currentSpeed;
 
+    private SwordSkills swordSkills;
+    private AxeSkill axeSkill;
+    private MageSkills mageSkills;
+
     public CombatMoveState(Character _character, StateMachine _stateMachine) : base(_character, _stateMachine)
     {
         character = _character;
@@ -23,10 +27,12 @@ public class CombatMoveState : BaseMoveState
         attack = false;
         character.isWeaponDrawn = true;
         character.animator.SetBool("combatMove", true);
-        Debug.Log($"<color=green>[CombatMoveState]</color> Enter");
-        
-        // 1. D?N D?P BÓNG MA QUÁN TÍNH: L?y v?n t?c th?c t? hi?n t?i, không d?ng d? cu!
-        velocity = character.CalculatedVelocity; 
+
+        if (swordSkills == null) swordSkills = character.GetComponentInChildren<SwordSkills>(true);
+        if (axeSkill == null) axeSkill = character.GetComponentInChildren<AxeSkill>(true);
+        if (mageSkills == null) mageSkills = character.GetComponentInChildren<MageSkills>(true);
+
+        velocity = character.CalculatedVelocity;
     }
     public override void HandleInput()
     {
@@ -45,65 +51,48 @@ public class CombatMoveState : BaseMoveState
     {
         base.LogicUpdate();
 
-        // THÊM ĐOẠN NÀY VÀO ĐỂ BẮT SỰ KIỆN CHẠM
-        if (character.currentInput.buttons.IsSet(NetworkInputButtons.Attack) && 
-           !character.previousInput.buttons.IsSet(NetworkInputButtons.Attack))
+        if (character.currentInput.buttons.IsSet(NetworkInputButtons.Attack) &&
+            !character.previousInput.buttons.IsSet(NetworkInputButtons.Attack))
         {
+            character.animator.SetTrigger("attack");
             stateMachine.ChangeState(character.attacking);
             return;
         }
-        var swordSkills = character.GetComponentInChildren<SwordSkills>();
-        var axeSkill = character.GetComponentInChildren<AxeSkill>();
-        var mageSkills = character.GetComponentInChildren<MageSkills>();
-        
+
         if (character.isWeaponDrawn)
         {
-            if (character.currentInput.buttons.IsSet(NetworkInputButtons.Skill_E) && !character.previousInput.buttons.IsSet(NetworkInputButtons.Skill_E)) 
+            if (character.currentInput.buttons.IsSet(NetworkInputButtons.Skill_E) && !character.previousInput.buttons.IsSet(NetworkInputButtons.Skill_E))
             {
                 if (swordSkills != null) swordSkills.TryUse(AbilityInput.E);
-                Debug.Log($"<color=green>[CombatMoveState]</color> Sword Skills E pressed");
                 if (axeSkill != null) axeSkill.TryUse(AbilityInput.E);
-                Debug.Log($"<color=green>[CombatMoveState]</color> Axe Skills E pressed");
                 if (mageSkills != null) mageSkills.TryUse(AbilityInput.E);
-                Debug.Log($"<color=green>[CombatMoveState]</color> Mage Skills E pressed");
-
-                Debug.Log($"<color=green>[CombatMoveState]</color> Skill E pressed");
             }
-                
-            if (character.currentInput.buttons.IsSet(NetworkInputButtons.Skill_R) && !character.previousInput.buttons.IsSet(NetworkInputButtons.Skill_R)) 
+
+            if (character.currentInput.buttons.IsSet(NetworkInputButtons.Skill_R) && !character.previousInput.buttons.IsSet(NetworkInputButtons.Skill_R))
             {
                 if (swordSkills != null) swordSkills.TryUse(AbilityInput.R);
-                Debug.Log($"<color=green>[CombatMoveState]</color> Sword Skills R pressed");
                 if (axeSkill != null) axeSkill.TryUse(AbilityInput.R);
-                Debug.Log($"<color=green>[CombatMoveState]</color> Axe Skill R pressed");
                 if (mageSkills != null) mageSkills.TryUse(AbilityInput.R);
-                Debug.Log($"<color=green>[CombatMoveState]</color> Mage Skills R pressed");
-                Debug.Log($"<color=green>[CombatMoveState]</color> Skill R pressed");
             }
-                
-            if (character.currentInput.buttons.IsSet(NetworkInputButtons.Skill_T) && !character.previousInput.buttons.IsSet(NetworkInputButtons.Skill_T)) 
+
+            if (character.currentInput.buttons.IsSet(NetworkInputButtons.Skill_T) && !character.previousInput.buttons.IsSet(NetworkInputButtons.Skill_T))
             {
                 if (swordSkills != null) swordSkills.TryUse(AbilityInput.T);
                 if (axeSkill != null) axeSkill.TryUse(AbilityInput.T);
                 if (mageSkills != null) mageSkills.TryUse(AbilityInput.T);
-                Debug.Log($"<color=green>[CombatMoveState]</color> Skill T pressed");
             }
-                
-            if (character.currentInput.buttons.IsSet(NetworkInputButtons.Skill_Q) && !character.previousInput.buttons.IsSet(NetworkInputButtons.Skill_Q)) 
+
+            if (character.currentInput.buttons.IsSet(NetworkInputButtons.Skill_Q) && !character.previousInput.buttons.IsSet(NetworkInputButtons.Skill_Q))
             {
                 if (swordSkills != null) swordSkills.TryUse(AbilityInput.Q_Ultimate);
                 if (axeSkill != null) axeSkill.TryUse(AbilityInput.Q_Ultimate);
                 if (mageSkills != null) mageSkills.TryUse(AbilityInput.Q_Ultimate);
-                Debug.Log($"<color=green>[CombatMoveState]</color> Skill Q pressed");
             }
         }
 
-        // NEW: khi đang skill, không xét sheath/attack/đổi state
         if (skillLock != null && skillLock.isPerformingSkill)
             return;
 
-
-        // Nếu nhấn nút tấn công, chuyển sang AttackState
         if (attack && stateMachine.currentState != character.attacking)
         {
             character.animator.SetTrigger("attack");

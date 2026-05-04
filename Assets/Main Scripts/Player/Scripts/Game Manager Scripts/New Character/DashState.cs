@@ -5,10 +5,8 @@ public class DashState : State
     private float elapsedTime;
     private Vector3 dashDirection;
 
-    // Dash cooldown and chain tracking
-    private int currentDashCount = 0; // Current number of consecutive dashes
+    private int currentDashCount = 0;
 
-    // Static variables to persist across state instances
     private int dashCount = 0;
     private float lastDashTime = 0f;
     private float dashChainEndTime = 0f;
@@ -22,18 +20,14 @@ public class DashState : State
         base.Enter();
         character.playerVelocity.y = 0f;
 
-        // Get dash settings from Character
         float dashCooldown = character.dashCooldown;
         float dashChainCooldown = character.dashChainCooldown;
         int maxConsecutiveDashes = character.maxConsecutiveDashes;
 
-        // Check if dash is on cooldown
         float currentTime = character.Runner.SimulationTime;
 
         if (dashChainEndTime > currentTime + 100f || lastDashTime > currentTime + 100f)
-        {
             ResetDashCooldown();
-        }
 
         if (currentTime < dashChainEndTime)
         {
@@ -42,9 +36,7 @@ public class DashState : State
         }
 
         if (lastDashTime <= 0 || currentTime - lastDashTime > dashCooldown)
-        {
             dashCount = 0;
-        }
 
         if (dashCount >= maxConsecutiveDashes)
         {
@@ -58,10 +50,8 @@ public class DashState : State
         lastDashTime = currentTime;
         currentDashCount = dashCount;
 
-        // Reset the timer
         elapsedTime = 0f;
 
-        // Calculate the dash direction based on input
         Vector2 input = MoveInput;
         GetPlanarCameraBasis(out Vector3 forward, out Vector3 right);
         dashDirection = (forward * input.y + right * input.x).normalized;
@@ -72,22 +62,16 @@ public class DashState : State
             dashDirection.Normalize();
         }
 
-        // Rotate the character to face the dash direction
         character.transform.rotation = Quaternion.LookRotation(dashDirection);
 
-        // B?t I-frame và d?i Layer tàng hình
         character.IsDashing = true;
         character.AE_EnableDashInvincibility();
 
-        // Phát animation l?n vòng
         if (character.animator)
-        {
             character.animator.SetTrigger("dash");
-        }
 
-        if(character.TryGetComponent(out StuckDetection stuck)){
+        if (character.TryGetComponent(out StuckDetection stuck))
             stuck.enabled = false;
-        }
 
         TutorialTextDisplay.NotifyDashStartedFromGameplay();
     }
@@ -96,13 +80,10 @@ public class DashState : State
     {
         base.LogicUpdate();
 
-        // Tích luy th?i gian
         elapsedTime += character.Runner.DeltaTime;
 
-        // N?u th?i gian lu?t dã vu?t qua dashDuration
         if (elapsedTime >= character.dashDuration)
         {
-            // Chuy?n v? tr?ng thái d?ng yên
             State nextState = character.currentLocomotionState != null ? character.currentLocomotionState : character.standing;
             stateMachine.ChangeState(nextState);
         }
@@ -112,33 +93,40 @@ public class DashState : State
     {
         base.PhysicsUpdate();
 
-        // Lao di v?i t?c d? dashSpeed (Không c?n di?u ki?n if(isDashMoving) t? AE n?a)
-        character.CalculatedVelocity = character.transform.forward * character.dashSpeed;
+        float dur = Mathf.Max(character.dashDuration, 0.0001f);
+        float t = Mathf.Clamp01(elapsedTime / dur);
+        float mul = character.dashSpeedMultiplierOverTime != null && character.dashSpeedMultiplierOverTime.length > 0
+            ? character.dashSpeedMultiplierOverTime.Evaluate(t)
+            : 1f;
+
+        Vector3 dashMove = character.transform.forward * (character.dashSpeed * mul);
+        character.CalculatedVelocity.x = dashMove.x;
+        character.CalculatedVelocity.z = dashMove.z;
+
+        if (!character.controller.isGrounded && !character.CachedGroundedFeet)
+            character.playerVelocity.y += character.gravityValue * character.Runner.DeltaTime;
+        else
+            character.playerVelocity.y = -2f;
     }
 
     public override void Exit()
     {
         base.Exit();
 
-        // T?t I-frame, tr? l?i Layer bình thu?ng
         character.IsDashing = false;
         if (character != null)
-        {
             character.AE_DisableDashInvincibility();
-        }
 
         dashDirection = Vector3.zero;
 
-        // Snap blend "speed" theo input hi?n t?i
         if (character != null)
         {
             Vector2 m = MoveInput;
             character.SetAnimatorLocomotionSpeed(m.magnitude);
         }
 
-        if(character.TryGetComponent(out StuckDetection stuck)){
+        if (character.TryGetComponent(out StuckDetection stuck))
             stuck.enabled = true;
-        }
     }
 
     #region Public Methods for Cooldown Checking
@@ -155,19 +143,13 @@ public class DashState : State
         float currentTime = character.Runner.SimulationTime;
 
         if (currentTime < dashChainEndTime)
-        {
             return false;
-        }
 
         if (currentTime - lastDashTime > character.dashCooldown)
-        {
             dashCount = 0;
-        }
 
         if (dashCount >= character.maxConsecutiveDashes)
-        {
             return false;
-        }
 
         return true;
     }
@@ -178,9 +160,7 @@ public class DashState : State
         float chainCooldownRemaining = dashChainEndTime - currentTime;
 
         if (chainCooldownRemaining > 0)
-        {
             return chainCooldownRemaining;
-        }
 
         return 0f;
     }

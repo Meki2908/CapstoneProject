@@ -103,7 +103,10 @@ public class TakeDamageTest : NetworkBehaviour
         // Find player for detection
         if (enableDetection || enableRaycastDamage)
         {
-            playerCharacter = FindFirstObjectByType<Character>();
+            playerCharacter = Character.LocalCharacter;
+            if (playerCharacter == null)
+                playerCharacter = FindFirstObjectByType<Character>();
+
             if (playerCharacter != null)
             {
                 player = playerCharacter.transform;
@@ -115,7 +118,8 @@ public class TakeDamageTest : NetworkBehaviour
                     Debug.LogWarning("[TakeDamageTest] PlayerHealth component not found on Character!");
                 }
 
-                Debug.Log("[TakeDamageTest] Player found for detection");
+                if (showDebugInfo)
+                    Debug.Log("[TakeDamageTest] Player found for detection");
             }
             else
             {

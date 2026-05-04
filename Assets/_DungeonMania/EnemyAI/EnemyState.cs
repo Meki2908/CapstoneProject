@@ -14,6 +14,18 @@ public class EnemyState : MonoBehaviour{
     [HideInInspector] public bool isCastingSkill = false; // Boss đang cast skill → khóa rotation
     [HideInInspector] public Vector3 skillCastDirection; // Hướng boss lúc bắt đầu cast (cho VFX)
 
+    const float MinYawDeltaToRotate = 2f;
+
+    bool ShouldRotateTowardPlayer()
+    {
+        if (enemyScript == null || enemyScript.target == null) return false;
+        Vector3 dir = enemyScript.target.position - enemyScript.transform.position;
+        dir.y = 0f;
+        if (dir.sqrMagnitude < 0.001f) return false;
+        float yawErr = Quaternion.Angle(enemyScript.transform.rotation, Quaternion.LookRotation(dir));
+        return yawErr > MinYawDeltaToRotate;
+    }
+
     private void Start () {
         enemyScript = GetComponent<EnemyScript> ();
         if (enemyScript != null) {
@@ -30,10 +42,8 @@ public class EnemyState : MonoBehaviour{
         if(!GameController.pause){
             if( enemyScript.alive ){
                 if (!enemyScript.hit && enemyScript.target != null) {
-                    // KHÔNG xoay khi đang cast skill (giữ hướng cho directional VFX)
-                    if (!isCastingSkill) {
+                    if (!isCastingSkill && ShouldRotateTowardPlayer())
                         enemyScript.RotateToPlayer();
-                    }
                 }
                 if(enemyScript.cont && !isAIRunning) {
                     StartCoroutine(AI());
