@@ -20,13 +20,9 @@ public class DashState : State
         character.playerVelocity.y = 0f;
         elapsedTime = 0f;
 
-<<<<<<< HEAD
         // Drive animator param so transitions can distinguish RollLanding vs CombatDash.
         if (character.animator)
             character.animator.SetBool("isRollLanding", character.isRollLanding);
-
-=======
->>>>>>> 977256f4eef791cf0127442fa9888b43439d29a6
         // BẢO HIỂM FULL-BODY (Tắt Layer Chân)
         int lowerBodyLayerIndex = character.animator.GetLayerIndex("Lower body");
         if (lowerBodyLayerIndex >= 0)
@@ -110,11 +106,7 @@ public class DashState : State
         elapsedTime += character.Runner.DeltaTime;
 
         // NẾU ĐANG DASH (KHÔNG PHẢI ROLL) MÀ HẾT ĐẤT -> RƠI
-<<<<<<< HEAD
         if (!character.isRollLanding && !character.IsGroundedStable())
-=======
-        if (!character.isRollLanding && !character.controller.isGrounded && !character.CachedGroundedFeet)
->>>>>>> 977256f4eef791cf0127442fa9888b43439d29a6
         {
             LayerMask mask = character.GetGroundRaycastMask();
             bool hitGround = Physics.Raycast(character.transform.position, Vector3.down, out RaycastHit hit, 10f, mask, QueryTriggerInteraction.Ignore);
@@ -173,12 +165,8 @@ public class DashState : State
         if (lowerBodyLayerIndex >= 0)
             character.animator.SetLayerWeight(lowerBodyLayerIndex, 1f); 
 
-<<<<<<< HEAD
         if (character.animator)
             character.animator.SetBool("isRollLanding", false);
-
-=======
->>>>>>> 977256f4eef791cf0127442fa9888b43439d29a6
         if (character.isRollLanding) character.isRollLanding = false;
         else
         {

@@ -94,10 +94,7 @@ public class Character : NetworkBehaviour
 
     [HideInInspector] public Vector3 momentumToInherit;
     [HideInInspector] public bool isRollLanding;
-<<<<<<< HEAD
     [HideInInspector] public float jumpStartY; // Lưu lại tọa độ Y lúc bắt đầu nhảy
-=======
->>>>>>> 977256f4eef791cf0127442fa9888b43439d29a6
 
     [HideInInspector]
     public bool requireLanding;
