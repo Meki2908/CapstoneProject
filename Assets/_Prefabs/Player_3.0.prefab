@@ -50526,7 +50526,7 @@ CharacterController:
   serializedVersion: 3
   m_Height: 1.8028462
   m_Radius: 0.2
-  m_SlopeLimit: 50
+  m_SlopeLimit: 60
   m_StepOffset: 0.3
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
@@ -50592,9 +50592,16 @@ MonoBehaviour:
   speedDampTime: 0.05
   velocityDampTime: 0.1
   rotationDampTime: 0.2
+  attackRotationSpeed: 20
   airControl: 0.064
   gravityValue: -9.81
-  minFallDistanceForLanding: 1.2
+  minFallDistanceForLanding: 0.85
+  enoughDistanceToFall: 1.5
+  farFallDistanceForRoll: 4
+  fallInertiaDecayRate: 2
+  extraFallAcceleration: 15
+  momentumToInherit: {x: 0, y: 0, z: 0}
+  isRollLanding: 0
   requireLanding: 0
   normalColliderHeight: 0
   controller: {fileID: 0}
@@ -85240,11 +85247,15 @@ MonoBehaviour:
   equipment: {fileID: 9113710843612948326}
   defaultVfxSpawn: {fileID: 5323140124051252252}
   animator: {fileID: 7101454677325079267}
+  character: {fileID: 0}
+  weaponController: {fileID: 0}
   enemyLayerMask:
     serializedVersion: 2
     m_Bits: 64
   autoAimRange: 15
-  comboResetTime: 1.5
+  spawnForwardClearance: 0.38
+  spawnHeightBias: 0.12
+  ownerIgnoreCollisionSeconds: 0.14
 --- !u!114 &4792827371751194196
 MonoBehaviour:
   m_ObjectHideFlags: 0

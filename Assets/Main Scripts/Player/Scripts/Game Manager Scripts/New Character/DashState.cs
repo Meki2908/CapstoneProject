@@ -6,7 +6,6 @@ public class DashState : State
     private Vector3 dashDirection;
 
     private int currentDashCount = 0;
-
     private int dashCount = 0;
     private float lastDashTime = 0f;
     private float dashChainEndTime = 0f;
@@ -19,11 +18,40 @@ public class DashState : State
     {
         base.Enter();
         character.playerVelocity.y = 0f;
+        elapsedTime = 0f;
+
+        // BẢO HIỂM FULL-BODY (Tắt Layer Chân)
+        int lowerBodyLayerIndex = character.animator.GetLayerIndex("Lower body");
+        if (lowerBodyLayerIndex >= 0)
+            character.animator.SetLayerWeight(lowerBodyLayerIndex, 0f);
+
+        // === PHÂN NHÁNH 1: PARKOUR ROLL (DÙNG ROOT MOTION) ===
+        if (character.isRollLanding)
+        {
+            character.animator.applyRootMotion = true; // Ép Root Motion
+
+            Vector2 input = MoveInput;
+            GetPlanarCameraBasis(out Vector3 forward, out Vector3 right);
+            dashDirection = (forward * input.y + right * input.x).normalized;
+            if (dashDirection == Vector3.zero) dashDirection = character.transform.forward;
+
+            character.transform.rotation = Quaternion.LookRotation(dashDirection);
+
+            if (character.animator)
+                character.animator.SetTrigger("dash");
+
+            if (character.TryGetComponent(out StuckDetection stuck))
+                stuck.enabled = false;
+                
+            return; // Ngắt luôn, KHÔNG bật I-Frame, KHÔNG tính Cooldown
+        }
+
+        // === PHÂN NHÁNH 2: DASH CHIẾN ĐẤU (DÙNG CODE CURVE) ===
+        character.animator.applyRootMotion = false; // Tắt Root Motion
 
         float dashCooldown = character.dashCooldown;
         float dashChainCooldown = character.dashChainCooldown;
         int maxConsecutiveDashes = character.maxConsecutiveDashes;
-
         float currentTime = character.Runner.SimulationTime;
 
         if (dashChainEndTime > currentTime + 100f || lastDashTime > currentTime + 100f)
@@ -35,8 +63,7 @@ public class DashState : State
             return;
         }
 
-        if (lastDashTime <= 0 || currentTime - lastDashTime > dashCooldown)
-            dashCount = 0;
+        if (lastDashTime <= 0 || currentTime - lastDashTime > dashCooldown) dashCount = 0;
 
         if (dashCount >= maxConsecutiveDashes)
         {
@@ -50,28 +77,22 @@ public class DashState : State
         lastDashTime = currentTime;
         currentDashCount = dashCount;
 
-        elapsedTime = 0f;
+        Vector2 normalInput = MoveInput;
+        GetPlanarCameraBasis(out Vector3 fwd, out Vector3 rgt);
+        dashDirection = (fwd * normalInput.y + rgt * normalInput.x).normalized;
 
-        Vector2 input = MoveInput;
-        GetPlanarCameraBasis(out Vector3 forward, out Vector3 right);
-        dashDirection = (forward * input.y + right * input.x).normalized;
-
-        if (dashDirection == Vector3.zero)
-        {
-            dashDirection = forward;
-            dashDirection.Normalize();
-        }
+        if (dashDirection == Vector3.zero) dashDirection = fwd.normalized;
 
         character.transform.rotation = Quaternion.LookRotation(dashDirection);
 
         character.IsDashing = true;
-        character.AE_EnableDashInvincibility();
+        character.AE_EnableDashInvincibility(); // Bật I-Frame
 
         if (character.animator)
             character.animator.SetTrigger("dash");
 
-        if (character.TryGetComponent(out StuckDetection stuck))
-            stuck.enabled = false;
+        if (character.TryGetComponent(out StuckDetection stuckDet))
+            stuckDet.enabled = false;
 
         TutorialTextDisplay.NotifyDashStartedFromGameplay();
     }
@@ -79,8 +100,21 @@ public class DashState : State
     public override void LogicUpdate()
     {
         base.LogicUpdate();
-
         elapsedTime += character.Runner.DeltaTime;
+
+        // NẾU ĐANG DASH (KHÔNG PHẢI ROLL) MÀ HẾT ĐẤT -> RƠI
+        if (!character.isRollLanding && !character.controller.isGrounded && !character.CachedGroundedFeet)
+        {
+            LayerMask mask = character.GetGroundRaycastMask();
+            bool hitGround = Physics.Raycast(character.transform.position, Vector3.down, out RaycastHit hit, 10f, mask, QueryTriggerInteraction.Ignore);
+            
+            if (!hitGround || hit.distance > character.enoughDistanceToFall)
+            {
+                character.momentumToInherit = new Vector3(character.CalculatedVelocity.x, 0, character.CalculatedVelocity.z);
+                stateMachine.ChangeState(character.falling);
+                return;
+            }
+        }
 
         if (elapsedTime >= character.dashDuration)
         {
@@ -93,15 +127,24 @@ public class DashState : State
     {
         base.PhysicsUpdate();
 
-        float dur = Mathf.Max(character.dashDuration, 0.0001f);
-        float t = Mathf.Clamp01(elapsedTime / dur);
-        float mul = character.dashSpeedMultiplierOverTime != null && character.dashSpeedMultiplierOverTime.length > 0
-            ? character.dashSpeedMultiplierOverTime.Evaluate(t)
-            : 1f;
+        if (character.isRollLanding)
+        {
+            // ROOT MOTION TỰ LO -> CODE TRẢ VỀ 0
+            character.CalculatedVelocity.x = 0f;
+            character.CalculatedVelocity.z = 0f;
+        }
+        else
+        {
+            // DASH THƯỜNG -> DÙNG CURVE NHƯ CŨ
+            float dur = Mathf.Max(character.dashDuration, 0.0001f);
+            float t = Mathf.Clamp01(elapsedTime / dur);
+            float mul = character.dashSpeedMultiplierOverTime != null && character.dashSpeedMultiplierOverTime.length > 0
+                ? character.dashSpeedMultiplierOverTime.Evaluate(t) : 1f;
 
-        Vector3 dashMove = character.transform.forward * (character.dashSpeed * mul);
-        character.CalculatedVelocity.x = dashMove.x;
-        character.CalculatedVelocity.z = dashMove.z;
+            Vector3 dashMove = character.transform.forward * (character.dashSpeed * mul);
+            character.CalculatedVelocity.x = dashMove.x;
+            character.CalculatedVelocity.z = dashMove.z;
+        }
 
         if (!character.controller.isGrounded && !character.CachedGroundedFeet)
             character.playerVelocity.y += character.gravityValue * character.Runner.DeltaTime;
@@ -113,9 +156,18 @@ public class DashState : State
     {
         base.Exit();
 
-        character.IsDashing = false;
-        if (character != null)
-            character.AE_DisableDashInvincibility();
+        character.animator.applyRootMotion = false; // Reset
+
+        int lowerBodyLayerIndex = character.animator.GetLayerIndex("Lower body");
+        if (lowerBodyLayerIndex >= 0)
+            character.animator.SetLayerWeight(lowerBodyLayerIndex, 1f); 
+
+        if (character.isRollLanding) character.isRollLanding = false;
+        else
+        {
+            character.IsDashing = false;
+            if (character != null) character.AE_DisableDashInvincibility();
+        }
 
         dashDirection = Vector3.zero;
 
@@ -130,40 +182,8 @@ public class DashState : State
     }
 
     #region Public Methods for Cooldown Checking
-
-    public void ResetDashCooldown()
-    {
-        dashCount = 0;
-        lastDashTime = 0f;
-        dashChainEndTime = 0f;
-    }
-
-    public bool CanDash()
-    {
-        float currentTime = character.Runner.SimulationTime;
-
-        if (currentTime < dashChainEndTime)
-            return false;
-
-        if (currentTime - lastDashTime > character.dashCooldown)
-            dashCount = 0;
-
-        if (dashCount >= character.maxConsecutiveDashes)
-            return false;
-
-        return true;
-    }
-
-    public float GetRemainingCooldown()
-    {
-        float currentTime = character.Runner.SimulationTime;
-        float chainCooldownRemaining = dashChainEndTime - currentTime;
-
-        if (chainCooldownRemaining > 0)
-            return chainCooldownRemaining;
-
-        return 0f;
-    }
-
+    public void ResetDashCooldown() { dashCount = 0; lastDashTime = 0f; dashChainEndTime = 0f; }
+    public bool CanDash() { if (character.Runner.SimulationTime < dashChainEndTime) return false; if (character.Runner.SimulationTime - lastDashTime > character.dashCooldown) dashCount = 0; return dashCount < character.maxConsecutiveDashes; }
+    public float GetRemainingCooldown() { float r = dashChainEndTime - character.Runner.SimulationTime; return r > 0 ? r : 0f; }
     #endregion
 }

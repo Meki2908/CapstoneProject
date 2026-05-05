@@ -78,6 +78,23 @@ public class Character : NetworkBehaviour
     [Tooltip("Khoảng cách rơi tối thiểu (mét) để bắt buộc chạy animation Land")]
     public float minFallDistanceForLanding = 1.2f;
 
+    [Tooltip("Khoảng cách mặt đất tối thiểu để ngắt Dash và bắt đầu rơi (mét)")]
+    public float enoughDistanceToFall = 0.8f;
+
+    [Tooltip("Độ cao tối thiểu để kích hoạt Parkour Roll khi tiếp đất (mét)")]
+    public float farFallDistanceForRoll = 5.0f;
+
+    [Tooltip("Tốc độ triệt tiêu quán tính phương ngang khi rơi.")]
+    public float fallInertiaDecayRate = 3f;
+
+    // === THÊM BIẾN NÀY ĐỂ ÉP RƠI NHANH DẦN ===
+    [Tooltip("Gia tốc cộng dồn ép nhân vật rơi nhanh dần theo thời gian (Tránh cảm giác trôi nổi)")]
+    public float extraFallAcceleration = 25f;
+    // ==========================================
+
+    [HideInInspector] public Vector3 momentumToInherit;
+    [HideInInspector] public bool isRollLanding;
+
     [HideInInspector]
     public bool requireLanding;
 
