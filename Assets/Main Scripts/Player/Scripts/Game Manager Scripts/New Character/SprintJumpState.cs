@@ -3,14 +3,15 @@ using UnityEngine;
 public class SprintJumpState : State
 {
     private Vector3 horizontalDirection;
-    private bool hasLeftGround;
-    private bool landingTriggered;
 
     public SprintJumpState(Character _character, StateMachine _stateMachine) : base(_character, _stateMachine) { }
 
     public override void Enter()
     {
         base.Enter();
+
+        // LƯU LẠI TỌA ĐỘ Y LÚC BẮT ĐẦU NHẢY
+        character.jumpStartY = character.transform.position.y;
 
         character.lastJumpTime = character.Runner.SimulationTime; 
         character.NotifyJumpImpulseStarted();
@@ -20,9 +21,6 @@ public class SprintJumpState : State
 
         // Play sprintJump animation
         character.animator.SetTrigger("sprintJump");
-
-        hasLeftGround = false;
-        landingTriggered = false;
 
         // Initialize jump impulse (use dedicated sprint-jump height, fallback to normal jump height)
         float sprintJumpHeight = character.sprintJumpHeight > 0f ? character.sprintJumpHeight : character.jumpHeight;
@@ -45,29 +43,11 @@ public class SprintJumpState : State
     public override void LogicUpdate()
     {
         base.LogicUpdate();
-
-        bool grounded = character.controller.isGrounded;
-        if (!grounded)
-        {
-            hasLeftGround = true;
-        }
-
-        if (grounded && hasLeftGround && character.playerVelocity.y <= 0f)
-        {
-            if (!landingTriggered)
-            {
-                character.animator.SetTrigger("land");
-                landingTriggered = true;
-            }
-
-            Vector2 moveInput = MoveInput;
-            if (TutorialInputGate.IsActive && (TutorialInputGate.EffectiveMask & TutorialInputMask.Move) == 0)
-                moveInput = Vector2.zero;
-            bool keepSprinting = SprintPressed && moveInput.sqrMagnitude > 0f
-                && (!TutorialInputGate.IsActive || TutorialInputGate.Allows(TutorialInputMask.Sprint));
-            stateMachine.ChangeState(keepSprinting ? character.sprinting : character.currentLocomotionState);
-            character.animator.SetTrigger("move");
-        }
+        
+        // Khi bắt đầu rơi xuống (vận tốc Y <= 0), nhường xử lý tiếp đất cho FallingState
+        // (đảm bảo chỉ Landing khi đủ cao hoặc requireLanding = true).
+        if (character.playerVelocity.y <= 0f)
+            stateMachine.ChangeState(character.falling);
     }
 
     public override void PhysicsUpdate()
@@ -85,10 +65,6 @@ public class SprintJumpState : State
             horizontalDirection = Vector3.Slerp(horizontalDirection, desiredDirection, character.airControl * Time.fixedDeltaTime * 6f);
             horizontalDirection.y = 0f;
             horizontalDirection.Normalize();
-        }
-
-        if (character.controller.isGrounded && character.playerVelocity.y < 0f)
-        {
         }
 
         Vector3 horizontalVelocity = horizontalDirection * character.sprintSpeed;
@@ -109,10 +85,15 @@ public class SprintJumpState : State
     {
         base.Exit();
         character.animator.applyRootMotion = false;
-
-        character.playerVelocity = horizontalDirection * character.sprintSpeed;
-        character.playerVelocity.y = 0f;
-        character.animator.SetFloat("speed", 1f);
+        
+        // Snap blend "speed" theo input hiện tại để tiếp đất/đổi state mượt (giống JumpingState)
+        if (character != null)
+        {
+            Vector2 m = MoveInput;
+            float targetSpeed = m.magnitude;
+            if (character.currentLocomotionState == character.combatMove) targetSpeed *= 0.5f;
+            character.SetAnimatorLocomotionSpeed(targetSpeed);
+        }
     }
 }
 

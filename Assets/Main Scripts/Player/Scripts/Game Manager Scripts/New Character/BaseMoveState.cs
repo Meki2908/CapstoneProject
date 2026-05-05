@@ -147,7 +147,8 @@ public class BaseMoveState : State
 
         // Guard: skip nếu CharacterController bị disable (vd: đang teleport)
         if (character.controller == null || !character.controller.enabled) return;
-        grounded = character.controller.isGrounded;
+        // Use stable grounded (feet cast + small grace) to avoid flicker on edges/uneven meshes.
+        grounded = character.IsGroundedStable();
 
         // NEW: đang skill -> chỉ gravity Y
         if (skillLock != null && skillLock.isPerformingSkill)

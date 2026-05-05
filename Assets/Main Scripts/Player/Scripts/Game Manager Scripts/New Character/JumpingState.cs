@@ -21,10 +21,13 @@ public class JumpingState : State
     {
         base.Enter();
 
+        // L?U L?I T?A ÔøΩ? Y LÔøΩC B?T ÔøΩ?U NH?Y
+        character.jumpStartY = character.transform.position.y;
+
         grounded = false;
         landTriggered = false;
 
-        // THùM DùNG NùY (C?c k? quan tr?ng d? b?t d?u tùnh Cooldown):
+        // TH?M D?NG N?Y (C?c k? quan tr?ng d? b?t d?u t?nh Cooldown):
         character.lastJumpTime = character.Runner.SimulationTime; 
 
         gravityValue = character.gravityValue;
@@ -44,7 +47,7 @@ public class JumpingState : State
         base.HandleInput();
 
         input = MoveInput;
-        // Trong state n‡y khÙng xÈt jump; Space khÙng ??i Y ó impulse ?„ ???c g·n trong Enter().
+        // Trong state n?y kh?ng x?t jump; Space kh?ng ??i Y ? impulse ?? ???c g?n trong Enter().
         if (TutorialInputGate.IsActive && (TutorialInputGate.EffectiveMask & TutorialInputMask.Move) == 0)
             input = Vector2.zero;
     }
@@ -53,10 +56,10 @@ public class JumpingState : State
     {
         base.LogicUpdate();
 
-        // N?u v?n t?c tr?c Y b?t d?u ùm (nghia lù dang roi xu?ng)
+        // N?u v?n t?c tr?c Y b?t d?u ?m (nghia l? dang roi xu?ng)
         if (character.playerVelocity.y <= 0f)
         {
-            // Nhu?ng sùn kh?u l?i cho FallingState
+            // Nhu?ng s?n kh?u l?i cho FallingState
             stateMachine.ChangeState(character.falling);
         }
     }
@@ -99,7 +102,7 @@ public class JumpingState : State
     {
         base.Exit();
         
-        // Snap blend "speed" theo input hi?n t?i gi?ng nhu Dash d? ti?p d?t mu?t mù
+        // Snap blend "speed" theo input hi?n t?i gi?ng nhu Dash d? ti?p d?t mu?t m?
         if (character != null)
         {
             Vector2 m = MoveInput;

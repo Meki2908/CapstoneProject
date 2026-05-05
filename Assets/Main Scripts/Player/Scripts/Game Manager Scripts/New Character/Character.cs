@@ -78,6 +78,24 @@ public class Character : NetworkBehaviour
     [Tooltip("Khoảng cách rơi tối thiểu (mét) để bắt buộc chạy animation Land")]
     public float minFallDistanceForLanding = 1.2f;
 
+    [Tooltip("Khoảng cách mặt đất tối thiểu để ngắt Dash và bắt đầu rơi (mét)")]
+    public float enoughDistanceToFall = 0.8f;
+
+    [Tooltip("Độ cao tối thiểu để kích hoạt Parkour Roll khi tiếp đất (mét)")]
+    public float farFallDistanceForRoll = 5.0f;
+
+    [Tooltip("Tốc độ triệt tiêu quán tính phương ngang khi rơi.")]
+    public float fallInertiaDecayRate = 3f;
+
+    // === THÊM BIẾN NÀY ĐỂ ÉP RƠI NHANH DẦN ===
+    [Tooltip("Gia tốc cộng dồn ép nhân vật rơi nhanh dần theo thời gian (Tránh cảm giác trôi nổi)")]
+    public float extraFallAcceleration = 25f;
+    // ==========================================
+
+    [HideInInspector] public Vector3 momentumToInherit;
+    [HideInInspector] public bool isRollLanding;
+    [HideInInspector] public float jumpStartY; // Lưu lại tọa độ Y lúc bắt đầu nhảy
+
     [HideInInspector]
     public bool requireLanding;
 
@@ -120,7 +138,7 @@ public class Character : NetworkBehaviour
     public float lastJumpTime; 
 
     /// <summary> Khi false, bỏ qua input nhảy cho đến khi vào lại locomotion. Nhảy thật sự còn cần <see cref="TryConsumeJumpBuffered"/> (ray chân + buffer + coyote nhẹ). </summary>
-    public bool canStartJump => controller.isGrounded && (Runner.SimulationTime >= lastJumpTime + jumpCooldownSeconds);
+    public bool canStartJump => IsGroundedStable() && (Runner.SimulationTime >= lastJumpTime + jumpCooldownSeconds);
 
     [Header("Jump — ground & buffer")]
     [Tooltip("Layer được coi là mặt đất cho 2 ray dưới chân. Để trống = mọi layer (DefaultRaycastLayers).")]
@@ -147,6 +165,7 @@ public class Character : NetworkBehaviour
     private InputAction jumpActionCache;
     float jumpBufferRemaining;
     float lastGroundedFeetTime = -999f;
+    float lastGroundedStableTime = -999f;
     float jumpAllowedAfterTime = -999f;
 
     private int originalLayer; // Store original layer before dash
@@ -352,9 +371,9 @@ public class Character : NetworkBehaviour
         if (controller != null && controller.enabled) 
         {
             // 1. Giữ nhân vật bấm sn nếu đang đứng trên đất
-            if (controller.isGrounded && playerVelocity.y < 0)
+            if (IsGroundedStable() && playerVelocity.y < 0)
             {
-                playerVelocity.y = -2f; 
+                playerVelocity.y = -8f; 
             }
 
             // 2. Tích luỹ trọng lực (Nếu không phải đang Dash)
@@ -394,6 +413,8 @@ public class Character : NetworkBehaviour
         CachedGroundedFeet = ComputeGroundedFeetRays();
         if (CachedGroundedFeet)
             lastGroundedFeetTime = Runner.SimulationTime;
+        if (CachedGroundedFeet || (controller != null && controller.isGrounded))
+            lastGroundedStableTime = Runner.SimulationTime;
 
         if ((currentInput.buttons.IsSet(NetworkInputButtons.Jump) && !previousInput.buttons.IsSet(NetworkInputButtons.Jump))
             && (!TutorialInputGate.IsActive || TutorialInputGate.Allows(TutorialInputMask.Jump)))
@@ -410,14 +431,31 @@ public class Character : NetworkBehaviour
     {
         if (controller == null) return false;
         LayerMask mask = groundLayers.value == 0 ? Physics.DefaultRaycastLayers : groundLayers;
-        float bottomY = transform.position.y + controller.center.y - controller.height * 0.5f + controller.skinWidth;
-        Vector3 basePos = new Vector3(transform.position.x, bottomY, transform.position.z);
-        Vector3 left = basePos + transform.TransformDirection(new Vector3(-footRayHalfWidth, 0f, 0f));
-        Vector3 right = basePos + transform.TransformDirection(new Vector3(footRayHalfWidth, 0f, 0f));
-        float dist = groundRayDistance + controller.skinWidth;
-        bool hitL = Physics.Raycast(left, Vector3.down, out _, dist, mask, QueryTriggerInteraction.Ignore);
-        bool hitR = Physics.Raycast(right, Vector3.down, out _, dist, mask, QueryTriggerInteraction.Ignore);
-        return hitL || hitR;
+
+        // CapsuleCast ổn định hơn Raycast trên MeshCollider gồ ghề.
+        Vector3 up = Vector3.up;
+        Vector3 worldCenter = transform.TransformPoint(controller.center);
+        float radius = Mathf.Max(0.01f, controller.radius * 0.85f);
+        float halfHeight = Mathf.Max(controller.height * 0.5f, controller.radius);
+        float cylinderHalf = Mathf.Max(0f, halfHeight - controller.radius);
+
+        // Hai đầu capsule ở trạng thái hiện tại (world space)
+        Vector3 p1 = worldCenter + up * cylinderHalf;
+        Vector3 p2 = worldCenter - up * cylinderHalf;
+
+        // Đẩy điểm dưới lên một chút để tránh cast bắt đầu trong mặt đất
+        float eps = 0.02f;
+        Vector3 castP1 = p1;
+        Vector3 castP2 = p2 + up * (controller.skinWidth + eps);
+        float dist = groundRayDistance + controller.skinWidth + eps;
+
+        if (!Physics.CapsuleCast(castP1, castP2, radius, Vector3.down, out RaycastHit hit, dist, mask, QueryTriggerInteraction.Ignore))
+            return false;
+
+        // Loại tường/độ dốc quá lớn để tránh dính side mesh
+        float maxSlope = controller.slopeLimit + 5f;
+        float angle = Vector3.Angle(hit.normal, up);
+        return angle <= maxSlope;
     }
 
     /// <summary>Mask giống ray chân — dùng cho FallingState đo khoảng cách xuống đất.</summary>
@@ -433,6 +471,15 @@ public class Character : NetworkBehaviour
         if (coyoteTime <= 0f) return false;
         if (Runner.SimulationTime - lastGroundedFeetTime > coyoteTime) return false;
         return controller != null && controller.velocity.y <= coyoteMaxUpSpeed;
+    }
+
+    /// <summary>Grounded ổn định: ưu tiên ray/cast chân + grace window chống nhấp nháy 1-2 frame.</summary>
+    public bool IsGroundedStable(float graceSeconds = 0.08f)
+    {
+        if (CachedGroundedFeet) return true;
+        if (controller != null && controller.isGrounded) return true;
+        if (graceSeconds <= 0f) return false;
+        return Runner != null && (Runner.SimulationTime - lastGroundedStableTime) <= graceSeconds;
     }
 
     /// <summary>Gọi khi impulse nhảy đã áp (JumpingState / SprintJump): xóa buffer và bật cooldown.</summary>
