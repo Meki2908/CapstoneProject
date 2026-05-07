@@ -11,8 +11,12 @@ public class BaseMoveState : State
     bool grounded;
     bool sprint;
     float playerSpeed;
-    public bool sheathWeapon;
-    public bool drawWeapon;
+    
+    // ToggleWeapon buffering (helps Fusion tick vs Update mismatch + avoids cooldown eating presses)
+    protected float toggleBufferRemaining = 0f;
+    protected const float TOGGLE_BUFFER_DURATION = 0.3f; // Lưu phím trong 0.3 giây
+    private bool _toggleBufferHasExplicitAction = false;
+    private bool _toggleBufferDraw = false;
 
     Vector3 cVelocity;
 
@@ -37,9 +41,10 @@ public class BaseMoveState : State
         base.Enter();
 
         jump = false;
-        // One-shot flags: luôn reset khi vào locomotion state để tránh mang cờ rác qua state khác.
-        sheathWeapon = false;
-        drawWeapon = false;
+        // Reset toggle buffer when entering locomotion.
+        toggleBufferRemaining = 0f;
+        _toggleBufferHasExplicitAction = false;
+        _toggleBufferDraw = false;
 
         // Queued Tab during GetHit is now consumed/handled by dedicated Draw/Sheath states.
         
@@ -122,24 +127,17 @@ public class BaseMoveState : State
                 bool combatMove = character.animator != null && character.animator.GetBool("combatMove");
                 Debug.Log($"[ToggleWeapon][HandleInput] frame={Time.frameCount} sim={character.Runner.SimulationTime:F3} state={stateMachine.currentState?.GetType().Name} allows={allows} isWeaponDrawn={character.isWeaponDrawn} combatMove={combatMove}");
             }
-
-            if (character.isWeaponDrawn)
-            {
-                sheathWeapon = true;
-                drawWeapon = false; // Prevent triggering both
-            }
-            else
-            {
-                drawWeapon = true;
-                sheathWeapon = false; // Prevent triggering both
-            }
+            
+            // Buffer the press; actual draw/sheath decision happens in LogicUpdate when cooldown is ready.
+            toggleBufferRemaining = TOGGLE_BUFFER_DURATION;
+            _toggleBufferHasExplicitAction = false;
         }
 
         ApplyTutorialInputGate();
 
         if (TOGGLE_DEBUG && ToggleWeaponTriggered)
         {
-            Debug.Log($"[ToggleWeapon][PostGate] frame={Time.frameCount} sim={character.Runner.SimulationTime:F3} drawFlag={drawWeapon} sheathFlag={sheathWeapon} gateActive={TutorialInputGate.IsActive} mask={TutorialInputGate.EffectiveMask}");
+            Debug.Log($"[ToggleWeapon][PostGate] frame={Time.frameCount} sim={character.Runner.SimulationTime:F3} buffer={toggleBufferRemaining:F2}s gateActive={TutorialInputGate.IsActive} mask={TutorialInputGate.EffectiveMask}");
         }
     }
 
@@ -158,8 +156,8 @@ public class BaseMoveState : State
         if ((m & TutorialInputMask.Dash) == 0) dash = false;
         if ((m & TutorialInputMask.ToggleWeapon) == 0)
         {
-            drawWeapon = false;
-            sheathWeapon = false;
+            toggleBufferRemaining = 0f;
+            _toggleBufferHasExplicitAction = false;
         }
     }
 
@@ -276,20 +274,20 @@ public class BaseMoveState : State
                     );
                 }
 
-                // C# liên tục kiểm tra: Animator đã về "Default State" hoặc "None" chưa?
-                // Nếu rồi, chứng tỏ GetHit đã kết thúc hoàn toàn -> Tiến hành rút/cất kiếm!
                 if (stateInfo.IsName("Default State") || stateInfo.IsName("None"))
                 {
                     if (character.TryConsumeQueuedWeaponAction(out var action))
                     {
-                        if (action == Character.QueuedWeaponAction.Draw) drawWeapon = true;
-                        else if (action == Character.QueuedWeaponAction.Sheath) sheathWeapon = true;
+                        // Buffer this explicit requested action so it survives cooldown.
+                        toggleBufferRemaining = TOGGLE_BUFFER_DURATION;
+                        _toggleBufferHasExplicitAction = true;
+                        _toggleBufferDraw = (action == Character.QueuedWeaponAction.Draw);
 
                         if (TOGGLE_DEBUG)
                         {
                             Debug.Log(
-                                $"[ToggleWeapon][Sync.Consume->Flags] frame={Time.frameCount} sim={character.Runner.SimulationTime:F3} " +
-                                $"action={action} setDraw={drawWeapon} setSheath={sheathWeapon}"
+                                $"[ToggleWeapon][Sync.Consume->Buffer] frame={Time.frameCount} sim={character.Runner.SimulationTime:F3} " +
+                                $"action={action} buffer={toggleBufferRemaining:F2}s"
                             );
                         }
                     }
@@ -305,44 +303,42 @@ public class BaseMoveState : State
         }
         // ====================================================================
 
-        if (sheathWeapon || drawWeapon)
+        // === TAB BUFFERING: giữ lệnh đến khi cooldown sẵn sàng (không clear khi chưa hết cooldown) ===
+        toggleBufferRemaining = Mathf.Max(0f, toggleBufferRemaining - character.Runner.DeltaTime);
+        if (toggleBufferRemaining > 0f)
         {
-            if (TOGGLE_DEBUG)
-            {
-                float dt = character.Runner.SimulationTime - lastToggleTime;
-                Debug.Log($"[ToggleWeapon][LogicUpdate] frame={Time.frameCount} sim={character.Runner.SimulationTime:F3} drawFlag={drawWeapon} sheathFlag={sheathWeapon} dt={dt:F3}/{toggleCooldown:F3} state={stateMachine.currentState?.GetType().Name}");
-            }
-
             if (character.Runner.SimulationTime - lastToggleTime >= toggleCooldown)
             {
                 lastToggleTime = character.Runner.SimulationTime;
+                toggleBufferRemaining = 0f;
 
-                if (sheathWeapon)
+                bool doDraw;
+                if (_toggleBufferHasExplicitAction)
                 {
-                    sheathWeapon = false;
-                    drawWeapon = false;
-                    if (TOGGLE_DEBUG) Debug.Log($"[ToggleWeapon][ChangeState] -> SheathWeaponState frame={Time.frameCount} sim={character.Runner.SimulationTime:F3}");
-                    stateMachine.ChangeState(character.sheathingWeapon);
-                    return;
+                    doDraw = _toggleBufferDraw;
+                    _toggleBufferHasExplicitAction = false;
+                }
+                else
+                {
+                    // Single source of truth at the moment we execute.
+                    doDraw = !character.isWeaponDrawn;
                 }
 
-                if (drawWeapon)
+                if (doDraw)
                 {
-                    sheathWeapon = false;
-                    drawWeapon = false;
                     if (TOGGLE_DEBUG) Debug.Log($"[ToggleWeapon][ChangeState] -> DrawWeaponState frame={Time.frameCount} sim={character.Runner.SimulationTime:F3}");
                     stateMachine.ChangeState(character.drawingWeapon);
                     return;
                 }
-            }
-            else
-            {
-                // Spam protection: clear one-shot flags if cooldown not ready.
-                sheathWeapon = false;
-                drawWeapon = false;
-                if (TOGGLE_DEBUG) Debug.Log($"[ToggleWeapon][CooldownBlock] cleared flags frame={Time.frameCount} sim={character.Runner.SimulationTime:F3}");
+                else
+                {
+                    if (TOGGLE_DEBUG) Debug.Log($"[ToggleWeapon][ChangeState] -> SheathWeaponState frame={Time.frameCount} sim={character.Runner.SimulationTime:F3}");
+                    stateMachine.ChangeState(character.sheathingWeapon);
+                    return;
+                }
             }
         }
+        // ====================================================================
     }
 
     public override void Exit()

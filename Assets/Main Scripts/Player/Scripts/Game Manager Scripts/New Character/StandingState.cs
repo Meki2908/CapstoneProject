@@ -13,9 +13,6 @@ public class StandingState : BaseMoveState
     public override void Enter()
     {
         base.Enter();
-        // Flags one-shot; không giữ trạng thái "sheathWeapon=true" giữa các state.
-        drawWeapon = false;
-        sheathWeapon = false;
         // Do not force isWeaponDrawn here; Draw/Sheath states own that truth.
         //Debug.Log("Standing State");
     }

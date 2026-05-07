@@ -23,9 +23,6 @@ public class CombatMoveState : BaseMoveState
     {
         base.Enter();
         attack = false;
-        // Flags one-shot; tránh spam draw/sheath khi đổi state.
-        drawWeapon = false;
-        sheathWeapon = false;
         // Do not force isWeaponDrawn here; Draw/Sheath states own that truth.
         character.animator.SetBool("combatMove", true);
 
