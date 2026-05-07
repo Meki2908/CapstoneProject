@@ -68,9 +68,37 @@ public class MageNormalAttack : MonoBehaviour
     private static Vector3 AimPointForTarget(Transform target)
     {
         if (target == null) return Vector3.zero;
-        var col = target.GetComponentInChildren<Collider>();
-        if (col != null) return col.bounds.center;
-        return target.position + Vector3.up * 0.9f;
+        
+        // Some enemies have multiple colliders (even "sideways" capsules) that can pull bounds.center too low.
+        // Pick the collider with the highest top (bounds.max.y), then aim near its head area.
+        Collider[] cols = target.GetComponentsInChildren<Collider>(true);
+        Bounds best = default;
+        bool hasBest = false;
+        float bestTopY = float.NegativeInfinity;
+        
+        foreach (var c in cols)
+        {
+            if (c == null) continue;
+            var b = c.bounds;
+            if (b.size.sqrMagnitude < 1e-6f) continue;
+            
+            if (!hasBest || b.max.y > bestTopY)
+            {
+                hasBest = true;
+                best = b;
+                bestTopY = b.max.y;
+            }
+        }
+        
+        if (hasBest)
+        {
+            float headOffsetDown = Mathf.Clamp(best.size.y * 0.15f, 0.15f, 0.45f);
+            Vector3 p = new Vector3(best.center.x, best.max.y - headOffsetDown, best.center.z);
+            p.y = Mathf.Max(p.y, best.center.y + 0.6f);
+            return p;
+        }
+        
+        return target.position + Vector3.up * 1.2f;
     }
 
     // ĐÃ FIX: Lấy hướng mặt của Player, KHÔNG lấy hướng Camera nữa

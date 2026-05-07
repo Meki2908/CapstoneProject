@@ -75,6 +75,10 @@ public class ScenePortal : MonoBehaviour
         
         if (Application.CanStreamedLevelBeLoaded(sceneName))
         {
+            // Ghi nhớ vị trí quay về (đứng trước cổng) để khi rời dungeon spawn đúng chỗ.
+            PlayerWorldData.ReturnPosition = transform.position + transform.forward * 2f;
+            PlayerWorldData.HasReturnPoint = true;
+
             Time.timeScale = 1f; 
             StartCoroutine(TeleportRoutine(sceneName));
         }

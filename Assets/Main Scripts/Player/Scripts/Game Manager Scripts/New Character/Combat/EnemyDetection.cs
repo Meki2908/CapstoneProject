@@ -443,7 +443,10 @@ public class EnemyDetection : NetworkBehaviour
 
     private void UpdateRootMotion()
     {
-        if (animator == null) return;
+        if (animator == null || character == null) return;
+        
+        // KHÔNG được giành quyền bật/tắt Root Motion nếu State Machine đang xử lý Dash / Roll landing.
+        if (character.IsDashing || character.isRollLanding) return;
 
         // Use root motion when no enemy, disable when enemy present
         bool shouldUseRootMotion = useRootMotionWhenNoEnemy && !isInCombat;

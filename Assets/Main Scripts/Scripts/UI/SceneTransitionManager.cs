@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -13,6 +14,8 @@ using TMPro;
 /// </summary>
 public class SceneTransitionManager : MonoBehaviour
 {
+    public static float LastNetworkingLoadingStartUnscaledTime { get; private set; } = -999f;
+    public static bool EnableFinishLoadingStackTraceLogs = true;
     public static SceneTransitionManager Instance { get; private set; }
 
     /// <summary>
@@ -332,7 +335,7 @@ public class SceneTransitionManager : MonoBehaviour
     /// Nếu true: dừng coroutine transition đang treo (ví dụ vào dungeon chưa kết thúc hẳn) rồi chuyển scene.
     /// Dùng khi thoát/Retry dungeon — tránh GoToScene bị bỏ qua vì <see cref="isTransitioning"/> vẫn true.
     /// </param>
-    public void GoToScene(string sceneName, string message = null, bool interruptIfTransitioning = false)
+    public void GoToScene(string sceneName, string message = null, bool interruptIfTransitioning = false, bool waitForNetworkSpawn = false)
     {
         if (isTransitioning)
         {
@@ -348,7 +351,7 @@ public class SceneTransitionManager : MonoBehaviour
             HideLoadingPanelIfAny();
         }
 
-        StartCoroutine(TransitionRoutine(sceneName));
+        StartCoroutine(TransitionRoutine(sceneName, waitForNetworkSpawn));
     }
 
     public void GoToMainMap(string message = "Đang quay về bản đồ...")
@@ -372,10 +375,10 @@ public class SceneTransitionManager : MonoBehaviour
 
     private string GetRandomTip()
     {
-        return loadingTips[Random.Range(0, loadingTips.Length)];
+        return loadingTips[UnityEngine.Random.Range(0, loadingTips.Length)];
     }
 
-    private IEnumerator TransitionRoutine(string sceneName)
+    private IEnumerator TransitionRoutine(string sceneName, bool waitForNetworkSpawn)
     {
         isTransitioning = true;
 
@@ -397,6 +400,10 @@ public class SceneTransitionManager : MonoBehaviour
 
             // Hiện panel NGAY (alpha=1) — không fade in để tránh bị đơ che mất
             if (cg != null) cg.alpha = 1f;
+            // Một số scene/prefab để root UI inactive theo flow (đặc biệt DDOL) → đảm bảo chain active để panel render.
+            EnsureParentsActive(panel.transform);
+            var parentCanvas = panel.GetComponentInParent<Canvas>(true);
+            if (parentCanvas != null && !parentCanvas.enabled) parentCanvas.enabled = true;
             panel.SetActive(true);
             panel.transform.SetAsLastSibling(); // Luôn render trên cùng
 
@@ -433,8 +440,9 @@ public class SceneTransitionManager : MonoBehaviour
             yield return null;
         }
 
-        // Hiển thị 100%
-        if (slider != null) slider.value = 1f;
+        // Hiển thị mức "gần xong".
+        // Với flow mạng (Fusion) ta sẽ fake 90→99% trong lúc chờ spawn, nên không nhảy thẳng 100% ở đây.
+        if (slider != null) slider.value = waitForNetworkSpawn ? 0.9f : 1f;
         yield return new WaitForSecondsRealtime(0.3f);
 
         // === BƯỚC 3: Kích hoạt scene mới (scene cũ bị destroy) ===
@@ -448,6 +456,18 @@ public class SceneTransitionManager : MonoBehaviour
         // Chờ 2 frame để scene mới setup (Awake/Start)
         yield return null;
         yield return null;
+
+        // Nếu đây là chuyển scene theo luồng mạng (Fusion): giữ nguyên loading UI và bàn giao quyền tắt cho PlayerSpawner.
+        if (waitForNetworkSpawn)
+        {
+            // Mốc thời gian để PlayerSpawner đo minLoadingSeconds cho UX ổn định.
+            LastNetworkingLoadingStartUnscaledTime = Time.realtimeSinceStartup;
+            Debug.Log($"[SceneTransition] Scene '{sceneName}' loaded. Waiting for network spawn → PlayerSpawner will call FinishLoadingUI().");
+
+            // "Làm phép" cho thanh loading: trôi 90% → 99% khi chờ mạng/spawn.
+            StartCoroutine(FakeNetworkLoadingProgress());
+            yield break;
+        }
 
         // === BƯỚC 4: Fade/tắt đúng panel đã bật ở bước 1 (thường DDOL) ===
         // Giữ reference `panel` từ bước 1. Nếu luôn FindLoadingPanelForFadeOrCleanup(), có thể trúng bản
@@ -495,6 +515,8 @@ public class SceneTransitionManager : MonoBehaviour
 
     public void StartNetworkingLoadingUI()
     {
+        Debug.Log($"[SceneTransition][NET-LOADING] StartNetworkingLoadingUI() instance={this.GetInstanceID()} activeScene={UnityEngine.SceneManagement.SceneManager.GetActiveScene().name}");
+        LastNetworkingLoadingStartUnscaledTime = Time.realtimeSinceStartup;
         isTransitioning = true;
         Time.timeScale = 1f;
 
@@ -510,6 +532,14 @@ public class SceneTransitionManager : MonoBehaviour
 
         if (panel != null)
         {
+            Debug.Log($"[SceneTransition][NET-LOADING] Showing panel={panel.name} activeInHierarchy={panel.activeInHierarchy} path={GetTransformPath(panel.transform)}");
+            
+            // Some scenes keep Canvas/Menu roots disabled until needed.
+            // Ensure parent chain is active so panel can actually render.
+            EnsureParentsActive(panel.transform);
+            var parentCanvas = panel.GetComponentInParent<Canvas>(true);
+            if (parentCanvas != null && !parentCanvas.enabled) parentCanvas.enabled = true;
+
             GetPanelComponents(panel, out Slider slider, out TextMeshProUGUI text, out CanvasGroup cg);
             if (cg != null) cg.alpha = 1f;
             panel.SetActive(true);
@@ -519,6 +549,34 @@ public class SceneTransitionManager : MonoBehaviour
             if (text != null) text.text = GetRandomTip();
 
             StartCoroutine(FakeProgressCoroutine(slider));
+        }
+        else
+        {
+            Debug.LogWarning("[SceneTransition][NET-LOADING] No loading panel found to show!");
+        }
+    }
+
+    private static string GetTransformPath(Transform t)
+    {
+        if (t == null) return "<null>";
+        string p = t.name;
+        while (t.parent != null)
+        {
+            t = t.parent;
+            p = t.name + "/" + p;
+        }
+        return p;
+    }
+
+    private static void EnsureParentsActive(Transform t)
+    {
+        if (t == null) return;
+        Transform cur = t;
+        while (cur != null)
+        {
+            if (!cur.gameObject.activeSelf)
+                cur.gameObject.SetActive(true);
+            cur = cur.parent;
         }
     }
 
@@ -533,8 +591,43 @@ public class SceneTransitionManager : MonoBehaviour
         }
     }
 
+    // HÀM LÀM GIẢ TIẾN ĐỘ CHỜ MẠNG (90% → 99%)
+    private IEnumerator FakeNetworkLoadingProgress()
+    {
+        GameObject panel = _loadingPanelShownThisTransition;
+        if (panel == null) panel = FindLoadingPanelForFadeOrCleanup();
+        if (panel == null) yield break;
+
+        GetPanelComponents(panel, out Slider slider, out TextMeshProUGUI text, out CanvasGroup cg);
+        if (slider == null) yield break;
+
+        // Đảm bảo panel/canvas thực sự render (phòng trường hợp root UI inactive)
+        EnsureParentsActive(panel.transform);
+        var parentCanvas = panel.GetComponentInParent<Canvas>(true);
+        if (parentCanvas != null && !parentCanvas.enabled) parentCanvas.enabled = true;
+        panel.SetActive(true);
+        panel.transform.SetAsLastSibling();
+
+        // Không bao giờ giảm progress (tránh case đã set 100% rồi tụt xuống)
+        float currentProgress = Mathf.Clamp(slider.value, 0.9f, 0.99f);
+
+        while (isTransitioning)
+        {
+            currentProgress = Mathf.MoveTowards(currentProgress, 0.99f, Time.unscaledDeltaTime * 0.03f);
+            slider.value = currentProgress;
+            if (text != null) text.text = $"Synchronizing network... {Mathf.FloorToInt(currentProgress * 100)}%";
+            yield return null;
+        }
+    }
+
     public void FinishLoadingUI()
     {
+        Debug.Log($"[SceneTransition][NET-LOADING] FinishLoadingUI() instance={this.GetInstanceID()} activeScene={UnityEngine.SceneManagement.SceneManager.GetActiveScene().name}");
+        if (EnableFinishLoadingStackTraceLogs)
+        {
+            // High-signal debugging: identify who is closing the loading screen early.
+            Debug.Log($"[SceneTransition][NET-LOADING] FinishLoadingUI caller stack:\n{Environment.StackTrace}");
+        }
         StopAllCoroutines();
         StartCoroutine(FadeOutCoroutine());
     }
@@ -552,6 +645,7 @@ public class SceneTransitionManager : MonoBehaviour
             panel.transform.SetAsLastSibling();
 
             if (slider != null) slider.value = 1f;
+            if (text != null) text.text = "Hoàn tất! 100%";
             if (cg != null) cg.alpha = 1f;
 
             yield return new WaitForSecondsRealtime(0.5f);

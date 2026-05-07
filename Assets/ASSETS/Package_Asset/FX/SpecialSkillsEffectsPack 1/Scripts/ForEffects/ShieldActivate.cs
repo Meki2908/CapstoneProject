@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.AI; // Thêm thư viện này để dùng NavMeshAgent
+using UnityEngine.AI;
 
 public class ShieldActivate : MonoBehaviour
 {
@@ -15,28 +15,24 @@ public class ShieldActivate : MonoBehaviour
     float time;
 
     [Header("Push Enemies Logic")]
-    public float pushRadius = 3f; // Bán kính đẩy quái
-    public float pushForce = 15f; // Lực hất văng
-    public LayerMask enemyLayer;  // Layer của quái (nhớ set trong Inspector)
-    public float stunDuration = 0.5f; // Thời gian quái bị choáng/văng ra trước khi bò dậy đi tiếp
+    public float pushRadius = 3f;
+    public float pushForce = 8f; // Gán thẳng vận tốc nên 8-10 là lướt rất mượt rồi
+    public LayerMask enemyLayer;
+    public float stunDuration = 0.5f;
 
-    // Debounce: tránh spam coroutine disable/enable cho cùng 1 agent
-    private readonly HashSet<int> _agentsTemporarilyDisabled = new HashSet<int>();
+    // === SỬA LỖI 2: Dùng Dictionary để nhớ cả Agent lẫn Rigidbody ===
+    private readonly Dictionary<int, (NavMeshAgent agent, Rigidbody rb)> _stunnedEnemies = new Dictionary<int, (NavMeshAgent, Rigidbody)>();
     
-    // ── SHIELD STATE (Global flag for PlayerHealth) ──────────────────────────
     public static bool IsShieldActive { get; private set; }
     
     public static void ForceReset() => IsShieldActive = false;
-    
-    // ──────────────────────────────────────────────────────────────────────────
 
     void OnEnable()
     {
         IsShieldActive = true;
-        // KHÔNG gọi đẩy 1 lần ở đây nữa
     }
 
-    void FixedUpdate() // Chạy liên tục song song với khung hình vật lý
+    void FixedUpdate() 
     {
         PushEnemiesContinuously();
     }
@@ -44,6 +40,41 @@ public class ShieldActivate : MonoBehaviour
     void OnDisable()
     {
         IsShieldActive = false;
+        
+        // === BẢO HIỂM LỖI 2: TRẢ LẠI AI KHI CẤT KHIÊN ĐỘT NGỘT ===
+        // Nếu Coroutine bị giết ngang, ta phải tự tay giải cứu bọn quái đang bị choáng
+        foreach (var kvp in _stunnedEnemies)
+        {
+            var data = kvp.Value;
+            if (data.rb != null)
+            {
+                data.rb.linearVelocity = Vector3.zero;
+                data.rb.angularVelocity = Vector3.zero;
+                data.rb.isKinematic = true;
+            }
+            if (data.agent != null && data.agent.gameObject.activeInHierarchy)
+            {
+                data.agent.enabled = true;
+                // Đánh thức ngay lập tức: ép tìm đường lại tới Player
+                if (data.agent.isOnNavMesh) data.agent.SetDestination(transform.root.position);
+            }
+        }
+        _stunnedEnemies.Clear();
+        // ==========================================================
+        
+        // === BÍ QUYẾT: ĐÁNH THỨC BỌN QUÁI ĐANG KẸT Ở MÉP KHIÊN ===
+        // Quét rộng thêm để gom bọn đang "chạy tại chỗ", reset path và ép tìm đường mới
+        Collider[] nearbyEnemies = Physics.OverlapSphere(transform.position, pushRadius + 3f, enemyLayer);
+        foreach (Collider enemyCollider in nearbyEnemies)
+        {
+            NavMeshAgent agent = enemyCollider.GetComponentInParent<NavMeshAgent>();
+            if (agent != null && agent.enabled && agent.isOnNavMesh)
+            {
+                agent.ResetPath();
+                agent.SetDestination(transform.root.position);
+            }
+        }
+        // ==========================================================
     }
 
     void Start()
@@ -57,7 +88,6 @@ public class ShieldActivate : MonoBehaviour
 
     void Update()
     {
-        // ... (Giữ nguyên code phần update Shader của bạn) ...
         m_material.SetVectorArray("_Points", points);
 
         Hitpoints = Hitpoints
@@ -73,10 +103,8 @@ public class ShieldActivate : MonoBehaviour
         Hitpoints.ToArray().CopyTo(points, 0);
     }
 
-    // --- THÊM LOGIC ĐẨY QUÁI LIÊN TỤC Ở ĐÂY ---
     private void PushEnemiesContinuously()
     {
-        // Liên tục quét những kẻ xâm nhập
         Collider[] enemiesInRadius = Physics.OverlapSphere(transform.position, pushRadius, enemyLayer);
 
         foreach (Collider enemyCollider in enemiesInRadius)
@@ -86,65 +114,76 @@ public class ShieldActivate : MonoBehaviour
 
             if (rb != null)
             {
-                // Tạm tắt AI để nó không cưỡng lại vật lý
                 if (agent != null && agent.enabled)
                 {
                     int id = agent.GetInstanceID();
-                    if (!_agentsTemporarilyDisabled.Contains(id))
+                    if (!_stunnedEnemies.ContainsKey(id))
                     {
-                        _agentsTemporarilyDisabled.Add(id);
+                        // Lưu vào danh sách bảo hiểm
+                        _stunnedEnemies.Add(id, (agent, rb));
                         StartCoroutine(TemporarilyDisableAgent(agent, rb, id));
                     }
                 }
 
-                // Tính hướng từ tâm khiên đẩy ra
-                Vector3 pushDirection = (rb.position - transform.position).normalized;
-                pushDirection.y = 0.2f; // Ép một chút lực hất lên trời để quái lùi dễ hơn
+                // Tính hướng hất
+                Vector3 pushDirection = rb.position - transform.position;
+                pushDirection.y = 0f; 
 
-                // Áp dụng lực đẩy liên tục (ForceMode.Force) thay vì Impulse
-                rb.isKinematic = false;
-                rb.AddForce(pushDirection * pushForce, ForceMode.Force);
+                if (pushDirection.sqrMagnitude > 0.01f)
+                {
+                    pushDirection = pushDirection.normalized;
+                    rb.isKinematic = false;
+                    
+                    // === SỬA LỖI 1: GÁN THẲNG VẬN TỐC ===
+                    // Giữ nguyên gia tốc rơi (trục Y), chỉ can thiệp lực đẩy ngang (X, Z)
+                    rb.linearVelocity = new Vector3(
+                        pushDirection.x * pushForce, 
+                        rb.linearVelocity.y, 
+                        pushDirection.z * pushForce
+                    );
+                    // ====================================
+                }
             }
         }
     }
 
-    // Coroutine nhỏ để bật lại AI sau khi quái bị văng ra khỏi khiên 1 thời gian ngắn
     private IEnumerator TemporarilyDisableAgent(NavMeshAgent agent, Rigidbody rb, int agentId)
     {
         if (agent != null) agent.enabled = false;
-        yield return new WaitForSeconds(stunDuration); // Dùng stunDuration thay vì fix cứng 0.5f
+        
+        yield return new WaitForSeconds(stunDuration);
 
-        // === BƯỚC QUAN TRỌNG NHẤT: DỌN DẸP VẬT LÝ ===
-        if (rb != null)
+        // Chỉ phục hồi nếu nó chưa được OnDisable() giải cứu trước đó
+        if (_stunnedEnemies.ContainsKey(agentId))
         {
-            rb.linearVelocity = Vector3.zero;
-            rb.angularVelocity = Vector3.zero;
-            rb.isKinematic = true;
-        }
-        // ===========================================
-
-        if (agent != null && agent.gameObject.activeInHierarchy)
-        {
-            // Đảm bảo nằm trên NavMesh trước khi bật lại agent
-            if (NavMesh.SamplePosition(agent.transform.position, out NavMeshHit hit, 2f, NavMesh.AllAreas))
+            if (rb != null)
             {
-                agent.Warp(hit.position);
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+                rb.isKinematic = true;
             }
-            agent.enabled = true;
+
+            if (agent != null && agent.gameObject.activeInHierarchy)
+            {
+                if (NavMesh.SamplePosition(agent.transform.position, out NavMeshHit hit, 2f, NavMesh.AllAreas))
+                {
+                    agent.Warp(hit.position);
+                }
+                agent.enabled = true;
+                
+                // Ép quái xác định lại mục tiêu ngay lập tức (tránh đứng chờ player di chuyển)
+                if (agent.isOnNavMesh)
+                {
+                    agent.SetDestination(transform.root.position);
+                }
+            }
+
+            _stunnedEnemies.Remove(agentId);
         }
-
-        _agentsTemporarilyDisabled.Remove(agentId);
     }
 
-    public void AddHitObject(Vector3 position)
-    {
-        // ... (Giữ nguyên)
-    }
-
-    public void AddEmpty()
-    {
-        // ... (Giữ nguyên)
-    }
+    public void AddHitObject(Vector3 position) { /* Giữ nguyên */ }
+    public void AddEmpty() { /* Giữ nguyên */ }
 
     private void OnDestroy()
     {

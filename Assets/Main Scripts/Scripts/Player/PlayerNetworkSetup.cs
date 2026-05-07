@@ -21,6 +21,7 @@ public class PlayerNetworkSetup : NetworkBehaviour
 
         if (HasInputAuthority)
         {
+            Debug.Log($"[PlayerNetworkSetup] Spawned local player. Will setup camera. scene={gameObject.scene.name} player={name}");
             SetupCamera();
         }
         else
@@ -57,6 +58,7 @@ public class PlayerNetworkSetup : NetworkBehaviour
 
             // Expose for other local-player systems (EnemyDetection, Zoom, etc.)
             LocalCinemachineCamera = cvc;
+            Debug.Log($"[PlayerNetworkSetup] LocalCinemachineCamera READY: {cvc.name} (scene={_spawnedCamera.scene.name})");
 
             // Ensure distance manager exists on the spawned camera rig
             var mgr = _spawnedCamera.GetComponentInChildren<PlayerCameraDistanceManager>(true);

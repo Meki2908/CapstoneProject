@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -1976,14 +1976,44 @@ public class DungeonWaveManager : MonoBehaviour
         EnableCameraInput();
         Time.timeScale = 1f;
 
-        // Dùng SceneTransitionManager (có loading screen). interruptIfTransitioning: tránh kẹt cờ từ transition vào dungeon chưa hoàn tất.
-        if (SceneTransitionManager.Instance != null)
+        // === BƯỚC QUAN TRỌNG: TẮT FUSION RUNNER ===
+        Debug.Log($"[RETURN-MAP] activeScene={UnityEngine.SceneManagement.SceneManager.GetActiveScene().name} " +
+                  $"mainMapSceneName={mainMapSceneName} timeScale={Time.timeScale}");
+
+        var runner = FindFirstObjectByType<Fusion.NetworkRunner>();
+        Debug.Log($"[RETURN-MAP] runnerFound={(runner != null)} " +
+                  $"isRunning={(runner != null && runner.IsRunning)} " +
+                  $"mode={(runner != null ? runner.GameMode.ToString() : "null")} " +
+                  $"sceneManager={(runner != null ? (runner.SceneManager != null ? runner.SceneManager.GetType().Name : "null") : "null")}");
+
+        if (runner != null && runner.IsRunning)
         {
-            SceneTransitionManager.Instance.GoToScene(mainMapSceneName, "Đang quay về bản đồ...", interruptIfTransitioning: true);
+            Debug.Log("[DungeonWave] Đang tắt NetworkRunner để giải phóng Session...");
+            // Shutdown runner để dọn dẹp các NetworkObject (Player, Quái mạng)
+            // false: không tự động load scene mặc định của Fusion (vì ta tự load bên dưới)
+            Debug.Log("[RETURN-MAP] calling runner.Shutdown(false, Ok) ...");
+            runner.Shutdown(false, Fusion.ShutdownReason.Ok);
         }
         else
         {
-            SceneManager.LoadScene(mainMapSceneName);
+            Debug.LogWarning("[RETURN-MAP] runner missing or not running -> no shutdown executed.");
+        }
+        // ==========================================
+
+        // Dùng SceneTransitionManager (có loading screen)
+        Debug.Log($"[RETURN-MAP] loading main map via SceneTransitionManager?={(SceneTransitionManager.Instance != null)}");
+        if (SceneTransitionManager.Instance != null)
+        {
+            SceneTransitionManager.Instance.GoToScene(
+                mainMapSceneName,
+                "Đang quay về bản đồ...",
+                interruptIfTransitioning: true,
+                waitForNetworkSpawn: true
+            );
+        }
+        else
+        {
+            UnityEngine.SceneManagement.SceneManager.LoadScene(mainMapSceneName);
         }
     }
 
@@ -2010,14 +2040,28 @@ public class DungeonWaveManager : MonoBehaviour
         EnableCameraInput();
         Time.timeScale = 1f;
 
-        string currentScene = SceneManager.GetActiveScene().name;
+        // === TẮT FUSION RUNNER KHI RESTART CHƠI LẠI TỪ ĐẦU ===
+        var runner = FindFirstObjectByType<Fusion.NetworkRunner>();
+        if (runner != null && runner.IsRunning)
+        {
+            Debug.Log("[DungeonWave] Đang tắt NetworkRunner để khởi động lại phòng...");
+            runner.Shutdown(false, Fusion.ShutdownReason.Ok);
+        }
+        // =====================================================
+
+        string currentScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
         if (SceneTransitionManager.Instance != null)
         {
-            SceneTransitionManager.Instance.GoToScene(currentScene, "Đang khởi động lại dungeon...", interruptIfTransitioning: true);
+            SceneTransitionManager.Instance.GoToScene(
+                currentScene,
+                "Đang khởi động lại dungeon...",
+                interruptIfTransitioning: true,
+                waitForNetworkSpawn: true
+            );
         }
         else
         {
-            SceneManager.LoadScene(currentScene);
+            UnityEngine.SceneManagement.SceneManager.LoadScene(currentScene);
         }
     }
 
@@ -2386,7 +2430,44 @@ public class DungeonWaveManager : MonoBehaviour
                         // Ở wave cuối, CHỈ quan tâm đến Boss. Các wave thường quan tâm mọi quái.
                         if (isFinalWave)
                         {
-                            if (enemy.isBoss || enemy.enemyType == EnemyScript.EnemyType.boss || enemy.enemyType == EnemyScript.EnemyType.demon || enemy.enemyType == EnemyScript.EnemyType.minotaur || enemy.enemyType == EnemyScript.EnemyType.ifrit || enemy.enemyType == EnemyScript.EnemyType.lich)
+                            // Nếu wave cuối KHÔNG có boss-type nào trong scene (dungeon dễ / cấu hình đặc biệt),
+                            // thì vẫn phải tính mọi quái để tránh auto-win sai.
+                            bool hasAnyBossTypeInScene = false;
+                            for (int i = 0; i < allEnemies.Length; i++)
+                            {
+                                var e = allEnemies[i];
+                                if (e == null) continue;
+                                
+                                // === Boss-type predicate (match cả isBoss flag lẫn enum) ===
+                                if (e.isBoss ||
+                                    e.enemyType == EnemyScript.EnemyType.boss ||
+                                    e.enemyType == EnemyScript.EnemyType.demon ||
+                                    e.enemyType == EnemyScript.EnemyType.minotaur ||
+                                    e.enemyType == EnemyScript.EnemyType.ifrit ||
+                                    e.enemyType == EnemyScript.EnemyType.lich ||
+                                    e.enemyType == EnemyScript.EnemyType.stoneogre || // Thêm con này
+                                    e.enemyType == EnemyScript.EnemyType.golem)       // Thêm con này
+                                {
+                                    hasAnyBossTypeInScene = true;
+                                    break;
+                                }
+                            }
+
+                            if (!hasAnyBossTypeInScene)
+                            {
+                                hasLivingEnemy = true;
+                                break;
+                            }
+
+                            // === ĐÃ SỬA: Bổ sung stoneogre và golem vào danh sách ===
+                            if (enemy.isBoss ||
+                                enemy.enemyType == EnemyScript.EnemyType.boss ||
+                                enemy.enemyType == EnemyScript.EnemyType.demon ||
+                                enemy.enemyType == EnemyScript.EnemyType.minotaur ||
+                                enemy.enemyType == EnemyScript.EnemyType.ifrit ||
+                                enemy.enemyType == EnemyScript.EnemyType.lich ||
+                                enemy.enemyType == EnemyScript.EnemyType.stoneogre || // Thêm con này
+                                enemy.enemyType == EnemyScript.EnemyType.golem)       // Thêm con này
                             {
                                 hasLivingEnemy = true;
                                 break;
