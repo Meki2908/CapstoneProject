@@ -2,8 +2,6 @@ using UnityEngine;
 
 public class CombatMoveState : BaseMoveState
 {
-    private float toggleCooldown = 0.5f;
-    private float lastToggleTime = 0;
     bool attack;
 
     // NEW: tránh CombatMoveState can thiệp trong lúc đang dùng skill
@@ -25,7 +23,10 @@ public class CombatMoveState : BaseMoveState
     {
         base.Enter();
         attack = false;
-        character.isWeaponDrawn = true;
+        // Flags one-shot; tránh spam draw/sheath khi đổi state.
+        drawWeapon = false;
+        sheathWeapon = false;
+        // Do not force isWeaponDrawn here; Draw/Sheath states own that truth.
         character.animator.SetBool("combatMove", true);
 
         if (swordSkills == null) swordSkills = character.GetComponentInChildren<SwordSkills>(true);
@@ -54,6 +55,11 @@ public class CombatMoveState : BaseMoveState
         if (character.currentInput.buttons.IsSet(NetworkInputButtons.Attack) &&
             !character.previousInput.buttons.IsSet(NetworkInputButtons.Attack))
         {
+            // Failsafe (idempotent): ensure visuals/scripts are in drawn state without spamming animator triggers.
+            var wc = character.GetComponent<WeaponController>();
+            if (wc != null)
+                wc.EnsureDrawn(requestAnimation: false);
+
             character.animator.SetTrigger("attack");
             stateMachine.ChangeState(character.attacking);
             return;
@@ -63,30 +69,30 @@ public class CombatMoveState : BaseMoveState
         {
             if (character.currentInput.buttons.IsSet(NetworkInputButtons.Skill_E) && !character.previousInput.buttons.IsSet(NetworkInputButtons.Skill_E))
             {
-                if (swordSkills != null) swordSkills.TryUse(AbilityInput.E);
-                if (axeSkill != null) axeSkill.TryUse(AbilityInput.E);
-                if (mageSkills != null) mageSkills.TryUse(AbilityInput.E);
+                if (swordSkills != null && swordSkills.isActiveAndEnabled) swordSkills.TryUse(AbilityInput.E);
+                if (axeSkill != null && axeSkill.isActiveAndEnabled) axeSkill.TryUse(AbilityInput.E);
+                if (mageSkills != null && mageSkills.isActiveAndEnabled) mageSkills.TryUse(AbilityInput.E);
             }
 
             if (character.currentInput.buttons.IsSet(NetworkInputButtons.Skill_R) && !character.previousInput.buttons.IsSet(NetworkInputButtons.Skill_R))
             {
-                if (swordSkills != null) swordSkills.TryUse(AbilityInput.R);
-                if (axeSkill != null) axeSkill.TryUse(AbilityInput.R);
-                if (mageSkills != null) mageSkills.TryUse(AbilityInput.R);
+                if (swordSkills != null && swordSkills.isActiveAndEnabled) swordSkills.TryUse(AbilityInput.R);
+                if (axeSkill != null && axeSkill.isActiveAndEnabled) axeSkill.TryUse(AbilityInput.R);
+                if (mageSkills != null && mageSkills.isActiveAndEnabled) mageSkills.TryUse(AbilityInput.R);
             }
 
             if (character.currentInput.buttons.IsSet(NetworkInputButtons.Skill_T) && !character.previousInput.buttons.IsSet(NetworkInputButtons.Skill_T))
             {
-                if (swordSkills != null) swordSkills.TryUse(AbilityInput.T);
-                if (axeSkill != null) axeSkill.TryUse(AbilityInput.T);
-                if (mageSkills != null) mageSkills.TryUse(AbilityInput.T);
+                if (swordSkills != null && swordSkills.isActiveAndEnabled) swordSkills.TryUse(AbilityInput.T);
+                if (axeSkill != null && axeSkill.isActiveAndEnabled) axeSkill.TryUse(AbilityInput.T);
+                if (mageSkills != null && mageSkills.isActiveAndEnabled) mageSkills.TryUse(AbilityInput.T);
             }
 
             if (character.currentInput.buttons.IsSet(NetworkInputButtons.Skill_Q) && !character.previousInput.buttons.IsSet(NetworkInputButtons.Skill_Q))
             {
-                if (swordSkills != null) swordSkills.TryUse(AbilityInput.Q_Ultimate);
-                if (axeSkill != null) axeSkill.TryUse(AbilityInput.Q_Ultimate);
-                if (mageSkills != null) mageSkills.TryUse(AbilityInput.Q_Ultimate);
+                if (swordSkills != null && swordSkills.isActiveAndEnabled) swordSkills.TryUse(AbilityInput.Q_Ultimate);
+                if (axeSkill != null && axeSkill.isActiveAndEnabled) axeSkill.TryUse(AbilityInput.Q_Ultimate);
+                if (mageSkills != null && mageSkills.isActiveAndEnabled) mageSkills.TryUse(AbilityInput.Q_Ultimate);
             }
         }
 
@@ -95,6 +101,11 @@ public class CombatMoveState : BaseMoveState
 
         if (attack && stateMachine.currentState != character.attacking)
         {
+            // Failsafe (idempotent): ensure visuals/scripts are in drawn state without spamming animator triggers.
+            var wc = character.GetComponent<WeaponController>();
+            if (wc != null)
+                wc.EnsureDrawn(requestAnimation: false);
+
             character.animator.SetTrigger("attack");
             stateMachine.ChangeState(character.attacking);
         }

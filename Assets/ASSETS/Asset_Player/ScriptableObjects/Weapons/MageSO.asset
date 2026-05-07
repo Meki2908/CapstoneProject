@@ -23,7 +23,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 7657bfc07d0611042b3eff8fe19f9922, type: 2}
   hitTimings:
   - windowStart: 0.33
-    vfxTime: 0.2
+    vfxTime: 0.45
     windowEnd: 0.42
     chainPoint: 0.75
     moveCancelPoint: 0.6
@@ -35,7 +35,7 @@ MonoBehaviour:
       scale: 0
       extraEulerOffset: {x: 0, y: 0, z: 0}
   - windowStart: 0.4
-    vfxTime: 0.2
+    vfxTime: 0.4
     windowEnd: 0.49
     chainPoint: 0.75
     moveCancelPoint: 0.57
@@ -47,10 +47,10 @@ MonoBehaviour:
       scale: 0
       extraEulerOffset: {x: 0, y: 0, z: 0}
   - windowStart: 0.42
-    vfxTime: 0.3
+    vfxTime: 0.42
     windowEnd: 0.88
     chainPoint: 0.75
-    moveCancelPoint: 0.57
+    moveCancelPoint: 0.5
     spawnRule:
       localOffset: {x: 0, y: 0.8, z: 1}
       yawOffset: 0
@@ -71,6 +71,8 @@ MonoBehaviour:
     localPosition: {x: -8.189174, y: 0.9583187, z: 4.980048}
     localEuler: {x: 42.09073, y: 358.5849, z: 212.2882}
     localScale: {x: 1, y: 1, z: 1}
+  drawEquipNormalizedTime: 0.35
+  sheathUnequipNormalizedTime: 0.6
   summonPosition: {x: 0, y: 2, z: -5}
   summonSpeed: 10
   sheathSpeed: 8

@@ -78,6 +78,13 @@ public class WeaponSO : ScriptableObject
     public SocketOffset handSocket = new SocketOffset { localScale = Vector3.one };
     public SocketOffset sheathSocket = new SocketOffset { localScale = Vector3.one };
 
+    [Header("Draw/Sheath Timing (No Animation Events)")]
+    [Tooltip("Normalized time (0..1) within the Upper body Draw clip when the weapon is actually equipped: show held weapon, enable scripts, and apply layers.")]
+    [Range(0f, 1f)] public float drawEquipNormalizedTime = 0.35f;
+
+    [Tooltip("Normalized time (0..1) within the Upper body Sheath clip when the weapon is actually unequipped: hide held weapon, show sheath, disable scripts, and apply layers.")]
+    [Range(0f, 1f)] public float sheathUnequipNormalizedTime = 0.40f;
+
     [Header("Mage-Specific Settings")]
     [Tooltip("For Mage: weapon summon position (where weapon flies from)")]
     public Vector3 summonPosition = new Vector3(0, 2, -5);

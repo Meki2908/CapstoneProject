@@ -70,6 +70,8 @@ public class Character : NetworkBehaviour
     public AttackState attacking;
     public GetHitState getHit;
     public DieState dieState;
+    public DrawWeaponState drawingWeapon;
+    public SheathWeaponState sheathingWeapon;
 
     [HideInInspector]
     public float gravityValue = -9.81f;
@@ -132,6 +134,12 @@ public class Character : NetworkBehaviour
 
     //public bool isInCombatState { get; set; }
     public bool isWeaponDrawn { get; set; }
+    public enum QueuedWeaponAction { None, Draw, Sheath }
+
+    // Queue requested weapon action when animation/state would skip it (e.g. GetHit/skill lock).
+    public QueuedWeaponAction queuedWeaponAction { get; private set; } = QueuedWeaponAction.None;
+
+    private const bool TOGGLE_WEAPON_QUEUE_DEBUG = true;
     public bool IsDashing { get; set; } // For invincibility frame during dash
     public float dashLockUntil = 0f; // Thời điểm trước đó dash bị khóa (để tránh auto-dash sau khi bị hit)
 
@@ -284,6 +292,8 @@ public class Character : NetworkBehaviour
         attacking = new AttackState(this, movementSM);
         getHit = new GetHitState(this, movementSM);
         dieState = new DieState(this, movementSM);        
+        drawingWeapon = new DrawWeaponState(this, movementSM);
+        sheathingWeapon = new SheathWeaponState(this, movementSM);
 
         currentLocomotionState = standing;
         movementSM.Initialize(currentLocomotionState);
@@ -522,6 +532,53 @@ public class Character : NetworkBehaviour
         {
             animator.SetFloat("speed", targetMagnitude, speedDampTime, Runner.DeltaTime);
         }
+    }
+
+    public void QueueWeaponAction(QueuedWeaponAction action)
+    {
+        if (action == QueuedWeaponAction.None) return;
+        if (queuedWeaponAction != QueuedWeaponAction.None)
+        {
+            if (TOGGLE_WEAPON_QUEUE_DEBUG)
+            {
+                Debug.Log(
+                    $"[ToggleWeapon][Queue] IGNORE (already queued) frame={Time.frameCount} sim={Runner?.SimulationTime:F3} " +
+                    $"incoming={action} queuedExisting={queuedWeaponAction}"
+                );
+            }
+            return; // buffer exactly once
+        }
+
+        if (TOGGLE_WEAPON_QUEUE_DEBUG)
+        {
+            Debug.Log(
+                $"[ToggleWeapon][Queue] SET frame={Time.frameCount} sim={Runner?.SimulationTime:F3} " +
+                $"queuedBefore={queuedWeaponAction} -> queuedAfter={action}"
+            );
+        }
+        queuedWeaponAction = action;
+    }
+
+    public void QueueWeaponActionFromCurrentContext()
+    {
+        // Lấy sự thật tuyệt đối từ FSM C#, cấm hỏi ý kiến Animator!
+        QueueWeaponAction(isWeaponDrawn ? QueuedWeaponAction.Sheath : QueuedWeaponAction.Draw);
+    }
+
+    public bool TryConsumeQueuedWeaponAction(out QueuedWeaponAction action)
+    {
+        action = queuedWeaponAction;
+        if (action == QueuedWeaponAction.None) return false;
+
+        if (TOGGLE_WEAPON_QUEUE_DEBUG)
+        {
+            Debug.Log(
+                $"[ToggleWeapon][Consume] frame={Time.frameCount} sim={Runner?.SimulationTime:F3} " +
+                $"consumed={action} queuedBeforeClear={queuedWeaponAction}"
+            );
+        }
+        queuedWeaponAction = QueuedWeaponAction.None;
+        return true;
     }
 
     

@@ -271,11 +271,27 @@ public class PlayerHealth : NetworkBehaviour
         // === KHÔNG NGẮT COMBO ===
         // Nếu player đang tấn công (AttackState) → chỉ trừ máu, KHÔNG chuyển GetHitState
         // Player "tank through" damage để giữ combo mượt
-        if (character != null && character.movementSM != null &&
-            character.movementSM.currentState == character.attacking)
+        if (character != null && character.movementSM != null)
         {
-            lastHitTime = Time.time; // Vẫn ghi nhận hit để cooldown hoạt động
-            return;
+            var st = character.movementSM.currentState;
+
+            // Super armor / anti-desync: nếu đang ở state mà Animator không nên (hoặc không thể)
+            // transition sang GetHit, thì chỉ trừ máu và thoát.
+            if (st == character.attacking ||
+                st == character.dashing ||
+                st == character.jumping ||
+                st == character.sprintjumping)
+            {
+                lastHitTime = Time.time; // Vẫn ghi nhận hit để cooldown hoạt động
+                return;
+            }
+
+            // Nếu đang thực hiện skill lock → không ép GetHit (tránh Animator bị lệch pha).
+            if (character.skillLock != null && character.skillLock.isPerformingSkill)
+            {
+                lastHitTime = Time.time;
+                return;
+            }
         }
         
         lastHitTime = Time.time; // Ghi nhận thời điểm bị đánh

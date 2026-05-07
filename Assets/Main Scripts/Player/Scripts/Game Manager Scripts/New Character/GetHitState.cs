@@ -2,10 +2,11 @@ using UnityEngine;
 
 public class GetHitState : State
 {
+    private const bool TOGGLE_QUEUE_DEBUG = true;
     bool dash;
     bool jump;
     bool toBaseMove;
-    bool toggleWeapon; // NEW: cho phép rút/cất vũ khí khi đang bị đánh
+    bool toggleWeapon; // allow queue Draw/Sheath while getting hit
     
     // BỎ LOGIC DELAY: Set thời gian stun = 0 theo yêu cầu để bỏ hoàn toàn delay.
     // Kết hợp với layer UpperBody_Hit, player có thể đánh/chạy ngay cả khi animation đang chạy!
@@ -63,6 +64,13 @@ public class GetHitState : State
         if (ToggleWeaponTriggered)
         {
             toggleWeapon = true;
+            if (TOGGLE_QUEUE_DEBUG)
+            {
+                Debug.Log(
+                    $"[ToggleWeapon][GetHit.Input] frame={Time.frameCount} sim={character.Runner.SimulationTime:F3} " +
+                    $"ToggleWeaponTriggered=1 queuedNow={character.queuedWeaponAction} isWeaponDrawn={character.isWeaponDrawn}"
+                );
+            }
         }
     }
 
@@ -82,23 +90,23 @@ public class GetHitState : State
         // Priority: ToggleWeapon > Dash > Jump > Resume Attack > BaseMove
         if (toggleWeapon)
         {
-            // Chuyển về locomotion state ngay lập tức, BaseMoveState sẽ xử lý toggle
-            // Set flag trên locomotion state để nó biết cần toggle
-            var locomotion = character.currentLocomotionState;
-            if (locomotion is BaseMoveState baseMoveState)
+            // Buffer exactly once: store requested action at the moment of Tab press.
+            if (TOGGLE_QUEUE_DEBUG)
             {
-                if (character.isWeaponDrawn)
-                {
-                    baseMoveState.sheathWeapon = true;
-                    baseMoveState.drawWeapon = false;
-                }
-                else
-                {
-                    baseMoveState.drawWeapon = true;
-                    baseMoveState.sheathWeapon = false;
-                }
+                Debug.Log(
+                    $"[ToggleWeapon][GetHit.Queue] BEFORE frame={Time.frameCount} sim={character.Runner.SimulationTime:F3} " +
+                    $"queuedBefore={character.queuedWeaponAction} isWeaponDrawn={character.isWeaponDrawn}"
+                );
             }
-            stateMachine.ChangeState(locomotion);
+            character.QueueWeaponActionFromCurrentContext();
+            if (TOGGLE_QUEUE_DEBUG)
+            {
+                Debug.Log(
+                    $"[ToggleWeapon][GetHit.Queue] AFTER frame={Time.frameCount} sim={character.Runner.SimulationTime:F3} " +
+                    $"queuedAfter={character.queuedWeaponAction}"
+                );
+            }
+            toggleWeapon = false;
         }
         else if (dash)
         {
@@ -114,7 +122,15 @@ public class GetHitState : State
             // để tránh việc input dash bị buffer khiến player auto-dash
             character.dashLockUntil = character.Runner.SimulationTime + 0.1f; // 0.1s sau khi hết hit mới cho phép dash lại
 
-            // Try to resume attack state if we were attacking before getting hit
+            // NOTE: Không được "xả hàng đợi" ở GetHitState nữa.
+            // Chỉ trả về locomotion/attack. Việc xả queued Draw/Sheath sẽ được đồng bộ theo Animator tại BaseMoveState.
+            if (TOGGLE_QUEUE_DEBUG)
+            {
+                Debug.Log(
+                    $"[ToggleWeapon][GetHit.Exit] frame={Time.frameCount} sim={character.Runner.SimulationTime:F3} " +
+                    $"toBaseMove=1 queuedNow={character.queuedWeaponAction} resumeAttack={ShouldResumeAttack()} locomotion={character.currentLocomotionState?.GetType().Name}"
+                );
+            }
             if (ShouldResumeAttack())
             {
                 ResumeAttackState();

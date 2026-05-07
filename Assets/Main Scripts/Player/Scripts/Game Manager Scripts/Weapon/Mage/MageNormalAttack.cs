@@ -3,7 +3,6 @@ using GAP_ParticleSystemController;
 
 /// <summary>
 /// Normal attack system cho Mage.
-/// KHÔNG DÙNG ANIMATION EVENT NỮA! Được gọi trực tiếp từ FSM (AttackState) dựa trên vfxTime.
 /// </summary>
 public class MageNormalAttack : MonoBehaviour
 {
@@ -132,7 +131,6 @@ public class MageNormalAttack : MonoBehaviour
                 if (rotateToMouse == null) rotateToMouse = vfx.AddComponent<RotateToMouseScript>();
                 projectileScript.SetTarget(target.gameObject, rotateToMouse);
             }
-            projectileScript.speed = 20f;
             projectileScript.accuracy = 100f;
         }
 

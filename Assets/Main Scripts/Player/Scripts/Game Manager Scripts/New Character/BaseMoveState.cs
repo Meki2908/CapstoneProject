@@ -2,6 +2,7 @@ using UnityEngine;
 
 public class BaseMoveState : State
 {
+    private const bool TOGGLE_DEBUG = true;
     float gravityValue;
     bool jump;
     bool crouch;
@@ -20,6 +21,10 @@ public class BaseMoveState : State
     private float fallTimer = 0f;
     private const float FallTimeout = 0.15f;
 
+    // Centralized toggle cooldown (prevents race between derived states)
+    protected float toggleCooldown = 0.5f;
+    protected float lastToggleTime = 0f;
+
     public BaseMoveState(Character _character, StateMachine _stateMachine) : base(_character, _stateMachine)
     {
         character = _character;
@@ -32,6 +37,11 @@ public class BaseMoveState : State
         base.Enter();
 
         jump = false;
+        // One-shot flags: luôn reset khi vào locomotion state để tránh mang cờ rác qua state khác.
+        sheathWeapon = false;
+        drawWeapon = false;
+
+        // Queued Tab during GetHit is now consumed/handled by dedicated Draw/Sheath states.
         
         // 2. CH? L?Y "�? L?N" T?C �? HI?N T?I �? KH�NG B? VANG SAU KHI DASH
         currentSpeed = new Vector3(character.CalculatedVelocity.x, 0, character.CalculatedVelocity.z).magnitude;
@@ -106,6 +116,13 @@ public class BaseMoveState : State
         }
         if (ToggleWeaponTriggered)
         {
+            if (TOGGLE_DEBUG)
+            {
+                bool allows = !TutorialInputGate.IsActive || TutorialInputGate.Allows(TutorialInputMask.ToggleWeapon);
+                bool combatMove = character.animator != null && character.animator.GetBool("combatMove");
+                Debug.Log($"[ToggleWeapon][HandleInput] frame={Time.frameCount} sim={character.Runner.SimulationTime:F3} state={stateMachine.currentState?.GetType().Name} allows={allows} isWeaponDrawn={character.isWeaponDrawn} combatMove={combatMove}");
+            }
+
             if (character.isWeaponDrawn)
             {
                 sheathWeapon = true;
@@ -119,6 +136,11 @@ public class BaseMoveState : State
         }
 
         ApplyTutorialInputGate();
+
+        if (TOGGLE_DEBUG && ToggleWeaponTriggered)
+        {
+            Debug.Log($"[ToggleWeapon][PostGate] frame={Time.frameCount} sim={character.Runner.SimulationTime:F3} drawFlag={drawWeapon} sheathFlag={sheathWeapon} gateActive={TutorialInputGate.IsActive} mask={TutorialInputGate.EffectiveMask}");
+        }
     }
 
     void ApplyTutorialInputGate()
@@ -234,24 +256,92 @@ public class BaseMoveState : State
             stateMachine.ChangeState(character.crouching);
         }
         
-        // Thêm đoạn này để bắt tín hiệu cất vũ khí từ Input
-        if (sheathWeapon && character.isWeaponDrawn)
+        // Toggle weapon transitions are handled via explicit Draw/Sheath states
+        // (uninterruptible, and applies gameplay truth via EnsureDrawn/EnsureSheathed).
+
+        // === ĐỒNG BỘ C# VỚI ANIMATOR: CHỜ GET HIT CHẠY XONG MỚI XẢ HÀNG ĐỢI ===
+        if (character.animator != null && character.queuedWeaponAction != Character.QueuedWeaponAction.None)
         {
-            // Reset cờ tránh loop
-            sheathWeapon = false; 
-            drawWeapon = false;
-            
-            character.isWeaponDrawn = false;
-            character.currentLocomotionState = character.standing;
-            TutorialTextDisplay.NotifyWeaponSheathedFromGameplay();
+            int upperLayer = character.animator.GetLayerIndex("UpperBody_Hit");
+            if (upperLayer >= 0)
+            {
+                AnimatorStateInfo stateInfo = character.animator.GetCurrentAnimatorStateInfo(upperLayer);
 
-            character.animator.SetBool("combatMove", false);
+                if (TOGGLE_DEBUG)
+                {
+                    Debug.Log(
+                        $"[ToggleWeapon][Sync] frame={Time.frameCount} sim={character.Runner.SimulationTime:F3} " +
+                        $"queued={character.queuedWeaponAction} upperLayer={upperLayer} shortHash={stateInfo.shortNameHash} " +
+                        $"norm={stateInfo.normalizedTime:F3} isDefault={stateInfo.IsName("Default State")} isNone={stateInfo.IsName("None")}"
+                    );
+                }
 
-            // Gửi lệnh lên Animator cho thân trên
-            character.animator.ResetTrigger("drawWeapon");
-            character.animator.SetTrigger("sheathWeapon");
+                // C# liên tục kiểm tra: Animator đã về "Default State" hoặc "None" chưa?
+                // Nếu rồi, chứng tỏ GetHit đã kết thúc hoàn toàn -> Tiến hành rút/cất kiếm!
+                if (stateInfo.IsName("Default State") || stateInfo.IsName("None"))
+                {
+                    if (character.TryConsumeQueuedWeaponAction(out var action))
+                    {
+                        if (action == Character.QueuedWeaponAction.Draw) drawWeapon = true;
+                        else if (action == Character.QueuedWeaponAction.Sheath) sheathWeapon = true;
 
-            stateMachine.ChangeState(character.currentLocomotionState);
+                        if (TOGGLE_DEBUG)
+                        {
+                            Debug.Log(
+                                $"[ToggleWeapon][Sync.Consume->Flags] frame={Time.frameCount} sim={character.Runner.SimulationTime:F3} " +
+                                $"action={action} setDraw={drawWeapon} setSheath={sheathWeapon}"
+                            );
+                        }
+                    }
+                }
+            }
+            else if (TOGGLE_DEBUG)
+            {
+                Debug.Log(
+                    $"[ToggleWeapon][Sync] frame={Time.frameCount} sim={character.Runner.SimulationTime:F3} " +
+                    $"queued={character.queuedWeaponAction} upperLayerMissing=1 (name=UpperBody_Hit)"
+                );
+            }
+        }
+        // ====================================================================
+
+        if (sheathWeapon || drawWeapon)
+        {
+            if (TOGGLE_DEBUG)
+            {
+                float dt = character.Runner.SimulationTime - lastToggleTime;
+                Debug.Log($"[ToggleWeapon][LogicUpdate] frame={Time.frameCount} sim={character.Runner.SimulationTime:F3} drawFlag={drawWeapon} sheathFlag={sheathWeapon} dt={dt:F3}/{toggleCooldown:F3} state={stateMachine.currentState?.GetType().Name}");
+            }
+
+            if (character.Runner.SimulationTime - lastToggleTime >= toggleCooldown)
+            {
+                lastToggleTime = character.Runner.SimulationTime;
+
+                if (sheathWeapon)
+                {
+                    sheathWeapon = false;
+                    drawWeapon = false;
+                    if (TOGGLE_DEBUG) Debug.Log($"[ToggleWeapon][ChangeState] -> SheathWeaponState frame={Time.frameCount} sim={character.Runner.SimulationTime:F3}");
+                    stateMachine.ChangeState(character.sheathingWeapon);
+                    return;
+                }
+
+                if (drawWeapon)
+                {
+                    sheathWeapon = false;
+                    drawWeapon = false;
+                    if (TOGGLE_DEBUG) Debug.Log($"[ToggleWeapon][ChangeState] -> DrawWeaponState frame={Time.frameCount} sim={character.Runner.SimulationTime:F3}");
+                    stateMachine.ChangeState(character.drawingWeapon);
+                    return;
+                }
+            }
+            else
+            {
+                // Spam protection: clear one-shot flags if cooldown not ready.
+                sheathWeapon = false;
+                drawWeapon = false;
+                if (TOGGLE_DEBUG) Debug.Log($"[ToggleWeapon][CooldownBlock] cleared flags frame={Time.frameCount} sim={character.Runner.SimulationTime:F3}");
+            }
         }
     }
 

@@ -1,5 +1,4 @@
-﻿using UnityEngine;
-using Unity.Cinemachine;
+using UnityEngine;
 using System.Collections;
 using System.Linq;
 
@@ -13,12 +12,7 @@ public class EnemyDetection : NetworkBehaviour
     [SerializeField] private float autoTargetRadius = 5f; // Bán kính tự động target enemy gần nhất
     [SerializeField] private float detectionUpdateInterval = 0.1f; // Update detection every 0.1 seconds instead of every frame
 
-    [Header("Camera Settings")]
-    public CinemachineCamera cnCamera;
-    [SerializeField] private float combatCameraDistance = 9f;
-    [SerializeField] private float normalCameraDistance = 5f;
-    [SerializeField] private float cameraTransitionSpeed = 2f;
-    // [SerializeField] private float cameraLookOffset = 0.5f; // Unused - commented out
+    // Camera distance is owned by PlayerCameraDistanceManager.
 
     [Header("Combat Movement")]
     [SerializeField] private float combatMoveSpeed = 2f; // Tốc độ di chuyển về phía enemy khi đánh
@@ -42,10 +36,11 @@ public class EnemyDetection : NetworkBehaviour
     private Transform nearestEnemy;
     private bool isInCombat = false;
     private bool isAttacking = false;
-    private Coroutine cameraTransitionCoroutine;
     private Coroutine smoothMovementCoroutine;
     private Coroutine smoothRotationCoroutine;
     private Vector3 lastEnemyPosition;
+
+    private PlayerCameraDistanceManager cameraDistanceManager;
 
     // Optimization variables
     private float lastDetectionTime = 0f;
@@ -88,12 +83,7 @@ public class EnemyDetection : NetworkBehaviour
             UpdateEnemyDetection();
             lastDetectionTime = Time.time;
         }
-        // Tự tìm đến cinemachine camera cho player khi mất dấu
-        if (cnCamera == null && Character.LocalCharacter != null)
-        {
-            cnCamera = Character.LocalCharacter.GetComponentInChildren<CinemachineCamera>();
-        }
-
+        ResolveLocalCameraDistanceManager();
         UpdateCameraSystem();
     }
 
@@ -224,45 +214,22 @@ public class EnemyDetection : NetworkBehaviour
     #region Camera System
     private void UpdateCameraSystem()
     {
-        if (cnCamera == null) return;
+        if (cameraDistanceManager == null) return;
 
-        if (isInCombat && nearestEnemy != null)
-        {
-            // Smooth transition to combat distance
-            if (cameraTransitionCoroutine != null)
-                StopCoroutine(cameraTransitionCoroutine);
-            cameraTransitionCoroutine = StartCoroutine(SmoothCameraDistance(combatCameraDistance));
-        }
-        else
-        {
-            // Smooth transition to normal distance
-            if (cameraTransitionCoroutine != null)
-                StopCoroutine(cameraTransitionCoroutine);
-            cameraTransitionCoroutine = StartCoroutine(SmoothCameraDistance(normalCameraDistance));
-        }
-    }
-
-    private IEnumerator SmoothCameraDistance(float targetDistance)
-    {
-        // Get current distance from camera's body component
-        var body = cnCamera.GetCinemachineComponent(CinemachineCore.Stage.Body) as CinemachineThirdPersonFollow;
-        if (body == null) yield break;
-
-        float startDistance = body.CameraDistance;
-        float elapsed = 0f;
-
-        while (elapsed < 1f / cameraTransitionSpeed)
-        {
-            elapsed += Time.deltaTime;
-            float t = elapsed * cameraTransitionSpeed;
-            body.CameraDistance = Mathf.Lerp(startDistance, targetDistance, t);
-            yield return null;
-        }
-
-        body.CameraDistance = targetDistance;
-        cameraTransitionCoroutine = null;
+        bool clamp = isInCombat && nearestEnemy != null;
+        cameraDistanceManager.SetCombatClamp(clamp);
     }
     #endregion
+
+    private void ResolveLocalCameraDistanceManager()
+    {
+        // Only local player should ever drive the camera
+        if (cameraDistanceManager != null) return;
+        if (Character.LocalCharacter == null) return;
+        if (character == null || character != Character.LocalCharacter) return;
+
+        cameraDistanceManager = PlayerNetworkSetup.LocalCameraDistanceManager;
+    }
 
     // 2. SỬA 3 BIẾN NÀY THÀNH BIẾN MẠNG
     [Networked] private float _moveTowardTimer { get; set; }

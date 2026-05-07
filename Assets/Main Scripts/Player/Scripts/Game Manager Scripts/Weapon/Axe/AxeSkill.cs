@@ -154,8 +154,24 @@ public class AxeSkill : MonoBehaviour
         
         Debug.Log($"<color=cyan>[AxeSkill]</color> K�ch ho?t TH�NH C�NG Skill {input}!");
 
+        // Cooldown should not depend on Animation Events (AE can be skipped in chaotic combat / networking).
+        if (AbilityIconManager.Instance != null)
+        {
+            AbilityIconManager.Instance.TriggerCooldown(input);
+        }
+
         if (skillLock != null) skillLock.BeginSkillRootMotion(animator);
         skillLockExpireAt = Time.time + maxSkillLockSeconds;
+
+        if (input == AbilityInput.Q_Ultimate && ultimateDirector != null)
+        {
+            if (character != null && character.HasInputAuthority)
+            {
+                TimelineMainCameraBinder.BindToMainCameraBrain(ultimateDirector, warnOnce: true);
+            }
+            ultimateDirector.time = 0;
+            ultimateDirector.Play();
+        }
 
         TutorialTextDisplay.NotifySkillActivatedFromGameplay(input);
     }

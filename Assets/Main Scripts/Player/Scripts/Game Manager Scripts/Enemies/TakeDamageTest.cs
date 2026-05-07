@@ -83,8 +83,8 @@ public class TakeDamageTest : NetworkBehaviour
 
     void Start()
     {
-// Initialize health
-        CurrentHealth = maxHealth;
+        // NOTE (Fusion): Không được đọc/ghi Networked property trong Start() khi NetworkObject chưa Spawned.
+        // HP sẽ được init trong Spawned() (StateAuthority).
         isAlive = true;
 
         // Cache squared ranges for faster distance checks
@@ -138,18 +138,22 @@ public class TakeDamageTest : NetworkBehaviour
             CheckForPlayer();
         }
 
-        // Raycast damage check every interval - DISABLED to prevent conflicts with EnemyContactDamage
-        // TakeDamageTest should only handle enemy receiving damage from player, not dealing damage to player
-        /*
+        // Raycast damage test mode:
+        // - Chỉ chạy khi bật enableRaycastDamage
+        // - Chỉ chạy trên StateAuthority để tránh double-damage trong multiplayer
         if (enableRaycastDamage && player != null && playerHealth != null)
         {
+            // Fusion guard: chỉ StateAuthority mới được phép gây damage (tránh double-damage).
+            // Không dùng Object.IsSpawned vì NetworkObject bản hiện tại không có API đó.
+            if (Runner != null && !HasStateAuthority) return;
+
             if (Time.time - lastDamageTime >= damageInterval)
             {
-                Debug.Log($"[TakeDamageTest] {gameObject.name} attempting raycast damage to player");
+                if (showDebugInfo)
+                    Debug.Log($"[TakeDamageTest] {gameObject.name} attempting raycast damage to player");
                 ActiveDamage();
             }
         }
-        */
 
         // Also check for skill projectiles hitting this enemy
         CheckForSkillDamage();

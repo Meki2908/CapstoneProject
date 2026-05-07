@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.IO;
@@ -10,12 +10,42 @@ namespace GAP_ParticleSystemController
 
 	public static class SaveParticleSystemScript{		
 
+        // Runtime safety: avoid writing "OriginalSettings" to disk at play-time.
+        // In runtime, prefab folder path is often null (not in PrefabStage), and writing to "/OriginalSettings"
+        // becomes "C:\\OriginalSettings" on Windows. Cache in memory instead.
+        private static readonly Dictionary<string, List<ParticleSystemOriginalSettings>> RuntimeCache =
+            new Dictionary<string, List<ParticleSystemOriginalSettings>>();
+
+        private static string RuntimeKey(GameObject vfx)
+        {
+            if (vfx == null) return string.Empty;
+            // Strip "(Clone)" suffix to share cache across instances.
+            return vfx.name.Replace("(Clone)", "").Trim();
+        }
+
 		public static void SaveVFX (GameObject prefabVFX, List<ParticleSystemOriginalSettings> psOriginalSettingsList) {
+#if !UNITY_EDITOR
+            // Runtime: cache in memory only.
+            var k = RuntimeKey(prefabVFX);
+            if (!string.IsNullOrEmpty(k) && psOriginalSettingsList != null)
+                RuntimeCache[k] = psOriginalSettingsList;
+            return;
+#endif
+
 #if UNITY_2018_3_OR_NEWER
              var prefabFolderPath = GetPrefabFolder2018_3 (prefabVFX);
 #else
              var prefabFolderPath = GetPrefabFolder (prefabVFX);
 #endif
+
+            if (string.IsNullOrEmpty(prefabFolderPath))
+            {
+                // Not in PrefabStage (e.g. running in scene). Cache only.
+                var k = RuntimeKey(prefabVFX);
+                if (!string.IsNullOrEmpty(k) && psOriginalSettingsList != null)
+                    RuntimeCache[k] = psOriginalSettingsList;
+                return;
+            }
 
 #if UNITY_EDITOR
 			if (!Directory.Exists (prefabFolderPath + "/OriginalSettings")) {
@@ -37,11 +67,26 @@ namespace GAP_ParticleSystemController
 		}
 
 		public static List<ParticleSystemOriginalSettings> LoadVFX (GameObject prefabVFX) {
+#if !UNITY_EDITOR
+            var k = RuntimeKey(prefabVFX);
+            if (!string.IsNullOrEmpty(k) && RuntimeCache.TryGetValue(k, out var cached))
+                return cached;
+            return null;
+#endif
+
 #if UNITY_2018_3_OR_NEWER
             var prefabFolderPath = GetPrefabFolder2018_3 (prefabVFX);
 #else
             var prefabFolderPath = GetPrefabFolder(prefabVFX);
 #endif
+
+            if (string.IsNullOrEmpty(prefabFolderPath))
+            {
+                var k = RuntimeKey(prefabVFX);
+                if (!string.IsNullOrEmpty(k) && RuntimeCache.TryGetValue(k, out var cached))
+                    return cached;
+                return null;
+            }
 
             if (File.Exists (prefabFolderPath + "/OriginalSettings/" + prefabVFX.name + ".dat")) {
 				BinaryFormatter bf = new BinaryFormatter ();
@@ -60,6 +105,11 @@ namespace GAP_ParticleSystemController
 		}
 
 		public static bool CheckExistingFile (GameObject prefabVFX){
+#if !UNITY_EDITOR
+            var k = RuntimeKey(prefabVFX);
+            return !string.IsNullOrEmpty(k) && RuntimeCache.ContainsKey(k);
+#endif
+
 #if UNITY_2018_3_OR_NEWER
             var prefabFolderPath = GetPrefabFolder2018_3 (prefabVFX);
 #else

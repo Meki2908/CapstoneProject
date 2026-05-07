@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -159,7 +159,9 @@ namespace GAP_ParticleSystemController{
 						}	
 
 						//DURATION
-						if(duration != 1){
+						// Unity doesn't support changing duration while the system is playing.
+						// Avoid warning spam in runtime by only applying duration when not playing.
+						if(duration != 1 && !ps.isPlaying){
 							main.duration *= duration;
 						}
 						

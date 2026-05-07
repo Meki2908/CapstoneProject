@@ -1085,20 +1085,20 @@ Camera:
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 1
-  m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
-  m_projectionMatrixMode: 2
+  m_BackGroundColor: {r: 0, g: 0, b: 0, a: 1}
+  m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
   m_Iso: 200
   m_ShutterSpeed: 0.005
   m_Aperture: 16
   m_FocusDistance: 10
-  m_FocalLength: 13.858139
+  m_FocalLength: 50
   m_BladeCount: 5
   m_Curvature: {x: 2, y: 11}
   m_BarrelClipping: 0.25
   m_Anamorphism: 0
-  m_SensorSize: {x: 21.946, y: 16.002}
+  m_SensorSize: {x: 36, y: 24}
   m_LensShift: {x: 0, y: 0}
   m_NormalizedViewPortRect:
     serializedVersion: 2
@@ -1111,7 +1111,7 @@ Camera:
   field of view: 60.000004
   orthographic: 0
   orthographic size: 5
-  m_Depth: -1
+  m_Depth: 0
   m_CullingMask:
     serializedVersion: 2
     m_Bits: 4294967295
@@ -1120,7 +1120,7 @@ Camera:
   m_TargetDisplay: 0
   m_TargetEye: 3
   m_HDR: 1
-  m_AllowMSAA: 0
+  m_AllowMSAA: 1
   m_AllowDynamicResolution: 0
   m_ForceIntoRT: 0
   m_OcclusionCulling: 1
@@ -3567,6 +3567,26 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 777777777777777777, guid: 9c72559a6891cfb4098be0c2825ab3ec, type: 3}
+      propertyPath: useHealthBar
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 777777777777777777, guid: 9c72559a6891cfb4098be0c2825ab3ec, type: 3}
+      propertyPath: showDebugInfo
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 777777777777777777, guid: 9c72559a6891cfb4098be0c2825ab3ec, type: 3}
+      propertyPath: enableDetection
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 777777777777777777, guid: 9c72559a6891cfb4098be0c2825ab3ec, type: 3}
+      propertyPath: enableRaycastDamage
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 777777777777777777, guid: 9c72559a6891cfb4098be0c2825ab3ec, type: 3}
+      propertyPath: showDetectionGizmos
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 2933755795626561153, guid: 9c72559a6891cfb4098be0c2825ab3ec, type: 3}
       propertyPath: SortKey
       value: 360849322
@@ -3578,7 +3598,7 @@ PrefabInstance:
     - target: {fileID: 2933755795626561153, guid: 9c72559a6891cfb4098be0c2825ab3ec, type: 3}
       propertyPath: 'NetworkedBehaviours.Array.data[0]'
       value: 
-      objectReference: {fileID: 3023744597348996161}
+      objectReference: {fileID: 3023744597348996158}
     - target: {fileID: 4861809776539466896, guid: 9c72559a6891cfb4098be0c2825ab3ec, type: 3}
       propertyPath: m_Name
       value: Capsule
@@ -3593,59 +3613,24 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 159345467061397532, guid: 9c72559a6891cfb4098be0c2825ab3ec, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1789079337}
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 4861809776539466896, guid: 9c72559a6891cfb4098be0c2825ab3ec, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 3023744597348996161}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 9c72559a6891cfb4098be0c2825ab3ec, type: 3}
---- !u!1 &3023744597348996158 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 4861809776539466896, guid: 9c72559a6891cfb4098be0c2825ab3ec, type: 3}
-  m_PrefabInstance: {fileID: 3023744597348996157}
-  m_PrefabAsset: {fileID: 0}
---- !u!4 &3023744597348996160 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 159345467061397532, guid: 9c72559a6891cfb4098be0c2825ab3ec, type: 3}
-  m_PrefabInstance: {fileID: 3023744597348996157}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &3023744597348996161
+--- !u!114 &3023744597348996158 stripped
 MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
+  m_CorrespondingSourceObject: {fileID: 777777777777777777, guid: 9c72559a6891cfb4098be0c2825ab3ec, type: 3}
+  m_PrefabInstance: {fileID: 3023744597348996157}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3023744597348996158}
+  m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 19c1d4ae4a02ff743952d6f5e7c17df8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  damageNumberPrefab: {fileID: 0}
-  hitEffect: {fileID: 0}
-  hitEffectLifetime: 1
-  showDebugInfo: 1
-  detectionRange: 8
-  detectionBufferZone: 2
-  detectionAngle: 120
-  playerLayerMask:
-    serializedVersion: 2
-    m_Bits: 256
-  obstacleLayerMask:
-    serializedVersion: 2
-    m_Bits: 262144
-  enableDetection: 1
-  showDetectionGizmos: 1
-  raycastRange: 5
-  raycastBufferZone: 0.5
-  damagePerHit: 1
-  damageInterval: 2
-  enableRaycastDamage: 0
-  maxHealth: 10000
-  _CurrentHealth: 0
-  isAlive: 1
-  useHealthBar: 0
-  bossName: 
-  healthBarColor: {r: 1, g: 0, b: 0, a: 1}
+--- !u!4 &3023744597348996160 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 159345467061397532, guid: 9c72559a6891cfb4098be0c2825ab3ec, type: 3}
+  m_PrefabInstance: {fileID: 3023744597348996157}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &3553284138633804877
 PrefabInstance:
   m_ObjectHideFlags: 0

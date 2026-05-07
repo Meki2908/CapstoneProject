@@ -50526,7 +50526,7 @@ CharacterController:
   serializedVersion: 3
   m_Height: 1.8028462
   m_Radius: 0.2
-  m_SlopeLimit: 60
+  m_SlopeLimit: 50
   m_StepOffset: 0.5
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
@@ -50561,27 +50561,18 @@ MonoBehaviour:
     m_Curve:
     - serializedVersion: 3
       time: 0
-      value: 1.12
-      inSlope: 0
-      outSlope: 0
+      value: 1
+      inSlope: -0.06620215
+      outSlope: -0.06620215
       tangentMode: 0
       weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    - serializedVersion: 3
-      time: 0.6949979
-      value: 1.0634309
-      inSlope: -0.15
-      outSlope: -0.15
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
     - serializedVersion: 3
       time: 1
-      value: 0.88
-      inSlope: -0.2
-      outSlope: -0.2
+      value: 0.2536621
+      inSlope: 0
+      outSlope: 0
       tangentMode: 0
       weightedMode: 0
       inWeight: 0
@@ -85165,7 +85156,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   equipment: {fileID: 9113710843612948326}
   defaultVfxSpawn: {fileID: 7442102893236942789}
-  animator: {fileID: 0}
+  animator: {fileID: 7101454677325079267}
   ultimateDirector: {fileID: 8858650690256050835}
   vfxDuration: 5
   skillTriggerParam: axeSkill
@@ -85190,7 +85181,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   equipment: {fileID: 9113710843612948326}
   defaultVfxSpawn: {fileID: 789048961051014707}
-  animator: {fileID: 0}
+  animator: {fileID: 7101454677325079267}
   ultimateDirector: {fileID: 4655992503645404404}
   skillTriggerParam: mageSkill
   skillIndexParam: skillIndex
@@ -85248,8 +85239,8 @@ MonoBehaviour:
   equipment: {fileID: 9113710843612948326}
   defaultVfxSpawn: {fileID: 5323140124051252252}
   animator: {fileID: 7101454677325079267}
-  character: {fileID: 0}
-  weaponController: {fileID: 0}
+  character: {fileID: 6908186544467181420}
+  weaponController: {fileID: 9068402693794656822}
   enemyLayerMask:
     serializedVersion: 2
     m_Bits: 64
@@ -85499,10 +85490,6 @@ MonoBehaviour:
     m_Bits: 576
   autoTargetRadius: 6
   detectionUpdateInterval: 0.1
-  cnCamera: {fileID: 0}
-  combatCameraDistance: 12
-  normalCameraDistance: 6
-  cameraTransitionSpeed: 3
   combatMoveSpeed: 5
   smoothRotationDuration: 0.3
   useRootMotionWhenNoEnemy: 1

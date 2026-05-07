@@ -37,8 +37,8 @@ public class AttackState : State
     {
         character = _character;
         stateMachine = _stateMachine;
-        equipment = character.GetComponent<EquipmentSystem>();
-        weaponController = character.GetComponent<WeaponController>();
+        equipment = character.GetComponentInChildren<EquipmentSystem>();
+        weaponController = character.GetComponentInChildren<WeaponController>();
     }
 
     public override void Enter()
@@ -87,6 +87,7 @@ public class AttackState : State
 
         character.animator.ResetTrigger("attack");
         character.animator.SetTrigger("attack");
+        // Keep combatMove true while attacking to ensure weapon layers behave correctly.
         if (character.animator != null)
             character.animator.SetBool("combatMove", true);
         
@@ -186,13 +187,26 @@ public class AttackState : State
         ApplyAttackSpeedToAnimator();
 
         // 1. MỞ KHÓA THÔNG MINH BẰNG TAG — chỉ tin transition tới state có tag "Attack"
-        if (waitingForComboTransition && isInTransition && character.animator != null && weaponLayerIndex >= 0)
+        if (waitingForComboTransition && character.animator != null && weaponLayerIndex >= 0)
         {
-            var nextState = character.animator.GetNextAnimatorStateInfo(weaponLayerIndex);
-            if (nextState.IsTag("Attack"))
+            if (isInTransition)
             {
-                waitingForComboTransition = false;
-                comboTransitionTimeout = 0f;
+                var nextState = character.animator.GetNextAnimatorStateInfo(weaponLayerIndex);
+                if (nextState.IsTag("Attack"))
+                {
+                    waitingForComboTransition = false;
+                    comboTransitionTimeout = 0f;
+                }
+            }
+            else
+            {
+                // Fallback: nếu đã vào state tag Attack mà không báo transition, mở khóa luôn.
+                var currState = character.animator.GetCurrentAnimatorStateInfo(weaponLayerIndex);
+                if (currState.IsTag("Attack"))
+                {
+                    waitingForComboTransition = false;
+                    comboTransitionTimeout = 0f;
+                }
             }
         }
 
@@ -203,105 +217,143 @@ public class AttackState : State
             return;
         }
 
-        if (currentWeapon != null && currentWeapon.weaponType == WeaponType.Mage
-            && currentWeapon.hitTimings != null
-            && hitIndex >= 0 && hitIndex < currentWeapon.hitTimings.Length)
+        // =========================================================================
+        // === CHỈ XỬ LÝ VFX/COMBO KHI ĐÃ VÀO ĐÚNG STATE ATTACK (tránh đọc normalizedTime state cũ) ===
+        // =========================================================================
+        if (!waitingForComboTransition)
         {
-            if (!mageVfxSpawnedThisHit)
+            if (currentWeapon != null && currentWeapon.weaponType == WeaponType.Mage
+                && currentWeapon.hitTimings != null
+                && hitIndex >= 0 && hitIndex < currentWeapon.hitTimings.Length)
             {
-                float vfxTargetPercent = Mathf.Clamp01(currentWeapon.hitTimings[hitIndex].vfxTime);
-                
-                if (normalizedTime >= vfxTargetPercent)
+                if (!mageVfxSpawnedThisHit)
                 {
-                    mageVfxSpawnedThisHit = true;
-                    var mageAtk = character.GetComponentInChildren<MageNormalAttack>(true);
-                    if (mageAtk != null)
-                        mageAtk.FireProjectileFSM(hitIndex);
+                    float vfxTargetPercent = Mathf.Clamp01(currentWeapon.hitTimings[hitIndex].vfxTime);
+
+                    if (normalizedTime >= vfxTargetPercent)
+                    {
+                        mageVfxSpawnedThisHit = true;
+                        var mageAtk = character.GetComponentInChildren<MageNormalAttack>(true);
+                        if (mageAtk != null)
+                            mageAtk.FireProjectileFSM(hitIndex);
+                    }
+                }
+            }
+
+            if (!nextAttackBuffered && normalizedTime >= commitPoint)
+            {
+                nextAttackBuffered = pressedSinceLastCheck;
+                pressedSinceLastCheck = false;
+            }
+
+            float currentChainPoint = 0.75f;
+            float currentMoveCancelPoint = 0.85f;
+            bool isLastHit = false;
+
+            if (currentWeapon != null && currentWeapon.hitTimings != null && hitIndex < currentWeapon.hitTimings.Length)
+            {
+                currentChainPoint = currentWeapon.hitTimings[hitIndex].chainPoint;
+                currentMoveCancelPoint = currentWeapon.hitTimings[hitIndex].moveCancelPoint;
+
+                if (hitIndex >= currentWeapon.hitTimings.Length - 1)
+                {
+                    isLastHit = true;
+                }
+            }
+
+            bool canChain = !isInTransition && normalizedTime >= currentChainPoint;
+            bool canCombo = canChain && !isLastHit;
+
+            // ===== RESTART COMBO (hit cuối) =====
+            // Nếu đang ở hit cuối và người chơi bấm Attack tại điểm chain,
+            // ta restart về hit 1 ngay trong AttackState để tránh kẹt state (do nhánh exit yêu cầu !attack).
+            if (isLastHit && canChain && (nextAttackBuffered || attack))
+            {
+                timePassed = 0f;
+                hitIndex = 0;
+                mageVfxSpawnedThisHit = false;
+
+                character.animator.ResetTrigger("attack");
+                character.animator.SetTrigger("attack");
+
+                if (bufferedDirection.sqrMagnitude > 0.01f)
+                {
+                    SetTargetRotation(bufferedDirection);
+                }
+
+                waitingForComboTransition = true;
+                comboTransitionTimeout = timePassed + 0.4f;
+
+                attack = false;
+                nextAttackBuffered = false;
+                pressedSinceLastCheck = false;
+                bufferedDirection = Vector2.zero;
+
+                if (hitHandler != null)
+                    hitHandler.StartHit(hitIndex);
+
+                return;
+            }
+
+            // 1. TRIỂN KHAI ĐÒN TIẾP THEO
+            if (canCombo && (nextAttackBuffered || attack))
+            {
+                timePassed = 0f;
+                hitIndex++;
+                mageVfxSpawnedThisHit = false;
+
+                character.animator.ResetTrigger("attack");
+                character.animator.SetTrigger("attack");
+
+                if (bufferedDirection.sqrMagnitude > 0.01f)
+                {
+                    SetTargetRotation(bufferedDirection);
+                }
+
+                waitingForComboTransition = true;
+                comboTransitionTimeout = timePassed + 0.4f;
+
+                attack = false;
+                nextAttackBuffered = false;
+                pressedSinceLastCheck = false;
+                bufferedDirection = Vector2.zero;
+
+                if (hitHandler != null)
+                    hitHandler.StartHit(hitIndex);
+            }
+            // 2. CHỜ THU CHIÊU (HOẶC BỊ KHÓA ĐÒN MỚI)
+            else if (canChain)
+            {
+                if (!nextAttackBuffered && !attack)
+                {
+                    bool isActuallyNone = false;
+                    if (weaponLayerIndex >= 0)
+                    {
+                        var currState = character.animator.GetCurrentAnimatorStateInfo(weaponLayerIndex);
+                        isActuallyNone = (currState.shortNameHash == Animator.StringToHash("None"));
+                    }
+
+                    bool canMoveCancel = normalizedTime >= currentMoveCancelPoint;
+                    bool allowExitByNormalizedEnd = !isInTransition && normalizedTime >= 0.95f;
+
+                    if (movementInput.sqrMagnitude > 0.01f && canMoveCancel)
+                    {
+                        if (weaponLayerIndex >= 0)
+                            character.animator.CrossFade("None", 0.1f, weaponLayerIndex);
+
+                        ForceExitState();
+                        return;
+                    }
+
+                    if (isActuallyNone || allowExitByNormalizedEnd)
+                    {
+                        ForceExitState();
+                        return;
+                    }
                 }
             }
         }
-
-        if (!nextAttackBuffered && normalizedTime >= commitPoint)
-        {
-            nextAttackBuffered = pressedSinceLastCheck;
-            pressedSinceLastCheck = false;
-        }
-
-        float currentChainPoint = 0.75f;
-        float currentMoveCancelPoint = 0.85f;
-        bool isLastHit = false;
-
-        if (currentWeapon != null && currentWeapon.hitTimings != null && hitIndex < currentWeapon.hitTimings.Length)
-        {
-            currentChainPoint = currentWeapon.hitTimings[hitIndex].chainPoint;
-            currentMoveCancelPoint = currentWeapon.hitTimings[hitIndex].moveCancelPoint;
-            
-            if (hitIndex >= currentWeapon.hitTimings.Length - 1)
-            {
-                isLastHit = true;
-            }
-        }
-        
-        bool canChain = !isInTransition && normalizedTime >= currentChainPoint;
-        bool canCombo = canChain && !isLastHit; 
-
-        // 1. TRIỂN KHAI ĐÒN TIẾP THEO
-        if (canCombo && (nextAttackBuffered || attack))
-        {
-            timePassed = 0f;
-            hitIndex++;
-            mageVfxSpawnedThisHit = false; 
-
-            character.animator.ResetTrigger("attack");
-            character.animator.SetTrigger("attack");
-            
-            if (bufferedDirection.sqrMagnitude > 0.01f)
-            {
-                SetTargetRotation(bufferedDirection);
-            }
-            
-            waitingForComboTransition = true;
-            comboTransitionTimeout = timePassed + 0.4f; 
-            
-            attack = false;
-            nextAttackBuffered = false;
-            pressedSinceLastCheck = false;
-            bufferedDirection = Vector2.zero; 
-
-            if (hitHandler != null)
-                hitHandler.StartHit(hitIndex);
-        }
-        // 2. CHỜ THU CHIÊU (HOẶC BỊ KHÓA ĐÒN MỚI)
-        else if (canChain)
-        {
-            if (!nextAttackBuffered && !attack && !waitingForComboTransition)
-            {
-                bool isActuallyNone = false;
-                if (weaponLayerIndex >= 0) 
-                {
-                    var currState = character.animator.GetCurrentAnimatorStateInfo(weaponLayerIndex);
-                    isActuallyNone = (currState.shortNameHash == Animator.StringToHash("None"));
-                }
-                
-                bool canMoveCancel = normalizedTime >= currentMoveCancelPoint;
-                bool allowExitByNormalizedEnd = !isInTransition && normalizedTime >= 0.95f;
-
-                if (movementInput.sqrMagnitude > 0.01f && canMoveCancel)
-                {
-                    if (weaponLayerIndex >= 0) 
-                        character.animator.CrossFade("None", 0.1f, weaponLayerIndex);
-                    
-                    ForceExitState();
-                    return;
-                }
-                
-                if (isActuallyNone || allowExitByNormalizedEnd)
-                {
-                    ForceExitState();
-                    return;
-                }
-            }
-        }
+        // =========================================================================
 
         if (jump)
         {

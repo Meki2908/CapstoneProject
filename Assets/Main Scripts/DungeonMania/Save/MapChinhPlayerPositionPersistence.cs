@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.IO;
 using UnityEngine;
+using Unity.Cinemachine;
 
 [Serializable]
 public class MapChinhPlayerPositionJson
@@ -152,10 +153,12 @@ public class MapChinhPlayerPositionPersistence : MonoBehaviour
         if (ch != null)
             ch.playerVelocity = Vector3.zero;
 
-        var enemyDetection = GetComponentInChildren<EnemyDetection>(true);
-        if (enemyDetection != null && enemyDetection.cnCamera != null)
+        // Reposition local player camera after teleport/loading.
+        // Camera is spawned by PlayerNetworkSetup from PlayerCamera.prefab (not stored on EnemyDetection).
+        CinemachineCamera cam = PlayerNetworkSetup.LocalCinemachineCamera;
+        if (cam != null)
         {
-            enemyDetection.cnCamera.ForceCameraPosition(transform.position, transform.rotation);
+            cam.ForceCameraPosition(transform.position, transform.rotation);
         }
     }
 

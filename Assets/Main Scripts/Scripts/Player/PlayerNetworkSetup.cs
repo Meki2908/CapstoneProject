@@ -4,6 +4,9 @@ using Unity.Cinemachine;
 
 public class PlayerNetworkSetup : NetworkBehaviour
 {
+    public static CinemachineCamera LocalCinemachineCamera { get; private set; }
+    public static PlayerCameraDistanceManager LocalCameraDistanceManager { get; private set; }
+
     [Header("Camera Settings")]
     [Tooltip("Prefab Camera (chứa CinemachineCamera). Khi LocalPlayer xuất hiện, nó sẽ tự spawn cái này ra ngoài Scene và gắn vào đầu.")]
     [SerializeField] private GameObject playerCameraPrefab;
@@ -52,6 +55,15 @@ public class PlayerNetworkSetup : NetworkBehaviour
 
             cvc.PreviousStateIsValid = false;
 
+            // Expose for other local-player systems (EnemyDetection, Zoom, etc.)
+            LocalCinemachineCamera = cvc;
+
+            // Ensure distance manager exists on the spawned camera rig
+            var mgr = _spawnedCamera.GetComponentInChildren<PlayerCameraDistanceManager>(true);
+            if (mgr == null)
+                mgr = _spawnedCamera.AddComponent<PlayerCameraDistanceManager>();
+            LocalCameraDistanceManager = mgr;
+
             // KIỂM SOÁT TỐI CAO: Ép Main Camera nhảy thẳng tới vị trí nhân vật ngay lập tức
             // Tránh việc CinemachineBrain "blend" từ một góc nhìn xa (như gốc toạ độ) tới nhân vật
             Camera mainCam = Camera.main;
@@ -81,6 +93,14 @@ public class PlayerNetworkSetup : NetworkBehaviour
         if (_spawnedCamera != null)
         {
             Destroy(_spawnedCamera);
+        }
+
+        if (HasInputAuthority)
+        {
+            if (LocalCinemachineCamera != null && _spawnedCamera != null && LocalCinemachineCamera.transform.IsChildOf(_spawnedCamera.transform))
+                LocalCinemachineCamera = null;
+            if (LocalCameraDistanceManager != null && _spawnedCamera != null && LocalCameraDistanceManager.transform.IsChildOf(_spawnedCamera.transform))
+                LocalCameraDistanceManager = null;
         }
         base.Despawned(runner, hasState);
     }

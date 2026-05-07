@@ -47,21 +47,24 @@ public class EnemyAttack : MonoBehaviour {
     {
         if (cachedBridge != null) return;
         
-        // Tìm trên target
         if (enemyScript != null && enemyScript.target != null) {
             cachedBridge = enemyScript.target.GetComponent<DungeonManiaPlayerBridge>();
+            if (cachedBridge == null)
+                cachedBridge = enemyScript.target.GetComponentInChildren<DungeonManiaPlayerBridge>(true);
             
-            // Thử parent nếu target là child
             if (cachedBridge == null && enemyScript.target.parent != null) {
                 cachedBridge = enemyScript.target.parent.GetComponent<DungeonManiaPlayerBridge>();
+                if (cachedBridge == null)
+                    cachedBridge = enemyScript.target.parent.GetComponentInChildren<DungeonManiaPlayerBridge>(true);
             }
         }
         
-        // Fallback: tìm bằng tag
         if (cachedBridge == null) {
             GameObject playerByTag = GameObject.FindGameObjectWithTag("Player");
             if (playerByTag != null) {
                 cachedBridge = playerByTag.GetComponent<DungeonManiaPlayerBridge>();
+                if (cachedBridge == null)
+                    cachedBridge = playerByTag.GetComponentInChildren<DungeonManiaPlayerBridge>(true);
             }
         }
         
@@ -70,6 +73,18 @@ public class EnemyAttack : MonoBehaviour {
         if (cachedBridge != null) {
             Debug.Log($"[EnemyAttack] Cached DungeonManiaPlayerBridge on {cachedBridge.gameObject.name}");
         }
+    }
+    
+    /// <summary>Khoảng cách XZ tới target; fallback enemyState.distance (đã phẳng trong EnemyScript).</summary>
+    private float GetPlanarAttackDistance()
+    {
+        if (enemyScript == null) return float.MaxValue;
+        if (enemyScript.target != null) {
+            Vector3 toTarget = enemyScript.target.position - transform.position;
+            toTarget.y = 0f;
+            return toTarget.magnitude;
+        }
+        return enemyScript.enemyState != null ? enemyScript.enemyState.distance : float.MaxValue;
     }
     
     public void StartAction(string anim){
@@ -99,14 +114,7 @@ public class EnemyAttack : MonoBehaviour {
             }
             
             if (cachedBridge != null) {
-                // Tính distance trực tiếp thay vì dùng cached value (có thể stale sau scene transition)
-                float actualDistance = 999f;
-                if (enemyScript.target != null) {
-                    actualDistance = Vector3.Distance(enemyScript.target.position, transform.position);
-                }
-                
-                // Nếu animation đánh đang chạy = enemy đủ gần → gây damage
-                // Dùng attackDistance * 1.5 để cho phép sai số
+                float actualDistance = GetPlanarAttackDistance();
                 float maxDamageRange = enemyScript.attackDistance * 1.5f;
                 if (actualDistance <= maxDamageRange) {
                     if (attackEffects != null) attackEffects.PlayBowAttack();
@@ -133,7 +141,9 @@ public class EnemyAttack : MonoBehaviour {
         // Original DungeonMania player system
         if(enemyScript.playerManager.playerHelth == null) return;
 
-        if(enemyScript.enemyState.distance <= enemyScript.attackDistance){
+        float planarDist = GetPlanarAttackDistance();
+        float maxMeleeRange = enemyScript.attackDistance * 1.5f;
+        if (planarDist <= maxMeleeRange) {
             damageStruct = D();
             enemyScript.playerManager.playerHelth.PlayerDamage ( damageStruct, hit);
         }

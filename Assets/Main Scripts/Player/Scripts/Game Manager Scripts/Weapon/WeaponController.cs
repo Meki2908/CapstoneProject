@@ -39,7 +39,10 @@ public class WeaponController : MonoBehaviour
 
     private void Awake()
     {
+        // Animator may live on a child (model/rig hierarchy).
         animator = GetComponent<Animator>();
+        if (animator == null)
+            animator = GetComponentInChildren<Animator>(true);
 
         // Auto-find WeaponAbilityManager if not assigned
         if (abilityManager == null)
@@ -135,6 +138,138 @@ public class WeaponController : MonoBehaviour
     }
 
     public WeaponSO GetCurrentWeapon() => currentWeapon;
+
+    /// <summary>
+    /// Trigger draw animation on the animator without swapping visuals/scripts immediately.
+    /// Used by the no-AE timing flow (swap happens later at a configured normalizedTime).
+    /// </summary>
+    public void TriggerDrawAnimationOnly()
+    {
+        if (animator == null)
+            animator = GetComponentInChildren<Animator>(true);
+        if (animator == null) return;
+
+        ApplyWeaponLayersAndParams();
+        animator.ResetTrigger(sheathTrigger);
+        animator.SetTrigger(drawTrigger);
+    }
+
+    /// <summary>
+    /// Trigger sheath animation on the animator without swapping visuals/scripts immediately.
+    /// Used by the no-AE timing flow (swap happens later at a configured normalizedTime).
+    /// </summary>
+    public void TriggerSheathAnimationOnly()
+    {
+        if (animator == null)
+            animator = GetComponentInChildren<Animator>(true);
+        if (animator == null) return;
+
+        ApplyWeaponLayersAndParams();
+        animator.ResetTrigger(drawTrigger);
+        animator.SetTrigger(sheathTrigger);
+    }
+
+    /// <summary>
+    /// Idempotent: ensure weapon is visually drawn and scripts/layers are active.
+    /// Safe to call repeatedly (does not spam animator triggers by default).
+    /// </summary>
+    public void EnsureDrawn(bool requestAnimation = false)
+    {
+        if (currentWeapon == null) return;
+
+        if (animator == null)
+            animator = GetComponentInChildren<Animator>(true);
+
+        ApplyWeaponLayersAndParams();
+        RefreshWeaponScripts();
+
+        if (IsCurrentWand())
+        {
+            EnsureWandInstance();
+            SetWandActive(true);
+        }
+        else
+        {
+            // Ensure held instance exists
+            if (currentHeldInstance == null && currentWeapon.weaponPrefab != null && handHolder != null)
+            {
+                currentHeldInstance = Instantiate(currentWeapon.weaponPrefab, handHolder, false);
+                StripPhysicalColliders(currentHeldInstance);
+                ApplySocket(currentHeldInstance.transform, currentWeapon.handSocket);
+            }
+            else if (currentHeldInstance != null && handHolder != null && currentHeldInstance.transform.parent != handHolder)
+            {
+                currentHeldInstance.transform.SetParent(handHolder, false);
+                ApplySocket(currentHeldInstance.transform, currentWeapon.handSocket);
+            }
+
+            // Hide sheath instance if any
+            if (currentSheathInstance != null)
+            {
+                Destroy(currentSheathInstance);
+                currentSheathInstance = null;
+            }
+        }
+
+        ReapplyWeaponLayers();
+
+        if (requestAnimation && animator != null)
+        {
+            Debug.Log($"[ToggleWeapon][WeaponController.EnsureDrawn] frame={Time.frameCount} time={Time.time:F3} weapon={(currentWeapon != null ? currentWeapon.weaponName : "null")} type={(currentWeapon != null ? currentWeapon.weaponType.ToString() : "null")} combatMove={animator.GetBool("combatMove")}");
+            animator.ResetTrigger(sheathTrigger);
+            animator.SetTrigger(drawTrigger);
+        }
+    }
+
+    /// <summary>
+    /// Idempotent: ensure weapon is visually sheathed and scripts are disabled.
+    /// Safe to call repeatedly (does not spam animator triggers by default).
+    /// </summary>
+    public void EnsureSheathed(bool requestAnimation = false)
+    {
+        if (animator == null)
+            animator = GetComponentInChildren<Animator>(true);
+
+        ApplyWeaponLayersAndParams();
+
+        // Disable scripts for all weapons (same as AE_SheathWeapon would do)
+        var swordAll = GetComponentsInChildren<SwordSkills>(true);
+        foreach (var s in swordAll) if (s) s.enabled = false;
+        var axeAll = GetComponentsInChildren<AxeSkill>(true);
+        foreach (var a in axeAll) if (a) a.enabled = false;
+        var mageAll = GetComponentsInChildren<MageSkills>(true);
+        foreach (var m in mageAll) if (m) m.enabled = false;
+
+        if (IsCurrentWand())
+        {
+            EnsureWandInstance();
+            SetWandActive(false);
+        }
+        else
+        {
+            // Ensure sheath instance exists
+            if (currentSheathInstance == null)
+                ShowWeaponInSheath();
+
+            if (currentHeldInstance != null)
+            {
+                Destroy(currentHeldInstance);
+                currentHeldInstance = null;
+            }
+        }
+
+        // Turn off weapon layers when sheathed
+        SetLayerWeightSafe(swordLayer, 0f);
+        SetLayerWeightSafe(axeLayer, 0f);
+        SetLayerWeightSafe(mageLayer, 0f);
+
+        if (requestAnimation && animator != null)
+        {
+            Debug.Log($"[ToggleWeapon][WeaponController.EnsureSheathed] frame={Time.frameCount} time={Time.time:F3} weapon={(currentWeapon != null ? currentWeapon.weaponName : "null")} type={(currentWeapon != null ? currentWeapon.weaponType.ToString() : "null")} combatMove={animator.GetBool("combatMove")}");
+            animator.ResetTrigger(drawTrigger);
+            animator.SetTrigger(sheathTrigger);
+        }
+    }
 
     public void DrawWeaponVisual() // g?i t? Animation/State
     {

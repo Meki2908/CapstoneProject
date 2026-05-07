@@ -19,6 +19,9 @@ public class ShieldActivate : MonoBehaviour
     public float pushForce = 15f; // Lực hất văng
     public LayerMask enemyLayer;  // Layer của quái (nhớ set trong Inspector)
     public float stunDuration = 0.5f; // Thời gian quái bị choáng/văng ra trước khi bò dậy đi tiếp
+
+    // Debounce: tránh spam coroutine disable/enable cho cùng 1 agent
+    private readonly HashSet<int> _agentsTemporarilyDisabled = new HashSet<int>();
     
     // ── SHIELD STATE (Global flag for PlayerHealth) ──────────────────────────
     public static bool IsShieldActive { get; private set; }
@@ -86,7 +89,12 @@ public class ShieldActivate : MonoBehaviour
                 // Tạm tắt AI để nó không cưỡng lại vật lý
                 if (agent != null && agent.enabled)
                 {
-                    StartCoroutine(TemporarilyDisableAgent(agent));
+                    int id = agent.GetInstanceID();
+                    if (!_agentsTemporarilyDisabled.Contains(id))
+                    {
+                        _agentsTemporarilyDisabled.Add(id);
+                        StartCoroutine(TemporarilyDisableAgent(agent, rb, id));
+                    }
                 }
 
                 // Tính hướng từ tâm khiên đẩy ra
@@ -101,14 +109,31 @@ public class ShieldActivate : MonoBehaviour
     }
 
     // Coroutine nhỏ để bật lại AI sau khi quái bị văng ra khỏi khiên 1 thời gian ngắn
-    private IEnumerator TemporarilyDisableAgent(NavMeshAgent agent)
+    private IEnumerator TemporarilyDisableAgent(NavMeshAgent agent, Rigidbody rb, int agentId)
     {
-        agent.enabled = false;
+        if (agent != null) agent.enabled = false;
         yield return new WaitForSeconds(stunDuration); // Dùng stunDuration thay vì fix cứng 0.5f
+
+        // === BƯỚC QUAN TRỌNG NHẤT: DỌN DẸP VẬT LÝ ===
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+            rb.isKinematic = true;
+        }
+        // ===========================================
+
         if (agent != null && agent.gameObject.activeInHierarchy)
         {
+            // Đảm bảo nằm trên NavMesh trước khi bật lại agent
+            if (NavMesh.SamplePosition(agent.transform.position, out NavMeshHit hit, 2f, NavMesh.AllAreas))
+            {
+                agent.Warp(hit.position);
+            }
             agent.enabled = true;
         }
+
+        _agentsTemporarilyDisabled.Remove(agentId);
     }
 
     public void AddHitObject(Vector3 position)

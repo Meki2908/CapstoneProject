@@ -195,7 +195,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""name"": ""ToggleWeapon"",
                     ""type"": ""Button"",
                     ""id"": ""f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c"",
-                    ""expectedControlType"": ""Button"",
+                    ""expectedControlType"": """",
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
