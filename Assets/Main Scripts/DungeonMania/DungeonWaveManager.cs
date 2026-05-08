@@ -96,6 +96,9 @@ public class DungeonWaveManager : MonoBehaviour
     [Tooltip("Item orb prefab (null = auto-generate glowing sphere)")]
     public GameObject itemOrbPrefab;
 
+    [Tooltip("Fusion NetworkObject prefab for loot broadcaster (recommended: LootBroadcaster_Prefab). If null, drops may not broadcast in online mode.")]
+    public GameObject lootBroadcasterPrefab;
+
     [Tooltip("Drop table for Skeleton/Archer")]
     public List<DungeonDropEntry> skeletDrops = new List<DungeonDropEntry>();
     [Tooltip("Max items dropped per Skeleton/Archer (0 = unlimited)")]
@@ -263,13 +266,9 @@ public class DungeonWaveManager : MonoBehaviour
 
     IEnumerator Start()
     {
-        Debug.Log("<color=orange>[DungeonWave]</color> Đang chờ DungeonPlayerSpawner đẻ Player...");
-
         // 1. NGƯNG ĐỌNG THỜI GIAN: Chờ cho đến khi biến player không còn null
         // (Biến này sẽ được DungeonPlayerSpawner tự động gán vào sau khi đẻ)
         yield return new WaitUntil(() => player != null);
-
-        Debug.Log($"<color=green>[DungeonWave]</color> Đã nhận được Player: {player.name}. Bắt đầu setup Dungeon!");
 
         // 2. SETUP CÁC THỨ CÒN LẠI
         ApplyBalanceConfig();
@@ -568,11 +567,36 @@ public class DungeonWaveManager : MonoBehaviour
 
         Debug.Log($"[DungeonWave] Bắt đầu dungeon: {dungeonName}");
 
+        EnsureLootBroadcasterSpawnedIfNeeded();
+
         if (DungeonOSTManager.Instance != null)
             DungeonOSTManager.Instance.OnDungeonFlowStarted();
 
         // Bắt đầu wave đầu tiên
         StartCoroutine(StartWaveSequence());
+    }
+
+    private void EnsureLootBroadcasterSpawnedIfNeeded()
+    {
+        // In online mode, ItemDropSpawner relies on NetworkLootBroadcaster.Instance to broadcast drops.
+        // If it's missing in the dungeon scene, spawn it once on the server/host.
+        var runner = FindFirstObjectByType<Fusion.NetworkRunner>();
+        if (runner == null || !runner.IsRunning || !runner.IsServer)
+            return;
+
+        if (NetworkLootBroadcaster.Instance != null)
+            return;
+
+        if (lootBroadcasterPrefab == null) return;
+
+        try
+        {
+            runner.Spawn(lootBroadcasterPrefab, Vector3.zero, Quaternion.identity, null);
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"[DungeonWave] EnsureLootBroadcaster: spawn failed. {ex}");
+        }
     }
 
     /// <summary>
@@ -1303,23 +1327,60 @@ public class DungeonWaveManager : MonoBehaviour
             randomEnemy.EnableDirect();
         }
 
-        // SAU KHI enemy bên trong đã được kích hoạt
-        AddEnemyDeathBridgeToActiveEnemy(enemy);
-
-        // Set player target + Start Chase
-        SetPlayerTargetAndChaseForActiveEnemy(enemy);
-
-        // APPLY DIFFICULTY STATS
-        ApplyDifficultyStats(enemy);
-
-        // BOSS HEALTH BAR
-        ShowBossHealthBarIfNeeded(enemy);
+        // Delay setup until RandomEnemy has actually activated a child.
+        StartCoroutine(DelayedEnemySetup(enemy));
 
         if (DungeonOSTManager.Instance != null)
             DungeonOSTManager.Instance.ScheduleBossPresenceCheckForSpawnedRoot(enemy);
 
         Debug.Log($"<color=green>[DungeonWave]</color> Đã Spawn Network Enemy tại {spawnPos}");
         return true;
+    }
+
+    private IEnumerator DelayedEnemySetup(GameObject enemy)
+    {
+        // Server-side guard (avoid double-init on clients)
+        var runner = FindFirstObjectByType<Fusion.NetworkRunner>();
+        if (runner == null || !runner.IsServer) yield break;
+
+        if (enemy == null) yield break;
+        RandomEnemy randomEnemy = enemy.GetComponent<RandomEnemy>();
+        if (randomEnemy == null || randomEnemy.enemys == null) yield break;
+
+        bool childIsActive = false;
+        float timeoutTime = Time.realtimeSinceStartup + 0.5f;
+
+        while (Time.realtimeSinceStartup < timeoutTime)
+        {
+            if (enemy == null) yield break;
+
+            for (int i = 0; i < randomEnemy.enemys.Length; i++)
+            {
+                if (randomEnemy.enemys[i] != null && randomEnemy.enemys[i].activeSelf)
+                {
+                    childIsActive = true;
+                    break;
+                }
+            }
+
+            if (childIsActive) break;
+            yield return null;
+        }
+
+        if (enemy == null) yield break;
+
+        if (!childIsActive)
+        {
+            Debug.LogWarning($"[DungeonWave] [Failsafe] Timeout! RandomEnemy không bật child nào sau 0.5s cho {enemy.name}");
+            yield break;
+        }
+
+        AddEnemyDeathBridgeToActiveEnemy(enemy);
+        SetPlayerTargetAndChaseForActiveEnemy(enemy);
+        ApplyDifficultyStats(enemy);
+        ShowBossHealthBarIfNeeded(enemy);
+
+        Debug.Log($"[DungeonWave] Hoàn tất Delayed Setup an toàn cho {enemy.name}");
     }
 
     /// <summary>
@@ -2502,6 +2563,94 @@ public class DungeonWaveManager : MonoBehaviour
                 }
             }
         }
+    }
+
+    // === HỆ THỐNG ĐẺ ĐỒ LOCAL (Fusion Loot Broadcaster) ===
+    public void SpawnLocalLoot(Vector3 position, int enemyTypeInt)
+    {
+        // Tạo một spawner cục bộ (không NetworkObject) để mỗi máy tự spawn loot cho vui (gacha).
+        GameObject tempSpawnerObj = new GameObject("TempLocalSpawner");
+        tempSpawnerObj.transform.position = position;
+        var spawner = tempSpawnerObj.AddComponent<ItemDropSpawner>();
+
+        if (itemOrbPrefab != null) spawner.SetOrbPrefab(itemOrbPrefab);
+
+        List<DungeonDropEntry> selectedDrops = GetDropTableByInt(enemyTypeInt);
+        int maxDrops = GetMaxDropsByInt(enemyTypeInt);
+        int customExp = GetExpByInt(enemyTypeInt);
+
+        var drops = new List<ItemDropSpawner.ItemDropEntry>();
+        if (selectedDrops != null)
+        {
+            foreach (var entry in selectedDrops)
+            {
+                if (entry == null || entry.item == null) continue;
+                float chance = entry.item.useRandomRarity ? 0.5f : GetDropChanceByRarity(entry.item.rarity);
+                drops.Add(new ItemDropSpawner.ItemDropEntry
+                {
+                    item = entry.item,
+                    dropChance = chance,
+                    minQuantity = entry.minQuantity,
+                    maxQuantity = entry.maxQuantity
+                });
+            }
+        }
+
+        spawner.SetDropTable(drops, dropExpOrb, maxDrops, customExp);
+        spawner.ExecuteLocalSpawn(position);
+
+        Destroy(tempSpawnerObj, 2f);
+    }
+
+    private List<DungeonDropEntry> GetDropTableByInt(int type)
+    {
+        return type switch
+        {
+            0 or 1 => skeletDrops,
+            2 => monsterDrops,
+            3 => lichDrops,
+            4 => bossDrops,
+            5 => demonDrops,
+            6 => (stoneogreDrops != null && stoneogreDrops.Count > 0) ? stoneogreDrops : bossDrops,
+            7 => (golemDrops != null && golemDrops.Count > 0) ? golemDrops : bossDrops,
+            8 => (minotaurDrops != null && minotaurDrops.Count > 0) ? minotaurDrops : bossDrops,
+            9 => (ifritDrops != null && ifritDrops.Count > 0) ? ifritDrops : bossDrops,
+            _ => skeletDrops
+        };
+    }
+
+    private int GetMaxDropsByInt(int type)
+    {
+        return type switch
+        {
+            0 or 1 => skeletMaxDrops,
+            2 => monsterMaxDrops,
+            3 => lichMaxDrops,
+            4 => bossMaxDrops,
+            5 => demonMaxDrops,
+            6 => stoneogreMaxDrops,
+            7 => golemMaxDrops,
+            8 => minotaurMaxDrops,
+            9 => ifritMaxDrops,
+            _ => skeletMaxDrops
+        };
+    }
+
+    private int GetExpByInt(int type)
+    {
+        return type switch
+        {
+            0 or 1 => skeletExp,
+            2 => monsterExp,
+            3 => lichExp,
+            4 => bossExp,
+            5 => demonExp,
+            6 => stoneogreExp,
+            7 => golemExp,
+            8 => minotaurExp,
+            9 => ifritExp,
+            _ => skeletExp
+        };
     }
 }
 

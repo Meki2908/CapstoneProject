@@ -12,6 +12,7 @@ public class MageNormalAttack : MonoBehaviour
     [SerializeField] private Animator animator;
     [SerializeField] private Character character;
     [SerializeField] private WeaponController weaponController;
+    [SerializeField] private EnemyDetection enemyDetection;
 
     [Header("Auto-Aim Settings")]
     [SerializeField] private LayerMask enemyLayerMask = -1;
@@ -22,12 +23,17 @@ public class MageNormalAttack : MonoBehaviour
     [SerializeField] private float spawnHeightBias = 0.12f;
     [SerializeField] private float ownerIgnoreCollisionSeconds = 0.14f;
 
+    // === Smart target lock (fix "khựng chuỗi" + "đánh xác chết") ===
+    private Transform currentLockedTarget;
+    private readonly Collider[] hitCollidersCache = new Collider[64]; // NonAlloc buffer
+
     private void Awake()
     {
         if (!equipment) equipment = GetComponent<EquipmentSystem>();
         if (!animator) animator = GetComponent<Animator>();
         if (!character) character = GetComponentInParent<Character>();
         if (!weaponController) weaponController = character != null ? character.GetComponent<WeaponController>() : GetComponentInParent<WeaponController>();
+        if (!enemyDetection) enemyDetection = GetComponentInParent<EnemyDetection>();
     }
 
     /// <summary>
@@ -113,7 +119,7 @@ public class MageNormalAttack : MonoBehaviour
     {
         if (weapon == null || comboIndex < 0 || comboIndex >= weapon.hitTimings.Length) return;
 
-        Transform target = FindNearestEnemy();
+        Transform target = GetOrFindTarget(weapon, comboIndex);
         Transform anchor = ResolveSpawnAnchor();
         HitTiming timing = weapon.hitTimings[comboIndex];
         VfxSpawnRule rule = timing.spawnRule;
@@ -174,25 +180,77 @@ public class MageNormalAttack : MonoBehaviour
         Destroy(vfx, 5f);
     }
 
-    private Transform FindNearestEnemy()
+    private float GetAutoAimRange(WeaponSO weapon)
+    {
+        // Option A: keep Mage auto-aim range identical to the weapon attack range used by EnemyDetection.
+        if (enemyDetection != null) return enemyDetection.MageAttackRange;
+        return autoAimRange;
+    }
+
+    private Transform GetOrFindTarget(WeaponSO weapon, int comboIndex)
+    {
+        // Only rescan when starting a new combo hit, or when the previous target is no longer valid.
+        if (comboIndex == 0 || !IsValidTarget(currentLockedTarget, weapon))
+        {
+            currentLockedTarget = FindNearestAliveEnemyOptimized(weapon);
+        }
+        return currentLockedTarget;
+    }
+
+    private bool IsValidTarget(Transform target, WeaponSO weapon)
+    {
+        if (target == null || !target.gameObject.activeInHierarchy) return false;
+
+        // Skip dead enemies (colliders can linger after death)
+        TakeDamageTest hp = target.GetComponentInParent<TakeDamageTest>();
+        if (hp != null && !hp.IsAlive()) return false;
+
+        float range = GetAutoAimRange(weapon);
+        float rangeSqr = range * range;
+        float hysteresisRangeSqr = rangeSqr * 1.4f; // allow some slack to keep combo stable
+
+        Transform selfRoot = character != null ? character.transform : transform;
+        Vector3 to = target.position - selfRoot.position;
+        to.y = 0f;
+        return to.sqrMagnitude <= hysteresisRangeSqr;
+    }
+
+    private Transform FindNearestAliveEnemyOptimized(WeaponSO weapon)
     {
         Transform selfRoot = character != null ? character.transform : transform;
         Vector3 searchOrigin = selfRoot.position;
-        Collider[] enemies = Physics.OverlapSphere(searchOrigin, autoAimRange, enemyLayerMask);
+
+        float range = GetAutoAimRange(weapon);
+        int count = Physics.OverlapSphereNonAlloc(searchOrigin, range, hitCollidersCache, enemyLayerMask);
+
         Transform nearest = null;
-        float nearestDistance = float.MaxValue;
+        float nearestDistanceSqr = float.MaxValue;
 
-        foreach (var enemy in enemies)
+        for (int i = 0; i < count; i++)
         {
-            if (enemy == null || enemy.transform.root == selfRoot.root) continue;
+            Collider col = hitCollidersCache[i];
+            if (col == null) continue;
 
-            float distance = Vector3.Distance(searchOrigin, enemy.transform.position);
-            if (distance < nearestDistance)
+            // Don't aim at self
+            if (col.transform.root == selfRoot.root) continue;
+
+            // Resolve to enemy root via HP component (preferred), otherwise use collider root.
+            TakeDamageTest hp = col.GetComponentInParent<TakeDamageTest>();
+            if (hp != null && !hp.IsAlive()) continue;
+
+            Transform candidate = hp != null ? hp.transform : col.transform.root;
+            if (candidate == null || !candidate.gameObject.activeInHierarchy) continue;
+
+            Vector3 to = candidate.position - searchOrigin;
+            to.y = 0f;
+            float distSqr = to.sqrMagnitude;
+            if (distSqr < nearestDistanceSqr)
             {
-                nearestDistance = distance;
-                nearest = enemy.transform;
+                nearestDistanceSqr = distSqr;
+                nearest = candidate;
             }
         }
+
         return nearest;
     }
 

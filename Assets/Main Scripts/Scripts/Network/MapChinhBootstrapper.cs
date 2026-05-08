@@ -19,16 +19,13 @@ public class MapChinhBootstrapper : MonoBehaviour
         var spawner = FindFirstObjectByType<PlayerSpawner>();
         
         // Ensure a loading overlay is visible during "runner recovery" and spawn.
-        Debug.Log($"[MapChinhBootstrapper][NET-LOADING] Start() scene={UnityEngine.SceneManagement.SceneManager.GetActiveScene().name} " +
-                  $"hasSceneTransition={(SceneTransitionManager.Instance != null)} hasSpawner={(spawner != null)}");
         if (SceneTransitionManager.Instance != null)
         {
-            Debug.Log("[MapChinhBootstrapper][NET-LOADING] Calling SceneTransitionManager.StartNetworkingLoadingUI()");
             SceneTransitionManager.Instance.StartNetworkingLoadingUI();
         }
         else
         {
-            Debug.LogWarning("[MapChinhBootstrapper][NET-LOADING] SceneTransitionManager.Instance is NULL, cannot show loading UI.");
+            Debug.LogWarning("[MapChinhBootstrapper] SceneTransitionManager.Instance is NULL, cannot show loading UI.");
         }
 
         // If a runner already exists and is running, attach spawner callbacks and ensure local player exists.

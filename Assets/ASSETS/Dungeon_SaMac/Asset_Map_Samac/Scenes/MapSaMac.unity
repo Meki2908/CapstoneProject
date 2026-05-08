@@ -51764,13 +51764,49 @@ PrefabInstance:
       value: Sa Mac Dungeon
       objectReference: {fileID: 0}
     - target: {fileID: 3549649341855738058, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
+      propertyPath: itemOrbPrefab
+      value: 
+      objectReference: {fileID: 5456321383537263166, guid: 742670ec3f16afa40859b27a3a14a7a6, type: 3}
+    - target: {fileID: 3549649341855738058, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
       propertyPath: obstacleLayer.m_Bits
       value: 262144
+      objectReference: {fileID: 0}
+    - target: {fileID: 3549649341855738058, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
+      propertyPath: lootBroadcasterPrefab
+      value: 
+      objectReference: {fileID: 2505133293621838208, guid: b46a56d7bf409d1489d7ce864f3bd05a, type: 3}
+    - target: {fileID: 3549649341855738058, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
+      propertyPath: skeletDrops.Array.size
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 3549649341855738058, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
       propertyPath: preEnterDungeonTimeline
       value: 
       objectReference: {fileID: 2119517537}
+    - target: {fileID: 3549649341855738058, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
+      propertyPath: skeletDrops.Array.data[0].item
+      value: 
+      objectReference: {fileID: 11400000, guid: fa50b5fec3228b24f922e8a583aa4619, type: 2}
+    - target: {fileID: 3549649341855738058, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
+      propertyPath: skeletDrops.Array.data[1].item
+      value: 
+      objectReference: {fileID: 11400000, guid: 78209c42631db484eb76c19ab6b32cac, type: 2}
+    - target: {fileID: 3549649341855738058, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
+      propertyPath: skeletDrops.Array.data[0].maxQuantity
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3549649341855738058, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
+      propertyPath: skeletDrops.Array.data[0].minQuantity
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3549649341855738058, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
+      propertyPath: skeletDrops.Array.data[1].maxQuantity
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3549649341855738058, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
+      propertyPath: skeletDrops.Array.data[1].minQuantity
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 4250913773273599965, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
       propertyPath: m_Name
       value: GUI_Dungeon

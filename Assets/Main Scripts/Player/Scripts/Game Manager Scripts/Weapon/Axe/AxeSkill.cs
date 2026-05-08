@@ -23,6 +23,7 @@ public class AxeSkill : MonoBehaviour
 
     private Character character;
     private SkillLock skillLock;
+    private EnemyDetection enemyDetection;
     public float maxSkillLockSeconds = 3f;
     private float skillLockExpireAt = 0f;
 
@@ -42,6 +43,7 @@ public class AxeSkill : MonoBehaviour
         Debug.Log($"<color=green>[AxeSkill]</color> Equipment: {equipment}");
         skillLock = GetComponentInChildren<SkillLock>();
         Debug.Log($"<color=green>[AxeSkill]</color> SkillLock: {skillLock}");
+        enemyDetection = character != null ? character.GetComponentInChildren<EnemyDetection>(true) : null;
     }
 
     public void SetForwardAnchor(Transform t) { forwardAnchor = t; }
@@ -147,6 +149,11 @@ public class AxeSkill : MonoBehaviour
             Debug.Log($"<color=grey>[AxeSkill]</color> Skill {input} dang trong th?i gian h?i chi�u!");
             return;
         }
+
+        if (enemyDetection == null && character != null)
+            enemyDetection = character.GetComponentInChildren<EnemyDetection>(true);
+        Vector2 moveInp = character != null ? character.currentInput.movementInput : Vector2.zero;
+        CombatAimHelper.SnapToTarget(character, equipment, enemyDetection, moveInp);
 
         int idx = input switch { AbilityInput.E => 0, AbilityInput.R => 1, AbilityInput.T => 2, AbilityInput.Q_Ultimate => 3, _ => 0 };
         animator.SetInteger(skillIndexParam, idx);

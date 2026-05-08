@@ -1,4 +1,5 @@
 using UnityEngine;
+using Fusion;
 
 /// <summary>
 /// Orb item rơi từ quái — Genshin-style 3 giai đoạn:
@@ -96,31 +97,29 @@ public class ItemDropOrb : MonoBehaviour
 
     private void FindRealPlayer()
     {
-        // Ưu tiên tìm PlayerHealth đang active để tránh trúng dummy player của cutscene
         PlayerHealth[] allHealths = FindObjectsByType<PlayerHealth>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+
+        // Ưu tiên 1: Local player (InputAuthority) trong multiplayer
         foreach (var ph in allHealths)
         {
-            if (ph.gameObject.CompareTag("Player") && ph.IsAlive)
+            if (ph == null) continue;
+            if (!ph.gameObject.CompareTag("Player") || !ph.IsAlive) continue;
+            var netObj = ph.GetComponent<NetworkObject>();
+            if (netObj != null && netObj.HasInputAuthority)
             {
                 playerTransform = ph.transform;
                 return;
             }
         }
-        
-        // Fallback 1: Lấy PlayerHealth đầu tiên tìm được
-        if (playerTransform == null && allHealths.Length > 0)
-        {
-            playerTransform = allHealths[0].transform;
-            return;
-        }
 
-        // Fallback 2: Thử tìm theo tag (cách cũ nhưng kém an toàn hơn)
-        if (playerTransform == null)
+        // Ưu tiên 2: Offline / fallback
+        foreach (var ph in allHealths)
         {
-            var pObject = GameObject.FindGameObjectWithTag("Player");
-            if (pObject != null)
+            if (ph == null) continue;
+            if (ph.gameObject.CompareTag("Player") && ph.IsAlive)
             {
-                playerTransform = pObject.transform;
+                playerTransform = ph.transform;
+                return;
             }
         }
     }

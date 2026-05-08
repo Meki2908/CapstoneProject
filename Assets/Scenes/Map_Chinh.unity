@@ -1886,12 +1886,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   playerPrefab:
     RawGuidValue: 83badadf57c803d4bb673774b34bb9c2
+  lootBroadcasterPrefab:
+    RawGuidValue: b46a56d7bf409d1489d7ce864f3bd05a
   fallbackSpawnPos: {x: 0, y: 5, z: 0}
   defaultSpawnPoint: {fileID: 1313963892}
   useReturnPoint: 1
   verboseLogs: 1
   minLoadingSeconds: 0.75
-  cameraWaitTimeoutSeconds: 2.5
+  cameraWaitTimeoutSeconds: 0.5
   requireLocalPlayerObjectPresentToFinishLoading: 1
 --- !u!114 &1417568259
 MonoBehaviour:

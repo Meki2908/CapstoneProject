@@ -14,6 +14,8 @@ public class PlayerSpawner : MonoBehaviour, INetworkRunnerCallbacks
 {
     [Header("Prefabs")]
     [SerializeField] private NetworkPrefabRef playerPrefab;
+    [SerializeField] private NetworkPrefabRef lootBroadcasterPrefab;
+    private bool _broadcasterSpawned = false;
 
     [Header("Spawn")]
     [Tooltip("Fallback spawn position if no SpawnPoint tag exists and no return point is available.")]
@@ -81,6 +83,13 @@ public class PlayerSpawner : MonoBehaviour, INetworkRunnerCallbacks
         if (!runner.IsServer)
             return;
 
+        // Spawn loot broadcaster exactly once per session (server authority).
+        if (!_broadcasterSpawned && lootBroadcasterPrefab.IsValid)
+        {
+            runner.Spawn(lootBroadcasterPrefab, Vector3.zero, Quaternion.identity);
+            _broadcasterSpawned = true;
+        }
+
         if (!playerPrefab.IsValid)
         {
             Debug.LogError("[PlayerSpawner] playerPrefab is not set/invalid.");
@@ -130,8 +139,6 @@ public class PlayerSpawner : MonoBehaviour, INetworkRunnerCallbacks
     private System.Collections.IEnumerator FinishLoadingWhenReady(NetworkRunner runner)
     {
         float start = Time.realtimeSinceStartup;
-        if (verboseLogs)
-            Debug.Log($"[PlayerSpawner][NET-LOADING] Waiting for readiness... min={minLoadingSeconds:F2}s timeout={cameraWaitTimeoutSeconds:F2}s requirePlayerObj={requireLocalPlayerObjectPresentToFinishLoading}");
 
         // If StartNetworkingLoadingUI() was called earlier, measure min time from that moment for better UX.
         float baseStart = Mathf.Max(SceneTransitionManager.LastNetworkingLoadingStartUnscaledTime, start);
@@ -178,11 +185,6 @@ public class PlayerSpawner : MonoBehaviour, INetworkRunnerCallbacks
         if (SceneTransitionManager.Instance != null)
         {
             SceneTransitionManager.Instance.FinishLoadingUI();
-            if (verboseLogs)
-            {
-                var cam = PlayerNetworkSetup.LocalCinemachineCamera;
-                Debug.Log($"[PlayerSpawner][NET-LOADING] FinishLoadingUI after camReady={(cam != null)} dt={(Time.realtimeSinceStartup - start):F2}s cam={(cam != null ? cam.name : "null")}");
-            }
         }
         else if (verboseLogs)
         {

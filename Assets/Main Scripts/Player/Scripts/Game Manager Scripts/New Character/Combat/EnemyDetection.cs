@@ -28,6 +28,13 @@ public class EnemyDetection : NetworkBehaviour
     [SerializeField] private float axeAttackRange = 3f;
     [SerializeField] private float mageAttackRange = 7f;
 
+    // Expose read-only ranges for other systems (e.g., Mage auto-aim).
+    public float MageAttackRange => mageAttackRange;
+    public LayerMask EnemyLayerMask => enemyLayer;
+
+    // Public wrapper so other gameplay systems can stay in sync.
+    public float GetCurrentWeaponAttackRangePublic() => GetCurrentWeaponAttackRange();
+
     // Private variables
     private EquipmentSystem equipment;
     private Character character;

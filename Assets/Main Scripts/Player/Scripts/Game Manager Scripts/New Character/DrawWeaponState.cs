@@ -2,12 +2,10 @@ using UnityEngine;
 
 public sealed class DrawWeaponState : State
 {
-    private const float TimeoutSeconds = 1.6f;
-    private const int UpperBodyLayerIndex = 4; // Player.controller: Upper body is layer 4
+    private const int UpperBodyLayerIndex = 4; // Player.controller: Upper body is layer 4 (not Base Layer 0)
     private const string DrawTag = "Draw";
+    private const string WeaponActionTag = "WeaponAction";
     private const bool TOGGLE_DEBUG = true;
-    private float enteredAt;
-    private bool hasEnteredDrawClip;
     private bool hasSwapped;
 
     private WeaponController weaponController;
@@ -28,8 +26,6 @@ public sealed class DrawWeaponState : State
             Debug.Log($"[ToggleWeapon][DrawState.Enter] frame={Time.frameCount} time={Time.time:F3} sim={character.Runner.SimulationTime:F3} isWeaponDrawn={character.isWeaponDrawn} combatMove={combatMove}");
         }
 
-        enteredAt = Time.time;
-        hasEnteredDrawClip = false;
         hasSwapped = false;
 
         if (weaponController == null)
@@ -77,33 +73,62 @@ public sealed class DrawWeaponState : State
             return;
         }
 
-        // 1. KIỂM TRA INPUT SPRINT (Shift)
+        // Locomotion blend during draw (unchanged behavior)
         bool isSprinting = SprintPressed && input.sqrMagnitude > 0f;
-
-        // 2. ÉP TỐC ĐỘ ANIMATOR (Sprint = 1.0, Chạy bộ = 0.5)
         float animSpeedMultiplier = isSprinting ? 1f : 0.5f;
         character.SetAnimatorLocomotionSpeed(input.magnitude * animSpeedMultiplier);
 
-        // Swap at the configured timing, then wait for clip end.
+        // Weapon visual swap at WeaponSO timing (still runs when not in transition)
         TrySwapAtTiming();
 
-        // Prefer checking the UpperBody layer since Draw/Sheath is authored there.
-        bool finished = IsUpperBodyClipFinished();
-        bool timedOut = (Time.time - enteredAt) >= TimeoutSeconds;
+        int layerIndex = UpperBodyLayerIndex;
+        float timeInState = TimeInState;
 
-        if (finished || timedOut)
+        if (character.animator.layerCount <= layerIndex)
         {
-            // Failsafe: if something prevented swap, force drawn before exiting.
-            if (!hasSwapped && weaponController != null)
+            if (timeInState > 1.5f)
             {
-                weaponController.EnsureDrawn(requestAnimation: false);
+                Debug.LogWarning("[FSM] Failsafe: Rút vũ khí quá lâu (missing layer), ép buộc vào Combat!");
+                if (!hasSwapped && weaponController != null)
+                    weaponController.EnsureDrawn(requestAnimation: false);
                 character.isWeaponDrawn = true;
                 if (character.animator != null)
                     character.animator.SetBool("combatMove", true);
                 character.currentLocomotionState = character.combatMove;
+                stateMachine.ChangeState(character.combatMove);
             }
+            return;
+        }
+
+        // Khi Animator đang blend -> không đọc normalizedTime (tránh frame rác / kẹt)
+        if (character.animator.IsInTransition(layerIndex))
+            return;
+
+        AnimatorStateInfo stateInfo = character.animator.GetCurrentAnimatorStateInfo(layerIndex);
+
+        if (stateInfo.IsTag(WeaponActionTag) && timeInState > 0.1f && stateInfo.normalizedTime >= 0.95f)
+        {
+            if (!hasSwapped && weaponController != null)
+                weaponController.EnsureDrawn(requestAnimation: false);
+            character.isWeaponDrawn = true;
+            if (character.animator != null)
+                character.animator.SetBool("combatMove", true);
             character.currentLocomotionState = character.combatMove;
-            stateMachine.ChangeState(character.currentLocomotionState);
+            stateMachine.ChangeState(character.combatMove);
+            return;
+        }
+
+        if (timeInState > 1.5f)
+        {
+            Debug.LogWarning("[FSM] Failsafe: Rút vũ khí quá lâu, ép buộc vào Combat!");
+            if (!hasSwapped && weaponController != null)
+                weaponController.EnsureDrawn(requestAnimation: false);
+            character.isWeaponDrawn = true;
+            if (character.animator != null)
+                character.animator.SetBool("combatMove", true);
+            character.currentLocomotionState = character.combatMove;
+            stateMachine.ChangeState(character.combatMove);
+            return;
         }
     }
 
@@ -167,29 +192,6 @@ public sealed class DrawWeaponState : State
             character.animator.SetBool("combatMove", true);
         character.currentLocomotionState = character.combatMove;
         hasSwapped = true;
-    }
-
-    private bool IsUpperBodyClipFinished()
-    {
-        if (character.animator.layerCount <= UpperBodyLayerIndex) return false;
-
-        if (character.animator.IsInTransition(UpperBodyLayerIndex)) return false;
-
-        var st = character.animator.GetCurrentAnimatorStateInfo(UpperBodyLayerIndex);
-        if (!hasEnteredDrawClip)
-        {
-            if (st.IsTag(DrawTag) || st.IsName("Draw Weapon"))
-                hasEnteredDrawClip = true;
-            else
-                return false;
-        }
-
-        if (TOGGLE_DEBUG && hasEnteredDrawClip)
-        {
-            Debug.Log($"[ToggleWeapon][DrawState.Anim] frame={Time.frameCount} norm={st.normalizedTime:F3} tagDraw={st.IsTag(DrawTag)} nameDraw={st.IsName("Draw Weapon")} inTrans={character.animator.IsInTransition(UpperBodyLayerIndex)}");
-        }
-
-        return st.normalizedTime >= 1f;
     }
 }
 

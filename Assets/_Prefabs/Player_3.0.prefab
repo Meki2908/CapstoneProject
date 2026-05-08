@@ -85136,7 +85136,7 @@ MonoBehaviour:
   skillTriggerParam: swordSkill
   skillIndexParam: skillIndex
   vfxDuration: 0.5
-  maxSkillLockSeconds: 3
+  maxSkillLockSeconds: 6
   swordLayerIndex: 1
   skillStateTag: SwordSkill
   vfxMinInterval: 0.05
@@ -85241,6 +85241,7 @@ MonoBehaviour:
   animator: {fileID: 7101454677325079267}
   character: {fileID: 6908186544467181420}
   weaponController: {fileID: 9068402693794656822}
+  enemyDetection: {fileID: 1834641077948493616}
   enemyLayerMask:
     serializedVersion: 2
     m_Bits: 512
@@ -85487,7 +85488,7 @@ MonoBehaviour:
   detectionRadius: 10
   enemyLayer:
     serializedVersion: 2
-    m_Bits: 576
+    m_Bits: 512
   autoTargetRadius: 6
   detectionUpdateInterval: 0.1
   combatMoveSpeed: 5

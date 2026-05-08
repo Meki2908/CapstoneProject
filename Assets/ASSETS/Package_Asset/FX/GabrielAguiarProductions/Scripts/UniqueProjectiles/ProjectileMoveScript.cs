@@ -20,6 +20,7 @@ using UnityEngine;
 
 public class ProjectileMoveScript : MonoBehaviour
 {
+    private const bool DEBUG_PROJECTILE_AIM = false;
 
     public bool rotate = false;
     public float rotateAmount = 45;
@@ -91,12 +92,15 @@ public class ProjectileMoveScript : MonoBehaviour
     {
         if (target != null)
         {
-            // Bỏ logic raycast theo chuột: tự xoay theo vị trí target
-            Vector3 direction = (target.transform.position - transform.position);
+            // Aim at a better point than target pivot (many enemies pivot at feet).
+            Vector3 aimPoint = ResolveAimPoint(target);
+            Vector3 direction = (aimPoint - transform.position);
             if (direction.sqrMagnitude > 0.0001f)
             {
                 Quaternion rot = Quaternion.LookRotation(direction);
                 transform.localRotation = rot;
+                if (DEBUG_PROJECTILE_AIM)
+                    Debug.Log($"[MageAim] Projectile aiming target={target.name} aimPoint={aimPoint} self={transform.position}");
             }
         }
         if (rotate)
@@ -198,5 +202,38 @@ public class ProjectileMoveScript : MonoBehaviour
     {
         target = trg;
         rotateToMouse = rotateTo;
+    }
+
+    private static Vector3 ResolveAimPoint(GameObject trg)
+    {
+        if (trg == null) return Vector3.zero;
+
+        Collider[] cols = trg.GetComponentsInChildren<Collider>(true);
+        Bounds best = default;
+        bool hasBest = false;
+        float bestTopY = float.NegativeInfinity;
+
+        foreach (var c in cols)
+        {
+            if (c == null) continue;
+            var b = c.bounds;
+            if (b.size.sqrMagnitude < 1e-6f) continue;
+            if (!hasBest || b.max.y > bestTopY)
+            {
+                hasBest = true;
+                best = b;
+                bestTopY = b.max.y;
+            }
+        }
+
+        if (hasBest)
+        {
+            float headOffsetDown = Mathf.Clamp(best.size.y * 0.15f, 0.15f, 0.45f);
+            Vector3 p = new Vector3(best.center.x, best.max.y - headOffsetDown, best.center.z);
+            p.y = Mathf.Max(p.y, best.center.y + 0.6f);
+            return p;
+        }
+
+        return trg.transform.position + Vector3.up * 1.2f;
     }
 }

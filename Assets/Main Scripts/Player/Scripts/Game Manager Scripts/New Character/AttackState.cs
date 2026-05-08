@@ -2,6 +2,7 @@ using UnityEngine;
 
 public class AttackState : State
 {
+    private const bool DEBUG_ATTACK_GATE = true;
     float timePassed;
     float clipLength;
     float clipSpeed;
@@ -32,6 +33,10 @@ public class AttackState : State
     
     private Quaternion targetAttackRotation;
     private bool isSnappingRotation;
+    
+    // === Smart Soft Lock-On ===
+    private readonly Collider[] autoAimColliders = new Collider[20];
+    private EnemyDetection enemyDetection;
 
     public AttackState(Character _character, StateMachine _stateMachine) : base(_character, _stateMachine)
     {
@@ -44,9 +49,18 @@ public class AttackState : State
     public override void Enter()
     {
         base.Enter();
+        
+        if (enemyDetection == null)
+            enemyDetection = character.GetComponentInChildren<EnemyDetection>(true);
 
         if (!character.isWeaponDrawn)
         {
+            if (DEBUG_ATTACK_GATE)
+            {
+                bool combatMove = character.animator != null && character.animator.GetBool("combatMove");
+                string fsm = stateMachine != null && stateMachine.currentState != null ? stateMachine.currentState.GetType().Name : "null";
+                Debug.LogWarning($"[AttackGate] Enter blocked: isWeaponDrawn=false fsm={fsm} combatMove={combatMove} frame={Time.frameCount} sim={character.Runner.SimulationTime:F3}");
+            }
             character.animator.ResetTrigger("attack");
             stateMachine.ChangeState(character.standing);
             return;
@@ -87,6 +101,8 @@ public class AttackState : State
 
         character.animator.ResetTrigger("attack");
         character.animator.SetTrigger("attack");
+        if (DEBUG_ATTACK_GATE)
+            Debug.Log($"[AttackGate] Enter ok weapon={(currentWeapon != null ? currentWeapon.weaponType.ToString() : "null")} hitIndex={hitIndex} frame={Time.frameCount} sim={character.Runner.SimulationTime:F3}");
         // Keep combatMove true while attacking to ensure weapon layers behave correctly.
         if (character.animator != null)
             character.animator.SetBool("combatMove", true);
@@ -97,10 +113,7 @@ public class AttackState : State
         mageVfxSpawnedThisHit = false;
         
         Vector2 initialInput = MoveInput;
-        if (initialInput.sqrMagnitude > 0.01f)
-        {
-            SetTargetRotation(initialInput);
-        }
+        DetermineAttackRotation(initialInput);
 
         TutorialTextDisplay.NotifyNormalAttackStartedFromGameplay();
 
@@ -276,10 +289,7 @@ public class AttackState : State
                 character.animator.ResetTrigger("attack");
                 character.animator.SetTrigger("attack");
 
-                if (bufferedDirection.sqrMagnitude > 0.01f)
-                {
-                    SetTargetRotation(bufferedDirection);
-                }
+                DetermineAttackRotation(bufferedDirection);
 
                 waitingForComboTransition = true;
                 comboTransitionTimeout = timePassed + 0.4f;
@@ -305,10 +315,7 @@ public class AttackState : State
                 character.animator.ResetTrigger("attack");
                 character.animator.SetTrigger("attack");
 
-                if (bufferedDirection.sqrMagnitude > 0.01f)
-                {
-                    SetTargetRotation(bufferedDirection);
-                }
+                DetermineAttackRotation(bufferedDirection);
 
                 waitingForComboTransition = true;
                 comboTransitionTimeout = timePassed + 0.4f;
@@ -376,6 +383,11 @@ public class AttackState : State
 
     private void ForceExitState()
     {
+        if (DEBUG_ATTACK_GATE)
+        {
+            bool combatMove = character.animator != null && character.animator.GetBool("combatMove");
+            Debug.Log($"[AttackGate] ForceExitState waitingCombo={waitingForComboTransition} buffered={nextAttackBuffered} isWeaponDrawn={character.isWeaponDrawn} combatMove={combatMove} frame={Time.frameCount} sim={character.Runner.SimulationTime:F3}");
+        }
         timePassed = 0f;
         waitingForComboTransition = false;
         comboTransitionTimeout = 0f;
@@ -398,6 +410,80 @@ public class AttackState : State
         {
             targetAttackRotation = Quaternion.LookRotation(targetDirection);
             isSnappingRotation = true; 
+        }
+    }
+
+    private void DetermineAttackRotation(Vector2 inputDir)
+    {
+        float searchRange = 4f;
+        LayerMask mask;
+
+        if (enemyDetection != null)
+        {
+            mask = enemyDetection.EnemyLayerMask;
+
+            if (currentWeapon != null && currentWeapon.weaponType == WeaponType.Mage)
+                searchRange = enemyDetection.MageAttackRange;
+            else
+                searchRange = enemyDetection.GetCurrentWeaponAttackRangePublic() * 1.2f;
+        }
+        else
+        {
+            mask = LayerMask.GetMask("Enemy");
+        }
+
+        Vector3 charPos = character.transform.position;
+        Vector3 charForward = character.transform.forward;
+        charForward.y = 0f;
+        if (charForward.sqrMagnitude > 1e-6f) charForward.Normalize();
+        else charForward = Vector3.forward;
+
+        int count = Physics.OverlapSphereNonAlloc(charPos, searchRange, autoAimColliders, mask);
+
+        Transform nearest = null;
+        float minSqrDist = float.MaxValue;
+
+        for (int i = 0; i < count; i++)
+        {
+            Collider col = autoAimColliders[i];
+            if (col == null) continue;
+
+            TakeDamageTest hp = col.GetComponentInParent<TakeDamageTest>();
+            if (hp != null && !hp.IsAlive()) continue;
+
+            Transform targetRoot = hp != null ? hp.transform : col.transform.root;
+            if (targetRoot == null || !targetRoot.gameObject.activeInHierarchy) continue;
+
+            Vector3 dirToTarget = targetRoot.position - charPos;
+            dirToTarget.y = 0f;
+            if (dirToTarget.sqrMagnitude < 0.001f) continue;
+
+            float dot = Vector3.Dot(charForward, dirToTarget.normalized);
+            if (dot < 0f) continue; // ignore targets behind the player
+
+            float sqrDist = dirToTarget.sqrMagnitude;
+            if (sqrDist < minSqrDist)
+            {
+                minSqrDist = sqrDist;
+                nearest = targetRoot;
+            }
+        }
+
+        if (nearest != null)
+        {
+            Vector3 dir = nearest.position - charPos;
+            dir.y = 0f;
+            if (dir.sqrMagnitude > 0.001f)
+            {
+                targetAttackRotation = Quaternion.LookRotation(dir.normalized);
+                isSnappingRotation = true;
+                return;
+            }
+        }
+
+        if (inputDir.sqrMagnitude > 0.01f)
+        {
+            SetTargetRotation(inputDir);
         }
     }
 

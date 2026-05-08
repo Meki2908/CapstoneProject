@@ -15,7 +15,7 @@ using TMPro;
 public class SceneTransitionManager : MonoBehaviour
 {
     public static float LastNetworkingLoadingStartUnscaledTime { get; private set; } = -999f;
-    public static bool EnableFinishLoadingStackTraceLogs = true;
+    public static bool EnableFinishLoadingStackTraceLogs = false;
     public static SceneTransitionManager Instance { get; private set; }
 
     /// <summary>
@@ -515,7 +515,6 @@ public class SceneTransitionManager : MonoBehaviour
 
     public void StartNetworkingLoadingUI()
     {
-        Debug.Log($"[SceneTransition][NET-LOADING] StartNetworkingLoadingUI() instance={this.GetInstanceID()} activeScene={UnityEngine.SceneManagement.SceneManager.GetActiveScene().name}");
         LastNetworkingLoadingStartUnscaledTime = Time.realtimeSinceStartup;
         isTransitioning = true;
         Time.timeScale = 1f;
@@ -532,8 +531,6 @@ public class SceneTransitionManager : MonoBehaviour
 
         if (panel != null)
         {
-            Debug.Log($"[SceneTransition][NET-LOADING] Showing panel={panel.name} activeInHierarchy={panel.activeInHierarchy} path={GetTransformPath(panel.transform)}");
-            
             // Some scenes keep Canvas/Menu roots disabled until needed.
             // Ensure parent chain is active so panel can actually render.
             EnsureParentsActive(panel.transform);
@@ -552,7 +549,7 @@ public class SceneTransitionManager : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("[SceneTransition][NET-LOADING] No loading panel found to show!");
+            Debug.LogWarning("[SceneTransition] No loading panel found to show!");
         }
     }
 
@@ -622,11 +619,10 @@ public class SceneTransitionManager : MonoBehaviour
 
     public void FinishLoadingUI()
     {
-        Debug.Log($"[SceneTransition][NET-LOADING] FinishLoadingUI() instance={this.GetInstanceID()} activeScene={UnityEngine.SceneManagement.SceneManager.GetActiveScene().name}");
         if (EnableFinishLoadingStackTraceLogs)
         {
             // High-signal debugging: identify who is closing the loading screen early.
-            Debug.Log($"[SceneTransition][NET-LOADING] FinishLoadingUI caller stack:\n{Environment.StackTrace}");
+            Debug.Log($"[SceneTransition] FinishLoadingUI caller stack:\n{Environment.StackTrace}");
         }
         StopAllCoroutines();
         StartCoroutine(FadeOutCoroutine());

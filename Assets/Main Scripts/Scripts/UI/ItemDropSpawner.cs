@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Fusion;
 
 /// <summary>
 /// Gắn vào enemy prefab — tự động spawn item orb khi enemy chết
@@ -90,6 +91,26 @@ public class ItemDropSpawner : MonoBehaviour
     /// Gọi khi enemy chết — spawn item orb bay ra
     /// </summary>
     public void SpawnDrops(Vector3 deathPosition)
+    {
+        // Online: only server broadcasts, clients do nothing here (RPC will trigger local spawns).
+        NetworkRunner runner = FindFirstObjectByType<NetworkRunner>();
+        if (runner != null && runner.IsRunning)
+        {
+            if (runner.IsServer && NetworkLootBroadcaster.Instance != null)
+            {
+                var es = GetComponent<EnemyScript>();
+                if (es == null) es = GetComponentInParent<EnemyScript>();
+                int type = es != null ? (int)es.enemyType : 0;
+                NetworkLootBroadcaster.Instance.BroadcastDrop(deathPosition, type);
+            }
+            return;
+        }
+
+        // Offline: spawn locally.
+        ExecuteLocalSpawn(deathPosition);
+    }
+
+    public void ExecuteLocalSpawn(Vector3 deathPosition)
     {
         int dropCount = 0;
 

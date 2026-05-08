@@ -7,6 +7,13 @@ public class State
     public StateMachine stateMachine;
     protected Vector3 velocity;
     protected Vector2 input;
+    
+    // Fusion-safe time base for rollback/resimulation.
+    // Use SimulationTime instead of Unity Time.time to avoid desync under lag/rollback.
+    protected float startTime;
+    protected float TimeInState => (character != null && character.Runner != null)
+        ? (character.Runner.SimulationTime - startTime)
+        : 0f;
     protected bool JumpTriggered => character.currentInput.buttons.IsSet(NetworkInputButtons.Jump) && !character.previousInput.buttons.IsSet(NetworkInputButtons.Jump);
     protected bool DashTriggered => character.currentInput.buttons.IsSet(NetworkInputButtons.Dash) && !character.previousInput.buttons.IsSet(NetworkInputButtons.Dash);
     protected bool ToggleWeaponTriggered => character.currentInput.buttons.IsSet(NetworkInputButtons.ToggleWeapon) && !character.previousInput.buttons.IsSet(NetworkInputButtons.ToggleWeapon);
@@ -27,6 +34,9 @@ public class State
 
     public virtual void Enter()
     {
+        // Measure time in state using Fusion simulation clock (rollback-safe)
+        if (character != null && character.Runner != null)
+            startTime = character.Runner.SimulationTime;
     }
 
     public virtual void HandleInput()

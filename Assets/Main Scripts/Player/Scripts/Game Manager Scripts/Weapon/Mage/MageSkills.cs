@@ -5,6 +5,7 @@ using UnityEngine.Playables;
 
 public class MageSkills : MonoBehaviour
 {
+    private const bool DEBUG_MAGE_LOCK = true;
     [Header("Refs")]
     [SerializeField] private EquipmentSystem equipment;
     [SerializeField] private Transform defaultVfxSpawn;     // v? tr� spawn VFX m?c d?nh (hand)
@@ -32,6 +33,7 @@ public class MageSkills : MonoBehaviour
 
     private Character character;
     private SkillLock skillLock;
+    private EnemyDetection enemyDetection;
     public float maxSkillLockSeconds = 3f;
     private float skillLockExpireAt = 0f;
     private GameObject currentWeapon;
@@ -51,6 +53,7 @@ public class MageSkills : MonoBehaviour
         Debug.Log($"<color=green>[MageSkills]</color> Equipment: {equipment}");
         skillLock = GetComponentInChildren<SkillLock>();
         Debug.Log($"<color=green>[MageSkills]</color> SkillLock: {skillLock}");
+        enemyDetection = character != null ? character.GetComponentInChildren<EnemyDetection>(true) : null;
     }
 
     private void Start()
@@ -153,7 +156,15 @@ public class MageSkills : MonoBehaviour
         
         if (weapon == null || weapon.weaponType != WeaponType.Mage || !drawn)
         {
-            Debug.Log($"<color=orange>[MageSkills]</color> X?t: Sai vu kh? ho?c chua r?t G?y Ph?p!");
+            if (DEBUG_MAGE_LOCK)
+            {
+                string wt = weapon != null ? weapon.weaponType.ToString() : "null";
+                Debug.LogWarning($"[MageSkillsGate] Blocked TryUse={input} weaponType={wt} isWeaponDrawn={drawn} skillLock={(skillLock != null ? skillLock.isPerformingSkill.ToString() : "null")} frame={Time.frameCount} time={Time.time:F3}");
+            }
+            else
+            {
+                Debug.Log($"<color=orange>[MageSkills]</color> X?t: Sai vu kh? ho?c chua r?t G?y Ph?p!");
+            }
             return;
         }
 
@@ -174,6 +185,11 @@ public class MageSkills : MonoBehaviour
             Debug.Log($"<color=grey>[MageSkills]</color> Skill {input} dang trong th?i gian h?i chi?u!");
             return;
         }
+
+        if (enemyDetection == null && character != null)
+            enemyDetection = character.GetComponentInChildren<EnemyDetection>(true);
+        Vector2 moveInp = character != null ? character.currentInput.movementInput : Vector2.zero;
+        CombatAimHelper.SnapToTarget(character, equipment, enemyDetection, moveInp);
 
         int idx = input switch { AbilityInput.E => 0, AbilityInput.R => 1, AbilityInput.T => 2, AbilityInput.Q_Ultimate => 3, _ => 0 };
         animator.SetInteger(skillIndexParam, idx);

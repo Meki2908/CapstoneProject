@@ -24,6 +24,7 @@ public class SwordSkills : MonoBehaviour
     private Animator animator;
     private Character character;
     private SkillLock skillLock;
+    private EnemyDetection enemyDetection;
 
     private readonly Dictionary<AbilityInput, AbilitySO> abilityMap = new();
 
@@ -60,6 +61,7 @@ public class SwordSkills : MonoBehaviour
         Debug.Log($"<color=green>[SwordSkills]</color> SkillLock: {skillLock}");
         equipment = GetComponentInChildren<EquipmentSystem>();
         Debug.Log($"<color=green>[SwordSkills]</color> Equipment: {equipment}");
+        enemyDetection = character != null ? character.GetComponentInChildren<EnemyDetection>(true) : null;
     }
 
     private void Start()
@@ -173,6 +175,11 @@ public class SwordSkills : MonoBehaviour
             Debug.Log($"<color=grey>[SwordSkills]</color> Skill {input} đang trong thời gian hồi chiêu!");
             return;
         }
+
+        if (enemyDetection == null && character != null)
+            enemyDetection = character.GetComponentInChildren<EnemyDetection>(true);
+        Vector2 moveInp = character != null ? character.currentInput.movementInput : Vector2.zero;
+        CombatAimHelper.SnapToTarget(character, equipment, enemyDetection, moveInp);
 
         int idx = input switch { AbilityInput.E => 0, AbilityInput.R => 1, AbilityInput.T => 2, AbilityInput.Q_Ultimate => 3, _ => 0 };
         animator.SetInteger(skillIndexParam, idx);
