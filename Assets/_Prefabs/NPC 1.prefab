@@ -7300,6 +7300,7 @@ GameObject:
   - component: {fileID: 4981952403428313455}
   - component: {fileID: 1488452934669183991}
   - component: {fileID: 990645886172921606}
+  - component: {fileID: 4639081091585932584}
   m_Layer: 0
   m_Name: Leona
   m_TagString: Untagged
@@ -7334,7 +7335,7 @@ Animator:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 761184060644207224}
-  m_Enabled: 0
+  m_Enabled: 1
   m_Avatar: {fileID: 0}
   m_Controller: {fileID: 9100000, guid: a322d92791ced994f9595fd1e2404769, type: 2}
   m_CullingMode: 0
@@ -7511,6 +7512,21 @@ MonoBehaviour:
   targetScene: Tutorial
   delayBeforeLoad: 1.5
   useFade: 1
+--- !u!114 &4639081091585932584
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 761184060644207224}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5716e6f14e039914d90f610b877dac81, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  tutorialSceneName: Tutorial
+  loadingMessage: "\u0110ang v\xE0o khu v\u1EF1c H\u01B0\u1EDBng D\u1EABn..."
+  waitForNetworkSpawn: 1
 --- !u!1 &761523151492215183
 GameObject:
   m_ObjectHideFlags: 0
@@ -51403,7 +51419,7 @@ GameObject:
   - component: {fileID: 5649399289944169697}
   m_Layer: 0
   m_Name: Maria_J_J_Ong
-  m_TagString: Untagged
+  m_TagString: NPC_Maria
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 18
@@ -58169,7 +58185,7 @@ GameObject:
   - component: {fileID: 2576828484755435867}
   m_Layer: 0
   m_Name: Maria (2)
-  m_TagString: Untagged
+  m_TagString: NPC_Maria2
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -72340,8 +72356,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.8070476, y: 2.2159548, z: 0.6841197}
-  m_Center: {x: 0.016655937, y: 1.013659, z: 0.027278064}
+  m_Size: {x: 2.772975, y: 2.2159548, z: 2.132122}
+  m_Center: {x: 0.04751074, y: 1.013659, z: 0.09257537}
 --- !u!95 &4288087165945182819
 Animator:
   serializedVersion: 7
@@ -73637,7 +73653,7 @@ GameObject:
   - component: {fileID: 3962737803615773235}
   m_Layer: 0
   m_Name: Maria
-  m_TagString: Untagged
+  m_TagString: NPC_Maria
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -80951,7 +80967,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   questID: 2
   showAtStep: 3
-  markerObject: {fileID: 6377109137982232140}
+  markerObject: {fileID: 8937652995256441109}
   enableBobbing: 1
   bobbingHeight: 0.3
   bobbingSpeed: 2
@@ -121490,7 +121506,7 @@ GameObject:
   - component: {fileID: 3956387512145127867}
   m_Layer: 0
   m_Name: Paladin Quest
-  m_TagString: Untagged
+  m_TagString: NPC_Paladin
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -132320,7 +132336,7 @@ GameObject:
   - component: {fileID: 4359273947321522580}
   m_Layer: 0
   m_Name: Maria_J_J_Ong
-  m_TagString: Untagged
+  m_TagString: NPC_Maria2
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 18

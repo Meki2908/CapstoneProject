@@ -139,7 +139,6 @@ public class Character : NetworkBehaviour
     // Queue requested weapon action when animation/state would skip it (e.g. GetHit/skill lock).
     public QueuedWeaponAction queuedWeaponAction { get; private set; } = QueuedWeaponAction.None;
 
-    private const bool TOGGLE_WEAPON_QUEUE_DEBUG = true;
     public bool IsDashing { get; set; } // For invincibility frame during dash
     public float dashLockUntil = 0f; // Thời điểm trước đó dash bị khóa (để tránh auto-dash sau khi bị hit)
 
@@ -539,23 +538,9 @@ public class Character : NetworkBehaviour
         if (action == QueuedWeaponAction.None) return;
         if (queuedWeaponAction != QueuedWeaponAction.None)
         {
-            if (TOGGLE_WEAPON_QUEUE_DEBUG)
-            {
-                Debug.Log(
-                    $"[ToggleWeapon][Queue] IGNORE (already queued) frame={Time.frameCount} sim={Runner?.SimulationTime:F3} " +
-                    $"incoming={action} queuedExisting={queuedWeaponAction}"
-                );
-            }
             return; // buffer exactly once
         }
 
-        if (TOGGLE_WEAPON_QUEUE_DEBUG)
-        {
-            Debug.Log(
-                $"[ToggleWeapon][Queue] SET frame={Time.frameCount} sim={Runner?.SimulationTime:F3} " +
-                $"queuedBefore={queuedWeaponAction} -> queuedAfter={action}"
-            );
-        }
         queuedWeaponAction = action;
     }
 
@@ -570,13 +555,6 @@ public class Character : NetworkBehaviour
         action = queuedWeaponAction;
         if (action == QueuedWeaponAction.None) return false;
 
-        if (TOGGLE_WEAPON_QUEUE_DEBUG)
-        {
-            Debug.Log(
-                $"[ToggleWeapon][Consume] frame={Time.frameCount} sim={Runner?.SimulationTime:F3} " +
-                $"consumed={action} queuedBeforeClear={queuedWeaponAction}"
-            );
-        }
         queuedWeaponAction = QueuedWeaponAction.None;
         return true;
     }

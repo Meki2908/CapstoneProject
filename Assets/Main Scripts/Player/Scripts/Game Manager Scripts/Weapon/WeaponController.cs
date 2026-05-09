@@ -215,10 +215,13 @@ public class WeaponController : MonoBehaviour
 
         if (requestAnimation && animator != null)
         {
-            Debug.Log($"[ToggleWeapon][WeaponController.EnsureDrawn] frame={Time.frameCount} time={Time.time:F3} weapon={(currentWeapon != null ? currentWeapon.weaponName : "null")} type={(currentWeapon != null ? currentWeapon.weaponType.ToString() : "null")} combatMove={animator.GetBool("combatMove")}");
             animator.ResetTrigger(sheathTrigger);
             animator.SetTrigger(drawTrigger);
         }
+
+        // Tutorial step progression: report draw as "done" from the single source of truth.
+        if (TutorialTextDisplay.Instance != null)
+            TutorialTextDisplay.NotifyWeaponDrawnFromGameplay();
     }
 
     /// <summary>
@@ -227,6 +230,7 @@ public class WeaponController : MonoBehaviour
     /// </summary>
     public void EnsureSheathed(bool requestAnimation = false)
     {
+        if (currentWeapon == null) return;
         if (animator == null)
             animator = GetComponentInChildren<Animator>(true);
 
@@ -265,10 +269,13 @@ public class WeaponController : MonoBehaviour
 
         if (requestAnimation && animator != null)
         {
-            Debug.Log($"[ToggleWeapon][WeaponController.EnsureSheathed] frame={Time.frameCount} time={Time.time:F3} weapon={(currentWeapon != null ? currentWeapon.weaponName : "null")} type={(currentWeapon != null ? currentWeapon.weaponType.ToString() : "null")} combatMove={animator.GetBool("combatMove")}");
             animator.ResetTrigger(drawTrigger);
             animator.SetTrigger(sheathTrigger);
         }
+
+        // Tutorial step progression: report sheath as "done" from the single source of truth.
+        if (TutorialTextDisplay.Instance != null)
+            TutorialTextDisplay.NotifyWeaponSheathedFromGameplay();
     }
 
     public void DrawWeaponVisual() // g?i t? Animation/State

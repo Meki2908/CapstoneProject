@@ -14,6 +14,7 @@ using System.Collections;
 /// </summary>
 public class TutorialQuestFinisher : MonoBehaviour
 {
+    private const string KEY_TUTORIAL_DONE = "TUTORIAL_DONE";
     [Header("Quest cần hoàn thành (Tutorial Quest)")]
     public int tutorialQuestID = 1;
 
@@ -47,7 +48,6 @@ public class TutorialQuestFinisher : MonoBehaviour
 
     public void FinishTutorial()
     {
-        Debug.Log("[TutorialFinisher] FinishTutorial() called – returning to map.");
         // Quest đã được xử lý trong LeonaDialogue khi accept
         // Chỉ cần save và load scene về Map
         StartCoroutine(ReturnToMap());
@@ -55,6 +55,10 @@ public class TutorialQuestFinisher : MonoBehaviour
 
     System.Collections.IEnumerator ReturnToMap()
     {
+        // Mark tutorial completed so LeonaDialogue won't force-enter tutorial again.
+        PlayerPrefs.SetInt(KEY_TUTORIAL_DONE, 1);
+        PlayerPrefs.Save();
+
         // Reset player level về 1 trước khi save và về map
         if (HeroInformation.player != null)
             HeroInformation.player.playerLevel = 1;
@@ -63,7 +67,6 @@ public class TutorialQuestFinisher : MonoBehaviour
         catch (System.Exception e) { Debug.LogWarning($"[TutorialFinisher] PlayerSave failed: {e.Message}"); }
 
         yield return new WaitForSeconds(delay);
-        Debug.Log($"[TutorialFinisher] Loading scene: {returnScene}");
         if (SceneTransitionManager.Instance != null)
             SceneTransitionManager.Instance.GoToScene(returnScene, "Đang quay về bản đồ...");
         else

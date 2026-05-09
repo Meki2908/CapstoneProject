@@ -5,7 +5,6 @@ public sealed class DrawWeaponState : State
     private const int UpperBodyLayerIndex = 4; // Player.controller: Upper body is layer 4 (not Base Layer 0)
     private const string DrawTag = "Draw";
     private const string WeaponActionTag = "WeaponAction";
-    private const bool TOGGLE_DEBUG = true;
     private bool hasSwapped;
 
     private WeaponController weaponController;
@@ -20,12 +19,6 @@ public sealed class DrawWeaponState : State
     {
         base.Enter();
 
-        if (TOGGLE_DEBUG)
-        {
-            bool combatMove = character.animator != null && character.animator.GetBool("combatMove");
-            Debug.Log($"[ToggleWeapon][DrawState.Enter] frame={Time.frameCount} time={Time.time:F3} sim={character.Runner.SimulationTime:F3} isWeaponDrawn={character.isWeaponDrawn} combatMove={combatMove}");
-        }
-
         hasSwapped = false;
 
         if (weaponController == null)
@@ -33,7 +26,6 @@ public sealed class DrawWeaponState : State
 
         if (weaponController == null || weaponController.GetCurrentWeapon() == null)
         {
-            if (TOGGLE_DEBUG) Debug.LogWarning($"[ToggleWeapon][DrawState] No WeaponController/weapon. Abort draw. frame={Time.frameCount} sim={character.Runner.SimulationTime:F3}");
             // No weapon to draw -> stay in unarmed locomotion.
             character.isWeaponDrawn = false;
             if (character.animator != null)

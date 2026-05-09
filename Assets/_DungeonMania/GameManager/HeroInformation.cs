@@ -87,7 +87,6 @@ public class HeroInformation : MonoBehaviour {
                 player.playerLevel = resetLevel;
                 PlayerPrefs.DeleteKey("TUTORIAL_RESET_PLAYER_LEVEL");
                 PlayerPrefs.Save();
-                Debug.Log($"[HeroInformation] Tutorial reset: playerLevel → {resetLevel}");
             }
         }
         else if (PlayerPrefs.HasKey("PlayerSave1")) {

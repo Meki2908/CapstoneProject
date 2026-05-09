@@ -43,6 +43,10 @@ public class WeaponUltimateShaderController : MonoBehaviour
     private int sceneLoadGraceFrames = 0;
     private const int GRACE_FRAME_COUNT = 3;
     private WeaponType currentWeaponType = WeaponType.Sword;
+    
+    // Anti-flicker grace window after draw/weapon change (Fusion sync can be delayed a few frames)
+    private int cooldownGraceFrames = 0;
+    private bool lastWeaponDrawnState = false; // Edge detection for draw/sheath (UI-driven)
 
     private void Awake()
     {
@@ -70,28 +74,48 @@ public class WeaponUltimateShaderController : MonoBehaviour
 
     private void RefreshReferences()
     {
-        // Unsubscribe from old weaponController (nếu có) trước khi tìm cái mới
-        if (weaponController != null)
-        {
-            weaponController.OnWeaponChanged -= OnWeaponChanged;
-        }
-
         abilityIconManager = FindFirstObjectByType<AbilityIconManager>();
-        weaponController = FindFirstObjectByType<WeaponController>();
 
-        if (abilityIconManager == null)
-        {
-            Debug.LogWarning("[WeaponUltimateShaderController] AbilityIconManager not found — will retry.");
-        }
+        // 1) Tạo biến tạm để lưu Controller mới tìm được (đúng LocalPlayer trong Fusion)
+        WeaponController newWeaponController = null;
 
-        if (weaponController == null)
+        if (Character.LocalCharacter != null)
         {
-            Debug.LogWarning("[WeaponUltimateShaderController] WeaponController not found — will retry.");
+            newWeaponController = Character.LocalCharacter.GetComponent<WeaponController>();
+            if (newWeaponController == null)
+                newWeaponController = Character.LocalCharacter.GetComponentInChildren<WeaponController>(true);
         }
         else
         {
-            // Subscribe to weapon change events
-            weaponController.OnWeaponChanged += OnWeaponChanged;
+            // Fallback khi test Offline
+            newWeaponController = FindFirstObjectByType<WeaponController>();
+        }
+
+        // 2) Chỉ xử lý Subscribe/Unsubscribe nếu Player thực sự thay đổi
+        if (newWeaponController != weaponController)
+        {
+            if (weaponController != null)
+            {
+                weaponController.OnWeaponChanged -= OnWeaponChanged;
+            }
+
+            weaponController = newWeaponController;
+
+            if (weaponController != null)
+            {
+                weaponController.OnWeaponChanged += OnWeaponChanged;
+
+                // Tránh "Missed Event" lúc khởi tạo: sync vũ khí hiện tại ngay lập tức
+                WeaponSO currentWp = weaponController.GetCurrentWeapon();
+                if (currentWp != null)
+                {
+                    UpdateMaterialForWeapon(currentWp.weaponType);
+                }
+
+                // Initialize edge-detection state based on current local character.
+                // Prevents "fake draw edge" when entering a scene where weapon is already drawn.
+                lastWeaponDrawnState = Character.LocalCharacter != null && Character.LocalCharacter.isWeaponDrawn;
+            }
         }
     }
 
@@ -111,10 +135,10 @@ public class WeaponUltimateShaderController : MonoBehaviour
 
     private void OnWeaponChanged(WeaponSO weapon)
     {
-        if (weapon != null)
-        {
-            UpdateMaterialForWeapon(weapon.weaponType);
-        }
+        // Weapon swap while already drawn: update shader material and apply a short grace window.
+        if (weapon == null) return;
+        UpdateMaterialForWeapon(weapon.weaponType);
+        cooldownGraceFrames = 5;
     }
 
     public void UpdateMaterialForWeapon(WeaponType weaponType)
@@ -151,8 +175,6 @@ public class WeaponUltimateShaderController : MonoBehaviour
             materialInstance = new Material(targetMaterial);
             ultimateIcon.material = materialInstance;
             currentMaterial = targetMaterial;
-
-            Debug.Log($"[WeaponUltimateShaderController] Switched to {weaponType} ultimate shader");
         }
         else
         {
@@ -162,27 +184,61 @@ public class WeaponUltimateShaderController : MonoBehaviour
 
     private void Update()
     {
-        if (!isInitialized || materialInstance == null) return;
-
-        // Grace period sau scene load — skip update để tránh flicker
-        if (sceneLoadGraceFrames > 0)
-        {
-            sceneLoadGraceFrames--;
-            if (sceneLoadGraceFrames == 0)
-            {
-                // Grace xong → refresh references lần cuối
-                RefreshReferences();
-            }
-            return;
-        }
-
-        // Nếu references null → retry, KHÔNG update shader
+        // 1) Quét Player trước để tránh bị return sớm chặn retry
         if (abilityIconManager == null || weaponController == null)
         {
             if (Time.frameCount % 30 == 0) RefreshReferences();
             return;
         }
 
+        // 2) Nếu thiếu Image component hoặc init fail thì ngắt luôn
+        if (!isInitialized)
+        {
+            return;
+        }
+
+        // 3) Grace period sau scene load — skip update để tránh flicker
+        if (sceneLoadGraceFrames > 0)
+        {
+            sceneLoadGraceFrames--;
+            if (sceneLoadGraceFrames == 0)
+            {
+                RefreshReferences();
+            }
+            return;
+        }
+
+        // 4) UI-driven draw/sheath edge detection (Fusion safe: only uses local character state)
+        var charTarget = Character.LocalCharacter;
+        bool isDrawnNow = charTarget != null && charTarget.isWeaponDrawn;
+
+        if (isDrawnNow != lastWeaponDrawnState)
+        {
+            if (isDrawnNow)
+            {
+                // Draw: re-assign material for current weapon + grace frames to avoid sync flicker
+                cooldownGraceFrames = 5;
+                WeaponSO currentWp = weaponController != null ? weaponController.GetCurrentWeapon() : null;
+                if (currentWp != null)
+                    UpdateMaterialForWeapon(currentWp.weaponType);
+            }
+            else
+            {
+                // Sheath: unassign material & force off ready state
+                UnassignMaterial();
+                SetReadyState(false);
+            }
+
+            lastWeaponDrawnState = isDrawnNow;
+        }
+
+        // If we are sheathed (no material), skip shader updates.
+        if (materialInstance == null)
+        {
+            return;
+        }
+
+        // 5) Everything ready → update shader
         UpdateCooldownState();
         UpdateGlowAnimation();
         UpdateShaderProperties();
@@ -192,16 +248,9 @@ public class WeaponUltimateShaderController : MonoBehaviour
     {
         if (abilityIconManager == null) return;
 
-        // Check if weapon is drawn
-        bool isWeaponDrawn = false;
-        if (weaponController != null)
-        {
-            var character = weaponController.GetComponent<Character>();
-            if (character != null)
-            {
-                isWeaponDrawn = character.isWeaponDrawn;
-            }
-        }
+        // Check if weapon is drawn (Fusion-safe: always read LocalCharacter)
+        var localChar = Character.LocalCharacter;
+        bool isWeaponDrawn = localChar != null && localChar.isWeaponDrawn;
 
         bool wasReady = isReady;
         bool isOnCooldown = abilityIconManager.IsOnCooldown(AbilityInput.Q_Ultimate);
@@ -214,7 +263,19 @@ public class WeaponUltimateShaderController : MonoBehaviour
         }
 
         // Ultimate is ready when: not on cooldown AND weapon is drawn AND Ultimate is unlocked
-        isReady = !isOnCooldown && isWeaponDrawn && isUltimateUnlocked;
+        bool readyNow = !isOnCooldown && isWeaponDrawn && isUltimateUnlocked;
+
+        // Grace frames: Fusion can deliver cooldown/unlock data a few frames late.
+        // If we were ready and immediately read "not ready" during the grace window,
+        // keep ready unless the player sheathed (materialInstance would be null and Update would have returned).
+        if (cooldownGraceFrames > 0)
+        {
+            cooldownGraceFrames--;
+            if (isReady && !readyNow && isOnCooldown)
+                readyNow = true;
+        }
+
+        isReady = readyNow;
 
         // Update target glow intensity based on state
         if (isReady)
@@ -230,12 +291,6 @@ public class WeaponUltimateShaderController : MonoBehaviour
         if (isReady && !wasReady)
         {
             pulseTime = 0f;
-        }
-
-        // Debug log for troubleshooting
-        if (isReady != wasReady)
-        {
-            Debug.Log($"[WeaponUltimateShaderController] Ready state changed: {wasReady} -> {isReady} (Cooldown: {isOnCooldown}, Drawn: {isWeaponDrawn})");
         }
     }
 
@@ -256,16 +311,9 @@ public class WeaponUltimateShaderController : MonoBehaviour
     {
         if (materialInstance == null) return;
 
-        // Check if weapon is drawn
-        bool isWeaponDrawn = false;
-        if (weaponController != null)
-        {
-            var character = weaponController.GetComponent<Character>();
-            if (character != null)
-            {
-                isWeaponDrawn = character.isWeaponDrawn;
-            }
-        }
+        // Check if weapon is drawn (Fusion-safe: always read LocalCharacter)
+        var localChar = Character.LocalCharacter;
+        bool isWeaponDrawn = localChar != null && localChar.isWeaponDrawn;
 
         // Update cooldown progress
         float cooldownProgress = 0f;
@@ -351,13 +399,23 @@ public class WeaponUltimateShaderController : MonoBehaviour
         if (ultimateIcon != null)
         {
             ultimateIcon.material = null;
-            Debug.Log("[WeaponUltimateShaderController] Unassigned Ultimate shader material");
+        }
+
+        // Ensure Update() can detect sheathed state and avoid leaking instances.
+        if (materialInstance != null)
+        {
+            DestroyImmediate(materialInstance);
+            materialInstance = null;
         }
     }
 
     private void OnDisable()
     {
         SceneManager.sceneLoaded -= OnSceneLoaded;
+        if (weaponController != null)
+        {
+            weaponController.OnWeaponChanged -= OnWeaponChanged;
+        }
     }
 
     private void OnDestroy()

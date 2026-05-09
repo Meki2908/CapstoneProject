@@ -339,6 +339,7 @@ namespace Artsystack.ArtsystackGui
         private static readonly string[] prefsKeys = {
             "Dungeon_SaMac_MaxCleared",
             "Dungeon_DamLay_MaxCleared",
+            "TUTORIAL_DONE",
             "QUEST_COUNT",
             "QUEST_1", "QUEST_1_STEP",
             "QUEST_2", "QUEST_2_STEP",

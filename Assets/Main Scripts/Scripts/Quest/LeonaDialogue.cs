@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using TMPro;
 using System.Collections;
+using UnityEngine.SceneManagement;
 
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -16,6 +17,7 @@ using UnityEngine.InputSystem;
 /// </summary>
 public class LeonaDialogue : MonoBehaviour
 {
+    private const string KEY_TUTORIAL_DONE = "TUTORIAL_DONE";
     // ─── UI References ────────────────────────────────────────────────────
 
     [Header("── Prompt UI ──")]
@@ -238,6 +240,11 @@ public class LeonaDialogue : MonoBehaviour
 
     DialogueMode PickMode()
     {
+        // Force first-time tutorial entry regardless of quest prefs (helps when PlayerPrefs carries over from older test runs).
+        // TutorialQuestFinisher sets KEY_TUTORIAL_DONE = 1 when the tutorial is completed.
+        if (PlayerPrefs.GetInt(KEY_TUTORIAL_DONE, 0) == 0)
+            return DialogueMode.Quest1Accept;
+
         if (QuestManager.Instance == null)
         {
             Debug.Log("[LeonaDialogue] PickMode → QuestManager null → Quest1Accept");

@@ -2,7 +2,6 @@ using UnityEngine;
 
 public class GetHitState : State
 {
-    private const bool TOGGLE_QUEUE_DEBUG = true;
     bool dash;
     bool jump;
     bool toBaseMove;
@@ -64,13 +63,6 @@ public class GetHitState : State
         if (ToggleWeaponTriggered)
         {
             toggleWeapon = true;
-            if (TOGGLE_QUEUE_DEBUG)
-            {
-                Debug.Log(
-                    $"[ToggleWeapon][GetHit.Input] frame={Time.frameCount} sim={character.Runner.SimulationTime:F3} " +
-                    $"ToggleWeaponTriggered=1 queuedNow={character.queuedWeaponAction} isWeaponDrawn={character.isWeaponDrawn}"
-                );
-            }
         }
     }
 
@@ -91,21 +83,7 @@ public class GetHitState : State
         if (toggleWeapon)
         {
             // Buffer exactly once: store requested action at the moment of Tab press.
-            if (TOGGLE_QUEUE_DEBUG)
-            {
-                Debug.Log(
-                    $"[ToggleWeapon][GetHit.Queue] BEFORE frame={Time.frameCount} sim={character.Runner.SimulationTime:F3} " +
-                    $"queuedBefore={character.queuedWeaponAction} isWeaponDrawn={character.isWeaponDrawn}"
-                );
-            }
             character.QueueWeaponActionFromCurrentContext();
-            if (TOGGLE_QUEUE_DEBUG)
-            {
-                Debug.Log(
-                    $"[ToggleWeapon][GetHit.Queue] AFTER frame={Time.frameCount} sim={character.Runner.SimulationTime:F3} " +
-                    $"queuedAfter={character.queuedWeaponAction}"
-                );
-            }
             toggleWeapon = false;
         }
         else if (dash)
@@ -124,13 +102,6 @@ public class GetHitState : State
 
             // NOTE: Không được "xả hàng đợi" ở GetHitState nữa.
             // Chỉ trả về locomotion/attack. Việc xả queued Draw/Sheath sẽ được đồng bộ theo Animator tại BaseMoveState.
-            if (TOGGLE_QUEUE_DEBUG)
-            {
-                Debug.Log(
-                    $"[ToggleWeapon][GetHit.Exit] frame={Time.frameCount} sim={character.Runner.SimulationTime:F3} " +
-                    $"toBaseMove=1 queuedNow={character.queuedWeaponAction} resumeAttack={ShouldResumeAttack()} locomotion={character.currentLocomotionState?.GetType().Name}"
-                );
-            }
             if (ShouldResumeAttack())
             {
                 ResumeAttackState();

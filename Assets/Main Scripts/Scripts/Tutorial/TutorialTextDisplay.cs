@@ -2,6 +2,7 @@ using UnityEngine;
 using TMPro;
 using System.Collections;
 using UnityEngine.AI;
+using Fusion;
 
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -149,13 +150,11 @@ public class TutorialTextDisplay : MonoBehaviour
         if (_weaponController != null)
         {
             _weaponController.OnWeaponChanged += OnWeaponChangedFromController;
-            Debug.Log("[Tutorial] Auto-subscribed to WeaponController.OnWeaponChanged");
         }
 
         if (_weaponSwapper != null)
         {
             _weaponSwapper.OnWeaponSwapped.AddListener(OnWeaponChanged);
-            Debug.Log("[Tutorial] Auto-subscribed to WeaponSwapper.OnWeaponSwapped");
         }
         else
         {
@@ -371,7 +370,6 @@ public class TutorialTextDisplay : MonoBehaviour
         if (_weaponSwapper != null)
         {
             _weaponSwapper.SetTutorialMode(true);
-            Debug.Log("[Tutorial] WeaponSwapper tutorial mode ON.");
         }
         if (_enemyDetection != null)
             _enemyDetection.SetCombatState(false);
@@ -449,21 +447,113 @@ public class TutorialTextDisplay : MonoBehaviour
             go.SetActive(true);
     }
 
+    static void DisableDropsOnEnemy(GameObject go)
+    {
+        if (go == null) return;
+        // Tutorial requirement: do NOT drop items. EnemyDeathBridge only spawns drops if it finds ItemDropSpawner.
+        // So we disable & remove any ItemDropSpawner present on this enemy root or its children.
+        var spawners = go.GetComponentsInChildren<ItemDropSpawner>(true);
+        if (spawners == null) return;
+        for (int i = 0; i < spawners.Length; i++)
+        {
+            if (spawners[i] == null) continue;
+            spawners[i].enabled = false;
+            Destroy(spawners[i]);
+        }
+    }
+
+    GameObject SpawnEnemyPrefab(GameObject prefab, Vector3 pos, Quaternion rot)
+    {
+        if (prefab == null) return null;
+
+        // Prefer Fusion spawn when prefab is a NetworkObject and we are the server/host (Tutorial runs GameMode.Single).
+        var runner = FindFirstObjectByType<NetworkRunner>();
+        var netPrefab = prefab.GetComponent<NetworkObject>();
+        if (runner != null && runner.IsRunning && runner.IsServer && netPrefab != null)
+        {
+            try
+            {
+                var netObj = runner.Spawn(netPrefab, pos, rot, null);
+                return netObj != null ? netObj.gameObject : null;
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"[Tutorial] runner.Spawn failed, fallback Instantiate. ex={ex.Message}");
+            }
+        }
+
+        return Instantiate(prefab, pos, rot);
+    }
+
+    // === COROUTINE ĐÃ FIX: NHẬN VÀ ÉP TYPE BỎ QUA WAVE MANAGER ===
+    IEnumerator EnsureEnemyNewReadyAndHookDeath(GameObject root, System.Action cb, int forcedEnemyType = 0)
+    {
+        if (root == null) yield break;
+
+        // 1. KÍCH HOẠT ENEMY THEO CHỈ ĐỊNH
+        var randomEnemy = root.GetComponent<RandomEnemy>();
+        if (randomEnemy != null)
+        {
+            // EnableSpecificType requires Fusion StateAuthority. If we fell back to Instantiate, use EnableDirect.
+            if (randomEnemy.HasStateAuthority)
+                randomEnemy.EnableSpecificType(forcedEnemyType);
+            else
+                randomEnemy.EnableDirect();
+        }
+
+        // 2. CHỜ QUÁI CON ĐƯỢC BẬT LÊN
+        float timeout = Time.realtimeSinceStartup + 1.0f;
+        while (Time.realtimeSinceStartup < timeout)
+        {
+            if (root == null) yield break;
+
+            if (HookDeath(root, cb))
+                yield break;
+
+            // Nếu chưa có Death Bridge, gắn vào con quái đang active
+            var enemies = root.GetComponentsInChildren<EnemyScript>(true);
+            if (enemies != null)
+            {
+                for (int i = 0; i < enemies.Length; i++)
+                {
+                    var es = enemies[i];
+                    if (es == null || !es.gameObject.activeInHierarchy) continue;
+
+                    if (es.GetComponent<EnemyDeathBridge>() == null)
+                    {
+                        es.gameObject.AddComponent<EnemyDeathBridge>();
+                    }
+                }
+            }
+
+            yield return null;
+        }
+
+        if (!HookDeath(root, cb))
+            Debug.LogWarning("[Tutorial] Failed to hook enemy death callback. Quái có thể không chuyển step khi chết!");
+    }
+
 
     void SpawnEnemy1()
     {
         if (enemyPrefab1 == null || spawnPoint1 == null) { Advance(); return; }
-        var go = Instantiate(enemyPrefab1, spawnPoint1.position, spawnPoint1.rotation);
+        var go = SpawnEnemyPrefab(enemyPrefab1, spawnPoint1.position, spawnPoint1.rotation);
         EnsureSpawnedEnemyActive(go);
-        if (!HookDeath(go, OnEnemy1Died)) Advance();
+        DisableDropsOnEnemy(go);
+
+        // Ép kiểu 0 = Skeleton (Quái cơ bản nhất để test đòn đầu tiên)
+        StartCoroutine(EnsureEnemyNewReadyAndHookDeath(go, OnEnemy1Died, 0));
     }
 
     void SpawnEnemy2()
     {
         if (enemyPrefab2 == null || spawnPoint2 == null) { Advance(); return; }
-        var go = Instantiate(enemyPrefab2, spawnPoint2.position, spawnPoint2.rotation);
+        var go = SpawnEnemyPrefab(enemyPrefab2, spawnPoint2.position, spawnPoint2.rotation);
         EnsureSpawnedEnemyActive(go);
-        if (!HookDeath(go, OnEnemy2Died)) Advance();
+        DisableDropsOnEnemy(go);
+
+        // Ép kiểu 2 = Monster (Orc/Troll) để đánh cho đã tay hơn xíu
+        StartCoroutine(EnsureEnemyNewReadyAndHookDeath(go, OnEnemy2Died, 2));
     }
 
     void SpawnWave()
@@ -477,9 +567,13 @@ public class TutorialTextDisplay : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             if (waveSpawnPoints[i] == null) continue;
-            var go = Instantiate(wavePrefab, waveSpawnPoints[i].position, waveSpawnPoints[i].rotation);
+            var go = SpawnEnemyPrefab(wavePrefab, waveSpawnPoints[i].position, waveSpawnPoints[i].rotation);
             EnsureSpawnedEnemyActive(go);
-            HookDeath(go, OnWaveKill);
+            DisableDropsOnEnemy(go);
+
+            // Random mix giữa Skeleton(0) và Archer(1) cho đàn quái
+            int randomType = Random.Range(0, 2);
+            StartCoroutine(EnsureEnemyNewReadyAndHookDeath(go, OnWaveKill, randomType));
         }
     }
 
@@ -495,9 +589,12 @@ public class TutorialTextDisplay : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             if (waveSpawnPoints[i] == null) continue;
-            var go = Instantiate(wavePrefab, waveSpawnPoints[i].position, waveSpawnPoints[i].rotation);
+            var go = SpawnEnemyPrefab(wavePrefab, waveSpawnPoints[i].position, waveSpawnPoints[i].rotation);
             EnsureSpawnedEnemyActive(go);
-            HookDeath(go, OnWaveKill);
+            DisableDropsOnEnemy(go);
+
+            int randomType = Random.Range(0, 2);
+            StartCoroutine(EnsureEnemyNewReadyAndHookDeath(go, OnWaveKill, randomType));
         }
     }
 
@@ -571,7 +668,6 @@ public class TutorialTextDisplay : MonoBehaviour
         // (HeroInformation.player có thể null trong Tutorial scene)
         PlayerPrefs.SetInt("TUTORIAL_RESET_PLAYER_LEVEL", playerLevelOnReturn);
         PlayerPrefs.Save();
-        Debug.Log($"[Tutorial] Stored level reset request: playerLevel → {playerLevelOnReturn}");
 
         // Nếu player không null thì reset trực tiếp luôn (backup)
         if (HeroInformation.player != null)
@@ -592,7 +688,6 @@ public class TutorialTextDisplay : MonoBehaviour
         WeaponMasteryManager.Instance.SetMasteryLevel(WeaponType.Sword, lv);
         WeaponMasteryManager.Instance.SetMasteryLevel(WeaponType.Axe, lv);
         WeaponMasteryManager.Instance.SetMasteryLevel(WeaponType.Mage, lv);
-        Debug.Log($"[Tutorial] Mastery level set to {lv}");
     }
 
     // ─────────────────────────────────────────────────────────────────────────

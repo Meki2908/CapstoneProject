@@ -5,7 +5,6 @@ public sealed class SheathWeaponState : State
     private const int UpperBodyLayerIndex = 4; // Player.controller: Upper body is layer 4 (not Base Layer 0)
     private const string SheathTag = "Sheath";
     private const string WeaponActionTag = "WeaponAction";
-    private const bool TOGGLE_DEBUG = true;
     private bool hasSwapped;
 
     private WeaponController weaponController;
@@ -20,12 +19,6 @@ public sealed class SheathWeaponState : State
     {
         base.Enter();
 
-        if (TOGGLE_DEBUG)
-        {
-            bool combatMove = character.animator != null && character.animator.GetBool("combatMove");
-            Debug.Log($"[ToggleWeapon][SheathState.Enter] frame={Time.frameCount} time={Time.time:F3} sim={character.Runner.SimulationTime:F3} isWeaponDrawn={character.isWeaponDrawn} combatMove={combatMove}");
-        }
-
         hasSwapped = false;
 
         if (weaponController == null)
@@ -36,10 +29,6 @@ public sealed class SheathWeaponState : State
             // Start sheath animation, but do NOT swap visuals/scripts yet.
             // Swap will happen later when Upper body normalizedTime reaches WeaponSO.sheathUnequipNormalizedTime.
             weaponController.TriggerSheathAnimationOnly();
-        }
-        else if (TOGGLE_DEBUG)
-        {
-            Debug.LogWarning($"[ToggleWeapon][SheathState] No WeaponController on enter. frame={Time.frameCount} sim={character.Runner.SimulationTime:F3}");
         }
 
         // Consider weapon still drawn until we reach the swap point.

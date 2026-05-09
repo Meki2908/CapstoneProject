@@ -57,6 +57,10 @@ public class AbilityIconManager : MonoBehaviour
     private AbilitySO[] currentAbilities;
 
     public static AbilityIconManager Instance { get; private set; }
+    
+    // UI-driven draw/sheath detection (Fusion-safe)
+    private bool _lastWeaponDrawnState = false;
+    private WeaponType _lastWeaponTypeWhileDrawn = WeaponType.None;
 
     private void Awake()
     {
@@ -102,6 +106,8 @@ public class AbilityIconManager : MonoBehaviour
             weaponController = null;
         }
         AE_ClearAbilityIcons();
+        _lastWeaponDrawnState = false;
+        _lastWeaponTypeWhileDrawn = WeaponType.None;
     }
 
     private void OnGemsChanged(WeaponType weaponType)
@@ -119,6 +125,45 @@ public class AbilityIconManager : MonoBehaviour
         if (weaponController == null && Character.LocalCharacter != null)
         {
             BindToLocalPlayer(Character.LocalCharacter.GetComponentInChildren<WeaponController>());
+        }
+        
+        // UI-driven: react immediately to draw/sheath without relying on Animation Events.
+        var lc = Character.LocalCharacter;
+        bool drawnNow = lc != null && lc.isWeaponDrawn;
+        
+        // Edge detection: Draw/Sheath
+        if (drawnNow != _lastWeaponDrawnState)
+        {
+            _lastWeaponDrawnState = drawnNow;
+            if (!drawnNow)
+            {
+                // Sheathed → clear icons (keep cooldownEndTimes to prevent cheat)
+                AE_ClearAbilityIcons();
+                _lastWeaponTypeWhileDrawn = WeaponType.None;
+            }
+            else
+            {
+                // Drawn → set icons from current weapon immediately (avoid missed event)
+                var wc = weaponController != null ? weaponController : (lc != null ? lc.GetComponentInChildren<WeaponController>() : null);
+                var w = wc != null ? wc.GetCurrentWeapon() : null;
+                if (w != null)
+                {
+                    SetCurrentWeaponType(w.weaponType);
+                    AE_SetAbilityIcons(w.abilities);
+                    _lastWeaponTypeWhileDrawn = w.weaponType;
+                }
+            }
+        }
+        else if (drawnNow)
+        {
+            // While drawn: if weapon type changed (swap), refresh icons once.
+            var w = weaponController != null ? weaponController.GetCurrentWeapon() : null;
+            if (w != null && w.weaponType != _lastWeaponTypeWhileDrawn)
+            {
+                SetCurrentWeaponType(w.weaponType);
+                AE_SetAbilityIcons(w.abilities);
+                _lastWeaponTypeWhileDrawn = w.weaponType;
+            }
         }
 
         UpdateCooldownUI();
@@ -398,12 +443,10 @@ public class AbilityIconManager : MonoBehaviour
 
         float endTime = Time.time + duration;
         cooldownEndTimes[key] = endTime;
-        Debug.Log($"[AbilityIconManager] Triggered cooldown for {weaponType} {input}: {duration}s (ends at {endTime:F2})");
 
         if (TutorialInputGate.ShouldSuppressCooldownForSkillTutorial(input))
         {
             cooldownEndTimes.Remove(key);
-            Debug.Log($"[AbilityIconManager] Tutorial: suppressed cooldown for {input} (skill step)");
         }
     }
 
@@ -426,8 +469,7 @@ public class AbilityIconManager : MonoBehaviour
             weaponType = weaponController.GetCurrentWeapon().weaponType;
         if (weaponType == WeaponType.None) return;
         var key = (weaponType, input);
-        if (cooldownEndTimes.Remove(key))
-            Debug.Log($"[AbilityIconManager] TutorialClearCooldown removed active CD for {weaponType} {input}");
+        cooldownEndTimes.Remove(key);
     }
 
     // Get remaining cooldown time for current weapon

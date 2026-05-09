@@ -1,24 +1,33 @@
+using System.Collections;
+using Fusion;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using System.Collections;
 
 /// <summary>
-/// Gắn script này lên NPC Leona.
-/// Sau khi AcceptQuest(1) thành công → load scene Tutorial với hiệu ứng fade.
+/// Gắn lên NPC (ví dụ Leona). Sau hội thoại / quest → lưu game, tùy chọn tắt Fusion runner, rồi load scene qua <see cref="SceneTransitionManager"/>.
 /// </summary>
 public class QuestSceneTeleporter : MonoBehaviour
 {
-    [Header("Scene để load sau khi accept quest")]
-    [Tooltip("Đặt đúng tên scene trong Build Settings (VD: 'Tutorial')")]
+    [Header("Scene")]
+    [Tooltip("Tên scene trong Build Settings (VD: Tutorial).")]
     public string targetScene = "Tutorial";
 
-    [Header("Thời gian delay trước khi chuyển cảnh (giây)")]
+    [Header("Timing")]
     public float delayBeforeLoad = 1.5f;
 
-    [Header("Fade Effect (tuỳ chọn)")]
+    [Header("Network")]
+    [Tooltip("Tắt NetworkRunner trước khi load (cần khi sang Tutorial solo / bootstrap lại Fusion).")]
+    [SerializeField] private bool shutdownNetworkRunnerBeforeLoad = true;
+
+    [Header("Scene transition")]
+    [SerializeField] private string loadingMessage = "Đang vào khu vực Hướng Dẫn...";
+    [SerializeField] private bool interruptIfTransitioning = true;
+    [SerializeField] private bool waitForNetworkSpawn = true;
+
+    [Header("Legacy (không dùng trong code — giữ field để prefab cũ không mất serial)")]
     public bool useFade = true;
 
-    // Gọi từ LeonaDialogue.cs sau khi AcceptQuest thành công
+    /// <summary>Gọi từ <see cref="LeonaDialogue"/> hoặc UnityEvent.</summary>
     public void TeleportToScene()
     {
         StartCoroutine(DoTeleport());
@@ -26,16 +35,34 @@ public class QuestSceneTeleporter : MonoBehaviour
 
     IEnumerator DoTeleport()
     {
-        // Lưu game trước khi chuyển cảnh (an toàn)
         try { GameController.PlayerSave(); }
         catch (System.Exception e) { Debug.LogWarning($"[QuestSceneTeleporter] PlayerSave failed: {e.Message}"); }
 
         yield return new WaitForSeconds(delayBeforeLoad);
 
-        Debug.Log($"[QuestSceneTeleporter] Loading scene: {targetScene}");
-        if (SceneTransitionManager.Instance != null)
-            SceneTransitionManager.Instance.GoToScene(targetScene, "Đang chuyển cảnh...");
-        else
-            SceneManager.LoadScene(targetScene);
+        if (shutdownNetworkRunnerBeforeLoad)
+        {
+            var runner = FindFirstObjectByType<NetworkRunner>();
+            if (runner != null && runner.IsRunning)
+            {
+                runner.Shutdown(false, ShutdownReason.Ok);
+            }
+        }
+
+        var stm = SceneTransitionManager.Instance != null
+            ? SceneTransitionManager.Instance
+            : SceneTransitionManager.EnsureInstance();
+
+        stm.GoToScene(
+            targetScene,
+            loadingMessage,
+            interruptIfTransitioning,
+            waitForNetworkSpawn);
+    }
+
+    /// <summary>Dự phòng: load thuần Unity, không shutdown / không loading UI.</summary>
+    public void LoadSceneSimple()
+    {
+        SceneManager.LoadScene(targetScene);
     }
 }

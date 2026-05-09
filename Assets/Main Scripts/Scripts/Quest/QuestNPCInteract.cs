@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Events;
 
 /// <summary>
 /// Đặt script này lên NPC Leona (hoặc bất kỳ NPC nào phát quest).
@@ -18,6 +19,10 @@ public class QuestNPCInteract : MonoBehaviour
     [Tooltip("Gắn GameObjects muốn bật/tắt sau khi quest nhận (VD: ẩn dialog, bật marker cổng)")]
     public GameObject[] activateOnAccept;
     public GameObject[] deactivateOnAccept;
+
+    [Header("UnityEvent (tuỳ chọn)")]
+    [Tooltip("Gọi sau khi AcceptQuest hoặc AdvanceStep thành công. VD: QuestSceneTeleporter.TeleportToScene (Leona đã gọi qua LeonaDialogue).")]
+    public UnityEvent onQuestProgressSucceeded;
 
     // ─── Public method – gọi từ button UI dialog hoặc từ event ───────────
 
@@ -58,7 +63,11 @@ public class QuestNPCInteract : MonoBehaviour
             }
         }
 
-        if (success) ApplyCallbacks();
+        if (success)
+        {
+            ApplyCallbacks();
+            onQuestProgressSucceeded?.Invoke();
+        }
     }
 
     // ─── Private ─────────────────────────────────────────────────────────

@@ -2,7 +2,6 @@ using UnityEngine;
 
 public class BaseMoveState : State
 {
-    private const bool TOGGLE_DEBUG = true;
     float gravityValue;
     bool jump;
     bool crouch;
@@ -121,24 +120,12 @@ public class BaseMoveState : State
         }
         if (ToggleWeaponTriggered)
         {
-            if (TOGGLE_DEBUG)
-            {
-                bool allows = !TutorialInputGate.IsActive || TutorialInputGate.Allows(TutorialInputMask.ToggleWeapon);
-                bool combatMove = character.animator != null && character.animator.GetBool("combatMove");
-                Debug.Log($"[ToggleWeapon][HandleInput] frame={Time.frameCount} sim={character.Runner.SimulationTime:F3} state={stateMachine.currentState?.GetType().Name} allows={allows} isWeaponDrawn={character.isWeaponDrawn} combatMove={combatMove}");
-            }
-            
             // Buffer the press; actual draw/sheath decision happens in LogicUpdate when cooldown is ready.
             toggleBufferRemaining = TOGGLE_BUFFER_DURATION;
             _toggleBufferHasExplicitAction = false;
         }
 
         ApplyTutorialInputGate();
-
-        if (TOGGLE_DEBUG && ToggleWeaponTriggered)
-        {
-            Debug.Log($"[ToggleWeapon][PostGate] frame={Time.frameCount} sim={character.Runner.SimulationTime:F3} buffer={toggleBufferRemaining:F2}s gateActive={TutorialInputGate.IsActive} mask={TutorialInputGate.EffectiveMask}");
-        }
     }
 
     void ApplyTutorialInputGate()
@@ -265,15 +252,6 @@ public class BaseMoveState : State
             {
                 AnimatorStateInfo stateInfo = character.animator.GetCurrentAnimatorStateInfo(upperLayer);
 
-                if (TOGGLE_DEBUG)
-                {
-                    Debug.Log(
-                        $"[ToggleWeapon][Sync] frame={Time.frameCount} sim={character.Runner.SimulationTime:F3} " +
-                        $"queued={character.queuedWeaponAction} upperLayer={upperLayer} shortHash={stateInfo.shortNameHash} " +
-                        $"norm={stateInfo.normalizedTime:F3} isDefault={stateInfo.IsName("Default State")} isNone={stateInfo.IsName("None")}"
-                    );
-                }
-
                 if (stateInfo.IsName("Default State") || stateInfo.IsName("None"))
                 {
                     if (character.TryConsumeQueuedWeaponAction(out var action))
@@ -282,23 +260,8 @@ public class BaseMoveState : State
                         toggleBufferRemaining = TOGGLE_BUFFER_DURATION;
                         _toggleBufferHasExplicitAction = true;
                         _toggleBufferDraw = (action == Character.QueuedWeaponAction.Draw);
-
-                        if (TOGGLE_DEBUG)
-                        {
-                            Debug.Log(
-                                $"[ToggleWeapon][Sync.Consume->Buffer] frame={Time.frameCount} sim={character.Runner.SimulationTime:F3} " +
-                                $"action={action} buffer={toggleBufferRemaining:F2}s"
-                            );
-                        }
                     }
                 }
-            }
-            else if (TOGGLE_DEBUG)
-            {
-                Debug.Log(
-                    $"[ToggleWeapon][Sync] frame={Time.frameCount} sim={character.Runner.SimulationTime:F3} " +
-                    $"queued={character.queuedWeaponAction} upperLayerMissing=1 (name=UpperBody_Hit)"
-                );
             }
         }
         // ====================================================================
@@ -326,13 +289,11 @@ public class BaseMoveState : State
 
                 if (doDraw)
                 {
-                    if (TOGGLE_DEBUG) Debug.Log($"[ToggleWeapon][ChangeState] -> DrawWeaponState frame={Time.frameCount} sim={character.Runner.SimulationTime:F3}");
                     stateMachine.ChangeState(character.drawingWeapon);
                     return;
                 }
                 else
                 {
-                    if (TOGGLE_DEBUG) Debug.Log($"[ToggleWeapon][ChangeState] -> SheathWeaponState frame={Time.frameCount} sim={character.Runner.SimulationTime:F3}");
                     stateMachine.ChangeState(character.sheathingWeapon);
                     return;
                 }
