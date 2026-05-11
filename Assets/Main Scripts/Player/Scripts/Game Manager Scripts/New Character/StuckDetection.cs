@@ -150,7 +150,7 @@ public class StuckDetection : MonoBehaviour
     private void TriggerAutoDash(Vector3 direction)
     {
         // Set player velocity for dash
-        character.playerVelocity = direction * dashForce;
+        character.PlayerVelocity = direction * dashForce;
 
         // Temporarily disable gravity during dash
         float originalGravity = character.gravityValue;
@@ -168,7 +168,7 @@ public class StuckDetection : MonoBehaviour
 
     private void ResetAfterDash()
     {
-        character.playerVelocity = Vector3.zero;
+        character.PlayerVelocity = Vector3.zero;
         character.gravityValue = -9.81f * character.gravityMultiplier;
 
         // Return to appropriate state

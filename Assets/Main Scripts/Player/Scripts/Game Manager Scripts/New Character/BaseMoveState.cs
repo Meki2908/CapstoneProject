@@ -12,7 +12,6 @@ public class BaseMoveState : State
     float playerSpeed;
     
     // ToggleWeapon buffering (helps Fusion tick vs Update mismatch + avoids cooldown eating presses)
-    protected float toggleBufferRemaining = 0f;
     protected const float TOGGLE_BUFFER_DURATION = 0.3f; // Lưu phím trong 0.3 giây
     private bool _toggleBufferHasExplicitAction = false;
     private bool _toggleBufferDraw = false;
@@ -20,13 +19,10 @@ public class BaseMoveState : State
     Vector3 cVelocity;
 
     private SkillLock skillLock;
-    private float currentSpeed;
-    private float fallTimer = 0f;
     private const float FallTimeout = 0.15f;
 
     // Centralized toggle cooldown (prevents race between derived states)
     protected float toggleCooldown = 0.5f;
-    protected float lastToggleTime = 0f;
 
     public BaseMoveState(Character _character, StateMachine _stateMachine) : base(_character, _stateMachine)
     {
@@ -41,14 +37,14 @@ public class BaseMoveState : State
 
         jump = false;
         // Reset toggle buffer when entering locomotion.
-        toggleBufferRemaining = 0f;
+        character.NetToggleBuffer = 0f;
         _toggleBufferHasExplicitAction = false;
         _toggleBufferDraw = false;
 
         // Queued Tab during GetHit is now consumed/handled by dedicated Draw/Sheath states.
         
         // 2. CH? L?Y "�? L?N" T?C �? HI?N T?I �? KH�NG B? VANG SAU KHI DASH
-        currentSpeed = new Vector3(character.CalculatedVelocity.x, 0, character.CalculatedVelocity.z).magnitude;
+        character.NetLocomotionSpeed = new Vector3(character.CalculatedVelocity.x, 0, character.CalculatedVelocity.z).magnitude;
         crouch = false;
         sprint = false;
         dash = false; // Initialize dash to false
@@ -121,7 +117,7 @@ public class BaseMoveState : State
         if (ToggleWeaponTriggered)
         {
             // Buffer the press; actual draw/sheath decision happens in LogicUpdate when cooldown is ready.
-            toggleBufferRemaining = TOGGLE_BUFFER_DURATION;
+            character.NetToggleBuffer = TOGGLE_BUFFER_DURATION;
             _toggleBufferHasExplicitAction = false;
         }
 
@@ -143,7 +139,7 @@ public class BaseMoveState : State
         if ((m & TutorialInputMask.Dash) == 0) dash = false;
         if ((m & TutorialInputMask.ToggleWeapon) == 0)
         {
-            toggleBufferRemaining = 0f;
+            character.NetToggleBuffer = 0f;
             _toggleBufferHasExplicitAction = false;
         }
     }
@@ -164,42 +160,31 @@ public class BaseMoveState : State
             return;
         }
 
-        // Apply movement speed multiplier from equipped gems
-        float speedMultiplier = 1f;
-        var wc = character.GetComponent<WeaponController>();
-        if (wc != null && wc.GetCurrentWeapon() != null && WeaponGemManager.Instance != null)
-        {
-            speedMultiplier = WeaponGemManager.Instance.GetMovementSpeedMultiplier(wc.GetCurrentWeapon().weaponType);
-        }
+        // Speed: gem + equipment already baked into character.playerSpeed via UpdateSpeedWithGems() — do not multiply WeaponGemManager again (would square gem bonus).
 
-        Vector3 camForward = character.cameraTransform.forward;
-        camForward.y = 0f;
-        camForward.Normalize();
-
-        Vector3 camRight = character.cameraTransform.right;
-        camRight.y = 0f;
-        camRight.Normalize();
+        GetPlanarCameraBasis(out Vector3 camForward, out Vector3 camRight);
 
         // 3. HU?NG T?I: C?p nh?t t?c th� 100% theo ph�m b?m (KH�NG LERP HU?NG)
         Vector3 targetDirection = (camForward * input.y + camRight * input.x).normalized;
 
         // 4. T?C �?: L�m mu?t t?c d?.
-        float targetSpeed = input.sqrMagnitude > 0.01f ? (character.playerSpeed * speedMultiplier) : 0f;
-        currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, 15f * character.Runner.DeltaTime);
+        float targetSpeed = input.sqrMagnitude > 0.01f ? character.playerSpeed : 0f;
+        character.NetLocomotionSpeed = Mathf.Lerp(character.NetLocomotionSpeed, targetSpeed, 15f * character.Runner.DeltaTime);
 
         // 5. V?N T?C = HU?NG T?C TH?I * T?C �? MU?T
-        velocity = targetDirection * currentSpeed;
+        velocity = targetDirection * character.NetLocomotionSpeed;
 
         character.CalculatedVelocity.x = velocity.x;
         character.CalculatedVelocity.z = velocity.z;
 
-        // Xoay model
+        // Xoay model — RotateTowards (deg/step) is more stable under Fusion resimulation than Slerp with a 0–1 blend factor.
         if (velocity.sqrMagnitude > 0.1f)
         {
             Quaternion targetRotation = Quaternion.LookRotation(new Vector3(velocity.x, 0, velocity.z));
             targetRotation.x = 0;
             targetRotation.z = 0;
-            character.transform.rotation = Quaternion.Slerp(character.transform.rotation, targetRotation, character.rotationSpeed * character.Runner.DeltaTime);
+            float maxDeg = character.LocomotionBodyTurnDegreesPerSecond * character.Runner.DeltaTime;
+            character.transform.rotation = Quaternion.RotateTowards(character.transform.rotation, targetRotation, maxDeg);
         }
     }
 
@@ -208,19 +193,19 @@ public class BaseMoveState : State
         base.LogicUpdate();
 
         // 3. Kh?c ph?c l?i Flicker ? BaseMoveState b?ng Fall Timeout (Coyote Time)
-        if (!grounded && character.playerVelocity.y < 0f)
+        if (!grounded && character.PlayerVelocity.y < 0f)
         {
-            fallTimer += character.Runner.DeltaTime;
-            if (fallTimer >= FallTimeout)
+            character.NetFallTimer += character.Runner.DeltaTime;
+            if (character.NetFallTimer >= FallTimeout)
             {
-                fallTimer = 0f;
+                character.NetFallTimer = 0f;
                 stateMachine.ChangeState(character.falling);
                 return;
             }
         }
         else
         {
-            fallTimer = 0f;
+            character.NetFallTimer = 0f;
         }
         character.SetAnimatorLocomotionSpeed(input.magnitude * 0.5f);
 
@@ -257,7 +242,7 @@ public class BaseMoveState : State
                     if (character.TryConsumeQueuedWeaponAction(out var action))
                     {
                         // Buffer this explicit requested action so it survives cooldown.
-                        toggleBufferRemaining = TOGGLE_BUFFER_DURATION;
+                        character.NetToggleBuffer = TOGGLE_BUFFER_DURATION;
                         _toggleBufferHasExplicitAction = true;
                         _toggleBufferDraw = (action == Character.QueuedWeaponAction.Draw);
                     }
@@ -267,13 +252,13 @@ public class BaseMoveState : State
         // ====================================================================
 
         // === TAB BUFFERING: giữ lệnh đến khi cooldown sẵn sàng (không clear khi chưa hết cooldown) ===
-        toggleBufferRemaining = Mathf.Max(0f, toggleBufferRemaining - character.Runner.DeltaTime);
-        if (toggleBufferRemaining > 0f)
+        character.NetToggleBuffer = Mathf.Max(0f, character.NetToggleBuffer - character.Runner.DeltaTime);
+        if (character.NetToggleBuffer > 0f)
         {
-            if (character.Runner.SimulationTime - lastToggleTime >= toggleCooldown)
+            if (character.Runner.SimulationTime - character.NetLastToggleSimTime >= toggleCooldown)
             {
-                lastToggleTime = character.Runner.SimulationTime;
-                toggleBufferRemaining = 0f;
+                character.NetLastToggleSimTime = character.Runner.SimulationTime;
+                character.NetToggleBuffer = 0f;
 
                 bool doDraw;
                 if (_toggleBufferHasExplicitAction)
@@ -305,7 +290,7 @@ public class BaseMoveState : State
     public override void Exit()
     {
         base.Exit();
-        character.playerVelocity = new Vector3(input.x, 0, input.y);
+        character.PlayerVelocity = new Vector3(input.x, 0, input.y);
 
         if (velocity.sqrMagnitude > 0.1f)
         {

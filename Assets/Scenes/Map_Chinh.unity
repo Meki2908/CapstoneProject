@@ -1891,6 +1891,20 @@ MonoBehaviour:
   fallbackSpawnPos: {x: 0, y: 5, z: 0}
   defaultSpawnPoint: {fileID: 1313963892}
   useReturnPoint: 1
+  hostJoinNearRadius: 4
+  hostJoinMaxAttempts: 24
+  hostJoinMinHorizontalSeparation: 0.35
+  spawnCapsuleHeight: 1.75
+  spawnCapsuleRadius: 0.32
+  spawnObstacleLayers:
+    serializedVersion: 2
+    m_Bits: 262152
+  spawnGroundLayers:
+    serializedVersion: 2
+    m_Bits: 4104
+  groundRayStartHeight: 18
+  groundRayMaxDistance: 48
+  spawnFeetYOffsetFromGround: 0.05
   verboseLogs: 1
   minLoadingSeconds: 0.75
   cameraWaitTimeoutSeconds: 0.5

@@ -57,7 +57,7 @@ public class JumpingState : State
         base.LogicUpdate();
 
         // N?u v?n t?c tr?c Y b?t d?u ?m (nghia l? dang roi xu?ng)
-        if (character.playerVelocity.y <= 0f)
+        if (character.PlayerVelocity.y <= 0f)
         {
             // Nhu?ng s?n kh?u l?i cho FallingState
             stateMachine.ChangeState(character.falling);
@@ -70,7 +70,7 @@ public class JumpingState : State
         if (!grounded)
         {
 
-            velocity = character.playerVelocity;
+            velocity = character.PlayerVelocity;
             airVelocity = new Vector3(input.x, 0, input.y);
 
             GetPlanarCameraBasis(out Vector3 camForward, out Vector3 camRight);
@@ -95,7 +95,9 @@ public class JumpingState : State
 
     void Jump()
     {
-        character.playerVelocity.y = Mathf.Sqrt(jumpHeight * -2.0f * gravityValue);
+        var pvJ = character.PlayerVelocity;
+        pvJ.y = Mathf.Sqrt(jumpHeight * -2.0f * gravityValue);
+        character.PlayerVelocity = pvJ;
     }
 
     public override void Exit()

@@ -24,7 +24,9 @@ public class SprintJumpState : State
 
         // Initialize jump impulse (use dedicated sprint-jump height, fallback to normal jump height)
         float sprintJumpHeight = character.sprintJumpHeight > 0f ? character.sprintJumpHeight : character.jumpHeight;
-        character.playerVelocity.y = Mathf.Sqrt(sprintJumpHeight * -2.0f * character.gravityValue);
+        var pvS = character.PlayerVelocity;
+        pvS.y = Mathf.Sqrt(sprintJumpHeight * -2.0f * character.gravityValue);
+        character.PlayerVelocity = pvS;
 
         // Initialize horizontal movement based on current move input, fallback to facing direction
         Vector2 moveInput = MoveInput;
@@ -46,7 +48,7 @@ public class SprintJumpState : State
         
         // Khi bắt đầu rơi xuống (vận tốc Y <= 0), nhường xử lý tiếp đất cho FallingState
         // (đảm bảo chỉ Landing khi đủ cao hoặc requireLanding = true).
-        if (character.playerVelocity.y <= 0f)
+        if (character.PlayerVelocity.y <= 0f)
             stateMachine.ChangeState(character.falling);
     }
 

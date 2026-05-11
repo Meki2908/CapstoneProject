@@ -1,6 +1,7 @@
 using UnityEngine;
 using Fusion;
 using Unity.Cinemachine;
+using UnityEngine.InputSystem;
 
 public class PlayerNetworkSetup : NetworkBehaviour
 {
@@ -13,21 +14,75 @@ public class PlayerNetworkSetup : NetworkBehaviour
     [Tooltip("Điểm Camera sẽ Follow và LookAt (Ví dụ: Transform của Head hoặc Spine). Nếu để trống sẽ lấy gốc của Player.")]
     [SerializeField] private Transform cameraLookPoint;
 
+    [Header("Nameplate (multiplayer)")]
+    [Tooltip("World-space name tag prefab (e.g. Player's name). Parent under socket on head so it follows hit-react motion; script billboards to camera.")]
+    [SerializeField] private GameObject nameplatePrefab;
+    [Tooltip("Empty/socket on head. Falls back to Camera LookPoint when unset.")]
+    [SerializeField] private Transform nameplateMountPoint;
+
     private GameObject _spawnedCamera;
+    private GameObject _spawnedNameplate;
 
     public override void Spawned()
     {
         base.Spawned();
 
+        var cc = GetComponentInChildren<CharacterController>(true);
+        if (cc != null)
+            cc.enabled = HasStateAuthority || HasInputAuthority;
+
+        var pi = GetComponentInChildren<PlayerInput>(true);
+
         if (HasInputAuthority)
         {
             Debug.Log($"[PlayerNetworkSetup] Spawned local player. Will setup camera. scene={gameObject.scene.name} player={name}");
+
+            if (pi != null)
+            {
+                pi.enabled = true;
+                try
+                {
+                    if (pi.currentActionMap != null && pi.currentActionMap.name != "Player")
+                        pi.SwitchCurrentActionMap("Player");
+                }
+                catch { }
+            }
+
             SetupCamera();
         }
         else
         {
-            // Proxy: Không làm gì cả vì Camera đã bị xóa khỏi Prefab Player theo kiến trúc mới.
+            if (pi != null)
+                pi.enabled = false;
         }
+
+        TrySpawnNameplate();
+    }
+
+    void TrySpawnNameplate()
+    {
+        if (Runner == null || nameplatePrefab == null)
+            return;
+        if (Runner.GameMode == GameMode.Single)
+            return;
+
+        Transform mount = nameplateMountPoint != null ? nameplateMountPoint : cameraLookPoint;
+        if (mount == null)
+            mount = transform;
+
+        _spawnedNameplate = Instantiate(nameplatePrefab, mount);
+        _spawnedNameplate.transform.localPosition = Vector3.zero;
+        _spawnedNameplate.transform.localRotation = Quaternion.identity;
+
+        if (_spawnedNameplate.TryGetComponent(out PlayerNameplate plate))
+        {
+            var ch = GetComponent<Character>();
+            if (ch != null)
+                plate.Bind(ch);
+        }
+
+        if (HasInputAuthority)
+            _spawnedNameplate.SetActive(false);
     }
 
     public void SetupCamera()
@@ -91,6 +146,12 @@ public class PlayerNetworkSetup : NetworkBehaviour
 
     public override void Despawned(NetworkRunner runner, bool hasState)
     {
+        if (_spawnedNameplate != null)
+        {
+            Destroy(_spawnedNameplate);
+            _spawnedNameplate = null;
+        }
+
         // Khi người chơi thoát, xóa luôn camera của họ
         if (_spawnedCamera != null)
         {

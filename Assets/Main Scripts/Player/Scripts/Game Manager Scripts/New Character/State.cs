@@ -57,10 +57,44 @@ public class State
 
     /// <summary>
     /// Returns a stable planar camera basis for movement.
-    /// Keeps last valid basis when camera pitch is near vertical.
+    /// When Fusion is running, uses <see cref="Character.currentInput"/>.<c>cameraYaw</c> from the owning client so host resimulation matches client view.
+    /// Otherwise uses <see cref="Character.cameraTransform"/> (offline / before first input).
     /// </summary>
     protected void GetPlanarCameraBasis(out Vector3 camForward, out Vector3 camRight)
     {
+        if (character != null && character.Runner != null && character.Runner.IsRunning)
+        {
+            Quaternion yawOnly = Quaternion.Euler(0f, character.currentInput.cameraYaw, 0f);
+            camForward = yawOnly * Vector3.forward;
+            camRight = yawOnly * Vector3.right;
+            camForward.y = 0f;
+            camRight.y = 0f;
+            if (camForward.sqrMagnitude >= 0.0001f)
+            {
+                camForward.Normalize();
+                character.cachedPlanarForward = camForward;
+            }
+            else
+            {
+                camForward = character.cachedPlanarForward.sqrMagnitude >= 0.0001f ? character.cachedPlanarForward : Vector3.forward;
+                camForward.y = 0f;
+                camForward.Normalize();
+                character.cachedPlanarForward = camForward;
+            }
+
+            if (camRight.sqrMagnitude >= 0.0001f)
+                camRight.Normalize();
+            else
+            {
+                camRight = Vector3.Cross(Vector3.up, camForward);
+                if (camRight.sqrMagnitude < 0.0001f) camRight = Vector3.right;
+                camRight.Normalize();
+            }
+
+            character.cachedPlanarRight = camRight;
+            return;
+        }
+
         camForward = character.cameraTransform != null ? character.cameraTransform.forward : character.cachedPlanarForward;
         camForward.y = 0f;
 

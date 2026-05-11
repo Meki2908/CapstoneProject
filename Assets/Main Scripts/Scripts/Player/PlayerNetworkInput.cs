@@ -6,10 +6,12 @@ public class PlayerNetworkInput : NetworkBehaviour
 {
     public static PlayerNetworkInput LocalInstance;
     private PlayerInput playerInput;
+    Character _character;
 
     private void Awake()
     {
         playerInput = GetComponent<PlayerInput>();
+        _character = GetComponent<Character>();
     }
 
     public override void Spawned()
@@ -29,6 +31,14 @@ public class PlayerNetworkInput : NetworkBehaviour
         if (playerInput != null && playerInput.actions != null)
         {
             data.movementInput = playerInput.actions["Move"].ReadValue<Vector2>();
+
+            Transform camTf = null;
+            if (_character != null && _character.cameraTransform != null)
+                camTf = _character.cameraTransform;
+            else if (Camera.main != null)
+                camTf = Camera.main.transform;
+            if (camTf != null)
+                data.cameraYaw = camTf.eulerAngles.y;
 
             bool isJump = playerInput.actions["Jump"].triggered || playerInput.actions["Jump"].IsPressed();
             bool isDash = playerInput.actions["Dash"].triggered;

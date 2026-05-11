@@ -19,4 +19,6 @@ public struct NetworkInputData : INetworkInput
 {
     public Vector2 movementInput;
     public NetworkButtons buttons;
+    /// <summary>World-space camera yaw (degrees) from owning client — host/resimulation use this instead of <see cref="Character.cameraTransform"/>.</summary>
+    public float cameraYaw;
 }

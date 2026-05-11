@@ -7,10 +7,8 @@ public class SprintState : State
     bool grounded;
     bool sprint;
     bool dash;
-    float playerSpeed;
     bool sprintJump;
     Vector3 cVelocity;
-    private float fallTimer = 0f;
     private const float FallTimeout = 0.15f;
 
     public SprintState(Character _character, StateMachine _stateMachine) : base(_character, _stateMachine)
@@ -30,10 +28,9 @@ public class SprintState : State
         velocity = Vector3.zero;
         currentVelocity = Vector3.zero;
 
-        playerSpeed = character.sprintSpeed;
         grounded = character.controller.isGrounded;
         gravityValue = character.gravityValue;
-
+        character.NetFallTimer = 0f;
     }
 
     public override void HandleInput()
@@ -86,19 +83,19 @@ public class SprintState : State
     public override void LogicUpdate()
     {
         // Fall Logic Timeout
-        if (!grounded && character.playerVelocity.y < 0f)
+        if (!grounded && character.PlayerVelocity.y < 0f)
         {
-            fallTimer += character.Runner.DeltaTime;
-            if (fallTimer >= FallTimeout)
+            character.NetFallTimer += character.Runner.DeltaTime;
+            if (character.NetFallTimer >= FallTimeout)
             {
-                fallTimer = 0f;
+                character.NetFallTimer = 0f;
                 stateMachine.ChangeState(character.falling);
                 return;
             }
         }
         else
         {
-            fallTimer = 0f;
+            character.NetFallTimer = 0f;
         }
 
         if (sprintJump)
@@ -136,14 +133,8 @@ public class SprintState : State
         grounded = character.IsGroundedStable();
         currentVelocity = Vector3.SmoothDamp(currentVelocity, velocity, ref cVelocity, character.velocityDampTime);
 
-        // Apply movement speed multiplier from equipped gems
-        float speedMultiplier = 1f;
-        var wc = character.GetComponent<WeaponController>();
-        if (wc != null && wc.GetCurrentWeapon() != null && WeaponGemManager.Instance != null)
-        {
-            speedMultiplier = WeaponGemManager.Instance.GetMovementSpeedMultiplier(wc.GetCurrentWeapon().weaponType);
-        }
-        character.CalculatedVelocity = currentVelocity * (playerSpeed * speedMultiplier);
+        // Sprint speed already includes gem/equipment via UpdateSpeedWithGems on character.sprintSpeed (do not multiply gems again).
+        character.CalculatedVelocity = currentVelocity * character.sprintSpeed;
 
 
         if (velocity.sqrMagnitude > 0.1f)

@@ -1,9 +1,11 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using UnityEngine.InputSystem;
+using Fusion;
 
 namespace Artsystack.ArtsystackGui
 {
@@ -332,8 +334,17 @@ namespace Artsystack.ArtsystackGui
             isPaused = false;
             HideAllPanels();
 
+            try
+            {
+                CursorUIPriority.EndAllUiOverlays();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[PauseMenuManager] EndAllUiOverlays: {ex.Message}");
+            }
+
             // In dungeon: use DungeonWaveManager to return properly
-            // (cleans up reward panel, restores player UI, goes to Map_Chinh)
+            // (cleans up reward panel, restores player UI, goes to Map_Chinh; Fusion shutdown handled there)
             var dwm = FindFirstObjectByType<DungeonWaveManager>();
             if (dwm != null)
             {
@@ -342,11 +353,71 @@ namespace Artsystack.ArtsystackGui
                 return;
             }
 
-            // Not in dungeon: go to main menu normally
-            if (SceneTransitionManager.Instance != null)
-                SceneTransitionManager.Instance.GoToScene(mainMenuSceneName, "Returning to menu...");
-            else
-                SceneManager.LoadScene(mainMenuSceneName);
+            TryShutdownFusionBeforeMainMenu();
+
+            try
+            {
+                if (SceneTransitionManager.Instance != null)
+                    SceneTransitionManager.Instance.GoToScene(mainMenuSceneName, "Returning to menu...");
+                else
+                    SceneManager.LoadScene(mainMenuSceneName);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[PauseMenuManager] GoToScene failed for '{mainMenuSceneName}': {ex.Message}");
+                try
+                {
+                    SceneManager.LoadScene(mainMenuSceneName);
+                }
+                catch (Exception ex2)
+                {
+                    Debug.LogError($"[PauseMenuManager] Fallback LoadScene failed: {ex2.Message}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Leave Fusion session before loading UI_Game so host gets <see cref="INetworkRunnerCallbacks.OnPlayerLeft"/> and can despawn the avatar.
+        /// Safe: try/catch, singleton resolve, fallback <see cref="NetworkRunner"/> if manager reference is stale.
+        /// </summary>
+        static void TryShutdownFusionBeforeMainMenu()
+        {
+            try
+            {
+                if (FusionConnectionManager.TryResolveInstance())
+                {
+                    var cm = FusionConnectionManager.Instance;
+                    var runner = cm != null ? cm.Runner : null;
+                    if (runner != null && runner.IsRunning)
+                    {
+                        bool destroyChild = runner.gameObject != cm.gameObject;
+                        Debug.Log($"[PauseMenuManager] Shutdown Fusion before main menu (destroyChild={destroyChild}, mode={runner.GameMode}).");
+                        runner.Shutdown(destroyChild, ShutdownReason.Ok);
+                        return;
+                    }
+                }
+
+                var orphan = UnityEngine.Object.FindFirstObjectByType<NetworkRunner>();
+                if (orphan != null && orphan.IsRunning)
+                {
+                    Debug.LogWarning("[PauseMenuManager] FusionConnectionManager missing/stale — shutting down orphan NetworkRunner.");
+                    orphan.Shutdown(false, ShutdownReason.Ok);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[PauseMenuManager] Fusion Shutdown (primary) failed: {ex.Message}");
+                try
+                {
+                    var r = UnityEngine.Object.FindFirstObjectByType<NetworkRunner>();
+                    if (r != null && r.IsRunning)
+                        r.Shutdown(false, ShutdownReason.Ok);
+                }
+                catch (Exception ex2)
+                {
+                    Debug.LogWarning($"[PauseMenuManager] Fusion Shutdown (fallback) failed: {ex2.Message}");
+                }
+            }
         }
 
         private void HideAllPanels()

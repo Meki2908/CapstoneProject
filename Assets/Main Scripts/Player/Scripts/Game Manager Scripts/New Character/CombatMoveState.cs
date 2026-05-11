@@ -6,7 +6,6 @@ public class CombatMoveState : BaseMoveState
 
     // NEW: tránh CombatMoveState can thiệp trong lúc đang dùng skill
     private SkillLock skillLock;
-    private float currentSpeed;
 
     private SwordSkills swordSkills;
     private AxeSkill axeSkill;
@@ -108,39 +107,6 @@ public class CombatMoveState : BaseMoveState
         }
     }
 
-    public override void PhysicsUpdate()
-    {
-        base.PhysicsUpdate();
-
-        Vector3 camForward = character.cameraTransform.forward;
-        camForward.y = 0f;
-        camForward.Normalize();
-
-        Vector3 camRight = character.cameraTransform.right;
-        camRight.y = 0f;
-        camRight.Normalize();
-
-        // 3. HU?NG T?I: C?p nh?t t?c th� 100% theo ph�m b?m (KH�NG LERP HU?NG)
-        Vector3 targetDirection = (camForward * input.y + camRight * input.x).normalized;
-
-        // 4. T?C �?: L�m mu?t t?c d?.
-        float targetSpeed = input.sqrMagnitude > 0.01f ? character.playerSpeed : 0f;
-        currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, 15f * character.Runner.DeltaTime);
-
-        // 5. V?N T?C = HU?NG T?C TH?I * T?C �? MU?T
-        velocity = targetDirection * currentSpeed;
-
-        character.CalculatedVelocity.x = velocity.x;
-        character.CalculatedVelocity.z = velocity.z;
-
-        // Xoay model
-        if (velocity.sqrMagnitude > 0.1f)
-        {
-            Quaternion targetRotation = Quaternion.LookRotation(new Vector3(velocity.x, 0, velocity.z));
-            character.transform.rotation = Quaternion.Slerp(character.transform.rotation, targetRotation, character.rotationSpeed * character.Runner.DeltaTime);
-        }
-    }
-
     public override void Exit()
     {
         base.Exit();
@@ -148,10 +114,3 @@ public class CombatMoveState : BaseMoveState
         character.animator.ResetTrigger("attack"); // Đặt lại trigger để tránh dư thừa
     }
 }
-
-
-
-
-
-
-

@@ -128,16 +128,9 @@ public sealed class SheathWeaponState : State
         bool isSprinting = SprintPressed && input.sqrMagnitude > 0f;
         float baseTargetSpeed = isSprinting ? character.sprintSpeed : character.playerSpeed;
 
-        // 4. CỘNG DỒN CHỈ SỐ CỦA NGỌC (GEM) CHO CHUẨN XÁC NHƯ BASE MOVESTATE
-        float gemMultiplier = 1f;
-        var wc = character.GetComponent<WeaponController>();
-        if (wc != null && wc.GetCurrentWeapon() != null && WeaponGemManager.Instance != null)
-        {
-            gemMultiplier = WeaponGemManager.Instance.GetMovementSpeedMultiplier(wc.GetCurrentWeapon().weaponType);
-        }
+        // baseTargetSpeed uses character speeds already updated by UpdateSpeedWithGems (no second gem multiply).
 
-        // Tốc độ cuối cùng
-        float targetSpeed = input.sqrMagnitude > 0.01f ? (baseTargetSpeed * gemMultiplier) : 0f;
+        float targetSpeed = input.sqrMagnitude > 0.01f ? baseTargetSpeed : 0f;
 
         // Bơm vận tốc vào CharacterController
         character.CalculatedVelocity.x = targetDirection.x * targetSpeed;

@@ -151,7 +151,7 @@ public class MapChinhPlayerPositionPersistence : MonoBehaviour
 
         var ch = GetComponentInChildren<Character>(true);
         if (ch != null)
-            ch.playerVelocity = Vector3.zero;
+            ch.PlayerVelocity = Vector3.zero;
 
         // Reposition local player camera after teleport/loading.
         // Camera is spawned by PlayerNetworkSetup from PlayerCamera.prefab (not stored on EnemyDetection).

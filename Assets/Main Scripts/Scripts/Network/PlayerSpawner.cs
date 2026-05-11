@@ -28,6 +28,22 @@ public class PlayerSpawner : MonoBehaviour, INetworkRunnerCallbacks
     [Tooltip("If true, prefer PlayerWorldData.ReturnPosition when returning from dungeon.")]
     [SerializeField] private bool useReturnPoint = true;
 
+    [Header("Join near host (server only, remote clients)")]
+    [Tooltip("Random horizontal offset radius (m) around host when a client joins after return-point logic did not apply.")]
+    [SerializeField] private float hostJoinNearRadius = 4f;
+    [SerializeField, Min(4)] private int hostJoinMaxAttempts = 24;
+    [SerializeField, Min(0f)] private float hostJoinMinHorizontalSeparation = 0.35f;
+    [Tooltip("Capsule used for Physics.CheckCapsule (approximate player).")]
+    [SerializeField] private float spawnCapsuleHeight = 1.75f;
+    [SerializeField] private float spawnCapsuleRadius = 0.32f;
+    [Tooltip("Layers treated as blocking spawn (walls, props). If None (0), only host separation + ground ray are used.")]
+    [SerializeField] private LayerMask spawnObstacleLayers;
+    [Tooltip("Ground for downward ray. If None (0), uses default raycast layers.")]
+    [SerializeField] private LayerMask spawnGroundLayers;
+    [SerializeField] private float groundRayStartHeight = 18f;
+    [SerializeField] private float groundRayMaxDistance = 48f;
+    [SerializeField] private float spawnFeetYOffsetFromGround = 0.05f;
+
     [Header("Debug")]
     [SerializeField] private bool verboseLogs = true;
     
@@ -41,23 +57,36 @@ public class PlayerSpawner : MonoBehaviour, INetworkRunnerCallbacks
     [Tooltip("Nếu true: chỉ tắt loading sau khi thấy Player NetworkObject (Player_3.0(Clone)) xuất hiện trong scene.")]
     [SerializeField] private bool requireLocalPlayerObjectPresentToFinishLoading = true;
 
-    private Vector3 ResolveSpawnPosition(PlayerRef player)
+    /// <param name="usedReturnPoint">True when dungeon / return flow consumed <see cref="PlayerWorldData"/> return position.</param>
+    Vector3 ResolveSpawnPosition(NetworkRunner runner, PlayerRef player, out bool usedReturnPoint)
     {
+        usedReturnPoint = false;
+
         // 1) Return point (preferred)
         if (useReturnPoint && PlayerWorldData.HasReturnPoint)
         {
+            usedReturnPoint = true;
             Vector3 p = PlayerWorldData.ReturnPosition + Vector3.up * 1.5f;
             PlayerWorldData.HasReturnPoint = false;
             return p;
         }
 
-        // 2) Explicit default spawn point
+        // 2) Remote client joining: spawn near host with clearance + overlap retries (host position re-read every attempt)
+        if (runner != null && runner.IsServer && player != runner.LocalPlayer &&
+            TryGetNearHostSpawnPosition(runner, out Vector3 nearHost))
+        {
+            if (verboseLogs)
+                Debug.Log($"[PlayerSpawner] Spawn near host for player={player} at {nearHost}");
+            return nearHost;
+        }
+
+        // 3) Explicit default spawn point
         if (defaultSpawnPoint != null)
         {
             return defaultSpawnPoint.position + Vector3.up * 1.5f;
         }
 
-        // 3) Any object tagged SpawnPoint
+        // 4) Any object tagged SpawnPoint
         GameObject[] spawnPoints = GameObject.FindGameObjectsWithTag("SpawnPoint");
         if (spawnPoints != null && spawnPoints.Length > 0)
         {
@@ -66,6 +95,104 @@ public class PlayerSpawner : MonoBehaviour, INetworkRunnerCallbacks
         }
 
         return fallbackSpawnPos;
+    }
+
+    static int GroundMaskOrDefault(LayerMask mask) => mask.value != 0 ? mask.value : Physics.DefaultRaycastLayers;
+
+    bool TryGetNearHostSpawnPosition(NetworkRunner runner, out Vector3 spawnPosition)
+    {
+        spawnPosition = default;
+        if (runner == null || !runner.IsServer)
+            return false;
+
+        NetworkObject hostObj;
+        try
+        {
+            hostObj = runner.GetPlayerObject(runner.LocalPlayer);
+        }
+        catch
+        {
+            return false;
+        }
+
+        if (hostObj == null)
+            return false;
+
+        var hostCc = hostObj.GetComponentInChildren<CharacterController>(true);
+        int groundMask = GroundMaskOrDefault(spawnGroundLayers);
+        int attempts = Mathf.Max(4, hostJoinMaxAttempts);
+
+        for (int attempt = 0; attempt < attempts; attempt++)
+        {
+            Vector3 hostRoot = hostObj.transform.position;
+            Vector3 hostCenter = hostCc != null
+                ? hostObj.transform.TransformPoint(hostCc.center)
+                : hostRoot + Vector3.up * (spawnCapsuleHeight * 0.5f);
+            float hostRadius = hostCc != null ? hostCc.radius : 0.35f;
+
+            Vector2 disk = UnityEngine.Random.insideUnitCircle * hostJoinNearRadius;
+            Vector3 planar = new Vector3(hostRoot.x + disk.x, hostRoot.y, hostRoot.z + disk.y);
+
+            float feetY = hostRoot.y;
+            var ray = new Ray(planar + Vector3.up * groundRayStartHeight, Vector3.down);
+            if (Physics.Raycast(ray, out RaycastHit hit, groundRayMaxDistance, groundMask, QueryTriggerInteraction.Ignore))
+                feetY = hit.point.y + spawnFeetYOffsetFromGround;
+
+            Vector3 feet = new Vector3(planar.x, feetY, planar.z);
+
+            Vector3 pBottom = feet + Vector3.up * spawnCapsuleRadius;
+            Vector3 pTop = feet + Vector3.up * (spawnCapsuleHeight - spawnCapsuleRadius);
+
+            Vector2 delta = new Vector2(feet.x - hostCenter.x, feet.z - hostCenter.z);
+            float minHoriz = hostRadius + spawnCapsuleRadius + hostJoinMinHorizontalSeparation;
+            if (delta.magnitude < minHoriz)
+                continue;
+
+            if (spawnObstacleLayers.value != 0)
+            {
+                if (Physics.CheckCapsule(pBottom, pTop, spawnCapsuleRadius, spawnObstacleLayers, QueryTriggerInteraction.Ignore))
+                    continue;
+            }
+
+            Vector3 spawnMid = 0.5f * (pBottom + pTop);
+            if (!HasClearanceFromHostColliders(hostObj, spawnMid, spawnCapsuleRadius + 0.06f))
+                continue;
+
+            spawnPosition = feet;
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>True if <paramref name="worldPoint"/> is not inside / tight against any enabled non-trigger collider on the host hierarchy.</summary>
+    static bool HasClearanceFromHostColliders(NetworkObject hostObj, Vector3 worldPoint, float clearanceRadius)
+    {
+        float minDistSq = clearanceRadius * clearanceRadius;
+        foreach (var col in hostObj.GetComponentsInChildren<Collider>(true))
+        {
+            if (col == null || !col.enabled || col.isTrigger)
+                continue;
+            Vector3 cp = col.ClosestPoint(worldPoint);
+            if ((cp - worldPoint).sqrMagnitude < minDistSq)
+                return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>Re-evaluate near-host spawn with fresh host transform immediately before <see cref="NetworkRunner.Spawn"/> (host may have moved while client was loading).</summary>
+    void TryRefreshNearHostSpawnBeforeSpawn(NetworkRunner runner, PlayerRef player, bool usedReturnPoint, ref Vector3 spawnPos)
+    {
+        if (usedReturnPoint)
+            return;
+        if (runner == null || !runner.IsServer || player == runner.LocalPlayer)
+            return;
+        if (!TryGetNearHostSpawnPosition(runner, out var refreshed))
+            return;
+        if (verboseLogs)
+            Debug.Log($"[PlayerSpawner] Pre-spawn refresh near-host for player={player}: {spawnPos} -> {refreshed}");
+        spawnPos = refreshed;
     }
 
     public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
@@ -96,44 +223,41 @@ public class PlayerSpawner : MonoBehaviour, INetworkRunnerCallbacks
             return;
         }
 
-        Vector3 spawnPos = ResolveSpawnPosition(player);
+        Vector3 spawnPos = ResolveSpawnPosition(runner, player, out bool usedReturnPoint);
+        TryRefreshNearHostSpawnBeforeSpawn(runner, player, usedReturnPoint, ref spawnPos);
         var obj = runner.Spawn(playerPrefab, spawnPos, Quaternion.identity, player);
+        if (obj != null)
+        {
+            try
+            {
+                runner.SetPlayerObject(player, obj);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[PlayerSpawner] SetPlayerObject failed for player={player}: {ex.Message}");
+            }
+        }
+
         if (verboseLogs)
             Debug.Log($"[PlayerSpawner] Spawned={(obj != null)} pos={spawnPos} objName={(obj != null ? obj.name : "null")}");
 
-        // After spawning local player, force-enable movement input (common case: action map stuck in UI).
-        if (obj != null && player == runner.LocalPlayer)
-        {
-            if (verboseLogs) Debug.Log("[PlayerSpawner] Post-spawn input restore begin.");
-            var cc = obj.GetComponentInChildren<CharacterController>(true);
-            if (cc != null) cc.enabled = true;
-            if (verboseLogs) Debug.Log($"[PlayerSpawner] CharacterController enabled={(cc != null && cc.enabled)}");
+        PostSpawnOnServer(runner, obj, player);
+    }
 
-            var pi = obj.GetComponentInChildren<PlayerInput>(true);
-            if (pi != null)
-            {
-                pi.enabled = true;
-                if (verboseLogs)
-                    Debug.Log($"[PlayerSpawner] PlayerInput enabled={pi.enabled} currentMap={(pi.currentActionMap != null ? pi.currentActionMap.name : "null")}");
-                try
-                {
-                    if (pi.currentActionMap != null && pi.currentActionMap.name != "Player")
-                    {
-                        string before = pi.currentActionMap.name;
-                        pi.SwitchCurrentActionMap("Player");
-                        if (verboseLogs) Debug.Log($"[PlayerSpawner] Switched action map to 'Player' (was '{before}'). now={(pi.currentActionMap != null ? pi.currentActionMap.name : "null")}");
-                    }
-                }
-                catch { }
-            }
-            else if (verboseLogs)
-            {
-                Debug.LogWarning("[PlayerSpawner] No PlayerInput found on spawned player.");
-            }
+    /// <summary>
+    /// CharacterController and PlayerInput are configured in <see cref="PlayerNetworkSetup.Spawned"/>.
+    /// Here we only run loading UI completion for <see cref="NetworkRunner.LocalPlayer"/> on this machine.
+    /// </summary>
+    void PostSpawnOnServer(NetworkRunner runner, NetworkObject netObj, PlayerRef player)
+    {
+        if (netObj == null) return;
 
-            // Finish loading only when local player object exists + camera is ready (prevents "blank world" after fade out).
-            StartCoroutine(FinishLoadingWhenReady(runner));
-        }
+        if (player != runner.LocalPlayer)
+            return;
+
+        if (verboseLogs) Debug.Log("[PlayerSpawner] Post-spawn loading UI (local player on server).");
+
+        StartCoroutine(FinishLoadingWhenReady(runner));
     }
 
     private System.Collections.IEnumerator FinishLoadingWhenReady(NetworkRunner runner)
@@ -220,13 +344,60 @@ public class PlayerSpawner : MonoBehaviour, INetworkRunnerCallbacks
         }
 
         PlayerRef p = runner.LocalPlayer;
-        Vector3 spawnPos = ResolveSpawnPosition(p);
+        Vector3 spawnPos = ResolveSpawnPosition(runner, p, out bool usedReturnPoint);
+        TryRefreshNearHostSpawnBeforeSpawn(runner, p, usedReturnPoint, ref spawnPos);
         var obj = runner.Spawn(playerPrefab, spawnPos, Quaternion.identity, p);
+        if (obj != null)
+        {
+            try
+            {
+                runner.SetPlayerObject(p, obj);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[PlayerSpawner] EnsureLocalPlayerSpawned SetPlayerObject failed: {ex.Message}");
+            }
+        }
+
         Debug.Log($"[PlayerSpawner] EnsureLocalPlayerSpawned: Spawned={(obj != null)} pos={spawnPos} objName={(obj != null ? obj.name : "null")}");
+        PostSpawnOnServer(runner, obj, p);
     }
 
-    // Unused callbacks
-    public void OnPlayerLeft(NetworkRunner runner, PlayerRef player) { }
+    public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)
+    {
+        if (runner == null || !runner.IsServer)
+            return;
+
+        NetworkObject playerObj = null;
+        try
+        {
+            playerObj = runner.GetPlayerObject(player);
+        }
+        catch (Exception ex)
+        {
+            if (verboseLogs)
+                Debug.LogWarning($"[PlayerSpawner] OnPlayerLeft GetPlayerObject exception player={player}: {ex.Message}");
+        }
+
+        if (playerObj == null)
+        {
+            if (verboseLogs)
+                Debug.Log($"[PlayerSpawner] OnPlayerLeft player={player} — no PlayerObject (already despawned or never set).");
+            return;
+        }
+
+        if (verboseLogs)
+            Debug.Log($"[PlayerSpawner] OnPlayerLeft player={player} → Despawn {playerObj.name}");
+
+        try
+        {
+            runner.Despawn(playerObj);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"[PlayerSpawner] OnPlayerLeft Despawn failed player={player}: {ex.Message}");
+        }
+    }
     public void OnInput(NetworkRunner runner, NetworkInput input)
     {
         // Provide input from the local player object (Fusion authoritative input pipeline).

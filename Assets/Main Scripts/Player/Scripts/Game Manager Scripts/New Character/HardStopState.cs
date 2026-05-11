@@ -19,7 +19,7 @@ public class HardStopState : State
         stopTimer = stopDuration;
 
         // Initialize deceleration velocity with the player's current velocity
-        decelerationVelocity = character.playerVelocity;
+        decelerationVelocity = character.PlayerVelocity;
 
         // Store the character's current facing direction
         initialFacingDirection = character.transform.rotation;
@@ -65,7 +65,7 @@ public class HardStopState : State
         base.Exit();
 
         // Reset the player's velocity when exiting the state
-        character.playerVelocity = Vector3.zero;
+        character.PlayerVelocity = Vector3.zero;
 
         // Preserve the character's facing direction
         character.transform.rotation = initialFacingDirection;

@@ -1,8 +1,9 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Fusion;
 public enum CharacterStateSync { Standing, Jumping, Crouching, Sprinting, Dash, HardStop, DrawWeapon, SheathWeapon, CombatMove, Attack, GetHit, Die }
-public class Character : NetworkBehaviour
+public class Character : NetworkBehaviour, IBeforeAllTicks
 {
     [Header("Controls")]
     public float playerSpeed = 5.0f;
@@ -13,7 +14,34 @@ public class Character : NetworkBehaviour
     [SerializeField] public float sprintJumpHeight = 1.0f;
     public float gravityMultiplier = 2;
     public float rotationSpeed = 5f;
+    [Tooltip("Body turn cap (degrees/sec) in simulation; used with RotateTowards for rollback-stable facing.")]
+    [SerializeField] float locomotionBodyTurnDegreesPerSecond = 480f;
+    public float LocomotionBodyTurnDegreesPerSecond => locomotionBodyTurnDegreesPerSecond;
     public float crouchColliderHeight = 1.35f;
+
+    [Header("Fusion / CharacterController rollback safety")]
+    [Tooltip("Helps prevent CharacterController internal cache from drifting during Fusion rollback/resimulation. Runs at IBeforeAllTicks (like Fusion's NetworkCharacterController).")]
+    [SerializeField] bool resyncCharacterControllerCache = true;
+
+    [Tooltip("When enabled, only resync during resimulation ticks (lower overhead, minimal impact). Disable to resync every tick.")]
+    [SerializeField] bool resyncCcOnlyOnResimulation = true;
+
+    void IBeforeAllTicks.BeforeAllTicks(bool resimulation, int tickCount)
+    {
+        if (!resyncCharacterControllerCache)
+            return;
+        if (resyncCcOnlyOnResimulation && !resimulation)
+            return;
+        if (!HasInputAuthority && !HasStateAuthority)
+            return;
+        if (controller == null || !controller.enabled)
+            return;
+
+        // Disable CC before engine state is used for simulation (mirrors Fusion's NetworkCharacterController.CopyToEngine pattern).
+        controller.enabled = false;
+        transform.SetPositionAndRotation(transform.position, transform.rotation);
+        controller.enabled = true;
+    }
 
     // Base speeds (stored to apply gem multipliers)
     private float basePlayerSpeed;
@@ -111,8 +139,13 @@ public class Character : NetworkBehaviour
     public Transform cameraTransform;
     [HideInInspector]
     public Animator animator;
-    [HideInInspector]
-    public Vector3 playerVelocity;
+    /// <summary>Simulation velocity (incl. vertical); networked so Fusion rollback/resim does not stack gravity/move.</summary>
+    [Networked] public Vector3 PlayerVelocity { get; set; }
+
+    [Networked] public float NetLocomotionSpeed { get; set; }
+    [Networked] public float NetFallTimer { get; set; }
+    [Networked] public float NetToggleBuffer { get; set; }
+    [Networked] public float NetLastToggleSimTime { get; set; }
     [HideInInspector]
     public Vector3 cachedPlanarForward;
     [HideInInspector]
@@ -124,6 +157,16 @@ public class Character : NetworkBehaviour
     public static Character LocalCharacter;
     [Networked] public CharacterStateSync NetworkedState { get; set; }
     [Networked] public bool NetworkedIsLanding { get; set; }
+
+    /// <summary>Replicated display name (set from local PlayerPrefs via RPC on spawn).</summary>
+    [Networked] public NetworkString<_32> DisplayName { get; set; }
+
+    /// <summary>Packed <c>(a&lt;&lt;24)|(r&lt;&lt;16)|(g&lt;&lt;8)|b</c>; 0 = nameplate derives hue from name string.</summary>
+    [Networked] public int DisplayNameColorArgb { get; set; }
+
+    /// <summary>Fired from <see cref="Render"/> when <see cref="DisplayName"/> or <see cref="DisplayNameColorArgb"/> changes (after state sync).</summary>
+    public event Action DisplayInfoChanged;
+
     private ChangeDetector _changeDetector;
     public NetworkInputData previousInput;
     public NetworkInputData currentInput;
@@ -225,10 +268,15 @@ public class Character : NetworkBehaviour
                 var wc = GetComponent<WeaponController>();
                 AbilityIconManager.Instance.BindToLocalPlayer(wc);
             }
+
+            string saved = PlayerDisplayNamePrefs.GetSavedOrDefault();
+            RPC_SetDisplayName(saved);
         }
         _changeDetector = GetChangeDetector(ChangeDetector.Source.SimulationState);
         
         CalculatedVelocity = Vector3.zero; // Reset v?n t?c ngay khi sinh ra
+        if (Runner != null && Object != null && Object.HasStateAuthority)
+            NetLastToggleSimTime = -999f; // So first weapon-toggle buffer does not instantly satisfy cooldown vs SimTime 0.
     }
     
     private void Start()
@@ -358,7 +406,10 @@ public class Character : NetworkBehaviour
         else
         {
             previousInput = currentInput;
-            currentInput = default;
+            float yaw = currentInput.cameraYaw;
+            currentInput.movementInput = Vector2.zero;
+            currentInput.buttons = default;
+            currentInput.cameraYaw = yaw;
         }
         
         UpdateGroundedAndJumpBuffer();
@@ -379,20 +430,24 @@ public class Character : NetworkBehaviour
 
         if (controller != null && controller.enabled) 
         {
+            Vector3 pVel = PlayerVelocity;
+
             // 1. Giữ nhân vật bấm sn nếu đang đứng trên đất
-            if (IsGroundedStable() && playerVelocity.y < 0)
+            if (IsGroundedStable() && pVel.y < 0)
             {
-                playerVelocity.y = -8f; 
+                pVel.y = -8f; 
             }
 
             // 2. Tích luỹ trọng lực (Nếu không phải đang Dash)
             if (!IsDashing)
             {
-                playerVelocity.y += gravityValue * Runner.DeltaTime;
+                pVel.y += gravityValue * Runner.DeltaTime;
             }
 
+            PlayerVelocity = pVel;
+
             // 3. Gộp vận tốc dọc (Trọng lực/Nhảy) vào vận tốc ngang (FSM)
-            CalculatedVelocity.y = playerVelocity.y;
+            CalculatedVelocity.y = PlayerVelocity.y;
 
             // 4. Lệnh di chuyển vật lý cuối cùng
             controller.Move(CalculatedVelocity * Runner.DeltaTime);
@@ -401,13 +456,27 @@ public class Character : NetworkBehaviour
     
     public override void Render()
     {
+        if (_changeDetector == null)
+            return;
         foreach (var change in _changeDetector.DetectChanges(this))
         {
             if (change == nameof(NetworkedState))
             {
                 // Proxy animation handling can go here
             }
+            else if (change == nameof(DisplayName) || change == nameof(DisplayNameColorArgb))
+            {
+                DisplayInfoChanged?.Invoke();
+            }
         }
+    }
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    public void RPC_SetDisplayName(string name)
+    {
+        string s = PlayerDisplayNamePrefs.Sanitize(name ?? "");
+        DisplayName = s;
+        DisplayNameColorArgb = PlayerNameplate.StableColorArgbFromString(s);
     }
     
     private void Update()

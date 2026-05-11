@@ -50410,9 +50410,9 @@ GameObject:
   - component: {fileID: 6908186544467181420}
   - component: {fileID: 714067477172138784}
   - component: {fileID: 5527963292950010670}
-  - component: {fileID: 285859869794557710}
   - component: {fileID: 3426306601166599555}
   - component: {fileID: -266004017500921199}
+  - component: {fileID: -7065532370374614935}
   m_Layer: 8
   m_Name: Player_3.0
   m_TagString: Player
@@ -50435,6 +50435,7 @@ Transform:
   m_Children:
   - {fileID: 4443364280475888411}
   - {fileID: 8963960291085751026}
+  - {fileID: 1762124915282055751}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &354996429375430864
@@ -50488,8 +50489,8 @@ MonoBehaviour:
   - {fileID: 6908186544467181420}
   - {fileID: 714067477172138784}
   - {fileID: 5527963292950010670}
-  - {fileID: 285859869794557710}
   - {fileID: 3426306601166599555}
+  - {fileID: -7065532370374614935}
   - {fileID: 1834641077948493616}
   ForceRemoteRenderTimeframe: 0
 --- !u!114 &5495140691655858426
@@ -50506,6 +50507,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   playerCameraPrefab: {fileID: 1180953816825873209, guid: 50c9a2b5a9cead0479948894e1c4b6cd, type: 3}
   cameraLookPoint: {fileID: 7779397472661390455}
+  nameplatePrefab: {fileID: 2138083790308196271, guid: 0bb3d2f5376344045a5d274d4b6e06f2, type: 3}
+  nameplateMountPoint: {fileID: 1762124915282055751}
 --- !u!143 &3909490242845665003
 CharacterController:
   m_ObjectHideFlags: 0
@@ -50547,12 +50550,15 @@ MonoBehaviour:
   crouchSpeed: 2
   sprintSpeed: 10
   dashSpeed: 15
-  jumpHeight: 2.5
-  sprintJumpHeight: 1.8
+  jumpHeight: 2.8
+  sprintJumpHeight: 2
   gravityMultiplier: 2
   rotationSpeed: 10
+  locomotionBodyTurnDegreesPerSecond: 480
   crouchColliderHeight: 1.35
-  dashDuration: 0.75
+  resyncCharacterControllerCache: 1
+  resyncCcOnlyOnResimulation: 1
+  dashDuration: 0.65
   maxConsecutiveDashes: 2
   dashCooldown: 1
   dashChainCooldown: 2.5
@@ -50600,12 +50606,21 @@ MonoBehaviour:
   playerInput: {fileID: 0}
   cameraTransform: {fileID: 0}
   animator: {fileID: 0}
-  playerVelocity: {x: 0, y: 0, z: 0}
+  _PlayerVelocity: {x: 0, y: 0, z: 0}
+  _NetLocomotionSpeed: 0
+  _NetFallTimer: 0
+  _NetToggleBuffer: 0
+  _NetLastToggleSimTime: 0
   cachedPlanarForward: {x: 0, y: 0, z: 0}
   cachedPlanarRight: {x: 0, y: 0, z: 0}
   skillLock: {fileID: 0}
   _NetworkedState: 0
   _NetworkedIsLanding: 0
+  _DisplayName:
+    _length: 0
+    _data:
+      Data: 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+  _DisplayNameColorArgb: 0
   CalculatedVelocity: {x: 0, y: 0, z: 0}
   lastAttackInputTime: 0
   dashLockUntil: 0
@@ -50650,23 +50665,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5dcbfff4dd2324d49846b47a9e9ce8e9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &285859869794557710
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3698074488449676619}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _stateAuthorityChangeErrorCorrectionDelta: 0
-  SyncScale: 0
-  SyncParent: 0
-  _autoAOIOverride: 1
-  DisableSharedModeInterpolation: 0
 --- !u!114 &3426306601166599555
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -50682,8 +50680,8 @@ MonoBehaviour:
   Animator: {fileID: 7101454677325079267}
   ApplyTiming: 2
   SyncSettings: -1
-  StateHashes: 000000006a2569b6dad4d6e8ac5102fbd4ef0a9a0dda2c773e6909408b1f5424a8af5782d245800df1f583ab22cecd5c037eea9831860c2e2c81cb692ecfdc820f7ffb46d2a8c6455f9ab96b9065561da3d6732a12cb03e7317b00415b1c94f8461b53bff1afa2dfc5ad6cb489f787209b370f4d22ff2dfd2fbc5c9398ae246495ed550a0e9e231303dd527dc1edf7d4bc806ddcd930e5c3cf309e99fa2f4b3eec2f30648bf5b048c6a5e0bfb71eac5e148265b80d286c401614ba262a909f72e141c6f4bca098057771c18306f1919ccd20c81a8e4f377e4a62ae707fcbdac7bbe643c958fbb5fb9cd62cf5e5e55e82ed13fbc0f21c4cf7faeae9b572faebd6da1964c890c196ebf6786a2660486d5119ce499b37e4f40de84aa422c66019b4cf7acb1ee1507688287f612962dfe39d105d7ec2256165f61f736cc976ba89bc4d221bfe911f70f193de93fa512bf97590195e8c52ec3403c7416d34f27d7600a5b9c702674cad8de24f8c1d8b866968df1ffae2
-  TriggerHashes: 00000000874303a7c6fab1d2940292181606b3a7d8d500a878373eeff25465e600dd6e9be5389559dc6a000f5e26def13b2dc047e4ae2fb4d7ff7839
+  StateHashes: 000000006a2569b6dad4d6e8ac5102fbd4ef0a9a0dda2c773e6909408b1f5424a8af5782d245800df1f583ab22cecd5c037eea988e0ba89e218b8f0d2ecfdc820f7ffb46d2a8c6455f9ab96b9065561da3d6732a12cb03e7317b00415b1c94f8461b53bf4278b79961c8b43f22ff2dfd2fbc5c9398ae246495ed550a0e9e231303dd527dc1edf7d4bc806ddcd930e5c3cf309e99fa2f4b3eec2f30648bf5b048c6a5e0bff1afa2dfb71eac5e148265b80d286c401614ba262a909f72e141c6f4bca098057771c18306f1919ccd20c81a8e4f377e4a62ae707fcbdac7bbe643c958fbb5fb9cd62cf5e5e55e82ed13fbc0f21c4cf7faeae9b572faebd6da1964c890c196ebf6786a2660486d5119ce499b37e4f40de84aa422c66019b4cf7acb1ee1507688287f612962dfe39d105d7ec2dc957f331f736cc9cefd461c4d221bfe29418bee93de93fab1eb5cb090195e8cb22c91c6c7416d340b896cc5a5b9c702878c0848e24f8c1d33c1a6c827ab29cbc5ad6cb489f787209b370f4d305212d906270a8a
+  TriggerHashes: 00000000874303a7c6fab1d2940292181606b3a7d8d500a878373eeff25465e600dd6e9be5389559dc6a000f5e26def13b2dc047e4ae2fb4d7ff7839d59dfd89
   TotalWords: 25
 --- !u!208 &-266004017500921199
 NavMeshObstacle:
@@ -50701,6 +50699,25 @@ NavMeshObstacle:
   m_CarveOnlyStationary: 1
   m_Center: {x: 0, y: 1, z: 0}
   m_TimeToStationary: 0.5
+--- !u!114 &-7065532370374614935
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3698074488449676619}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 378411a89480da345945c2f888327a2d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  gravity: -20
+  jumpImpulse: 8
+  acceleration: 10
+  braking: 10
+  maxSpeed: 2
+  rotationSpeed: 15
 --- !u!1 &3762816990167538178
 GameObject:
   m_ObjectHideFlags: 0
@@ -115021,3 +115038,34 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!1 &9132030327276129247
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1762124915282055751}
+  m_Layer: 8
+  m_Name: nameplateMountPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1762124915282055751
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9132030327276129247}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 2.3, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1245353089643615957}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}

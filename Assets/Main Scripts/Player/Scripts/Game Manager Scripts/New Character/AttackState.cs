@@ -107,7 +107,7 @@ public class AttackState : State
         if (character.animator != null)
             character.animator.SetBool("combatMove", true);
         
-        character.playerVelocity = Vector3.zero;
+        character.PlayerVelocity = Vector3.zero;
         character.CalculatedVelocity = Vector3.zero; 
         character.animator.SetFloat("speed", 0f);
         mageVfxSpawnedThisHit = false;
@@ -490,11 +490,13 @@ public class AttackState : State
     public override void PhysicsUpdate()
     {
         base.PhysicsUpdate();
+        var pv = character.PlayerVelocity;
         if (!character.controller.isGrounded)
-            character.playerVelocity.y += character.gravityValue * Time.fixedDeltaTime;
+            pv.y += character.gravityValue * character.Runner.DeltaTime;
         else
-            character.playerVelocity.y = 0f;
-        character.controller.Move(character.playerVelocity * Time.fixedDeltaTime);
+            pv.y = 0f;
+        character.PlayerVelocity = pv;
+        character.controller.Move(character.PlayerVelocity * character.Runner.DeltaTime);
     }
 
     public override void Exit()

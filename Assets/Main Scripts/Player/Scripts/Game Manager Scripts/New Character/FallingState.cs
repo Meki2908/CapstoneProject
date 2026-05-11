@@ -161,13 +161,15 @@ public class FallingState : State
         {
             character.CalculatedVelocity.x = 0f;
             character.CalculatedVelocity.z = 0f;
-            character.playerVelocity.y = -2f; 
+            var pvL = character.PlayerVelocity;
+            pvL.y = -2f;
+            character.PlayerVelocity = pvL;
             return;
         }
 
         if (!character.IsGroundedStable())
         {
-            velocity = character.playerVelocity;
+            velocity = character.PlayerVelocity;
             airVelocity = new Vector3(input.x, 0, input.y);
 
             GetPlanarCameraBasis(out Vector3 camForward, out Vector3 camRight);
@@ -198,7 +200,9 @@ public class FallingState : State
 
             if (applyExtraGravity)
             {
-                character.playerVelocity.y -= character.extraFallAcceleration * character.Runner.DeltaTime;
+                var pvF = character.PlayerVelocity;
+                pvF.y -= character.extraFallAcceleration * character.Runner.DeltaTime;
+                character.PlayerVelocity = pvF;
             }
             // ===============================================
 

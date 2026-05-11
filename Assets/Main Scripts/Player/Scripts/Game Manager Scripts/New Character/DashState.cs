@@ -17,7 +17,9 @@ public class DashState : State
     public override void Enter()
     {
         base.Enter();
-        character.playerVelocity.y = 0f;
+        var pv0 = character.PlayerVelocity;
+        pv0.y = 0f;
+        character.PlayerVelocity = pv0;
         elapsedTime = 0f;
 
         // Drive animator param so transitions can distinguish RollLanding vs CombatDash.
@@ -149,10 +151,12 @@ public class DashState : State
             character.CalculatedVelocity.z = dashMove.z;
         }
 
+        var pv = character.PlayerVelocity;
         if (!character.IsGroundedStable())
-            character.playerVelocity.y += character.gravityValue * character.Runner.DeltaTime;
+            pv.y += character.gravityValue * character.Runner.DeltaTime;
         else
-            character.playerVelocity.y = -8f;
+            pv.y = -8f;
+        character.PlayerVelocity = pv;
     }
 
     public override void Exit()
