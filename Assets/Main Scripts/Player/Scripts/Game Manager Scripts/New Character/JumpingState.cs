@@ -2,14 +2,13 @@ using UnityEngine;
 
 public class JumpingState : State
 {
-    bool grounded;
-    bool landTriggered;
-
+    const float MinJumpToFallTime = 0.06f;
     float gravityValue;
     float jumpHeight;
     float playerSpeed;
 
     Vector3 airVelocity;
+    Vector3 lastPlanarAirVelocity;
 
     public JumpingState(Character _character, StateMachine _stateMachine) : base(_character, _stateMachine)
     {
@@ -21,33 +20,35 @@ public class JumpingState : State
     {
         base.Enter();
 
-        // L?U L?I T?A �? Y L�C B?T �?U NH?Y
         character.jumpStartY = character.transform.position.y;
 
-        grounded = false;
-        landTriggered = false;
-
-        // TH?M D?NG N?Y (C?c k? quan tr?ng d? b?t d?u t?nh Cooldown):
-        character.lastJumpTime = character.Runner.SimulationTime; 
+        character.lastJumpTime = character.Runner.SimulationTime;
 
         gravityValue = character.gravityValue;
         jumpHeight = character.jumpHeight;
         playerSpeed = character.playerSpeed;
 
-        character.animator.SetFloat("speed", 0);
-        character.animator.SetTrigger("jump");
+        // Carry horizontal momentum from locomotion into air (CalculatedVelocity is still last tick before this state's PhysicsUpdate zeros it).
+        airVelocity = new Vector3(character.CalculatedVelocity.x, 0f, character.CalculatedVelocity.z);
+        lastPlanarAirVelocity = airVelocity;
+
+        if (character.animator != null)
+            character.animator.SetFloat("speed", 0);
+        character.TrySetAnimatorBool("isGrounded", false);
+        character.SetNetworkedKneeLanding(false);
+        character.SetTriggerSafe("jump");
         character.NotifyJumpImpulseStarted();
         Jump();
         TutorialTextDisplay.NotifyJumpStartedFromGameplay();
 
         character.requireLanding = true;
     }
+
     public override void HandleInput()
     {
         base.HandleInput();
 
         input = MoveInput;
-        // Trong state n?y kh?ng x?t jump; Space kh?ng ??i Y ? impulse ?? ???c g?n trong Enter().
         if (TutorialInputGate.IsActive && (TutorialInputGate.EffectiveMask & TutorialInputMask.Move) == 0)
             input = Vector2.zero;
     }
@@ -56,10 +57,14 @@ public class JumpingState : State
     {
         base.LogicUpdate();
 
-        // N?u v?n t?c tr?c Y b?t d?u ?m (nghia l? dang roi xu?ng)
-        if (character.PlayerVelocity.y <= 0f)
+        // Rollback-safe guard:
+        // - cần đã qua một khoảng ngắn sau Enter
+        // - cần thực sự rời đất (grounded stable false)
+        // - cần vận tốc Y âm rõ ràng
+        bool airborne = !character.IsGroundedStable();
+        if (TimeInState >= MinJumpToFallTime && airborne && character.PlayerVelocity.y < -0.02f)
         {
-            // Nhu?ng s?n kh?u l?i cho FallingState
+            character.momentumToInherit = new Vector3(lastPlanarAirVelocity.x, 0f, lastPlanarAirVelocity.z);
             stateMachine.ChangeState(character.falling);
         }
     }
@@ -67,30 +72,33 @@ public class JumpingState : State
     public override void PhysicsUpdate()
     {
         base.PhysicsUpdate();
-        if (!grounded)
+
+        Vector2 moveInput = MoveInput;
+        if (TutorialInputGate.IsActive && (TutorialInputGate.EffectiveMask & TutorialInputMask.Move) == 0)
+            moveInput = Vector2.zero;
+
+        GetPlanarCameraBasis(out Vector3 camForward, out Vector3 camRight);
+
+        Vector3 desiredDirection = (camRight * moveInput.x + camForward * moveInput.y).normalized;
+        Vector3 desiredVelocity = desiredDirection * playerSpeed;
+
+        if (moveInput.sqrMagnitude > 0.0001f)
         {
-
-            velocity = character.PlayerVelocity;
-            airVelocity = new Vector3(input.x, 0, input.y);
-
-            GetPlanarCameraBasis(out Vector3 camForward, out Vector3 camRight);
-
-            velocity = velocity.x * camRight + velocity.z * camForward;
-            velocity.y = 0f;
-            airVelocity = airVelocity.x * camRight + airVelocity.z * camForward;
-            if (airVelocity.sqrMagnitude > 1f) airVelocity.Normalize();
-            airVelocity.y = 0f;
-            Vector3 movement = (airVelocity * character.airControl + velocity * (1 - character.airControl)) * playerSpeed;
-            character.CalculatedVelocity.x = movement.x;
-            character.CalculatedVelocity.z = movement.z;
-
-            if (movement.sqrMagnitude > 0.1f)
-            {
-                Quaternion targetRotation = Quaternion.LookRotation(new Vector3(movement.x, 0, movement.z));
-                character.transform.rotation = Quaternion.Slerp(character.transform.rotation, targetRotation, character.rotationDampTime);
-            }
+            float steer = Mathf.Clamp01(character.airControl * 5f * character.Runner.DeltaTime);
+            airVelocity = Vector3.Lerp(airVelocity, desiredVelocity, steer);
         }
-        grounded = character.controller.isGrounded;
+        airVelocity.y = 0f;
+
+        character.CalculatedVelocity.x = airVelocity.x;
+        character.CalculatedVelocity.z = airVelocity.z;
+
+        lastPlanarAirVelocity = airVelocity;
+
+        if (airVelocity.sqrMagnitude > 0.1f)
+        {
+            Quaternion targetRotation = Quaternion.LookRotation(airVelocity);
+            character.transform.rotation = Quaternion.Slerp(character.transform.rotation, targetRotation, character.rotationDampTime);
+        }
     }
 
     void Jump()
@@ -103,8 +111,7 @@ public class JumpingState : State
     public override void Exit()
     {
         base.Exit();
-        
-        // Snap blend "speed" theo input hi?n t?i gi?ng nhu Dash d? ti?p d?t mu?t m?
+
         if (character != null)
         {
             Vector2 m = MoveInput;
@@ -113,9 +120,4 @@ public class JumpingState : State
             character.SetAnimatorLocomotionSpeed(targetSpeed);
         }
     }
-
 }
-
-
-
-

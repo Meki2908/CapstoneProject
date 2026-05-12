@@ -54,13 +54,9 @@ public class SwordSkills : MonoBehaviour
     private void Awake()
     {
         animator = GetComponentInChildren<Animator>();
-        Debug.Log($"<color=green>[SwordSkills]</color> Animator: {animator}");
         character = GetComponentInParent<Character>();
-        Debug.Log($"<color=green>[SwordSkills]</color> Character: {character}");
         skillLock = GetComponentInChildren<SkillLock>();
-        Debug.Log($"<color=green>[SwordSkills]</color> SkillLock: {skillLock}");
         equipment = GetComponentInChildren<EquipmentSystem>();
-        Debug.Log($"<color=green>[SwordSkills]</color> Equipment: {equipment}");
         enemyDetection = character != null ? character.GetComponentInChildren<EnemyDetection>(true) : null;
     }
 
@@ -110,6 +106,17 @@ public class SwordSkills : MonoBehaviour
         if (skillLock != null) skillLock.EndSkillRootMotion(animator);
     }
 
+    /// <summary>Invoked by <see cref="Character.RPC_PlayPlayerUltimate"/> on every peer.</summary>
+    public void PlayUltimateFromNetworkRpc()
+    {
+        if (ultimateDirector == null) return;
+        ultimateDirector.Stop();
+        ultimateDirector.time = 0f;
+        ultimateDirector.Play();
+        if (character != null && character.HasInputAuthority)
+            TimelineMainCameraBinder.BindToMainCameraBrain(ultimateDirector, warnOnce: true);
+    }
+
     public void RebuildAbilityMap()
     {
         abilityMap.Clear();
@@ -153,28 +160,16 @@ public class SwordSkills : MonoBehaviour
         bool drawn = character != null && character.isWeaponDrawn;
         
         if (weapon == null || weapon.weaponType != WeaponType.Sword || !drawn)
-        {
-            Debug.Log($"<color=orange>[SwordSkills]</color> Xịt: Sai vũ khí hoặc chưa rút kiếm!");
             return;
-        }
 
-        if (!abilityMap.TryGetValue(input, out var ability)) 
-        {
-            Debug.Log($"<color=red>[SwordSkills]</color> Xịt: Không tìm thấy Data của nút {input}!");
+        if (!abilityMap.TryGetValue(input, out var ability))
             return;
-        }
 
         if (WeaponMasteryManager.Instance != null && !WeaponMasteryManager.Instance.IsSkillUnlocked(WeaponType.Sword, input))
-        {
-            Debug.Log($"<color=yellow>[SwordSkills]</color> Skill {input} bị khóa do chưa đủ Mastery!");
             return;
-        }
 
         if (AbilityIconManager.Instance != null && AbilityIconManager.Instance.IsOnCooldown(input))
-        {
-            Debug.Log($"<color=grey>[SwordSkills]</color> Skill {input} đang trong thời gian hồi chiêu!");
             return;
-        }
 
         if (enemyDetection == null && character != null)
             enemyDetection = character.GetComponentInChildren<EnemyDetection>(true);
@@ -183,9 +178,10 @@ public class SwordSkills : MonoBehaviour
 
         int idx = input switch { AbilityInput.E => 0, AbilityInput.R => 1, AbilityInput.T => 2, AbilityInput.Q_Ultimate => 3, _ => 0 };
         animator.SetInteger(skillIndexParam, idx);
-        animator.SetTrigger(skillTriggerParam);
-        
-        Debug.Log($"<color=cyan>[SwordSkills]</color> Kích hoạt THÀNH CÔNG Skill {input}!");
+        if (character != null)
+            character.SetTriggerSafe(skillTriggerParam);
+        else
+            animator.SetTrigger(skillTriggerParam);
 
         // Cooldown should not depend on Animation Events (AE can be skipped in chaotic combat / networking).
         if (AbilityIconManager.Instance != null)
@@ -198,12 +194,17 @@ public class SwordSkills : MonoBehaviour
 
         if (input == AbilityInput.Q_Ultimate && ultimateDirector != null)
         {
-            if (character != null && character.HasInputAuthority)
+            bool useNet = character != null && character.Object != null && character.Object.IsValid
+                && character.Runner != null && character.Runner.IsRunning;
+            if (useNet && character.HasInputAuthority)
+                character.RPC_PlayPlayerUltimate(Character.PlayerUltimateVisualKind.Sword);
+            else
             {
-                TimelineMainCameraBinder.BindToMainCameraBrain(ultimateDirector, warnOnce: true);
+                if (character != null && character.HasInputAuthority)
+                    TimelineMainCameraBinder.BindToMainCameraBrain(ultimateDirector, warnOnce: true);
+                ultimateDirector.time = 0;
+                ultimateDirector.Play();
             }
-            ultimateDirector.time = 0;
-            ultimateDirector.Play();
         }
 
         TutorialTextDisplay.NotifySkillActivatedFromGameplay(input);

@@ -40,13 +40,13 @@ public class DieState : State
             // Use currentLocomotionState to determine which layer should play die animation
             // If StandingState (weapon not drawn) -> play on base layer only
             // If CombatMoveState (weapon drawn) -> play on weapon layer
-            bool isWeaponDrawn = character.currentLocomotionState is CombatMoveState;
+            bool drawnForDie = character.isWeaponDrawn;
 
-            if (isWeaponDrawn)
+            if (drawnForDie)
             {
                 // Weapon is drawn - ensure weapon layer can play animation
                 // The animation should play on the active weapon layer
-                character.animator.SetTrigger("die");
+                character.SetTriggerSafe("die");
             }
             else
             {
@@ -54,7 +54,7 @@ public class DieState : State
                 DisableWeaponLayersForBaseDie();
 
                 // Trigger die - will play on base layer since weapon layers are disabled
-                character.animator.SetTrigger("die");
+                character.SetTriggerSafe("die");
             }
         }
     }

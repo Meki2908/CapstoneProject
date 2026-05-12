@@ -2,7 +2,6 @@ using UnityEngine;
 
 public class AttackState : State
 {
-    private const bool DEBUG_ATTACK_GATE = true;
     float timePassed;
     float clipLength;
     float clipSpeed;
@@ -20,6 +19,8 @@ public class AttackState : State
     
     private bool waitingForComboTransition;
     private bool mageVfxSpawnedThisHit;
+    private int entryTick;
+    private int lastIgnoredEntryEdgeTick = int.MinValue;
     
     // THÊM BIẾN BẢO VỆ MAGE: Hẹn giờ ngắt lệnh nếu Animator quá lỳ
     private float comboTransitionTimeout;
@@ -49,19 +50,16 @@ public class AttackState : State
     public override void Enter()
     {
         base.Enter();
+        entryTick = (character != null && character.Runner != null && character.Runner.IsRunning)
+            ? (int)character.Runner.Tick
+            : int.MinValue;
         
         if (enemyDetection == null)
             enemyDetection = character.GetComponentInChildren<EnemyDetection>(true);
 
         if (!character.isWeaponDrawn)
         {
-            if (DEBUG_ATTACK_GATE)
-            {
-                bool combatMove = character.animator != null && character.animator.GetBool("combatMove");
-                string fsm = stateMachine != null && stateMachine.currentState != null ? stateMachine.currentState.GetType().Name : "null";
-                Debug.LogWarning($"[AttackGate] Enter blocked: isWeaponDrawn=false fsm={fsm} combatMove={combatMove} frame={Time.frameCount} sim={character.Runner.SimulationTime:F3}");
-            }
-            character.animator.ResetTrigger("attack");
+            character.ResetTriggerSafe("attack");
             stateMachine.ChangeState(character.standing);
             return;
         }
@@ -99,10 +97,8 @@ public class AttackState : State
         EnsureCorrectWeaponLayer();
         ApplyAttackSpeedToAnimator();
 
-        character.animator.ResetTrigger("attack");
-        character.animator.SetTrigger("attack");
-        if (DEBUG_ATTACK_GATE)
-            Debug.Log($"[AttackGate] Enter ok weapon={(currentWeapon != null ? currentWeapon.weaponType.ToString() : "null")} hitIndex={hitIndex} frame={Time.frameCount} sim={character.Runner.SimulationTime:F3}");
+        character.ResetTriggerSafe("attack");
+        character.SetTriggerSafe("attack");
         // Keep combatMove true while attacking to ensure weapon layers behave correctly.
         if (character.animator != null)
             character.animator.SetBool("combatMove", true);
@@ -136,8 +132,24 @@ public class AttackState : State
 
         if (AttackTriggered)
         {
-            attack = true;
-            pressedSinceLastCheck = true;
+            int tickNow = (character != null && character.Runner != null && character.Runner.IsRunning)
+                ? (int)character.Runner.Tick
+                : int.MinValue;
+            // Client resimulation can replay the same input edge in the tick that opened AttackState.
+            // Ignore that entry-edge so one click cannot immediately queue hit #2.
+            if (tickNow == entryTick)
+            {
+                if (lastIgnoredEntryEdgeTick != tickNow)
+                {
+                    lastIgnoredEntryEdgeTick = tickNow;
+                    character.LogCritFsm("Attack", $"IGNORE entry edge tick={tickNow} (prevent same-click auto chain)");
+                }
+            }
+            else
+            {
+                attack = true;
+                pressedSinceLastCheck = true;
+            }
         }
         if (character.TryConsumeJumpBuffered(character.canStartJump)) jump = true;
         if (DashTriggered) dash = true;
@@ -286,8 +298,8 @@ public class AttackState : State
                 hitIndex = 0;
                 mageVfxSpawnedThisHit = false;
 
-                character.animator.ResetTrigger("attack");
-                character.animator.SetTrigger("attack");
+                character.ResetTriggerSafe("attack");
+                character.SetTriggerSafe("attack");
 
                 DetermineAttackRotation(bufferedDirection);
 
@@ -312,8 +324,8 @@ public class AttackState : State
                 hitIndex++;
                 mageVfxSpawnedThisHit = false;
 
-                character.animator.ResetTrigger("attack");
-                character.animator.SetTrigger("attack");
+                character.ResetTriggerSafe("attack");
+                character.SetTriggerSafe("attack");
 
                 DetermineAttackRotation(bufferedDirection);
 
@@ -365,7 +377,7 @@ public class AttackState : State
         if (jump)
         {
             if (hitHandler != null) hitHandler.CancelCurrentHit();
-            character.animator.SetTrigger("jump"); 
+            character.SetTriggerSafe("jump"); 
             stateMachine.ChangeState(character.jumping);
             return;
         }
@@ -373,7 +385,7 @@ public class AttackState : State
         if (dash)
         {
             if (hitHandler != null) hitHandler.CancelCurrentHit();
-            character.animator.SetTrigger("dash"); 
+            character.SetTriggerSafe("dash"); 
             stateMachine.ChangeState(character.dashing);
             return;
         }
@@ -383,11 +395,6 @@ public class AttackState : State
 
     private void ForceExitState()
     {
-        if (DEBUG_ATTACK_GATE)
-        {
-            bool combatMove = character.animator != null && character.animator.GetBool("combatMove");
-            Debug.Log($"[AttackGate] ForceExitState waitingCombo={waitingForComboTransition} buffered={nextAttackBuffered} isWeaponDrawn={character.isWeaponDrawn} combatMove={combatMove} frame={Time.frameCount} sim={character.Runner.SimulationTime:F3}");
-        }
         timePassed = 0f;
         waitingForComboTransition = false;
         comboTransitionTimeout = 0f;
@@ -504,7 +511,7 @@ public class AttackState : State
         base.Exit();
         if (hitHandler != null) hitHandler.CancelCurrentHit();
         character.animator.SetFloat("speed", 0f);
-        character.animator.ResetTrigger("attack");
+        character.ResetTriggerSafe("attack");
         if (character.animator != null)
             character.animator.speed = 1f;
         isSnappingRotation = false; 

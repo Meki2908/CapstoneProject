@@ -36,13 +36,9 @@ public class AxeSkill : MonoBehaviour
     private void Awake()
     {
         character = GetComponentInParent<Character>();
-        Debug.Log($"<color=green>[AxeSkill]</color> Character: {character}");
         if (!animator) animator = GetComponentInChildren<Animator>();
-        Debug.Log($"<color=green>[AxeSkill]</color> Animator: {animator}");
         if (!equipment) equipment = GetComponentInChildren<EquipmentSystem>();
-        Debug.Log($"<color=green>[AxeSkill]</color> Equipment: {equipment}");
         skillLock = GetComponentInChildren<SkillLock>();
-        Debug.Log($"<color=green>[AxeSkill]</color> SkillLock: {skillLock}");
         enemyDetection = character != null ? character.GetComponentInChildren<EnemyDetection>(true) : null;
     }
 
@@ -127,28 +123,16 @@ public class AxeSkill : MonoBehaviour
         bool drawn = character != null && character.isWeaponDrawn;
         
         if (weapon == null || weapon.weaponType != WeaponType.Axe || !drawn)
-        {
-            Debug.Log($"<color=orange>[AxeSkill]</color> X?t: Sai vu kh� ho?c chua r�t R�u!");
             return;
-        }
 
-        if (!abilityMap.TryGetValue(input, out var ability)) 
-        {
-            Debug.Log($"<color=red>[AxeSkill]</color> X?t: Kh�ng t�m th?y Data c?a n�t {input} trong WeaponSO!");
+        if (!abilityMap.TryGetValue(input, out var ability))
             return;
-        }
 
         if (WeaponMasteryManager.Instance != null && !WeaponMasteryManager.Instance.IsSkillUnlocked(WeaponType.Axe, input))
-        {
-            Debug.Log($"<color=yellow>[AxeSkill]</color> Skill {input} b? kh�a do chua d? Mastery!");
             return;
-        }
 
         if (AbilityIconManager.Instance != null && AbilityIconManager.Instance.IsOnCooldown(input))
-        {
-            Debug.Log($"<color=grey>[AxeSkill]</color> Skill {input} dang trong th?i gian h?i chi�u!");
             return;
-        }
 
         if (enemyDetection == null && character != null)
             enemyDetection = character.GetComponentInChildren<EnemyDetection>(true);
@@ -157,10 +141,10 @@ public class AxeSkill : MonoBehaviour
 
         int idx = input switch { AbilityInput.E => 0, AbilityInput.R => 1, AbilityInput.T => 2, AbilityInput.Q_Ultimate => 3, _ => 0 };
         animator.SetInteger(skillIndexParam, idx);
-        animator.SetTrigger(skillTriggerParam);
-        
-        Debug.Log($"<color=cyan>[AxeSkill]</color> K�ch ho?t TH�NH C�NG Skill {input}!");
-
+        if (character != null)
+            character.SetTriggerSafe(skillTriggerParam);
+        else
+            animator.SetTrigger(skillTriggerParam);
         // Cooldown should not depend on Animation Events (AE can be skipped in chaotic combat / networking).
         if (AbilityIconManager.Instance != null)
         {
@@ -172,12 +156,17 @@ public class AxeSkill : MonoBehaviour
 
         if (input == AbilityInput.Q_Ultimate && ultimateDirector != null)
         {
-            if (character != null && character.HasInputAuthority)
+            bool useNet = character != null && character.Object != null && character.Object.IsValid
+                && character.Runner != null && character.Runner.IsRunning;
+            if (useNet && character.HasInputAuthority)
+                character.RPC_PlayPlayerUltimate(Character.PlayerUltimateVisualKind.Axe);
+            else
             {
-                TimelineMainCameraBinder.BindToMainCameraBrain(ultimateDirector, warnOnce: true);
+                if (character != null && character.HasInputAuthority)
+                    TimelineMainCameraBinder.BindToMainCameraBrain(ultimateDirector, warnOnce: true);
+                ultimateDirector.time = 0;
+                ultimateDirector.Play();
             }
-            ultimateDirector.time = 0;
-            ultimateDirector.Play();
         }
 
         TutorialTextDisplay.NotifySkillActivatedFromGameplay(input);
@@ -321,6 +310,17 @@ public class AxeSkill : MonoBehaviour
             ultimateDirector.Stop();
         }
         skillLock?.EndSkillRootMotion(animator);
+    }
+
+    /// <summary>Invoked by <see cref="Character.RPC_PlayPlayerUltimate"/> on every peer.</summary>
+    public void PlayUltimateFromNetworkRpc()
+    {
+        if (ultimateDirector == null) return;
+        ultimateDirector.Stop();
+        ultimateDirector.time = 0f;
+        ultimateDirector.Play();
+        if (character != null && character.HasInputAuthority)
+            TimelineMainCameraBinder.BindToMainCameraBrain(ultimateDirector, warnOnce: true);
     }
 }
 

@@ -8,7 +8,6 @@ public class NetworkLootBroadcaster : NetworkBehaviour
     public override void Spawned()
     {
         Instance = this;
-        Debug.Log("[LootBroadcaster] Đã khởi động hệ thống phát loa rớt đồ!");
     }
 
     // Server gọi hàm này khi quái chết

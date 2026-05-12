@@ -2,7 +2,6 @@ using UnityEngine;
 
 public sealed class DrawWeaponState : State
 {
-    private const int UpperBodyLayerIndex = 4; // Player.controller: Upper body is layer 4 (not Base Layer 0)
     private const string DrawTag = "Draw";
     private const string WeaponActionTag = "WeaponAction";
     private bool hasSwapped;
@@ -26,8 +25,9 @@ public sealed class DrawWeaponState : State
 
         if (weaponController == null || weaponController.GetCurrentWeapon() == null)
         {
+            character.LogCritFsm("DrawSheath", "Enter DrawWeapon → abort (no weapon)");
             // No weapon to draw -> stay in unarmed locomotion.
-            character.isWeaponDrawn = false;
+            character.SyncWeaponDrawnState(false);
             if (character.animator != null)
                 character.animator.SetBool("combatMove", false);
             character.currentLocomotionState = character.standing;
@@ -37,10 +37,11 @@ public sealed class DrawWeaponState : State
 
         // Start draw animation, but do NOT swap weapon visuals/scripts yet.
         // Swap will happen later when Upper body normalizedTime reaches WeaponSO.drawEquipNormalizedTime.
+        character.LogCritFsm("DrawSheath", $"Enter DrawWeapon → TriggerDraw upperL={character.UpperBodyAnimatorLayerIndex} | {character.GetCritFsmAnimatorSnapshot()}");
         weaponController.TriggerDrawAnimationOnly();
 
         // Consider weapon still sheathed until we reach the swap point.
-        character.isWeaponDrawn = false;
+        character.SyncWeaponDrawnState(false);
         if (character.animator != null)
             character.animator.SetBool("combatMove", true);
 
@@ -73,7 +74,7 @@ public sealed class DrawWeaponState : State
         // Weapon visual swap at WeaponSO timing (still runs when not in transition)
         TrySwapAtTiming();
 
-        int layerIndex = UpperBodyLayerIndex;
+        int layerIndex = character.UpperBodyAnimatorLayerIndex;
         float timeInState = TimeInState;
 
         if (character.animator.layerCount <= layerIndex)
@@ -83,7 +84,7 @@ public sealed class DrawWeaponState : State
                 Debug.LogWarning("[FSM] Failsafe: Rút vũ khí quá lâu (missing layer), ép buộc vào Combat!");
                 if (!hasSwapped && weaponController != null)
                     weaponController.EnsureDrawn(requestAnimation: false);
-                character.isWeaponDrawn = true;
+                character.SyncWeaponDrawnState(true);
                 if (character.animator != null)
                     character.animator.SetBool("combatMove", true);
                 character.currentLocomotionState = character.combatMove;
@@ -102,7 +103,7 @@ public sealed class DrawWeaponState : State
         {
             if (!hasSwapped && weaponController != null)
                 weaponController.EnsureDrawn(requestAnimation: false);
-            character.isWeaponDrawn = true;
+            character.SyncWeaponDrawnState(true);
             if (character.animator != null)
                 character.animator.SetBool("combatMove", true);
             character.currentLocomotionState = character.combatMove;
@@ -115,7 +116,7 @@ public sealed class DrawWeaponState : State
             Debug.LogWarning("[FSM] Failsafe: Rút vũ khí quá lâu, ép buộc vào Combat!");
             if (!hasSwapped && weaponController != null)
                 weaponController.EnsureDrawn(requestAnimation: false);
-            character.isWeaponDrawn = true;
+            character.SyncWeaponDrawnState(true);
             if (character.animator != null)
                 character.animator.SetBool("combatMove", true);
             character.currentLocomotionState = character.combatMove;
@@ -162,17 +163,17 @@ public sealed class DrawWeaponState : State
         var weapon = weaponController.GetCurrentWeapon();
         if (weapon == null) return;
         if (character == null || character.animator == null) return;
-        if (character.animator.layerCount <= UpperBodyLayerIndex) return;
-        if (character.animator.IsInTransition(UpperBodyLayerIndex)) return;
+        if (character.animator.layerCount <= character.UpperBodyAnimatorLayerIndex) return;
+        if (character.animator.IsInTransition(character.UpperBodyAnimatorLayerIndex)) return;
 
-        var st = character.animator.GetCurrentAnimatorStateInfo(UpperBodyLayerIndex);
+        var st = character.animator.GetCurrentAnimatorStateInfo(character.UpperBodyAnimatorLayerIndex);
         if (!(st.IsTag(DrawTag) || st.IsName("Draw Weapon"))) return;
 
         float t = Mathf.Clamp01(weapon.drawEquipNormalizedTime);
         if (st.normalizedTime < t) return;
 
         weaponController.EnsureDrawn(requestAnimation: false);
-        character.isWeaponDrawn = true;
+        character.SyncWeaponDrawnState(true);
         if (character.animator != null)
             character.animator.SetBool("combatMove", true);
         character.currentLocomotionState = character.combatMove;

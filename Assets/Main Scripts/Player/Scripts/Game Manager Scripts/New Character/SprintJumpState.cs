@@ -2,7 +2,9 @@ using UnityEngine;
 
 public class SprintJumpState : State
 {
+    const float MinSprintJumpToFallTime = 0.06f;
     private Vector3 horizontalDirection;
+    private Vector3 lastPlanarVelocity;
 
     public SprintJumpState(Character _character, StateMachine _stateMachine) : base(_character, _stateMachine) { }
 
@@ -20,7 +22,7 @@ public class SprintJumpState : State
         character.animator.applyRootMotion = false;
 
         // Play sprintJump animation
-        character.animator.SetTrigger("sprintJump");
+        character.SetTriggerSafe("sprintJump");
 
         // Initialize jump impulse (use dedicated sprint-jump height, fallback to normal jump height)
         float sprintJumpHeight = character.sprintJumpHeight > 0f ? character.sprintJumpHeight : character.jumpHeight;
@@ -40,16 +42,23 @@ public class SprintJumpState : State
         }
 
         character.requireLanding = true;
+
+        lastPlanarVelocity = horizontalDirection * character.sprintSpeed;
+        character.TrySetAnimatorBool("isGrounded", false);
+        character.SetNetworkedKneeLanding(false);
     }
 
     public override void LogicUpdate()
     {
         base.LogicUpdate();
         
-        // Khi bắt đầu rơi xuống (vận tốc Y <= 0), nhường xử lý tiếp đất cho FallingState
-        // (đảm bảo chỉ Landing khi đủ cao hoặc requireLanding = true).
-        if (character.PlayerVelocity.y <= 0f)
+        // Rollback-safe guard: chỉ rơi khi đã thực sự airborne và qua thời gian tối thiểu sau Enter.
+        bool airborne = !character.IsGroundedStable();
+        if (TimeInState >= MinSprintJumpToFallTime && airborne && character.PlayerVelocity.y < -0.02f)
+        {
+            character.momentumToInherit = new Vector3(lastPlanarVelocity.x, 0f, lastPlanarVelocity.z);
             stateMachine.ChangeState(character.falling);
+        }
     }
 
     public override void PhysicsUpdate()
@@ -64,12 +73,13 @@ public class SprintJumpState : State
         if (desiredDirection.sqrMagnitude > 0.0001f)
         {
             // Light air steering while preserving sprint-jump feel
-            horizontalDirection = Vector3.Slerp(horizontalDirection, desiredDirection, character.airControl * Time.fixedDeltaTime * 6f);
+            horizontalDirection = Vector3.Slerp(horizontalDirection, desiredDirection, character.airControl * character.Runner.DeltaTime * 6f);
             horizontalDirection.y = 0f;
             horizontalDirection.Normalize();
         }
 
         Vector3 horizontalVelocity = horizontalDirection * character.sprintSpeed;
+        lastPlanarVelocity = horizontalVelocity;
         Vector3 movement = horizontalVelocity;
         character.CalculatedVelocity = movement;
 

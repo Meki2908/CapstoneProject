@@ -27,7 +27,7 @@ public class HardStopState : State
         // Trigger the hard stop animation
         if (character.animator)
         {
-            character.animator.SetTrigger("hardStop");
+            character.SetTriggerSafe("hardStop");
             character.SetAnimatorLocomotionSpeed(0f);
         }
     }

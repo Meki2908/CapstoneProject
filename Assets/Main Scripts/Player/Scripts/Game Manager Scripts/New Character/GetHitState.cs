@@ -8,7 +8,7 @@ public class GetHitState : State
     bool toggleWeapon; // allow queue Draw/Sheath while getting hit
     
     // BỎ LOGIC DELAY: Set thời gian stun = 0 theo yêu cầu để bỏ hoàn toàn delay.
-    // Kết hợp với layer UpperBody_Hit, player có thể đánh/chạy ngay cả khi animation đang chạy!
+    // Kết hợp với layer "Upper body", player có thể đánh/chạy ngay cả khi animation đang chạy!
     float hitDuration = 0.0f; 
     float hitTimer;
 
@@ -38,7 +38,7 @@ public class GetHitState : State
             weaponController.ReapplyWeaponLayers();
 
         if (character.animator != null)
-            character.animator.SetTrigger("gethit");
+            character.SetTriggerSafe("gethit");
     }
 
     public override void HandleInput()

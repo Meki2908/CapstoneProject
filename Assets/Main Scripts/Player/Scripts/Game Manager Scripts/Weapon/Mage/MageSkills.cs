@@ -5,7 +5,6 @@ using UnityEngine.Playables;
 
 public class MageSkills : MonoBehaviour
 {
-    private const bool DEBUG_MAGE_LOCK = true;
     [Header("Refs")]
     [SerializeField] private EquipmentSystem equipment;
     [SerializeField] private Transform defaultVfxSpawn;     // v? tr� spawn VFX m?c d?nh (hand)
@@ -46,13 +45,9 @@ public class MageSkills : MonoBehaviour
     private void Awake()
     {
         character = GetComponentInParent<Character>();
-        Debug.Log($"<color=green>[MageSkills]</color> Character: {character}");
         if (!animator) animator = GetComponentInChildren<Animator>();
-        Debug.Log($"<color=green>[MageSkills]</color> Animator: {animator}");
         if (!equipment) equipment = GetComponentInChildren<EquipmentSystem>();
-        Debug.Log($"<color=green>[MageSkills]</color> Equipment: {equipment}");
         skillLock = GetComponentInChildren<SkillLock>();
-        Debug.Log($"<color=green>[MageSkills]</color> SkillLock: {skillLock}");
         enemyDetection = character != null ? character.GetComponentInChildren<EnemyDetection>(true) : null;
     }
 
@@ -155,36 +150,16 @@ public class MageSkills : MonoBehaviour
         bool drawn = character != null && character.isWeaponDrawn;
         
         if (weapon == null || weapon.weaponType != WeaponType.Mage || !drawn)
-        {
-            if (DEBUG_MAGE_LOCK)
-            {
-                string wt = weapon != null ? weapon.weaponType.ToString() : "null";
-                Debug.LogWarning($"[MageSkillsGate] Blocked TryUse={input} weaponType={wt} isWeaponDrawn={drawn} skillLock={(skillLock != null ? skillLock.isPerformingSkill.ToString() : "null")} frame={Time.frameCount} time={Time.time:F3}");
-            }
-            else
-            {
-                Debug.Log($"<color=orange>[MageSkills]</color> X?t: Sai vu kh? ho?c chua r?t G?y Ph?p!");
-            }
             return;
-        }
 
-        if (!abilityMap.TryGetValue(input, out var ability)) 
-        {
-            Debug.Log($"<color=red>[MageSkills]</color> X?t: Kh?ng t?m th?y Data c?a n?t {input} trong WeaponSO!");
+        if (!abilityMap.TryGetValue(input, out var ability))
             return;
-        }
 
         if (WeaponMasteryManager.Instance != null && !WeaponMasteryManager.Instance.IsSkillUnlocked(WeaponType.Mage, input))
-        {
-            Debug.Log($"<color=yellow>[MageSkills]</color> Skill {input} b? kh?a do chua d? Mastery!");
             return;
-        }
 
         if (AbilityIconManager.Instance != null && AbilityIconManager.Instance.IsOnCooldown(input))
-        {
-            Debug.Log($"<color=grey>[MageSkills]</color> Skill {input} dang trong th?i gian h?i chi?u!");
             return;
-        }
 
         if (enemyDetection == null && character != null)
             enemyDetection = character.GetComponentInChildren<EnemyDetection>(true);
@@ -193,9 +168,10 @@ public class MageSkills : MonoBehaviour
 
         int idx = input switch { AbilityInput.E => 0, AbilityInput.R => 1, AbilityInput.T => 2, AbilityInput.Q_Ultimate => 3, _ => 0 };
         animator.SetInteger(skillIndexParam, idx);
-        animator.SetTrigger(skillTriggerParam);
-        
-        Debug.Log($"<color=cyan>[MageSkills]</color> K?ch ho?t TH?NH C?NG Skill {input}!");
+        if (character != null)
+            character.SetTriggerSafe(skillTriggerParam);
+        else
+            animator.SetTrigger(skillTriggerParam);
 
         // Cooldown should not depend on Animation Events (AE can be skipped in chaotic combat / networking).
         if (AbilityIconManager.Instance != null)
@@ -208,12 +184,17 @@ public class MageSkills : MonoBehaviour
 
         if (input == AbilityInput.Q_Ultimate && ultimateDirector != null)
         {
-            if (character != null && character.HasInputAuthority)
+            bool useNet = character != null && character.Object != null && character.Object.IsValid
+                && character.Runner != null && character.Runner.IsRunning;
+            if (useNet && character.HasInputAuthority)
+                character.RPC_PlayPlayerUltimate(Character.PlayerUltimateVisualKind.Mage);
+            else
             {
-                TimelineMainCameraBinder.BindToMainCameraBrain(ultimateDirector, warnOnce: true);
+                if (character != null && character.HasInputAuthority)
+                    TimelineMainCameraBinder.BindToMainCameraBrain(ultimateDirector, warnOnce: true);
+                ultimateDirector.time = 0;
+                ultimateDirector.Play();
             }
-            ultimateDirector.time = 0;
-            ultimateDirector.Play();
         }
 
         TutorialTextDisplay.NotifySkillActivatedFromGameplay(input);
@@ -225,12 +206,9 @@ public class MageSkills : MonoBehaviour
         var wc = GetComponent<WeaponController>();
         var weapon = wc != null ? wc.GetCurrentWeapon() : null;
         if (weapon == null || weapon.weaponType != WeaponType.Mage) return;
-        Debug.Log($"[MageSkills.AE_PlaySkillVFXByEvent] weapon={weapon.weaponName}, typeOK={(weapon != null && weapon.weaponType == WeaponType.Mage)}");
-
-        // Guard-2: d�ng animator state/tag/layer c?a Mage
+// Guard-2: d�ng animator state/tag/layer c?a Mage
         if (!IsInSkillState()) return;
-        Debug.Log($"[MageSkills.AE_PlaySkillVFXByEvent] isInSkillState={IsInSkillState()}");
-        if (!animator) return;
+if (!animator) return;
         int skillIdx = animator.GetInteger(skillIndexParam);
         var input = (AbilityInput)(skillIdx == 0 ? AbilityInput.E :
                                    skillIdx == 1 ? AbilityInput.R :
@@ -483,6 +461,17 @@ public class MageSkills : MonoBehaviour
             ultimateDirector.Stop();
         }
         skillLock?.EndSkillRootMotion(animator);
+    }
+
+    /// <summary>Invoked by <see cref="Character.RPC_PlayPlayerUltimate"/> on every peer so timeline/VFX are not input-only.</summary>
+    public void PlayUltimateFromNetworkRpc()
+    {
+        if (ultimateDirector == null) return;
+        ultimateDirector.Stop();
+        ultimateDirector.time = 0f;
+        ultimateDirector.Play();
+        if (character != null && character.HasInputAuthority)
+            TimelineMainCameraBinder.BindToMainCameraBrain(ultimateDirector, warnOnce: true);
     }
 
     private bool ShouldUseUltimatePool(AbilityInput input, SkillEvent ev)

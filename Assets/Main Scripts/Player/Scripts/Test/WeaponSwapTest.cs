@@ -60,7 +60,8 @@ public class WeaponSwapTest : MonoBehaviour
     {
         if (character == null) return;
 
-        character.isWeaponDrawn = !character.isWeaponDrawn;
+        bool next = !character.isWeaponDrawn;
+        character.SyncWeaponDrawnState(next);
         Debug.Log($"[WeaponSwapTest] Sheath state toggled - Weapon drawn: {character.isWeaponDrawn}");
     }
 

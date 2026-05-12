@@ -232,7 +232,9 @@ public class BaseMoveState : State
         // === ĐỒNG BỘ C# VỚI ANIMATOR: CHỜ GET HIT CHẠY XONG MỚI XẢ HÀNG ĐỢI ===
         if (character.animator != null && character.queuedWeaponAction != Character.QueuedWeaponAction.None)
         {
-            int upperLayer = character.animator.GetLayerIndex("UpperBody_Hit");
+            int upperLayer = character.animator.GetLayerIndex("Upper body");
+            if (upperLayer < 0)
+                upperLayer = character.animator.GetLayerIndex("UpperBody_Hit");
             if (upperLayer >= 0)
             {
                 AnimatorStateInfo stateInfo = character.animator.GetCurrentAnimatorStateInfo(upperLayer);
@@ -241,6 +243,11 @@ public class BaseMoveState : State
                 {
                     if (character.TryConsumeQueuedWeaponAction(out var action))
                     {
+                        var uinf = character.animator.GetCurrentAnimatorStateInfo(upperLayer);
+                        string upperName = uinf.IsName("None") ? "None"
+                            : uinf.IsName("Default State") ? "Default State"
+                            : $"other(sh={uinf.shortNameHash})";
+                        character.LogCritFsm("Queue", $"Dequeued {action} upperIx={upperLayer} ({upperName}) → NetToggleBuffer");
                         // Buffer this explicit requested action so it survives cooldown.
                         character.NetToggleBuffer = TOGGLE_BUFFER_DURATION;
                         _toggleBufferHasExplicitAction = true;
@@ -269,8 +276,11 @@ public class BaseMoveState : State
                 else
                 {
                     // Single source of truth at the moment we execute.
-                    doDraw = !character.isWeaponDrawn;
+                    doDraw = !character.NetIsWeaponDrawn;
                 }
+
+                character.LogCritFsm("TabBuffer",
+                    $"EXEC toggle doDraw={doDraw} NetDrawn={(bool)character.NetIsWeaponDrawn} bufWas>0 sim={character.Runner.SimulationTime:F3}");
 
                 if (doDraw)
                 {
@@ -290,8 +300,7 @@ public class BaseMoveState : State
     public override void Exit()
     {
         base.Exit();
-        character.PlayerVelocity = new Vector3(input.x, 0, input.y);
-
+        // Do not overwrite PlayerVelocity from raw input (camera-relative movement lives in CalculatedVelocity / NetLocomotionSpeed).
         if (velocity.sqrMagnitude > 0.1f)
         {
             Quaternion targetRotation = Quaternion.LookRotation(velocity);

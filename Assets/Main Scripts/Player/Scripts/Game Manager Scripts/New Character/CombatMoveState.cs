@@ -2,7 +2,6 @@ using UnityEngine;
 
 public class CombatMoveState : BaseMoveState
 {
-    bool attack;
 
     // NEW: tránh CombatMoveState can thiệp trong lúc đang dùng skill
     private SkillLock skillLock;
@@ -21,7 +20,6 @@ public class CombatMoveState : BaseMoveState
     public override void Enter()
     {
         base.Enter();
-        attack = false;
         // Do not force isWeaponDrawn here; Draw/Sheath states own that truth.
         character.animator.SetBool("combatMove", true);
 
@@ -38,10 +36,6 @@ public class CombatMoveState : BaseMoveState
         // NEW: khi đang skill, không đọc/tiêu thụ input để tránh can thiệp
         if (skillLock != null && skillLock.isPerformingSkill)
             return;
-
-        attack = AttackTriggered;
-        if (TutorialInputGate.IsActive && (TutorialInputGate.EffectiveMask & TutorialInputMask.Attack) == 0)
-            attack = false;
     }
 
     public override void LogicUpdate()
@@ -56,7 +50,7 @@ public class CombatMoveState : BaseMoveState
             if (wc != null)
                 wc.EnsureDrawn(requestAnimation: false);
 
-            character.animator.SetTrigger("attack");
+            character.SetTriggerSafe("attack");
             stateMachine.ChangeState(character.attacking);
             return;
         }
@@ -94,23 +88,12 @@ public class CombatMoveState : BaseMoveState
 
         if (skillLock != null && skillLock.isPerformingSkill)
             return;
-
-        if (attack && stateMachine.currentState != character.attacking)
-        {
-            // Failsafe (idempotent): ensure visuals/scripts are in drawn state without spamming animator triggers.
-            var wc = character.GetComponent<WeaponController>();
-            if (wc != null)
-                wc.EnsureDrawn(requestAnimation: false);
-
-            character.animator.SetTrigger("attack");
-            stateMachine.ChangeState(character.attacking);
-        }
     }
 
     public override void Exit()
     {
         base.Exit();
         // Don't reset speed here - let BaseMoveState handle it for smooth blending
-        character.animator.ResetTrigger("attack"); // Đặt lại trigger để tránh dư thừa
+        character.ResetTriggerSafe("attack"); // Chỉ reset Animator thuần khi không có NetworkMecanimAnimator
     }
 }

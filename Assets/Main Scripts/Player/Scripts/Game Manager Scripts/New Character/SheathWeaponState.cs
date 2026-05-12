@@ -2,7 +2,6 @@ using UnityEngine;
 
 public sealed class SheathWeaponState : State
 {
-    private const int UpperBodyLayerIndex = 4; // Player.controller: Upper body is layer 4 (not Base Layer 0)
     private const string SheathTag = "Sheath";
     private const string WeaponActionTag = "WeaponAction";
     private bool hasSwapped;
@@ -26,13 +25,14 @@ public sealed class SheathWeaponState : State
 
         if (weaponController != null)
         {
+            character.LogCritFsm("DrawSheath", $"Enter SheathWeapon → TriggerSheath upperL={character.UpperBodyAnimatorLayerIndex} | {character.GetCritFsmAnimatorSnapshot()}");
             // Start sheath animation, but do NOT swap visuals/scripts yet.
             // Swap will happen later when Upper body normalizedTime reaches WeaponSO.sheathUnequipNormalizedTime.
             weaponController.TriggerSheathAnimationOnly();
         }
-
-        // Consider weapon still drawn until we reach the swap point.
-        character.isWeaponDrawn = true;
+        else
+            character.LogCritFsm("DrawSheath", "Enter SheathWeapon (no WeaponController)");
+        character.SyncWeaponDrawnState(true);
         if (character.animator != null)
             character.animator.SetBool("combatMove", false);
 
@@ -64,7 +64,7 @@ public sealed class SheathWeaponState : State
 
         TrySwapAtTiming();
 
-        int layerIndex = UpperBodyLayerIndex;
+        int layerIndex = character.UpperBodyAnimatorLayerIndex;
         float timeInState = TimeInState;
 
         if (character.animator.layerCount <= layerIndex)
@@ -74,7 +74,7 @@ public sealed class SheathWeaponState : State
                 Debug.LogWarning("[FSM] Failsafe: Cất vũ khí quá lâu (missing layer), ép buộc vào Standing!");
                 if (!hasSwapped && weaponController != null)
                     weaponController.EnsureSheathed(requestAnimation: false);
-                character.isWeaponDrawn = false;
+                character.SyncWeaponDrawnState(false);
                 if (character.animator != null)
                     character.animator.SetBool("combatMove", false);
                 character.currentLocomotionState = character.standing;
@@ -93,7 +93,7 @@ public sealed class SheathWeaponState : State
         {
             if (!hasSwapped && weaponController != null)
                 weaponController.EnsureSheathed(requestAnimation: false);
-            character.isWeaponDrawn = false;
+            character.SyncWeaponDrawnState(false);
             if (character.animator != null)
                 character.animator.SetBool("combatMove", false);
             character.currentLocomotionState = character.standing;
@@ -106,7 +106,7 @@ public sealed class SheathWeaponState : State
             Debug.LogWarning("[FSM] Failsafe: Cất vũ khí quá lâu, ép buộc vào Standing!");
             if (!hasSwapped && weaponController != null)
                 weaponController.EnsureSheathed(requestAnimation: false);
-            character.isWeaponDrawn = false;
+            character.SyncWeaponDrawnState(false);
             if (character.animator != null)
                 character.animator.SetBool("combatMove", false);
             character.currentLocomotionState = character.standing;
@@ -153,17 +153,17 @@ public sealed class SheathWeaponState : State
         var weapon = weaponController.GetCurrentWeapon();
         if (weapon == null) return;
         if (character == null || character.animator == null) return;
-        if (character.animator.layerCount <= UpperBodyLayerIndex) return;
-        if (character.animator.IsInTransition(UpperBodyLayerIndex)) return;
+        if (character.animator.layerCount <= character.UpperBodyAnimatorLayerIndex) return;
+        if (character.animator.IsInTransition(character.UpperBodyAnimatorLayerIndex)) return;
 
-        var st = character.animator.GetCurrentAnimatorStateInfo(UpperBodyLayerIndex);
+        var st = character.animator.GetCurrentAnimatorStateInfo(character.UpperBodyAnimatorLayerIndex);
         if (!(st.IsTag(SheathTag) || st.IsName("Sheath Weapon"))) return;
 
         float t = Mathf.Clamp01(weapon.sheathUnequipNormalizedTime);
         if (st.normalizedTime < t) return;
 
         weaponController.EnsureSheathed(requestAnimation: false);
-        character.isWeaponDrawn = false;
+        character.SyncWeaponDrawnState(false);
         if (character.animator != null)
             character.animator.SetBool("combatMove", false);
         character.currentLocomotionState = character.standing;

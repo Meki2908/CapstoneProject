@@ -10,12 +10,12 @@ public class WeaponController : MonoBehaviour
     [SerializeField] private EquipmentSystem equipmentSystem; // ch? d�ng cho damage hooks n?u c?n
 
     [Header("Animator Layers (indices)")]
-    [Tooltip("Base=0, Sword=1, Axe=2, Mage=3, Arms=5 (adjust to your Animator)")]
     [SerializeField] private int baseLayer = 0;
     [SerializeField] private int swordLayer = 1;
     [SerializeField] private int axeLayer = 2;
     [SerializeField] private int mageLayer = 3;
-    [SerializeField] private int armsLayer = 5;
+    [Tooltip("Layer index for \"Upper body\" (Player.controller: same as draw/sheath). Not Lower body (5).")]
+    [SerializeField] private int armsLayer = 4;
 
     [Header("Animator Parameters")]
     [SerializeField] private string weaponTypeParam = "weaponType"; // int
@@ -33,6 +33,9 @@ public class WeaponController : MonoBehaviour
     public event Action<WeaponSO> OnWeaponChanged;
 
     private Animator animator;
+    Character _cachedCharacter;
+    Character CachedCharacter => _cachedCharacter != null ? _cachedCharacter : (_cachedCharacter = GetComponent<Character>() ?? GetComponentInParent<Character>());
+
     private GameObject currentHeldInstance;
     private GameObject currentSheathInstance;
     private Coroutine wandScaleRoutine;
@@ -51,10 +54,6 @@ public class WeaponController : MonoBehaviour
             if (abilityManager == null)
             {
                 Debug.LogWarning("[WeaponController] No WeaponAbilityManager found! Ability icons will not work.");
-            }
-            else
-            {
-                Debug.Log("[WeaponController] Auto-found WeaponAbilityManager");
             }
         }
     }
@@ -139,6 +138,28 @@ public class WeaponController : MonoBehaviour
 
     public WeaponSO GetCurrentWeapon() => currentWeapon;
 
+    void SetDrawSheathTriggerSafe(string triggerName)
+    {
+        if (string.IsNullOrEmpty(triggerName)) return;
+        if (animator == null)
+            animator = GetComponentInChildren<Animator>(true);
+        if (animator == null) return;
+        var ch = CachedCharacter;
+        if (ch != null)
+            ch.SetTriggerSafe(triggerName);
+        else
+            animator.SetTrigger(triggerName);
+    }
+
+    void ResetDrawSheathTriggerIfNoNetworkAnimator(string triggerName)
+    {
+        if (string.IsNullOrEmpty(triggerName) || animator == null) return;
+        var ch = CachedCharacter;
+        if (ch != null && ch.networkAnimator != null)
+            return;
+        animator.ResetTrigger(triggerName);
+    }
+
     /// <summary>
     /// Trigger draw animation on the animator without swapping visuals/scripts immediately.
     /// Used by the no-AE timing flow (swap happens later at a configured normalizedTime).
@@ -150,8 +171,9 @@ public class WeaponController : MonoBehaviour
         if (animator == null) return;
 
         ApplyWeaponLayersAndParams();
-        animator.ResetTrigger(sheathTrigger);
-        animator.SetTrigger(drawTrigger);
+        ResetDrawSheathTriggerIfNoNetworkAnimator(sheathTrigger);
+        SetDrawSheathTriggerSafe(drawTrigger);
+        CachedCharacter?.LogCritFsm("WeaponCtrl", "TriggerDrawAnimationOnly (WeaponController)");
     }
 
     /// <summary>
@@ -165,8 +187,9 @@ public class WeaponController : MonoBehaviour
         if (animator == null) return;
 
         ApplyWeaponLayersAndParams();
-        animator.ResetTrigger(drawTrigger);
-        animator.SetTrigger(sheathTrigger);
+        ResetDrawSheathTriggerIfNoNetworkAnimator(drawTrigger);
+        SetDrawSheathTriggerSafe(sheathTrigger);
+        CachedCharacter?.LogCritFsm("WeaponCtrl", "TriggerSheathAnimationOnly (WeaponController)");
     }
 
     /// <summary>
@@ -215,8 +238,8 @@ public class WeaponController : MonoBehaviour
 
         if (requestAnimation && animator != null)
         {
-            animator.ResetTrigger(sheathTrigger);
-            animator.SetTrigger(drawTrigger);
+            ResetDrawSheathTriggerIfNoNetworkAnimator(sheathTrigger);
+            SetDrawSheathTriggerSafe(drawTrigger);
         }
 
         // Tutorial step progression: report draw as "done" from the single source of truth.
@@ -269,8 +292,8 @@ public class WeaponController : MonoBehaviour
 
         if (requestAnimation && animator != null)
         {
-            animator.ResetTrigger(drawTrigger);
-            animator.SetTrigger(sheathTrigger);
+            ResetDrawSheathTriggerIfNoNetworkAnimator(drawTrigger);
+            SetDrawSheathTriggerSafe(sheathTrigger);
         }
 
         // Tutorial step progression: report sheath as "done" from the single source of truth.
@@ -280,8 +303,8 @@ public class WeaponController : MonoBehaviour
 
     public void DrawWeaponVisual() // g?i t? Animation/State
     {
-        animator.ResetTrigger(sheathTrigger);
-        animator.SetTrigger(drawTrigger);
+        ResetDrawSheathTriggerIfNoNetworkAnimator(sheathTrigger);
+        SetDrawSheathTriggerSafe(drawTrigger);
         if (IsCurrentWand())
         {
             // Wand always under handHolder; reuse instance and toggle active
@@ -315,8 +338,8 @@ public class WeaponController : MonoBehaviour
 
     public void SheathWeaponVisual() // g?i t? Animation/State
     {
-        animator.ResetTrigger(drawTrigger);
-        animator.SetTrigger(sheathTrigger);
+        ResetDrawSheathTriggerIfNoNetworkAnimator(drawTrigger);
+        SetDrawSheathTriggerSafe(sheathTrigger);
         // T?t Aura v� unbind
         var auraCtrl = GetComponent<WeaponAuraController>();
         if (auraCtrl != null) { auraCtrl.AE_AuraOff(); auraCtrl.UnbindAura(); }
@@ -497,6 +520,10 @@ public class WeaponController : MonoBehaviour
     // ========== Animation Events ==========
     public void AE_DrawWeapon()
     {
+        var ch = CachedCharacter;
+        if (ch == null || ch.movementSM == null || !(ch.movementSM.currentState is DrawWeaponState))
+            return;
+
         DrawWeaponVisual();
 
         var equip = equipmentSystem;
@@ -509,6 +536,10 @@ public class WeaponController : MonoBehaviour
 
     public void AE_SheathWeapon()
     {
+        var ch = CachedCharacter;
+        if (ch == null || ch.movementSM == null || !(ch.movementSM.currentState is SheathWeaponState))
+            return;
+
         var auraCtrl = GetComponent<WeaponAuraController>();
         if (auraCtrl != null) { auraCtrl.AE_AuraOff(); auraCtrl.UnbindAura(); }
 
@@ -527,8 +558,6 @@ public class WeaponController : MonoBehaviour
         var mageAll = GetComponentsInChildren<MageSkills>(true);
         foreach (var m in mageAll) if (m) m.enabled = false;
 
-        Debug.Log("[WeaponController] Disabled all weapon skill scripts");
-
         // Clear ability icons when weapon is sheathed
         if (abilityManager != null)
         {
@@ -540,7 +569,6 @@ public class WeaponController : MonoBehaviour
         if (shaderController != null)
         {
             shaderController.UnassignMaterial();
-            Debug.Log("[WeaponController] Unassigned Ultimate shader material on sheath");
         }
 
         // Áp tất cả các Layer vũ khí về 0 để Base/UpperBody tự do hoạt động
@@ -654,33 +682,21 @@ public class WeaponController : MonoBehaviour
         foreach (var s in swordAll)
         {
             if (s)
-            {
                 s.enabled = isSword;
-                if (isSword) Debug.Log("[WeaponController] Enabled SwordSkills");
-                else Debug.Log("[WeaponController] Disabled SwordSkills");
-            }
         }
 
         var axeAll = GetComponentsInChildren<AxeSkill>(true);
         foreach (var a in axeAll)
         {
             if (a)
-            {
                 a.enabled = isAxe;
-                if (isAxe) Debug.Log("[WeaponController] Enabled AxeSkill");
-                else Debug.Log("[WeaponController] Disabled AxeSkill");
-            }
         }
 
         var mageAll = GetComponentsInChildren<MageSkills>(true);
         foreach (var m in mageAll)
         {
             if (m)
-            {
                 m.enabled = isMage;
-                if (isMage) Debug.Log("[WeaponController] Enabled MageSkills");
-                else Debug.Log("[WeaponController] Disabled MageSkills");
-            }
         }
 
 
@@ -700,7 +716,6 @@ public class WeaponController : MonoBehaviour
         if (abilityManager != null)
         {
             abilityManager.AE_SetWeaponAbilities();
-            Debug.Log("[WeaponController] AE_SetWeaponAbilities called");
         }
         else
         {
@@ -710,7 +725,6 @@ public class WeaponController : MonoBehaviour
                 abilityManager = currentHeldInstance.GetComponent<WeaponAbilityManager>();
                 if (abilityManager != null)
                 {
-                    Debug.Log("[WeaponController] Found WeaponAbilityManager in weapon instance");
                     abilityManager.AE_SetWeaponAbilities();
                 }
                 else
@@ -719,7 +733,6 @@ public class WeaponController : MonoBehaviour
                     abilityManager = currentHeldInstance.GetComponentInChildren<WeaponAbilityManager>();
                     if (abilityManager != null)
                     {
-                        Debug.Log("[WeaponController] Found WeaponAbilityManager in weapon instance children");
                         abilityManager.AE_SetWeaponAbilities();
                     }
                     else
@@ -765,14 +778,7 @@ public class WeaponController : MonoBehaviour
         // Only assign material if Ultimate is ready (not on cooldown)
         if (!isUltimateOnCooldown)
         {
-            // Update material for current weapon type
             shaderController.UpdateMaterialForWeapon(weaponType);
-            Debug.Log($"[WeaponController] Assigned Ultimate shader for {weaponType} (Ultimate ready)");
-        }
-        else
-        {
-            // Don't assign material if Ultimate is on cooldown
-            Debug.Log($"[WeaponController] Skipped Ultimate shader assignment for {weaponType} (Ultimate on cooldown)");
         }
     }
 

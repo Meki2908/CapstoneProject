@@ -2,6 +2,8 @@ using UnityEngine;
 
 public class DashState : State
 {
+    const float MinRollDashVisualDuration = 0.35f;
+    const float RollDashSpeedScale = 0.65f;
     private float elapsedTime;
     private Vector3 dashDirection;
 
@@ -30,10 +32,11 @@ public class DashState : State
         if (lowerBodyLayerIndex >= 0)
             character.animator.SetLayerWeight(lowerBodyLayerIndex, 0f);
 
-        // === PHÂN NHÁNH 1: PARKOUR ROLL (DÙNG ROOT MOTION) ===
+        // === PHÂN NHÁNH 1: PARKOUR ROLL (DETERMINISTIC CODE MOTION) ===
         if (character.isRollLanding)
         {
-            character.animator.applyRootMotion = true; // Ép Root Motion
+            // Avoid root-motion transform fighting CharacterController.Move during client resimulation.
+            character.animator.applyRootMotion = false;
 
             Vector2 input = MoveInput;
             GetPlanarCameraBasis(out Vector3 forward, out Vector3 right);
@@ -43,7 +46,7 @@ public class DashState : State
             character.transform.rotation = Quaternion.LookRotation(dashDirection);
 
             if (character.animator)
-                character.animator.SetTrigger("dash");
+                character.SetTriggerSafe("dash");
 
             if (character.TryGetComponent(out StuckDetection stuck))
                 stuck.enabled = false;
@@ -94,7 +97,7 @@ public class DashState : State
         character.AE_EnableDashInvincibility(); // Bật I-Frame
 
         if (character.animator)
-            character.animator.SetTrigger("dash");
+            character.SetTriggerSafe("dash");
 
         if (character.TryGetComponent(out StuckDetection stuckDet))
             stuckDet.enabled = false;
@@ -121,7 +124,10 @@ public class DashState : State
             }
         }
 
-        if (elapsedTime >= character.dashDuration)
+        float exitDuration = character.isRollLanding
+            ? Mathf.Max(character.dashDuration, MinRollDashVisualDuration)
+            : character.dashDuration;
+        if (elapsedTime >= exitDuration)
         {
             State nextState = character.currentLocomotionState != null ? character.currentLocomotionState : character.standing;
             stateMachine.ChangeState(nextState);
@@ -134,9 +140,14 @@ public class DashState : State
 
         if (character.isRollLanding)
         {
-            // ROOT MOTION TỰ LO -> CODE TRẢ VỀ 0
-            character.CalculatedVelocity.x = 0f;
-            character.CalculatedVelocity.z = 0f;
+            // Deterministic roll movement (rollback-safe) instead of animator root motion.
+            float dur = Mathf.Max(character.dashDuration, MinRollDashVisualDuration);
+            float t = Mathf.Clamp01(elapsedTime / dur);
+            float mul = character.dashSpeedMultiplierOverTime != null && character.dashSpeedMultiplierOverTime.length > 0
+                ? character.dashSpeedMultiplierOverTime.Evaluate(t) : 1f;
+            Vector3 rollMove = dashDirection * (character.dashSpeed * RollDashSpeedScale * mul);
+            character.CalculatedVelocity.x = rollMove.x;
+            character.CalculatedVelocity.z = rollMove.z;
         }
         else
         {
@@ -171,7 +182,8 @@ public class DashState : State
 
         if (character.animator)
             character.animator.SetBool("isRollLanding", false);
-        if (character.isRollLanding) character.isRollLanding = false;
+        if (character.isRollLanding)
+            character.SyncRollLandingState(false);
         else
         {
             character.IsDashing = false;

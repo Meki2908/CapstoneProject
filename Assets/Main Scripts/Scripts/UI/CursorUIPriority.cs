@@ -33,14 +33,12 @@ public static class CursorUIPriority
     public static void BeginUiOverlay()
     {
         _depth++;
-        UnityEngine.Debug.Log($"[CursorUIPriority] BeginUiOverlay: depth={_depth}");
         MouseLockManager.Instance?.NotifyUiOverlay(true);
     }
 
     /// <summary>Gọi khi đóng một UI panel/menu; khi depth về 0 → FPS mode.</summary>
     public static void EndUiOverlay()
     {
-        UnityEngine.Debug.Log($"[CursorUIPriority] EndUiOverlay: depth={_depth}");
         if (_depth <= 0) return;
 
         _depth--;

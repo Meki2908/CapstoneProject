@@ -49,7 +49,6 @@ public class CrouchingState : State
         // Restore the original height and center of the CharacterController
         character.controller.height = originalHeight;
         character.controller.center = originalCenter;
-        character.PlayerVelocity = new Vector3(input.x, 0, input.y);
         character.animator.SetBool("isCrouch", false);
     }
 
@@ -96,6 +95,9 @@ public class CrouchingState : State
         currentVelocity = Vector3.Lerp(currentVelocity, velocity, character.velocityDampTime);
 
         character.CalculatedVelocity = (currentVelocity * playerSpeed);
+
+        if (character != null)
+            character.SetAnimatorLocomotionSpeed(currentVelocity.magnitude);
 
         if (velocity.sqrMagnitude > 0.1f)
         {
