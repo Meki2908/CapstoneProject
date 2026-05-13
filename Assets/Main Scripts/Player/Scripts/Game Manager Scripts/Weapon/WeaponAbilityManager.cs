@@ -31,8 +31,11 @@ public class WeaponAbilityManager : MonoBehaviour
     // Animation Event: Set ability icons when weapon is drawn
     public void AE_SetWeaponAbilities()
     {
+        var character = GetComponentInParent<Character>();
+        if (character != null && !character.HasInputAuthority)
+            return;
+
         EnsureIconManager();
-        Debug.Log($"[WeaponAbilityManager] AE_SetWeaponAbilities called - iconManager: {iconManager != null}, abilities: {weaponAbilities?.Length ?? 0}");
 
         if (iconManager != null && weaponAbilities != null)
         {
@@ -47,11 +50,6 @@ public class WeaponAbilityManager : MonoBehaviour
             }
 
             iconManager.AE_SetAbilityIcons(weaponAbilities);
-            Debug.Log("[WeaponAbilityManager] Successfully called iconManager.AE_SetAbilityIcons");
-        }
-        else
-        {
-            Debug.LogWarning($"[WeaponAbilityManager] IconManager or Abilities not found - iconManager: {iconManager != null}, abilities: {weaponAbilities != null}");
         }
     }
 
@@ -63,6 +61,10 @@ public class WeaponAbilityManager : MonoBehaviour
     // Animation Event: Clear ability icons when weapon is sheathed
     public void AE_ClearWeaponAbilities()
     {
+        var character = GetComponentInParent<Character>();
+        if (character != null && !character.HasInputAuthority)
+            return;
+
         EnsureIconManager();
         if (iconManager != null)
         {

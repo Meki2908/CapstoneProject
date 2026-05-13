@@ -87,6 +87,13 @@ public class AttackState : State
 
         boundWeaponForHitRunner = null;
         ResolveAndSyncCurrentWeapon();
+        if (currentWeapon == null)
+        {
+            character.ResetTriggerSafe("attack");
+            stateMachine.ChangeState(character.combatMove);
+            return;
+        }
+
         hitIndex = 0;
 
         if (hitHandler == null)
@@ -179,6 +186,13 @@ public class AttackState : State
         EnsureCorrectWeaponLayer();
 
         timePassed += character.Runner.DeltaTime;
+
+        int weaponLayerIndex = GetWeaponLayerIndex();
+        if (weaponLayerIndex < 0 && timePassed > 0.35f)
+        {
+            ForceExitState();
+            return;
+        }
         
         if (isSnappingRotation)
         {
@@ -189,7 +203,6 @@ public class AttackState : State
             }
         }
 
-        int weaponLayerIndex = GetWeaponLayerIndex();
         float normalizedTime = 0f;
         bool isInTransition = false;
 
@@ -556,6 +569,13 @@ public class AttackState : State
     {
         if (currentWeapon != null)
             return currentWeapon.weaponType;
+        if (character != null && character.Object != null && character.Object.IsValid
+            && character.Runner != null && character.Runner.IsRunning)
+        {
+            int net = character.NetEquippedWeaponType;
+            if (net >= (int)WeaponType.Sword && net <= (int)WeaponType.Mage)
+                return (WeaponType)net;
+        }
         int ti = GetWeaponTypeIntFromAnimator(character.animator);
         if (ti >= (int)WeaponType.Sword && ti <= (int)WeaponType.Mage)
             return (WeaponType)ti;
@@ -583,13 +603,14 @@ public class AttackState : State
             case WeaponType.Sword: return 1;
             case WeaponType.Axe: return 2;
             case WeaponType.Mage: return 3;
-            default: return 1;
+            default: return -1;
         }
     }
 
     private void SetLayerWeightSafe(int layer, float weight)
     {
-        if (character.animator != null && layer >= 0 && layer < character.animator.layerCount)
+        if (layer < 0) return;
+        if (character.animator != null && layer < character.animator.layerCount)
             character.animator.SetLayerWeight(layer, weight);
     }
 

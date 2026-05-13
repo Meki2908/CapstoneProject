@@ -18,39 +18,34 @@ public class ProjectileDamage : MonoBehaviour
     {
         baseDamage = damage;
         hasPlayedImpactSfx = false;
-        // Find EquipmentSystem and WeaponController
         equipmentSystem = GetComponentInParent<EquipmentSystem>();
-        if (equipmentSystem == null)
-        {
-            equipmentSystem = FindFirstObjectByType<EquipmentSystem>();
-        }
-        
         weaponController = GetComponentInParent<WeaponController>();
-        if (weaponController == null)
-        {
-            weaponController = FindFirstObjectByType<WeaponController>();
-        }
-
         if (impactAudioSource == null)
-        {
             impactAudioSource = GetComponentInParent<AudioSource>();
-        }
+    }
+
+    public void SetOwner(Character owner)
+    {
+        if (owner == null) return;
+        equipmentSystem = owner.GetComponentInChildren<EquipmentSystem>();
+        weaponController = owner.GetComponentInChildren<WeaponController>();
+        UpdateDamageWithGems();
+        TryRegisterWithProjectileManager();
     }
 
     private void Start()
     {
         UpdateDamageWithGems();
+        TryRegisterWithProjectileManager();
+    }
 
-        // Auto-setup with SkillProjectileManager if available
-        if (SkillProjectileManager.Instance != null)
-        {
-            WeaponType weaponType = WeaponType.Mage; // Default for projectiles
-            if (weaponController != null && weaponController.GetCurrentWeapon() != null)
-            {
-                weaponType = weaponController.GetCurrentWeapon().weaponType;
-            }
-            SkillProjectileManager.Instance.SetupSkillProjectile(gameObject, damage, weaponType, AbilityInput.E, false);
-        }
+    void TryRegisterWithProjectileManager()
+    {
+        if (SkillProjectileManager.Instance == null) return;
+        var wt = WeaponType.Mage;
+        if (weaponController != null && weaponController.GetCurrentWeapon() != null)
+            wt = weaponController.GetCurrentWeapon().weaponType;
+        SkillProjectileManager.Instance.SetupSkillProjectile(gameObject, damage, wt, AbilityInput.E, false);
     }
 
     /// <summary>
@@ -65,14 +60,13 @@ public class ProjectileDamage : MonoBehaviour
         }
 
         WeaponSO currentWeapon = equipmentSystem.GetCurrentWeapon();
-        if (currentWeapon == null || currentWeapon.weaponType != WeaponType.Mage)
+        if (currentWeapon == null)
         {
             damage = baseDamage;
             return;
         }
 
-        // Get damage multiplier from gems (returns 1.0 + total %)
-        float damageMultiplier = WeaponGemManager.Instance.GetDamageMultiplier(WeaponType.Mage);
+        float damageMultiplier = WeaponGemManager.Instance.GetDamageMultiplier(currentWeapon.weaponType);
 
         // Calculate: baseDamage + (baseDamage × %)
         float damagePercent = damageMultiplier - 1f; // Extract the % part (e.g., 1.15 -> 0.15)
@@ -117,7 +111,10 @@ public class ProjectileDamage : MonoBehaviour
             if (debugMode) Debug.Log($"[ProjectileDamage] Collision hit: {enemy.name} for {finalDamage} damage (crit: {isCrit})");
             
             // isSkill=true để skill projectile damage boss đúng cách
-            enemy.TakeDamage(finalDamage, WeaponType.Mage, isCrit, true);
+            var wt = weaponController != null && weaponController.GetCurrentWeapon() != null
+                ? weaponController.GetCurrentWeapon().weaponType
+                : WeaponType.Mage;
+            enemy.TakeDamage(finalDamage, wt, isCrit, true);
             PlayImpactSfxOnce();
         }
     }
@@ -155,7 +152,10 @@ public class ProjectileDamage : MonoBehaviour
             if (debugMode) Debug.Log($"[ProjectileDamage] Particle hit: {enemy.name} for {finalDamage} damage (crit: {isCrit})");
             
             // isSkill=true để skill projectile damage boss đúng cách
-            enemy.TakeDamage(finalDamage, WeaponType.Mage, isCrit, true);
+            var wt = weaponController != null && weaponController.GetCurrentWeapon() != null
+                ? weaponController.GetCurrentWeapon().weaponType
+                : WeaponType.Mage;
+            enemy.TakeDamage(finalDamage, wt, isCrit, true);
             PlayImpactSfxOnce();
         }
     }

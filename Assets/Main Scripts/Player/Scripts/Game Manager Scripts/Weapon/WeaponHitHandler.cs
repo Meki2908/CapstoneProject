@@ -206,6 +206,10 @@ public class WeaponHitRunner : MonoBehaviour
                 vfx.transform.rotation = vfx.transform.rotation * Quaternion.Euler(timing.spawnRule.extraEulerOffset);
             }
 
+            var owner = characterRoot != null ? characterRoot.GetComponent<Character>() : null;
+            if (owner != null)
+                BaseEffectScript.WireSpellOwnership(owner, vfx);
+
             if (vfxLifetime > 0f) Destroy(vfx, vfxLifetime);
         }
     }

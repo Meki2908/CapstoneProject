@@ -27,11 +27,27 @@ public abstract class BaseEffectScript : MonoBehaviour
     protected virtual void Awake()
     {
         baseDamage = damage;
-        weaponController = FindFirstObjectByType<WeaponController>();
-
+        weaponController = GetComponentInParent<WeaponController>();
         equipmentSystem = GetComponentInParent<EquipmentSystem>();
-        if (equipmentSystem == null)
-            equipmentSystem = FindFirstObjectByType<EquipmentSystem>();
+    }
+
+    /// <summary>For projectiles/VFX instantiated without a parent chain to the caster.</summary>
+    public void SetOwner(Character owner)
+    {
+        if (owner == null) return;
+        weaponController = owner.GetComponentInChildren<WeaponController>();
+        equipmentSystem = owner.GetComponentInChildren<EquipmentSystem>();
+        UpdateDamageWithGems();
+    }
+
+    /// <summary>Assign caster to all networked damage helpers under a spawned root.</summary>
+    public static void WireSpellOwnership(Character owner, GameObject spawnedRoot)
+    {
+        if (owner == null || spawnedRoot == null) return;
+        foreach (var p in spawnedRoot.GetComponentsInChildren<ProjectileDamage>(true))
+            p.SetOwner(owner);
+        foreach (var e in spawnedRoot.GetComponentsInChildren<BaseEffectScript>(true))
+            e.SetOwner(owner);
     }
 
     protected virtual void Start()

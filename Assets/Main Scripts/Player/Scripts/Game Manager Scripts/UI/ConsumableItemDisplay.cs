@@ -120,15 +120,19 @@ public class ConsumableItemDisplay : MonoBehaviour
     /// </summary>
     private void TryFindPlayerHealth()
     {
-        // Nếu đã có reference hợp lệ → không cần tìm lại
-        if (playerHealth != null) return;
-        if (!autoFindPlayerHealth) return;
+        if (!autoFindPlayerHealth)
+            return;
 
-        playerHealth = FindFirstObjectByType<PlayerHealth>();
-        if (playerHealth != null)
+        if (Character.LocalCharacter != null)
         {
-            Debug.Log($"[ConsumableItemDisplay] Found PlayerHealth on '{playerHealth.gameObject.name}'");
+            var ph = Character.LocalCharacter.GetComponent<PlayerHealth>()
+                     ?? Character.LocalCharacter.GetComponentInChildren<PlayerHealth>(true);
+            playerHealth = ph;
+            return;
         }
+
+        if (playerHealth == null)
+            playerHealth = FindFirstObjectByType<PlayerHealth>();
     }
 
     /// <summary>
@@ -214,9 +218,7 @@ public class ConsumableItemDisplay : MonoBehaviour
         }
 
         if (useInput)
-        {
             TryUseHealthPotion();
-        }
 
         // Update cooldown
         if (isOnCooldown)
@@ -250,6 +252,9 @@ public class ConsumableItemDisplay : MonoBehaviour
     /// </summary>
     private void TryUseHealthPotion()
     {
+        if (Character.LocalCharacter == null)
+            return;
+
         // Check cooldown
         if (isOnCooldown)
         {
@@ -358,10 +363,8 @@ public class ConsumableItemDisplay : MonoBehaviour
     /// </summary>
     public void RefreshPlayerHealth()
     {
-        if (autoFindPlayerHealth)
-        {
-            playerHealth = FindFirstObjectByType<PlayerHealth>();
-        }
+        playerHealth = null;
+        TryFindPlayerHealth();
     }
 
     private void OnDestroy()

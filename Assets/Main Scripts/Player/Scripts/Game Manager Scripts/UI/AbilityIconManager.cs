@@ -292,6 +292,24 @@ public class AbilityIconManager : MonoBehaviour
         Debug.Log("<color=green>[UI]</color> �� k?t n?i v?i WeaponController c?a Local Player!");
     }
 
+    WeaponController ResolveLocalWeaponController()
+    {
+        if (Character.LocalCharacter == null)
+            return null;
+        var localWc = Character.LocalCharacter.GetComponent<WeaponController>();
+        if (localWc == null)
+            localWc = Character.LocalCharacter.GetComponentInChildren<WeaponController>(true);
+        return localWc;
+    }
+
+    bool IsBoundToLocalController()
+    {
+        var localWc = ResolveLocalWeaponController();
+        if (localWc == null || weaponController == null)
+            return false;
+        return localWc == weaponController;
+    }
+
     public void AE_SetAbilityIcons(AbilitySO[] abilities)
     {
         Debug.Log($"[AbilityIconManager] AE_SetAbilityIcons called with {abilities?.Length ?? 0} abilities");
@@ -428,6 +446,12 @@ public class AbilityIconManager : MonoBehaviour
     // Method to trigger cooldown when ability is used (flags CD to current weapon from WeaponController)
     public void TriggerCooldown(AbilityInput input)
     {
+        if (!IsBoundToLocalController())
+        {
+            Debug.LogWarning($"[AbilityIconManager] Reject TriggerCooldown({input}) because UI is not bound to LocalCharacter weapon.");
+            return;
+        }
+
         WeaponType weaponType = WeaponType.None;
         if (weaponController != null && weaponController.GetCurrentWeapon() != null)
             weaponType = weaponController.GetCurrentWeapon().weaponType;
@@ -448,6 +472,30 @@ public class AbilityIconManager : MonoBehaviour
         {
             cooldownEndTimes.Remove(key);
         }
+    }
+
+    /// <summary>
+    /// Safe entrypoint for gameplay scripts: trigger cooldown only when call source belongs to local player weapon.
+    /// </summary>
+    public void TriggerCooldownFromSource(AbilityInput input, WeaponController source)
+    {
+        if (source == null)
+        {
+            Debug.LogWarning($"[AbilityIconManager] Reject TriggerCooldownFromSource({input}) because source is null.");
+            return;
+        }
+
+        var localWc = ResolveLocalWeaponController();
+        if (localWc == null || source != localWc)
+        {
+            Debug.Log($"[AbilityIconManager] Ignore remote cooldown source for {input} (source={source.name}).");
+            return;
+        }
+
+        if (weaponController != localWc)
+            BindToLocalPlayer(localWc);
+
+        TriggerCooldown(input);
     }
 
     // Check if ability is on cooldown for current weapon

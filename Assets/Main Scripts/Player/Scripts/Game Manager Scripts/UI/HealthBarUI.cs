@@ -25,7 +25,8 @@ public class HealthBarUI : MonoBehaviour
 
     [Header("Auto Find Settings")]
     [SerializeField] private bool autoFindPlayerHealth = true;
-    [SerializeField] private string playerTag = "Player"; // Tag to find player if auto-find is enabled
+    [Tooltip("Fallback when Character.LocalCharacter is null (e.g. offline menu without Fusion).")]
+    [SerializeField] private string playerTag = "Player";
 
     private PlayerHealth playerHealth;
     private float targetHealthFill = 1f;
@@ -185,32 +186,55 @@ public class HealthBarUI : MonoBehaviour
     /// </summary>
     private void FindPlayerHealth()
     {
-        // Try to find by tag first
+        if (!autoFindPlayerHealth)
+            return;
+
+        // Primary: local input player (Fusion / multi-client safe)
+        if (Character.LocalCharacter != null)
+        {
+            var ph = Character.LocalCharacter.GetComponent<PlayerHealth>()
+                     ?? Character.LocalCharacter.GetComponentInChildren<PlayerHealth>(true);
+            if (ph != null)
+            {
+                if (playerHealth != ph)
+                {
+                    UnsubscribeFromHealthEvents();
+                    playerHealth = ph;
+                    SubscribeToHealthEvents();
+                }
+                return;
+            }
+        }
+
+        // Fallback: tag (single-player / editor before spawn)
         if (!string.IsNullOrEmpty(playerTag))
         {
-            GameObject playerObject = GameObject.FindGameObjectWithTag(playerTag);
+            var playerObject = GameObject.FindGameObjectWithTag(playerTag);
             if (playerObject != null)
             {
-                playerHealth = playerObject.GetComponent<PlayerHealth>();
-                if (playerHealth != null)
+                var ph = playerObject.GetComponent<PlayerHealth>() ?? playerObject.GetComponentInChildren<PlayerHealth>(true);
+                if (ph != null)
                 {
-                    SubscribeToHealthEvents();
-                    Debug.Log($"[HealthBarUI] Found PlayerHealth on '{playerObject.name}' by tag. HP={playerHealth.CurrentHealth}/{playerHealth.MaxHealth}");
+                    if (playerHealth != ph)
+                    {
+                        UnsubscribeFromHealthEvents();
+                        playerHealth = ph;
+                        SubscribeToHealthEvents();
+                    }
                     return;
                 }
             }
         }
 
-        // Try FindObjectOfType as fallback
-        playerHealth = FindFirstObjectByType<PlayerHealth>();
-        if (playerHealth != null)
+        var any = FindFirstObjectByType<PlayerHealth>();
+        if (any != null)
         {
-            SubscribeToHealthEvents();
-            Debug.Log($"[HealthBarUI] Found PlayerHealth on '{playerHealth.gameObject.name}' by FindFirstObjectByType. HP={playerHealth.CurrentHealth}/{playerHealth.MaxHealth}");
-        }
-        else
-        {
-            Debug.LogWarning("[HealthBarUI] PlayerHealth not found! Make sure PlayerHealth component exists in the scene.");
+            if (playerHealth != any)
+            {
+                UnsubscribeFromHealthEvents();
+                playerHealth = any;
+                SubscribeToHealthEvents();
+            }
         }
     }
 

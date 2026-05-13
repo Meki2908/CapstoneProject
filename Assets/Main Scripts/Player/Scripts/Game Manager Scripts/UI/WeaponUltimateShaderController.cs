@@ -87,8 +87,11 @@ public class WeaponUltimateShaderController : MonoBehaviour
         }
         else
         {
-            // Fallback khi test Offline
-            newWeaponController = FindFirstObjectByType<WeaponController>();
+            // In multiplayer, avoid binding to arbitrary player while LocalCharacter is not ready.
+            // Offline fallback is allowed when there is no active Fusion runner.
+            var anyCharacter = FindFirstObjectByType<Character>();
+            bool fusionRunning = anyCharacter != null && anyCharacter.Runner != null && anyCharacter.Runner.IsRunning;
+            newWeaponController = fusionRunning ? null : FindFirstObjectByType<WeaponController>();
         }
 
         // 2) Chỉ xử lý Subscribe/Unsubscribe nếu Player thực sự thay đổi

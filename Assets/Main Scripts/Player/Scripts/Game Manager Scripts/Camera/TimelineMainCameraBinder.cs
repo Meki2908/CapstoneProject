@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 using UnityEngine.Playables;
 using UnityEngine.Timeline;
@@ -40,10 +39,20 @@ public sealed class TimelineMainCameraBinder : MonoBehaviour
         if (director == null)
             return false;
 
-        return BindToMainCameraBrain(director, warnOnce: localPlayerOnly);
+        return BindToMainCameraBrain(director, character, warnOnce: localPlayerOnly, bindLocalCamera: true);
     }
 
     public static bool BindToMainCameraBrain(PlayableDirector playableDirector, bool warnOnce)
+    {
+        Character owner = playableDirector != null ? playableDirector.GetComponentInParent<Character>() : null;
+        return BindToMainCameraBrain(playableDirector, owner, warnOnce: warnOnce, bindLocalCamera: true);
+    }
+
+    /// <summary>
+    /// Binds CinemachineBrain and Camera timeline outputs only (no Animator rebinding).
+    /// Camera/brain binding is skipped on non–input-authority peers when Fusion is running.
+    /// </summary>
+    public static bool BindToMainCameraBrain(PlayableDirector playableDirector, Character owner, bool warnOnce, bool bindLocalCamera)
     {
         if (playableDirector == null)
             return false;
@@ -51,27 +60,38 @@ public sealed class TimelineMainCameraBinder : MonoBehaviour
         if (playableDirector.playableAsset is not TimelineAsset timeline)
             return false;
 
-        var cam = Camera.main;
-        if (cam == null)
+        var resolvedOwner = owner != null ? owner : playableDirector.GetComponentInParent<Character>();
+
+        bool canBindLocalCamera = bindLocalCamera;
+        if (canBindLocalCamera && resolvedOwner != null && resolvedOwner.Runner != null && resolvedOwner.Runner.IsRunning)
+            canBindLocalCamera = resolvedOwner.HasInputAuthority;
+
+        Camera cam = null;
+        CinemachineBrain brain = null;
+        if (canBindLocalCamera)
         {
-            cam = FindFirstObjectByType<Camera>();
-            if (warnOnce && !_warnedNoMainCamera)
+            cam = Camera.main;
+            if (cam == null)
             {
-                _warnedNoMainCamera = true;
-                Debug.LogWarning("[TimelineBinder] No Camera.main found. Falling back to first Camera in scene.");
+                cam = FindFirstObjectByType<Camera>();
+                if (warnOnce && !_warnedNoMainCamera)
+                {
+                    _warnedNoMainCamera = true;
+                    Debug.LogWarning("[TimelineBinder] No Camera.main found. Falling back to first Camera in scene.");
+                }
             }
-        }
 
-        if (cam == null)
-            return false;
-
-        var brain = cam.GetComponent<CinemachineBrain>();
-        if (brain == null)
-        {
-            if (warnOnce && !_warnedNoBrain)
+            if (cam != null)
             {
-                _warnedNoBrain = true;
-                Debug.LogWarning("[TimelineBinder] Main camera has no CinemachineBrain. Cinemachine timeline tracks may not work.");
+                brain = cam.GetComponent<CinemachineBrain>();
+                if (brain == null)
+                {
+                    if (warnOnce && !_warnedNoBrain)
+                    {
+                        _warnedNoBrain = true;
+                        Debug.LogWarning("[TimelineBinder] Main camera has no CinemachineBrain. Cinemachine timeline tracks may not work.");
+                    }
+                }
             }
         }
 
@@ -83,7 +103,6 @@ public sealed class TimelineMainCameraBinder : MonoBehaviour
             if (targetType == null)
                 continue;
 
-            // Bind Cinemachine tracks to the scene's brain.
             if (brain != null && typeof(CinemachineBrain).IsAssignableFrom(targetType))
             {
                 playableDirector.SetGenericBinding(output.sourceObject, brain);
@@ -91,8 +110,7 @@ public sealed class TimelineMainCameraBinder : MonoBehaviour
                 continue;
             }
 
-            // Some timelines might output to Camera directly.
-            if (typeof(Camera).IsAssignableFrom(targetType))
+            if (cam != null && typeof(Camera).IsAssignableFrom(targetType))
             {
                 playableDirector.SetGenericBinding(output.sourceObject, cam);
                 anyBound = true;
@@ -103,4 +121,3 @@ public sealed class TimelineMainCameraBinder : MonoBehaviour
         return anyBound;
     }
 }
-

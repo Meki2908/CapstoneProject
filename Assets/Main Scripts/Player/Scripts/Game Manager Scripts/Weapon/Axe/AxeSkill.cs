@@ -33,6 +33,14 @@ public class AxeSkill : MonoBehaviour
     private readonly Dictionary<int, int> lastVfxSpawnFrame = new();
     [SerializeField] private float vfxMinInterval = 0.03f;
 
+    bool CanTouchLocalHud()
+    {
+        if (character == null) return false;
+        if (character.Runner != null && character.Runner.IsRunning)
+            return character.HasInputAuthority;
+        return true;
+    }
+
     private void Awake()
     {
         character = GetComponentInParent<Character>();
@@ -131,7 +139,7 @@ public class AxeSkill : MonoBehaviour
         if (WeaponMasteryManager.Instance != null && !WeaponMasteryManager.Instance.IsSkillUnlocked(WeaponType.Axe, input))
             return;
 
-        if (AbilityIconManager.Instance != null && AbilityIconManager.Instance.IsOnCooldown(input))
+        if (CanTouchLocalHud() && AbilityIconManager.Instance != null && AbilityIconManager.Instance.IsOnCooldown(input))
             return;
 
         if (enemyDetection == null && character != null)
@@ -146,9 +154,9 @@ public class AxeSkill : MonoBehaviour
         else
             animator.SetTrigger(skillTriggerParam);
         // Cooldown should not depend on Animation Events (AE can be skipped in chaotic combat / networking).
-        if (AbilityIconManager.Instance != null)
+        if (CanTouchLocalHud() && AbilityIconManager.Instance != null)
         {
-            AbilityIconManager.Instance.TriggerCooldown(input);
+            AbilityIconManager.Instance.TriggerCooldownFromSource(input, wc);
         }
 
         if (skillLock != null) skillLock.BeginSkillRootMotion(animator);
@@ -156,17 +164,10 @@ public class AxeSkill : MonoBehaviour
 
         if (input == AbilityInput.Q_Ultimate && ultimateDirector != null)
         {
-            bool useNet = character != null && character.Object != null && character.Object.IsValid
-                && character.Runner != null && character.Runner.IsRunning;
-            if (useNet && character.HasInputAuthority)
-                character.RPC_PlayPlayerUltimate(Character.PlayerUltimateVisualKind.Axe);
-            else
-            {
-                if (character != null && character.HasInputAuthority)
-                    TimelineMainCameraBinder.BindToMainCameraBrain(ultimateDirector, warnOnce: true);
-                ultimateDirector.time = 0;
-                ultimateDirector.Play();
-            }
+            bool startedViaRpc = character != null &&
+                character.TryBroadcastUltimateTimeline(Character.PlayerUltimateVisualKind.Axe);
+            if (!startedViaRpc)
+                PlayUltimateTimeline(bindLocalCamera: true);
         }
 
         TutorialTextDisplay.NotifySkillActivatedFromGameplay(input);
@@ -213,6 +214,9 @@ public class AxeSkill : MonoBehaviour
             v.transform.rotation *= Quaternion.Euler(ev.spawnRule.extraEulerOffset);
         }
         v.transform.localScale = Vector3.Scale(v.transform.localScale, scl);
+
+        if (character != null)
+            BaseEffectScript.WireSpellOwnership(character, v);
 
         // Move (optional)
         if (ev.moveAfterSpawn)
@@ -291,9 +295,11 @@ public class AxeSkill : MonoBehaviour
     // Animation Event: Trigger cooldown for specific ability
     public void AE_TriggerCooldown(int inputIndex)
     {
+        if (!CanTouchLocalHud()) return;
         if (AbilityIconManager.Instance != null) 
         {
-            AbilityIconManager.Instance.AE_TriggerCooldown(inputIndex);
+            var wc = GetComponent<WeaponController>();
+            AbilityIconManager.Instance.TriggerCooldownFromSource((AbilityInput)inputIndex, wc);
         }
     }
 
@@ -315,12 +321,16 @@ public class AxeSkill : MonoBehaviour
     /// <summary>Invoked by <see cref="Character.RPC_PlayPlayerUltimate"/> on every peer.</summary>
     public void PlayUltimateFromNetworkRpc()
     {
+        PlayUltimateTimeline(bindLocalCamera: true);
+    }
+
+    private void PlayUltimateTimeline(bool bindLocalCamera)
+    {
         if (ultimateDirector == null) return;
+        TimelineMainCameraBinder.BindToMainCameraBrain(ultimateDirector, character, warnOnce: true, bindLocalCamera: bindLocalCamera);
         ultimateDirector.Stop();
         ultimateDirector.time = 0f;
         ultimateDirector.Play();
-        if (character != null && character.HasInputAuthority)
-            TimelineMainCameraBinder.BindToMainCameraBrain(ultimateDirector, warnOnce: true);
     }
 }
 

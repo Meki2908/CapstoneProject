@@ -208,7 +208,10 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
     public SkillLock skillLock;
 
     public State currentLocomotionState;
+    /// <summary>Input-owned player on this machine (Fusion). Cleared on <see cref="Despawned"/>.</summary>
     public static Character LocalCharacter;
+    /// <summary>Alias for readability in UI code.</summary>
+    public static Character Local => LocalCharacter;
     [Networked] public CharacterStateSync NetworkedState { get; set; }
     [Networked] public bool NetworkedIsLanding { get; set; }
 
@@ -232,6 +235,23 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
     public event Action LandingEventForVfx;
 
     private ChangeDetector _changeDetector;
+    WeaponController _weaponControllerCache;
+    bool _weaponControllerCacheResolved;
+
+    /// <summary>
+    /// <see cref="WeaponController"/> is on the child rig (e.g. <c>player</c>) on Player_3.0 — not on the same GameObject as <see cref="Character"/>.
+    /// </summary>
+    WeaponController GetWeaponControllerInHierarchy()
+    {
+        if (_weaponControllerCacheResolved)
+            return _weaponControllerCache;
+        _weaponControllerCacheResolved = true;
+        _weaponControllerCache = GetComponentInChildren<WeaponController>(true);
+        if (_weaponControllerCache == null && Application.isPlaying)
+            Debug.LogWarning("[Character] No WeaponController found under this Character hierarchy.", this);
+        return _weaponControllerCache;
+    }
+
     public NetworkInputData previousInput;
     public NetworkInputData currentInput;
     public Vector3 CalculatedVelocity;
@@ -253,6 +273,11 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
 
     /// <summary>Weapon considered drawn for gameplay + UI (replicated).</summary>
     [Networked] public NetworkBool NetIsWeaponDrawn { get; set; }
+    /// <summary>Single source of truth for equipped weapon type across peers.</summary>
+    [Networked] public int NetEquippedWeaponType { get; set; }
+    [Header("Debug — networked weapon")]
+    [Tooltip("Log [NetWeapon] when NetEquippedWeaponType syncs (RPC host + Render peers + delayed read after swap). Tắt khi không test.")]
+    [SerializeField] bool debugNetEquippedWeaponLog = false;
     /// <summary>Convenience read (mirrors <see cref="NetIsWeaponDrawn"/>).</summary>
     public bool isWeaponDrawn => NetIsWeaponDrawn;
     public enum QueuedWeaponAction { None, Draw, Sheath }
@@ -389,7 +414,7 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
             // GI?I THI?U V?I UI:
             if (AbilityIconManager.Instance != null)
             {
-                var wc = GetComponent<WeaponController>();
+                var wc = GetWeaponControllerInHierarchy();
                 AbilityIconManager.Instance.BindToLocalPlayer(wc);
             }
 
@@ -412,6 +437,7 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
             NetLastToggleSimTime = -999f; // So first weapon-toggle buffer does not instantly satisfy cooldown vs SimTime 0.
             NetIsRollLanding = false;
             NetIsWeaponDrawn = false; // default sheathed at spawn (Draw/Sheath states update when needed)
+            NetEquippedWeaponType = (int)WeaponType.None;
             NetworkedIsLanding = false;
             NetLandingRecoveryTimer = TickTimer.None;
             NetJumpBufferRemaining = 0f;
@@ -424,6 +450,20 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
             animator.SetBool("isRollLanding", NetIsRollLanding);
             TrySetAnimatorBool(AnimatorKneeLandingParam, NetworkedIsLanding);
         }
+
+        var weaponCtrl = GetWeaponControllerInHierarchy();
+        if (HasInputAuthority && weaponCtrl != null && weaponCtrl.GetCurrentWeapon() != null)
+            SyncEquippedWeaponType(weaponCtrl.GetCurrentWeapon().weaponType);
+        if (weaponCtrl != null && NetEquippedWeaponType != (int)WeaponType.None)
+            weaponCtrl.ApplyNetworkWeaponType((WeaponType)NetEquippedWeaponType);
+    }
+
+    public override void Despawned(NetworkRunner runner, bool hasState)
+    {
+        CancelInvoke(nameof(DebugLogNetEquippedWeaponDelayedTick));
+        if (HasInputAuthority && LocalCharacter == this)
+            LocalCharacter = null;
+        base.Despawned(runner, hasState);
     }
     
     private void Start()
@@ -517,7 +557,7 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
         }
 
         // Subscribe to weapon change events to update speed multipliers
-        var weaponController = GetComponent<WeaponController>();
+        var weaponController = GetWeaponControllerInHierarchy();
         if (weaponController != null)
         {
             weaponController.OnWeaponChanged += OnWeaponChanged;
@@ -668,6 +708,27 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
                 if (animator != null)
                     animator.SetBool("isWeaponDrawn", NetIsWeaponDrawn);
                 LogCritFsm("Render", $"NetIsWeaponDrawn → {NetIsWeaponDrawn} (anim bool synced)");
+
+                var weaponCtrl = GetWeaponControllerInHierarchy();
+                if (weaponCtrl != null)
+                {
+                    if (NetIsWeaponDrawn)
+                        weaponCtrl.EnsureDrawn(requestAnimation: false);
+                    else
+                        weaponCtrl.EnsureSheathed(requestAnimation: false);
+                }
+            }
+            else if (change == nameof(NetEquippedWeaponType))
+            {
+                if (debugNetEquippedWeaponLog)
+                {
+                    Debug.Log(
+                        $"[NetWeapon] Render NetEquippedWeaponType={(WeaponType)NetEquippedWeaponType} SA={HasStateAuthority} IA={HasInputAuthority} tick={(Runner != null && Runner.IsRunning ? Runner.Tick.ToString() : "?")} obj={name}",
+                        this);
+                }
+                var weaponCtrl = GetWeaponControllerInHierarchy();
+                if (weaponCtrl != null)
+                    weaponCtrl.ApplyNetworkWeaponType((WeaponType)NetEquippedWeaponType);
             }
             else if (change == nameof(NetworkedIsLanding))
             {
@@ -705,10 +766,38 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
         }
     }
 
+    /// <summary>
+    /// Broadcast ultimate visual timeline from the local input owner.
+    /// Returns true when an RPC was sent; false when caller should play local fallback.
+    /// </summary>
+    public bool TryBroadcastUltimateTimeline(PlayerUltimateVisualKind kind)
+    {
+        if (Object == null || !Object.IsValid || Runner == null || !Runner.IsRunning)
+            return false;
+        if (!HasInputAuthority)
+            return false;
+
+        RPC_PlayPlayerUltimate(kind);
+        return true;
+    }
+
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
     void RPC_SyncWeaponDrawn(bool drawn)
     {
         NetIsWeaponDrawn = drawn;
+    }
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    void RPC_SyncEquippedWeaponType(int weaponTypeValue)
+    {
+        int before = NetEquippedWeaponType;
+        NetEquippedWeaponType = weaponTypeValue;
+        if (debugNetEquippedWeaponLog)
+        {
+            Debug.Log(
+                $"[NetWeapon] RPC_SyncEquippedWeaponType APPLIED on StateAuthority {before} → {weaponTypeValue} ({(WeaponType)weaponTypeValue}) obj={name} SA={HasStateAuthority} IA={HasInputAuthority}",
+                this);
+        }
     }
 
     /// <summary>Replicate weapon drawn flag (InputAuthority → StateAuthority RPC if needed).</summary>
@@ -726,6 +815,81 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
 
         if (animator != null && (HasStateAuthority || HasInputAuthority))
             animator.SetBool("isWeaponDrawn", drawn);
+    }
+
+    /// <summary>Replicate equipped weapon type so every peer can mirror visuals/scripts deterministically.</summary>
+    public void SyncEquippedWeaponType(WeaponType type)
+    {
+        if (!Enum.IsDefined(typeof(WeaponType), type))
+        {
+            Debug.LogWarning($"[NetWeapon] SyncEquippedWeaponType INVALID type={type} ({(int)type}) obj={name}", this);
+            return;
+        }
+
+        if (Object == null || !Object.IsValid || Runner == null || !Runner.IsRunning)
+        {
+            if (debugNetEquippedWeaponLog)
+                Debug.LogWarning($"[NetWeapon] SyncEquippedWeaponType SKIP network not ready type={type} obj={name}", this);
+            return;
+        }
+
+        int weaponTypeValue = (int)type;
+        if (NetEquippedWeaponType == weaponTypeValue)
+        {
+            if (debugNetEquippedWeaponLog)
+                Debug.Log($"[NetWeapon] SyncEquippedWeaponType SKIP (already {weaponTypeValue}) obj={name}", this);
+            return;
+        }
+
+        if (HasStateAuthority)
+        {
+            if (debugNetEquippedWeaponLog)
+                Debug.Log($"[NetWeapon] SyncEquippedWeaponType LOCAL SET SA {NetEquippedWeaponType} → {weaponTypeValue} ({(WeaponType)weaponTypeValue}) obj={name}", this);
+            NetEquippedWeaponType = weaponTypeValue;
+        }
+        else if (HasInputAuthority)
+        {
+            if (debugNetEquippedWeaponLog)
+                Debug.Log($"[NetWeapon] SyncEquippedWeaponType RPC SEND {NetEquippedWeaponType} → {weaponTypeValue} ({(WeaponType)weaponTypeValue}) obj={name}", this);
+            RPC_SyncEquippedWeaponType(weaponTypeValue);
+        }
+        else if (debugNetEquippedWeaponLog)
+        {
+            Debug.LogWarning(
+                $"[NetWeapon] SyncEquippedWeaponType NO PATH (not SA, not IA) wanted={(WeaponType)weaponTypeValue} obj={name} — networked weapon will NOT update.",
+                this);
+        }
+    }
+
+    /// <summary>Call from UI after EquipWeapon to log replicated value a few frames later (same-frame read is often stale on client).</summary>
+    public void DebugLogNetEquippedWeaponDelayed()
+    {
+        if (!debugNetEquippedWeaponLog) return;
+        CancelInvoke(nameof(DebugLogNetEquippedWeaponDelayedTick));
+        _netWeaponDebugTicksRemaining = 6;
+        InvokeRepeating(nameof(DebugLogNetEquippedWeaponDelayedTick), 0.05f, 0.05f);
+    }
+
+    int _netWeaponDebugTicksRemaining;
+
+    void DebugLogNetEquippedWeaponDelayedTick()
+    {
+        if (this == null || !isActiveAndEnabled)
+        {
+            CancelInvoke(nameof(DebugLogNetEquippedWeaponDelayedTick));
+            return;
+        }
+        if (!debugNetEquippedWeaponLog)
+        {
+            CancelInvoke(nameof(DebugLogNetEquippedWeaponDelayedTick));
+            return;
+        }
+        _netWeaponDebugTicksRemaining--;
+        Debug.Log(
+            $"[NetWeapon] delayed tick NetEquippedWeaponType={(WeaponType)NetEquippedWeaponType} SA={HasStateAuthority} IA={HasInputAuthority} remaining={_netWeaponDebugTicksRemaining} obj={name}",
+            this);
+        if (_netWeaponDebugTicksRemaining <= 0)
+            CancelInvoke(nameof(DebugLogNetEquippedWeaponDelayedTick));
     }
 
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
@@ -1190,7 +1354,7 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
         float equipmentSpeedPercent = 0f;
 
         // Get gem speed multiplier
-        var weaponController = GetComponent<WeaponController>();
+        var weaponController = GetWeaponControllerInHierarchy();
         if (WeaponGemManager.Instance != null && weaponController != null)
         {
             WeaponSO currentWeapon = weaponController.GetCurrentWeapon();
@@ -1225,7 +1389,7 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
     private void OnDestroy()
     {
         // Unsubscribe from weapon change events
-        var weaponController = GetComponent<WeaponController>();
+        var weaponController = GetWeaponControllerInHierarchy();
         if (weaponController != null)
         {
             weaponController.OnWeaponChanged -= OnWeaponChanged;

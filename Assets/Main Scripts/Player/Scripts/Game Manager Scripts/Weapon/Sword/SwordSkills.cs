@@ -35,14 +35,24 @@ public class SwordSkills : MonoBehaviour
     [SerializeField] private bool useInputDirection = false;
     [SerializeField] private Transform forwardAnchor;
 
+    bool CanTouchLocalHud()
+    {
+        if (character == null) return false;
+        if (character.Runner != null && character.Runner.IsRunning)
+            return character.HasInputAuthority;
+        return true;
+    }
+
     public void SetForwardAnchor(Transform t) => forwardAnchor = t;
     public void SetDefaultVfxSpawn(Transform t) => defaultVfxSpawn = t;
 
     public void AE_TriggerCooldown(int inputIndex)
     {
+        if (!CanTouchLocalHud()) return;
         if (AbilityIconManager.Instance != null) 
         {
-            AbilityIconManager.Instance.AE_TriggerCooldown(inputIndex);
+            var wc = GetComponent<WeaponController>();
+            AbilityIconManager.Instance.TriggerCooldownFromSource((AbilityInput)inputIndex, wc);
         }
     }
 
@@ -109,12 +119,16 @@ public class SwordSkills : MonoBehaviour
     /// <summary>Invoked by <see cref="Character.RPC_PlayPlayerUltimate"/> on every peer.</summary>
     public void PlayUltimateFromNetworkRpc()
     {
+        PlayUltimateTimeline(bindLocalCamera: true);
+    }
+
+    private void PlayUltimateTimeline(bool bindLocalCamera)
+    {
         if (ultimateDirector == null) return;
+        TimelineMainCameraBinder.BindToMainCameraBrain(ultimateDirector, character, warnOnce: true, bindLocalCamera: bindLocalCamera);
         ultimateDirector.Stop();
         ultimateDirector.time = 0f;
         ultimateDirector.Play();
-        if (character != null && character.HasInputAuthority)
-            TimelineMainCameraBinder.BindToMainCameraBrain(ultimateDirector, warnOnce: true);
     }
 
     public void RebuildAbilityMap()
@@ -168,7 +182,7 @@ public class SwordSkills : MonoBehaviour
         if (WeaponMasteryManager.Instance != null && !WeaponMasteryManager.Instance.IsSkillUnlocked(WeaponType.Sword, input))
             return;
 
-        if (AbilityIconManager.Instance != null && AbilityIconManager.Instance.IsOnCooldown(input))
+        if (CanTouchLocalHud() && AbilityIconManager.Instance != null && AbilityIconManager.Instance.IsOnCooldown(input))
             return;
 
         if (enemyDetection == null && character != null)
@@ -184,9 +198,9 @@ public class SwordSkills : MonoBehaviour
             animator.SetTrigger(skillTriggerParam);
 
         // Cooldown should not depend on Animation Events (AE can be skipped in chaotic combat / networking).
-        if (AbilityIconManager.Instance != null)
+        if (CanTouchLocalHud() && AbilityIconManager.Instance != null)
         {
-            AbilityIconManager.Instance.TriggerCooldown(input);
+            AbilityIconManager.Instance.TriggerCooldownFromSource(input, wc);
         }
 
         if (skillLock != null) skillLock.BeginSkillRootMotion(animator);
@@ -194,17 +208,10 @@ public class SwordSkills : MonoBehaviour
 
         if (input == AbilityInput.Q_Ultimate && ultimateDirector != null)
         {
-            bool useNet = character != null && character.Object != null && character.Object.IsValid
-                && character.Runner != null && character.Runner.IsRunning;
-            if (useNet && character.HasInputAuthority)
-                character.RPC_PlayPlayerUltimate(Character.PlayerUltimateVisualKind.Sword);
-            else
-            {
-                if (character != null && character.HasInputAuthority)
-                    TimelineMainCameraBinder.BindToMainCameraBrain(ultimateDirector, warnOnce: true);
-                ultimateDirector.time = 0;
-                ultimateDirector.Play();
-            }
+            bool startedViaRpc = character != null &&
+                character.TryBroadcastUltimateTimeline(Character.PlayerUltimateVisualKind.Sword);
+            if (!startedViaRpc)
+                PlayUltimateTimeline(bindLocalCamera: true);
         }
 
         TutorialTextDisplay.NotifySkillActivatedFromGameplay(input);
@@ -238,6 +245,9 @@ public class SwordSkills : MonoBehaviour
         
         if (ev.spawnRule.extraEulerOffset != Vector3.zero) v.transform.rotation *= Quaternion.Euler(ev.spawnRule.extraEulerOffset);
         v.transform.localScale = Vector3.Scale(v.transform.localScale, scl);
+
+        if (character != null)
+            BaseEffectScript.WireSpellOwnership(character, v);
 
         if (ev.moveAfterSpawn)
         {

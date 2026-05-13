@@ -66,7 +66,22 @@ public class UltimateIconShaderController : MonoBehaviour
     private void RefreshReferences()
     {
         abilityIconManager = FindFirstObjectByType<AbilityIconManager>();
-        weaponController = FindFirstObjectByType<WeaponController>();
+
+        // Never use FindFirstObjectByType<WeaponController> in multiplayer — order = wrong player (often host).
+        if (Character.LocalCharacter != null)
+        {
+            weaponController = Character.LocalCharacter.GetComponent<WeaponController>();
+            if (weaponController == null)
+                weaponController = Character.LocalCharacter.GetComponentInChildren<WeaponController>(true);
+        }
+        else
+        {
+            // In multiplayer, waiting for LocalCharacter is safer than binding to first scene player (often host).
+            // Offline fallback is still allowed when there is no active Fusion runner.
+            var anyCharacter = FindFirstObjectByType<Character>();
+            bool fusionRunning = anyCharacter != null && anyCharacter.Runner != null && anyCharacter.Runner.IsRunning;
+            weaponController = fusionRunning ? null : FindFirstObjectByType<WeaponController>();
+        }
     }
 
     private void InitializeMaterial()

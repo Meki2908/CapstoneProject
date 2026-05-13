@@ -152,6 +152,9 @@ public class MageNormalAttack : MonoBehaviour
 
         if (rule.scale > 0f) vfx.transform.localScale *= rule.scale;
 
+        if (character != null)
+            BaseEffectScript.WireSpellOwnership(character, vfx);
+
         GameObject ownerRoot = character != null ? character.gameObject : gameObject;
         if (ownerIgnoreCollisionSeconds > 0f)
             MageProjectileCollisionIgnorer.Attach(vfx, ownerRoot, ownerIgnoreCollisionSeconds);

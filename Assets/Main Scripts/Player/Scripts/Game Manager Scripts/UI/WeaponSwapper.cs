@@ -36,6 +36,9 @@ public class WeaponSwapper : MonoBehaviour
     [SerializeField] private WeaponController weaponController;
     [SerializeField] private Character character;
     [SerializeField] private EnemyDetection enemyDetection;
+    [Header("Debug")]
+    [Tooltip("Log luồng đổi vũ khí theo network (UI request -> Character.SyncEquippedWeaponType).")]
+    [SerializeField] private bool debugNetworkSwapFlow = true;
 
     [Header("Tutorial Callback")]
     [Tooltip("Gán TutorialTextDisplay.OnWeaponChanged vào đây trong Inspector")]
@@ -57,19 +60,23 @@ public class WeaponSwapper : MonoBehaviour
 
     private void Update()
     {
-        // Rình cho đến khi Local Player xuất hiện thì tóm lấy 1 lần duy nhất
-        if (character == null && Character.LocalCharacter != null)
+        var loc = Character.LocalCharacter;
+        if (loc == null)
         {
-            // 1. Gán thẳng, không cần GetComponent
-            character = Character.LocalCharacter; 
-            
-            // 2. Móc túi lấy WeaponController từ chính nhân vật này
+            if (character != null)
+            {
+                character = null;
+                weaponController = null;
+                enemyDetection = null;
+            }
+            return;
+        }
+
+        if (character != loc)
+        {
+            character = loc;
             weaponController = character.GetComponentInChildren<WeaponController>();
-            
-            // 3. Móc túi lấy EnemyDetection (TUYỆT ĐỐI KHÔNG DÙNG FindFirst)
             enemyDetection = character.GetComponentInChildren<EnemyDetection>();
-            
-            Debug.Log("<color=cyan>[WeaponSwapper]</color> Đã kết nối thành công với Local Player!");
         }
     }
 
@@ -182,15 +189,6 @@ public class WeaponSwapper : MonoBehaviour
             }
         }
 
-        if (weaponController == null)
-            weaponController = FindFirstObjectByType<WeaponController>();
-
-        if (weaponController == null)
-        {
-            Debug.LogError("[WeaponSwapper] WeaponController not found! Make sure it exists in the scene.");
-            return;
-        }
-
         WeaponSO targetWeapon = GetWeaponSO(pendingWeaponType);
         if (targetWeapon == null)
         {
@@ -198,8 +196,20 @@ public class WeaponSwapper : MonoBehaviour
             return;
         }
 
-        // Switch weapon
-        weaponController.EquipWeapon(targetWeapon);
+        if (character != null)
+        {
+            var wcCh = weaponController != null ? weaponController.GetComponentInParent<Character>() : null;
+            string wcOwner = wcCh != null ? wcCh.name : "null";
+            var before = weaponController != null && weaponController.GetCurrentWeapon() != null
+                ? weaponController.GetCurrentWeapon().weaponType.ToString()
+                : "None";
+            character.LogCritFsm(
+                "WeaponSwap",
+                $"CONFIRM swap {before} -> {targetWeapon.weaponType} | wc={(weaponController != null ? weaponController.name : "null")} wcOwner={wcOwner} sameOwner={(wcCh == character)} netType={character.NetEquippedWeaponType} drawn={character.isWeaponDrawn}");
+        }
+
+        // Network-first flow: UI chỉ request sync; visuals sẽ apply từ Character.Render change detection.
+        RequestNetworkWeaponSwap(targetWeapon.weaponType, "Confirm");
 
         // Notify tutorial (hoặc bất kỳ listener nào)
         OnWeaponSwapped?.Invoke();
@@ -208,8 +218,8 @@ public class WeaponSwapper : MonoBehaviour
         if (confirmationDialog != null)
             confirmationDialog.SetActive(false);
 
-        Debug.Log($"[WeaponSwapper] Switched to {pendingWeaponType} weapon");
-        ShowMessage($"Switched to {GetWeaponDisplayName(pendingWeaponType)}!");
+        Debug.Log($"[WeaponSwapper] Requested network swap to {pendingWeaponType}");
+        ShowMessage($"Requested {GetWeaponDisplayName(pendingWeaponType)} swap...");
     }
 
     private void OnCancelWeaponSwitch()
@@ -298,14 +308,53 @@ public class WeaponSwapper : MonoBehaviour
 
     public void ForceSwitchWeapon(WeaponType weaponType)
     {
-        if (weaponController == null) return;
-
         WeaponSO targetWeapon = GetWeaponSO(weaponType);
         if (targetWeapon != null)
         {
-            weaponController.EquipWeapon(targetWeapon);
-            Debug.Log($"[WeaponSwapper] Force switched to {weaponType}");
+            RequestNetworkWeaponSwap(targetWeapon.weaponType, "ForceSwitch");
         }
+    }
+
+    void RequestNetworkWeaponSwap(WeaponType targetType, string source)
+    {
+        if (character == null)
+        {
+            Debug.LogError($"[WeaponSwapper] ({source}) Character is null -> cannot request network swap to {targetType}.");
+            return;
+        }
+
+        bool canSendNetwork =
+            character.Object != null &&
+            character.Object.IsValid &&
+            character.Runner != null &&
+            character.Runner.IsRunning;
+
+        if (debugNetworkSwapFlow)
+        {
+            Debug.Log(
+                $"[WeaponSwapFlow] source={source} target={targetType} canSendNetwork={canSendNetwork} SA={character.HasStateAuthority} IA={character.HasInputAuthority} netType={character.NetEquippedWeaponType} obj={character.name}",
+                character);
+        }
+
+        if (!canSendNetwork)
+        {
+            Debug.LogWarning($"[WeaponSwapper] ({source}) Runner/Object not ready -> skip network swap request {targetType}.");
+            return;
+        }
+
+        if (!character.HasInputAuthority && !character.HasStateAuthority)
+        {
+            Debug.LogWarning(
+                $"[WeaponSwapper] ({source}) No authority to request swap {targetType} on {character.name}. UI may be bound to wrong player.",
+                character);
+            return;
+        }
+
+        character.LogCritFsm(
+            "WeaponSwap",
+            $"REQUEST from {source} -> target={targetType} (idx={(int)targetType}) netBefore={character.NetEquippedWeaponType}");
+        character.SyncEquippedWeaponType(targetType);
+        character.DebugLogNetEquippedWeaponDelayed();
     }
 }
 

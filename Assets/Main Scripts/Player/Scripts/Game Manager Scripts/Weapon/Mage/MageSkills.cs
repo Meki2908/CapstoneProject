@@ -42,6 +42,14 @@ public class MageSkills : MonoBehaviour
     private readonly Dictionary<GameObject, Queue<GameObject>> ultimateVfxPools = new();
     private readonly Dictionary<GameObject, Coroutine> pooledReleaseRoutines = new();
 
+    bool CanTouchLocalHud()
+    {
+        if (character == null) return false;
+        if (character.Runner != null && character.Runner.IsRunning)
+            return character.HasInputAuthority;
+        return true;
+    }
+
     private void Awake()
     {
         character = GetComponentInParent<Character>();
@@ -158,7 +166,7 @@ public class MageSkills : MonoBehaviour
         if (WeaponMasteryManager.Instance != null && !WeaponMasteryManager.Instance.IsSkillUnlocked(WeaponType.Mage, input))
             return;
 
-        if (AbilityIconManager.Instance != null && AbilityIconManager.Instance.IsOnCooldown(input))
+        if (CanTouchLocalHud() && AbilityIconManager.Instance != null && AbilityIconManager.Instance.IsOnCooldown(input))
             return;
 
         if (enemyDetection == null && character != null)
@@ -174,9 +182,9 @@ public class MageSkills : MonoBehaviour
             animator.SetTrigger(skillTriggerParam);
 
         // Cooldown should not depend on Animation Events (AE can be skipped in chaotic combat / networking).
-        if (AbilityIconManager.Instance != null)
+        if (CanTouchLocalHud() && AbilityIconManager.Instance != null)
         {
-            AbilityIconManager.Instance.TriggerCooldown(input);
+            AbilityIconManager.Instance.TriggerCooldownFromSource(input, wc);
         }
 
         if (skillLock != null) skillLock.BeginSkillRootMotion(animator);
@@ -184,17 +192,10 @@ public class MageSkills : MonoBehaviour
 
         if (input == AbilityInput.Q_Ultimate && ultimateDirector != null)
         {
-            bool useNet = character != null && character.Object != null && character.Object.IsValid
-                && character.Runner != null && character.Runner.IsRunning;
-            if (useNet && character.HasInputAuthority)
-                character.RPC_PlayPlayerUltimate(Character.PlayerUltimateVisualKind.Mage);
-            else
-            {
-                if (character != null && character.HasInputAuthority)
-                    TimelineMainCameraBinder.BindToMainCameraBrain(ultimateDirector, warnOnce: true);
-                ultimateDirector.time = 0;
-                ultimateDirector.Play();
-            }
+            bool startedViaRpc = character != null &&
+                character.TryBroadcastUltimateTimeline(Character.PlayerUltimateVisualKind.Mage);
+            if (!startedViaRpc)
+                PlayUltimateTimeline(bindLocalCamera: true);
         }
 
         TutorialTextDisplay.NotifySkillActivatedFromGameplay(input);
@@ -206,9 +207,9 @@ public class MageSkills : MonoBehaviour
         var wc = GetComponent<WeaponController>();
         var weapon = wc != null ? wc.GetCurrentWeapon() : null;
         if (weapon == null || weapon.weaponType != WeaponType.Mage) return;
-// Guard-2: d�ng animator state/tag/layer c?a Mage
+        // Guard-2: d�ng animator state/tag/layer c?a Mage
         if (!IsInSkillState()) return;
-if (!animator) return;
+        if (!animator) return;
         int skillIdx = animator.GetInteger(skillIndexParam);
         var input = (AbilityInput)(skillIdx == 0 ? AbilityInput.E :
                                    skillIdx == 1 ? AbilityInput.R :
@@ -247,7 +248,11 @@ if (!animator) return;
             // Attach FollowPlayer component d? follow player
             var follow = v.GetComponent<FollowPlayer>();
             if (follow == null) follow = v.AddComponent<FollowPlayer>();
-            follow.offset = ev.spawnRule.localOffset; // Use spawn offset as follow offset
+            follow.offset = ev.spawnRule.localOffset;
+            if (character != null)
+                follow.target = character.transform;
+            if (character != null)
+                BaseEffectScript.WireSpellOwnership(character, v);
             // ShieldActivate tr�n prefab t? qu?n l� NavMeshObstacle + ch?n damage
 
             // Destroy sau duration (ShieldActivate.OnDestroy s? reset IsShieldActive)
@@ -257,6 +262,9 @@ if (!animator) return;
         }
         else
         {
+            if (character != null)
+                BaseEffectScript.WireSpellOwnership(character, v);
+
             // World space VFX - normal destroy
             if (ev.moveAfterSpawn)
             {
@@ -442,9 +450,11 @@ if (!animator) return;
     // Animation Event: Trigger cooldown for specific ability
     public void AE_TriggerCooldown(int inputIndex)
     {
+        if (!CanTouchLocalHud()) return;
         if (AbilityIconManager.Instance != null) 
         {
-            AbilityIconManager.Instance.AE_TriggerCooldown(inputIndex);
+            var wc = GetComponent<WeaponController>();
+            AbilityIconManager.Instance.TriggerCooldownFromSource((AbilityInput)inputIndex, wc);
         }
     }
 
@@ -466,12 +476,16 @@ if (!animator) return;
     /// <summary>Invoked by <see cref="Character.RPC_PlayPlayerUltimate"/> on every peer so timeline/VFX are not input-only.</summary>
     public void PlayUltimateFromNetworkRpc()
     {
+        PlayUltimateTimeline(bindLocalCamera: true);
+    }
+
+    private void PlayUltimateTimeline(bool bindLocalCamera)
+    {
         if (ultimateDirector == null) return;
+        TimelineMainCameraBinder.BindToMainCameraBrain(ultimateDirector, character, warnOnce: true, bindLocalCamera: bindLocalCamera);
         ultimateDirector.Stop();
         ultimateDirector.time = 0f;
         ultimateDirector.Play();
-        if (character != null && character.HasInputAuthority)
-            TimelineMainCameraBinder.BindToMainCameraBrain(ultimateDirector, warnOnce: true);
     }
 
     private bool ShouldUseUltimatePool(AbilityInput input, SkillEvent ev)

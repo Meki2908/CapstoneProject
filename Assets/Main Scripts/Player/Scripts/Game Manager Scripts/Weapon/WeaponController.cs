@@ -26,8 +26,15 @@ public class WeaponController : MonoBehaviour
     [Header("Runtime")]
     [SerializeField] private WeaponSO currentWeapon; // assigned at runtime or in inspector
 
+    [Header("Weapon Data (Network Resolve Fallback)")]
+    [SerializeField] private WeaponSO swordWeapon;
+    [SerializeField] private WeaponSO axeWeapon;
+    [SerializeField] private WeaponSO mageWeapon;
+
     [Header("Ability Management")]
     [SerializeField] private WeaponAbilityManager abilityManager;
+    [Header("Debug")]
+    [SerializeField] private bool debugLocalUiGuards = false;
 
     // TH�M: S? ki?n b?n ra khi d?i vu kh�
     public event Action<WeaponSO> OnWeaponChanged;
@@ -35,6 +42,24 @@ public class WeaponController : MonoBehaviour
     private Animator animator;
     Character _cachedCharacter;
     Character CachedCharacter => _cachedCharacter != null ? _cachedCharacter : (_cachedCharacter = GetComponent<Character>() ?? GetComponentInParent<Character>());
+    bool CanAffectLocalHud()
+    {
+        var ch = CachedCharacter;
+        if (ch == null) return false;
+        if (ch.Runner != null && ch.Runner.IsRunning)
+            return ch.HasInputAuthority;
+        // Offline/local test mode: there is no Fusion runner, so this instance is effectively local.
+        return true;
+    }
+
+    void DebugHudGuard(string reason)
+    {
+        if (!debugLocalUiGuards) return;
+        var ch = CachedCharacter;
+        Debug.Log(
+            $"[WeaponController][HUD-Guard] Skip HUD update ({reason}) on {name} | ch={(ch != null ? ch.name : "null")} SA={(ch != null && ch.HasStateAuthority)} IA={(ch != null && ch.HasInputAuthority)}",
+            this);
+    }
 
     private GameObject currentHeldInstance;
     private GameObject currentSheathInstance;
@@ -60,19 +85,34 @@ public class WeaponController : MonoBehaviour
 
     private void Start()
     {
+        var ch = CachedCharacter;
+        if (ch != null && ch.Runner != null && ch.Runner.IsRunning && !ch.HasInputAuthority)
+        {
+            // Networked proxy visuals are driven by Character.NetEquippedWeaponType in Render.
+            ClearHeld();
+            ClearSheath();
+            SetLayerWeightSafe(swordLayer, 0f);
+            SetLayerWeightSafe(axeLayer, 0f);
+            SetLayerWeightSafe(mageLayer, 0f);
+            return;
+        }
+
         var loadedFromDisk = false;
         if (WeaponSelectionPersistence.TryLoad(out var savedType) && savedType != WeaponType.None)
         {
-            var so = WeaponSelectionPersistence.ResolveWeaponSO(savedType);
+            var so = ResolveWeaponSO(savedType);
             if (so != null)
             {
-                EquipWeapon(so);
+                EquipWeaponInternal(so, syncNetwork: true, saveSelection: true);
                 loadedFromDisk = true;
             }
         }
 
         if (!loadedFromDisk)
             ApplyDefaultStartWeaponVisuals();
+
+        if (currentWeapon != null)
+            ch?.SyncEquippedWeaponType(currentWeapon.weaponType);
     }
 
     void ApplyDefaultStartWeaponVisuals()
@@ -94,7 +134,9 @@ public class WeaponController : MonoBehaviour
 
     void OnApplicationQuit()
     {
-        if (currentWeapon != null)
+        var ch = CachedCharacter;
+        bool canPersist = ch == null || ch.Runner == null || !ch.Runner.IsRunning || ch.HasInputAuthority;
+        if (canPersist && currentWeapon != null)
             WeaponSelectionPersistence.Save(currentWeapon.weaponType);
     }
 
@@ -105,6 +147,11 @@ public class WeaponController : MonoBehaviour
     }
 
     public void EquipWeapon(WeaponSO weapon)
+    {
+        EquipWeaponInternal(weapon, syncNetwork: true, saveSelection: true);
+    }
+
+    void EquipWeaponInternal(WeaponSO weapon, bool syncNetwork, bool saveSelection)
     {
         currentWeapon = weapon;
         ApplyWeaponLayersAndParams();
@@ -132,11 +179,54 @@ public class WeaponController : MonoBehaviour
         // B?N s? ki?n cho t?t c? consumer (Skills/HitRunner/UIs...)
         OnWeaponChanged?.Invoke(currentWeapon);
 
-        if (weapon != null)
+        if (saveSelection && weapon != null)
             WeaponSelectionPersistence.Save(weapon.weaponType);
+
+        if (syncNetwork && weapon != null)
+            CachedCharacter?.SyncEquippedWeaponType(weapon.weaponType);
     }
 
     public WeaponSO GetCurrentWeapon() => currentWeapon;
+
+    public void ApplyNetworkWeaponType(WeaponType type)
+    {
+        if (type == WeaponType.None)
+            return;
+
+        if (currentWeapon != null && currentWeapon.weaponType == type)
+        {
+            // Re-apply to recover from resim / proxy visual drift.
+            ApplyWeaponLayersAndParams();
+            return;
+        }
+
+        var so = ResolveWeaponSO(type);
+        if (so == null)
+        {
+            Debug.LogWarning($"[WeaponController] Cannot resolve WeaponSO for networked type {type}. Assign weapon refs on WeaponController or keep WeaponSwapper in scene.");
+            return;
+        }
+
+        EquipWeaponInternal(so, syncNetwork: false, saveSelection: false);
+    }
+
+    WeaponSO ResolveWeaponSO(WeaponType type)
+    {
+        switch (type)
+        {
+            case WeaponType.Sword:
+                if (swordWeapon != null) return swordWeapon;
+                break;
+            case WeaponType.Axe:
+                if (axeWeapon != null) return axeWeapon;
+                break;
+            case WeaponType.Mage:
+                if (mageWeapon != null) return mageWeapon;
+                break;
+        }
+
+        return WeaponSelectionPersistence.ResolveWeaponSO(type);
+    }
 
     void SetDrawSheathTriggerSafe(string triggerName)
     {
@@ -488,6 +578,7 @@ public class WeaponController : MonoBehaviour
 
     private void SetLayerWeightSafe(int layer, float weight)
     {
+        if (animator == null) return;
         if (layer >= 0 && layer < animator.layerCount)
             animator.SetLayerWeight(layer, weight);
     }
@@ -520,9 +611,7 @@ public class WeaponController : MonoBehaviour
     // ========== Animation Events ==========
     public void AE_DrawWeapon()
     {
-        var ch = CachedCharacter;
-        if (ch == null || ch.movementSM == null || !(ch.movementSM.currentState is DrawWeaponState))
-            return;
+        if (CachedCharacter == null) return;
 
         DrawWeaponVisual();
 
@@ -536,9 +625,7 @@ public class WeaponController : MonoBehaviour
 
     public void AE_SheathWeapon()
     {
-        var ch = CachedCharacter;
-        if (ch == null || ch.movementSM == null || !(ch.movementSM.currentState is SheathWeaponState))
-            return;
+        if (CachedCharacter == null) return;
 
         var auraCtrl = GetComponent<WeaponAuraController>();
         if (auraCtrl != null) { auraCtrl.AE_AuraOff(); auraCtrl.UnbindAura(); }
@@ -558,17 +645,24 @@ public class WeaponController : MonoBehaviour
         var mageAll = GetComponentsInChildren<MageSkills>(true);
         foreach (var m in mageAll) if (m) m.enabled = false;
 
-        // Clear ability icons when weapon is sheathed
-        if (abilityManager != null)
+        // Clear ability icons when weapon is sheathed (local HUD only).
+        if (abilityManager != null && CanAffectLocalHud())
         {
             abilityManager.AE_ClearWeaponAbilities();
         }
 
-        // Unassign Ultimate Icon Shader material when sheathing
-        var shaderController = FindFirstObjectByType<WeaponUltimateShaderController>();
-        if (shaderController != null)
+        // Unassign Ultimate Icon Shader material when sheathing (local HUD only).
+        if (CanAffectLocalHud())
         {
-            shaderController.UnassignMaterial();
+            var shaderController = FindFirstObjectByType<WeaponUltimateShaderController>();
+            if (shaderController != null)
+            {
+                shaderController.UnassignMaterial();
+            }
+        }
+        else
+        {
+            DebugHudGuard("AE_SheathWeapon");
         }
 
         // Áp tất cả các Layer vũ khí về 0 để Base/UpperBody tự do hoạt động
@@ -712,12 +806,12 @@ public class WeaponController : MonoBehaviour
                 auraCtrl.BindAuraFrom(currentHeldInstance.transform, "Aura");
         }
 
-        // Set ability icons when weapon is drawn
-        if (abilityManager != null)
+        // Set ability icons when weapon is drawn (local HUD only).
+        if (abilityManager != null && CanAffectLocalHud())
         {
             abilityManager.AE_SetWeaponAbilities();
         }
-        else
+        else if (CanAffectLocalHud())
         {
             // Try to find WeaponAbilityManager in current weapon instance
             if (currentHeldInstance != null)
@@ -746,6 +840,10 @@ public class WeaponController : MonoBehaviour
                 Debug.LogWarning("[WeaponController] abilityManager is null and no weapon instance! Cannot set ability icons.");
             }
         }
+        else
+        {
+            DebugHudGuard("AE_ActiveWeaponScript");
+        }
 
         // Handle Ultimate Icon Shader - only assign material if Ultimate is ready
         HandleUltimateIconShader(type);
@@ -759,6 +857,12 @@ public class WeaponController : MonoBehaviour
     // Handle Ultimate Icon Shader based on weapon type and cooldown state
     private void HandleUltimateIconShader(WeaponType weaponType)
     {
+        if (!CanAffectLocalHud())
+        {
+            DebugHudGuard("HandleUltimateIconShader");
+            return;
+        }
+
         // Find Ultimate Icon Shader Controller
         var shaderController = FindFirstObjectByType<WeaponUltimateShaderController>();
         if (shaderController == null)

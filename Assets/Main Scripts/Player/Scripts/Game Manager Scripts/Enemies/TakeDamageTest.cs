@@ -505,11 +505,11 @@ public class TakeDamageTest : NetworkBehaviour
         }
 
         // Apply damage
-          if (HasStateAuthority) 
-          { 
-              CurrentHealth -= damage; 
-              CurrentHealth = Mathf.Max(0f, CurrentHealth);
-          }
+        if (HasStateAuthority)
+        {
+            CurrentHealth -= damage;
+            CurrentHealth = Mathf.Max(0f, CurrentHealth);
+        }
 
         // Visual feedback
         if (hitEffect != null)
@@ -518,22 +518,20 @@ public class TakeDamageTest : NetworkBehaviour
             Destroy(hit, hitEffectLifetime);
         }
 
-        // Spawn damage number using DamageTextManager
-        if (DamageTextManager.Instance != null)
+        // Damage numbers: replicate so every client sees floating text (authority applies HP above).
+        if (Object != null && Object.IsValid && Runner != null && Runner.IsRunning && HasStateAuthority)
+            RPC_SyncEnemyDamageFloat(transform.position, damage, (int)weaponType, isCrit);
+        else if (Runner == null || !Runner.IsRunning)
         {
-            DamageTextManager.Instance.SpawnDamageText(transform.position, damage, weaponType, isCrit);
-        }
-        else if (damageNumberPrefab != null)
-        {
-            // Fallback to old system if DamageTextManager not available
-            Vector3 spawnPosition = transform.position + Vector3.up * 2f;
-            var damageNumber = damageNumberPrefab.Spawn(spawnPosition, damage);
-            damageNumber.SetColor(isCrit ? Color.yellow : Color.red);
-            damageNumber.SetScale(isCrit ? 1.5f : 1.2f);
-        }
-        else
-        {
-            Debug.LogWarning("[TakeDamageTest] Cannot spawn damage number - no DamageTextManager or prefab assigned!");
+            if (DamageTextManager.Instance != null)
+                DamageTextManager.Instance.SpawnDamageText(transform.position, damage, weaponType, isCrit);
+            else if (damageNumberPrefab != null)
+            {
+                Vector3 spawnPosition = transform.position + Vector3.up * 2f;
+                var damageNumber = damageNumberPrefab.Spawn(spawnPosition, damage);
+                damageNumber.SetColor(isCrit ? Color.yellow : Color.red);
+                damageNumber.SetScale(isCrit ? 1.5f : 1.2f);
+            }
         }
 
         // Play hit animation if still alive (non-lethal hit)
@@ -552,6 +550,21 @@ public class TakeDamageTest : NetworkBehaviour
         else if (showDebugInfo)
         {
             Debug.Log($"[TakeDamageTest] {gameObject.name} took {damage} damage (weapon: {weaponType}, crit: {isCrit}). HP: {CurrentHealth}/{maxHealth}");
+        }
+    }
+
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    void RPC_SyncEnemyDamageFloat(Vector3 worldPosition, float damage, int weaponTypeIndex, bool isCrit)
+    {
+        var wt = (WeaponType)weaponTypeIndex;
+        if (DamageTextManager.Instance != null)
+            DamageTextManager.Instance.SpawnDamageText(worldPosition, damage, wt, isCrit);
+        else if (damageNumberPrefab != null)
+        {
+            Vector3 spawnPosition = worldPosition + Vector3.up * 2f;
+            var damageNumber = damageNumberPrefab.Spawn(spawnPosition, damage);
+            damageNumber.SetColor(isCrit ? Color.yellow : Color.red);
+            damageNumber.SetScale(isCrit ? 1.5f : 1.2f);
         }
     }
 

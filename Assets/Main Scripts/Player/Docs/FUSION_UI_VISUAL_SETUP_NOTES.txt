@@ -1,0 +1,31 @@
+Fusion / UI / damage number — ghi chú sau chỉnh code (2026)
+
+1) WeaponAbilityManager + HUD skill (prefab vũ khí / rig)
+- Không cần đổi prefab: AE_SetWeaponAbilities / AE_ClearWeaponAbilities đã chặn khi Character.HasInputAuthority = false (proxy không đụng AbilityIconManager).
+- Đảm bảo WeaponAbilityManager nằm dưới hierarchy có Character (GetComponentInParent<Character>() khác null). Nếu weapon prefab detach không có Character, AE sẽ không chạy icon — gắn lại parent đúng.
+
+2) PlayerHealth — invulnerability TickTimer
+- Không cần field mới trên prefab Player: NetInvulnerabilityTimer là [Networked].
+- Scene / Fusion: cần Runner đang chạy; BeginInvulnerability / SetInvulnerable không làm gì nếu Object chưa spawn / không có Runner (editor offline không có invuln networked — chấp nhận hoặc test trong Play với Fusion).
+- SetInvulnerable(true) dùng timer 999s thay “vô hạn”; tắt bằng SetInvulnerable(false) (skill end AE).
+
+3) DamageTextManager + TakeDamageTest (enemy)
+- Scene: vẫn cần 1 GameObject (thường dưới Canvas) có DamageTextManager + Instance + prefab Damage Numbers Pro đã gán (sword/axe/mage).
+- Prefab quái: TakeDamageTest phải trên NetworkObject có StateAuthority (host) để RPC_SyncEnemyDamageFloat chạy từ StateAuthority → All.
+- Nếu client vẫn không thấy số: kiểm tra enemy prefab đã Spawned trong Fusion và TakeDamage chỉ được gọi sau khi có authority (HP đã trừ trên host).
+
+4) Inventory / potion (nhắc từ trước)
+- RemoveItem từ client vẫn có thể cần RPC riêng nếu túi đồ là nguồn sự thật networked; heal đã qua StateAuthority.
+
+5) Weapon swap / draw-sheath multiplayer (refactor solid)
+- Đã thêm `Character.NetEquippedWeaponType` làm nguồn sự thật networked; mọi peer mirror lại `WeaponController` ở `Render`.
+- `WeaponController.Start()` trên proxy (không có InputAuthority) không còn tự load file local để tránh lệch vũ khí host/client.
+- Prefab Player nên gán sẵn `swordWeapon` / `axeWeapon` / `mageWeapon` trong `WeaponController` để resolve chắc chắn, không phụ thuộc tìm `WeaponSwapper` trong scene.
+- Nếu không gán 3 field trên, hệ thống fallback qua `WeaponSelectionPersistence.ResolveWeaponSO` (cần có `WeaponSwapper` trong scene hoạt động).
+
+6) Proxy visuals + spell ownership (surgical 2026)
+- `FollowPlayer`: không còn `FindFirstObjectByType<Character>`. Spawner (vd `MageSkills`) phải gán `follow.target = character.transform` ngay sau spawn.
+- `WeaponController.AE_DrawWeapon` / `AE_SheathWeapon`: không chặn theo `movementSM` nữa — proxy vẫn nhận mesh từ AE; logic aura / unbind / icon / layer giữ nguyên sau `DrawWeaponVisual` / `SheathWeaponVisual`.
+- `Character.Render`: khi `NetIsWeaponDrawn` đổi, gọi `WeaponController.EnsureDrawn(false)` / `EnsureSheathed(false)` để mesh khớp truth mạng.
+- `AttackState`: layer mặc định khi không resolve được weapon là `-1` (không còn fallback Sword); có failsafe thoát attack sau ~0.35s nếu layer vẫn -1; thêm đọc `NetEquippedWeaponType` khi `currentWeapon` chưa sync.
+- `BaseEffectScript` / `ProjectileDamage`: bỏ find global; dùng parent hoặc `SetOwner(Character)` + `BaseEffectScript.WireSpellOwnership` sau `Instantiate` VFX/đạn tách hierarchy (`MageSkills`, `SwordSkills`, `AxeSkill`, `MageNormalAttack`, `WeaponHitRunner`).

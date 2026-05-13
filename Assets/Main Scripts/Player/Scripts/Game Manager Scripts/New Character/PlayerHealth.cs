@@ -35,10 +35,18 @@ public class PlayerHealth : NetworkBehaviour
     public float CurrentHealth => currentHealth;
     public float MaxHealth => maxHealth;
     public bool IsAlive => currentHealth > 0f;
-    // Temporary invulnerability (for ultimates)
-    bool isInvulnerable = false;
 
-    public bool IsInvulnerable() => isInvulnerable;
+    /// <summary>Invulnerability window driven by simulation TickTimer (rollback-safe vs coroutines).</summary>
+    [Networked] public TickTimer NetInvulnerabilityTimer { get; set; }
+
+    public bool IsInvulnerable() => IsInvulnerabilityActive();
+
+    bool IsInvulnerabilityActive()
+    {
+        if (Runner == null || !Runner.IsRunning)
+            return false;
+        return NetInvulnerabilityTimer.IsRunning && !NetInvulnerabilityTimer.Expired(Runner);
+    }
 
     public override void Spawned()
     {
@@ -49,6 +57,7 @@ public class PlayerHealth : NetworkBehaviour
         if (HasStateAuthority)
         {
             currentHealth = maxHealth;
+            NetInvulnerabilityTimer = TickTimer.None;
         }
         character = GetComponent<Character>();
         animator = GetComponent<Animator>();
@@ -212,7 +221,7 @@ public class PlayerHealth : NetworkBehaviour
         }
 
         // === INVULNERABLE CHECK (+ anti-stuck safety) ===
-        if (isInvulnerable && !forceHitAnimation)
+        if (IsInvulnerabilityActive() && !forceHitAnimation)
         {
             return;
         }
@@ -342,7 +351,33 @@ public class PlayerHealth : NetworkBehaviour
 
     public void Heal(float amount)
     {
-        if (!IsAlive) return; // Can't heal if dead
+        if (amount <= 0f || !IsAlive)
+            return;
+
+        if (Object == null || !Object.IsValid || Runner == null || !Runner.IsRunning)
+        {
+            ApplyHealAuthority(amount);
+            return;
+        }
+
+        if (HasStateAuthority)
+            ApplyHealAuthority(amount);
+        else if (HasInputAuthority)
+            RPC_ApplyConsumableHeal(amount);
+    }
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    void RPC_ApplyConsumableHeal(float amount)
+    {
+        ApplyHealAuthority(amount);
+    }
+
+    void ApplyHealAuthority(float amount)
+    {
+        if (!HasStateAuthority)
+            return;
+        if (!IsAlive)
+            return;
 
         currentHealth += amount;
         currentHealth = Mathf.Clamp(currentHealth, 0f, maxHealth);
@@ -353,6 +388,9 @@ public class PlayerHealth : NetworkBehaviour
 
     public void ResetHealth()
     {
+        if (Object != null && Object.IsValid && Runner != null && Runner.IsRunning && !HasStateAuthority)
+            return;
+
         currentHealth = maxHealth;
         OnHealthChanged?.Invoke(currentHealth);
         UpdateHealthText();
@@ -373,29 +411,54 @@ public class PlayerHealth : NetworkBehaviour
     public void BeginInvulnerability(float duration)
     {
         if (duration <= 0f) return;
-        if (isInvulnerable)
-        {
-            // extend timer by restarting coroutine
-            StopCoroutine("InvulnerabilityCoroutine");
-        }
-        StartCoroutine(InvulnerabilityCoroutine(duration));
+        if (Object == null || !Object.IsValid || Runner == null || !Runner.IsRunning)
+            return;
+
+        if (HasStateAuthority)
+            ApplyBeginInvulnerabilityAuthority(duration);
+        else
+            RPC_BeginInvulnerabilityRequest(duration);
     }
 
-    System.Collections.IEnumerator InvulnerabilityCoroutine(float duration)
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    void RPC_BeginInvulnerabilityRequest(float duration)
     {
-        isInvulnerable = true;
-        yield return new WaitForSeconds(duration);
-        isInvulnerable = false;
+        ApplyBeginInvulnerabilityAuthority(duration);
+    }
+
+    void ApplyBeginInvulnerabilityAuthority(float duration)
+    {
+        if (!HasStateAuthority || Runner == null || !Runner.IsRunning)
+            return;
+        if (duration <= 0f) return;
+        NetInvulnerabilityTimer = TickTimer.CreateFromSeconds(Runner, duration);
     }
 
     // Set invulnerability state directly (used for skill lock duration)
     public void SetInvulnerable(bool value)
     {
-        // Stop any timed invulnerability when explicitly setting
-        try { StopCoroutine("InvulnerabilityCoroutine"); } catch { }
-        isInvulnerable = value;
+        if (Object == null || !Object.IsValid || Runner == null || !Runner.IsRunning)
+            return;
+
+        if (HasStateAuthority)
+            ApplySetInvulnerableAuthority(value);
+        else
+            RPC_SetInvulnerableRequest(value);
+    }
+
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    void RPC_SetInvulnerableRequest(bool value)
+    {
+        ApplySetInvulnerableAuthority(value);
+    }
+
+    void ApplySetInvulnerableAuthority(bool value)
+    {
+        if (!HasStateAuthority || Runner == null || !Runner.IsRunning)
+            return;
+        if (value)
+            NetInvulnerabilityTimer = TickTimer.CreateFromSeconds(Runner, 999f);
+        else
+            NetInvulnerabilityTimer = TickTimer.None;
     }
 }
-
-
-
