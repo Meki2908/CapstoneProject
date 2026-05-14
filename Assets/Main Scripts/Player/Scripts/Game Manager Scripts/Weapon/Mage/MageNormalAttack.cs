@@ -41,10 +41,55 @@ public class MageNormalAttack : MonoBehaviour
     /// </summary>
     public void FireProjectileFSM(int comboIndex)
     {
-        WeaponSO currentWeapon = equipment?.GetCurrentWeapon();
-        if (currentWeapon == null || currentWeapon.weaponType != WeaponType.Mage) return;
+        if (!TryGetCurrentMageWeapon(out WeaponSO currentWeapon)) return;
 
         SpawnHitVFX(currentWeapon, comboIndex);
+    }
+
+    public bool TryGetPredictedSpawn(int comboIndex, out Vector3 spawnPos, out Quaternion spawnRot)
+    {
+        spawnPos = Vector3.zero;
+        spawnRot = Quaternion.identity;
+
+        if (!TryGetCurrentMageWeapon(out WeaponSO weapon)) return false;
+        if (comboIndex < 0 || comboIndex >= weapon.hitTimings.Length) return false;
+
+        Transform target = GetOrFindTarget(weapon, comboIndex);
+        Transform anchor = ResolveSpawnAnchor();
+        HitTiming timing = weapon.hitTimings[comboIndex];
+        VfxSpawnRule rule = timing.spawnRule;
+
+        Vector3 baseWorldPos = anchor.position + anchor.TransformDirection(rule.localOffset);
+        Quaternion orientWorld = RotationFromSpawnRule(anchor.rotation, rule);
+
+        Vector3 aimPoint = AimPointForTarget(target);
+        Vector3 dir;
+        if (target != null)
+        {
+            dir = aimPoint - baseWorldPos;
+            if (dir.sqrMagnitude < 1e-6f) dir = orientWorld * Vector3.forward;
+            else dir.Normalize();
+        }
+        else
+        {
+            dir = PlanarCharacterForward();
+        }
+
+        spawnPos = baseWorldPos + dir * spawnForwardClearance;
+        spawnPos.y += spawnHeightBias;
+        spawnRot = Quaternion.LookRotation(dir, Vector3.up);
+        return true;
+    }
+
+    public void SpawnVFXDirect(int comboIndex, Vector3 spawnPos, Quaternion spawnRot)
+    {
+        if (!TryGetCurrentMageWeapon(out WeaponSO weapon)) return;
+        GameObject vfxPrefab = GetHitVfxPrefab(weapon, comboIndex);
+        if (vfxPrefab == null) return;
+        float scale = 1f;
+        if (comboIndex >= 0 && comboIndex < weapon.hitTimings.Length)
+            scale = weapon.hitTimings[comboIndex].spawnRule.scale;
+        SpawnProjectileVisual(vfxPrefab, comboIndex, spawnPos, spawnRot, null, scale);
     }
 
     private Transform ResolveSpawnAnchor()
@@ -120,37 +165,32 @@ public class MageNormalAttack : MonoBehaviour
         if (weapon == null || comboIndex < 0 || comboIndex >= weapon.hitTimings.Length) return;
 
         Transform target = GetOrFindTarget(weapon, comboIndex);
-        Transform anchor = ResolveSpawnAnchor();
-        HitTiming timing = weapon.hitTimings[comboIndex];
-        VfxSpawnRule rule = timing.spawnRule;
-
-        Vector3 baseWorldPos = anchor.position + anchor.TransformDirection(rule.localOffset);
-        Quaternion orientWorld = RotationFromSpawnRule(anchor.rotation, rule);
-
-        Vector3 aimPoint = AimPointForTarget(target);
-        Vector3 dir;
-        if (target != null)
-        {
-            dir = aimPoint - baseWorldPos;
-            if (dir.sqrMagnitude < 1e-6f) dir = orientWorld * Vector3.forward;
-            else dir.Normalize();
-        }
-        else
-        {
-            dir = PlanarCharacterForward(); // Sử dụng hướng mặt nhân vật
-        }
-
-        Vector3 spawnPos = baseWorldPos + dir * spawnForwardClearance;
-        spawnPos.y += spawnHeightBias;
-        Quaternion spawnRot = Quaternion.LookRotation(dir, Vector3.up);
-
-        if (weapon.normalHitVfx == null || comboIndex >= weapon.normalHitVfx.Length || weapon.normalHitVfx[comboIndex] == null)
+        if (!TryGetPredictedSpawn(comboIndex, out Vector3 spawnPos, out Quaternion spawnRot))
             return;
+        GameObject vfxPrefab = GetHitVfxPrefab(weapon, comboIndex);
+        if (vfxPrefab == null) return;
+        float scale = weapon.hitTimings[comboIndex].spawnRule.scale;
+        SpawnProjectileVisual(vfxPrefab, comboIndex, spawnPos, spawnRot, target, scale);
+    }
 
-        GameObject vfxPrefab = weapon.normalHitVfx[comboIndex];
+    private bool TryGetCurrentMageWeapon(out WeaponSO weapon)
+    {
+        weapon = equipment?.GetCurrentWeapon();
+        return weapon != null && weapon.weaponType == WeaponType.Mage;
+    }
+
+    private static GameObject GetHitVfxPrefab(WeaponSO weapon, int comboIndex)
+    {
+        if (weapon == null || comboIndex < 0) return null;
+        if (weapon.normalHitVfx == null || comboIndex >= weapon.normalHitVfx.Length) return null;
+        return weapon.normalHitVfx[comboIndex];
+    }
+
+    private void SpawnProjectileVisual(GameObject vfxPrefab, int comboIndex, Vector3 spawnPos, Quaternion spawnRot, Transform target, float scale)
+    {
         var vfx = Instantiate(vfxPrefab, spawnPos, spawnRot);
-
-        if (rule.scale > 0f) vfx.transform.localScale *= rule.scale;
+        if (scale > 0f)
+            vfx.transform.localScale *= scale;
 
         if (character != null)
             BaseEffectScript.WireSpellOwnership(character, vfx);

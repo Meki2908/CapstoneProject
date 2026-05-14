@@ -44,6 +44,11 @@ public class TeleportOnQuestStep : MonoBehaviour
         if (id != questID) return;
         if (QuestManager.Instance == null) return;
 
+        // Host-mode guard: when Fusion session is running, only Host should drive scene teleport.
+        var local = Character.LocalCharacter;
+        if (local != null && local.Runner != null && local.Runner.IsRunning && !local.Runner.IsServer)
+            return;
+
         int currentStep = QuestManager.Instance.GetStepIndex(questID);
         if (currentStep != triggerAtStep) return;
 

@@ -194,7 +194,10 @@ public class AttackState : State
             return;
         }
         
-        if (isSnappingRotation)
+        bool canDriveAttackRotation = character.Runner == null
+            || !character.Runner.IsRunning
+            || character.HasInputAuthority;
+        if (isSnappingRotation && canDriveAttackRotation)
         {
             character.transform.rotation = Quaternion.Slerp(character.transform.rotation, targetAttackRotation, character.attackRotationSpeed * character.Runner.DeltaTime);
             if (Quaternion.Angle(character.transform.rotation, targetAttackRotation) < 2f)
@@ -204,12 +207,15 @@ public class AttackState : State
         }
 
         float normalizedTime = 0f;
+        float currentAttackNormalizedTime = 0f;
         bool isInTransition = false;
 
         if (weaponLayerIndex >= 0 && character.animator != null)
         {
             var stateInfo = character.animator.GetCurrentAnimatorStateInfo(weaponLayerIndex);
             isInTransition = character.animator.IsInTransition(weaponLayerIndex);
+            if (stateInfo.IsTag("Attack"))
+                currentAttackNormalizedTime = stateInfo.normalizedTime;
             
             if (isInTransition)
             {
@@ -223,6 +229,20 @@ public class AttackState : State
         }
 
         ApplyAttackSpeedToAnimator();
+
+        // Wall-clock duration of the CURRENT attack clip only.
+        // We intentionally avoid next-state timing here to prevent early VFX on combo transitions.
+        clipLength = 0f;
+        if (weaponLayerIndex >= 0 && character.animator != null)
+        {
+            var currentInfoForLen = character.animator.GetCurrentAnimatorStateInfo(weaponLayerIndex);
+            if (currentInfoForLen.IsTag("Attack") && currentInfoForLen.length > 0.001f)
+            {
+                float animGlobalSpeed = Mathf.Max(0.001f, character.animator.speed);
+                float statePlayback = Mathf.Max(0.001f, Mathf.Abs(currentInfoForLen.speed * currentInfoForLen.speedMultiplier));
+                clipLength = currentInfoForLen.length / (statePlayback * animGlobalSpeed);
+            }
+        }
 
         // 1. MỞ KHÓA THÔNG MINH BẰNG TAG — chỉ tin transition tới state có tag "Attack"
         if (waitingForComboTransition && character.animator != null && weaponLayerIndex >= 0)
@@ -268,12 +288,48 @@ public class AttackState : State
                 {
                     float vfxTargetPercent = Mathf.Clamp01(currentWeapon.hitTimings[hitIndex].vfxTime);
 
-                    if (normalizedTime >= vfxTargetPercent)
+                    // Local input owner: follow Animator timing for visual feel.
+                    // Other peers: follow simulation timing for deterministic networking.
+                    float currentNorm;
+                    if (character.Runner != null && character.Runner.IsRunning)
                     {
-                        mageVfxSpawnedThisHit = true;
-                        var mageAtk = character.GetComponentInChildren<MageNormalAttack>(true);
-                        if (mageAtk != null)
-                            mageAtk.FireProjectileFSM(hitIndex);
+                        currentNorm = character.HasInputAuthority
+                            ? currentAttackNormalizedTime
+                            : (clipLength > 0.001f ? Mathf.Clamp01(timePassed / clipLength) : currentAttackNormalizedTime);
+                    }
+                    else
+                    {
+                        currentNorm = currentAttackNormalizedTime;
+                    }
+                    bool readyForVfx = currentNorm >= vfxTargetPercent;
+
+                    if (readyForVfx)
+                    {
+                        // Side effects (Instantiate) must not run during Fusion resimulation rewind.
+                        bool forwardOrOffline = character.Runner == null
+                            || !character.Runner.IsRunning
+                            || character.Runner.IsForward;
+
+                        if (forwardOrOffline)
+                        {
+                            bool canSpawnMageVfxLocally = character.Runner == null
+                                || !character.Runner.IsRunning
+                                || character.HasInputAuthority;
+                            if (canSpawnMageVfxLocally)
+                            {
+                                mageVfxSpawnedThisHit = true;
+                                var mageAtk = character.GetComponentInChildren<MageNormalAttack>(true);
+                                if (mageAtk != null)
+                                {
+                                    mageAtk.FireProjectileFSM(hitIndex);
+                                    if (character.Runner != null && character.Runner.IsRunning)
+                                    {
+                                        if (mageAtk.TryGetPredictedSpawn(hitIndex, out Vector3 origin, out Quaternion rotation))
+                                            character.TryBroadcastMageNormalAttackVFX(hitIndex, origin, rotation);
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

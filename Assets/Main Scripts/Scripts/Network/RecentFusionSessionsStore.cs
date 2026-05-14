@@ -14,6 +14,7 @@ namespace Artsystack.ArtsystackGui
         public string roomName = "";
         public string password = "";
         public bool wasHost;
+        public string profileKey = "";
         public long lastUsedUtcTicks;
         public int hostPlayerCount = 4;
         public bool hostIsPrivate;
@@ -27,14 +28,51 @@ namespace Artsystack.ArtsystackGui
 
     public static class RecentFusionSessionsStore
     {
-        const string PrefsKey = "RecentFusionSessions_v1";
+        const string PrefsKeyBase = "RecentFusionSessions_v1";
         const int MaxEntries = 10;
+        static string NormalizeProfileKey(string s) => string.IsNullOrWhiteSpace(s) ? "" : s.Trim().ToLowerInvariant();
+        static string CurrentProfileKey() => NormalizeProfileKey(PlayerDisplayNamePrefs.GetSavedOrDefault());
+        static string InstanceKeySuffix()
+        {
+#if UNITY_EDITOR
+            // In ParrelSync tests each clone has a different project path; include it so clones do not share one PlayerPrefs slot.
+            string source = Application.dataPath ?? "";
+            if (string.IsNullOrEmpty(source)) return "";
 
-        public static int Count => GetOrdered().Count;
+            unchecked
+            {
+                uint hash = 2166136261u;
+                for (int i = 0; i < source.Length; i++)
+                    hash = (hash ^ source[i]) * 16777619u;
+                return "_" + hash.ToString("X8");
+            }
+#else
+            return "";
+#endif
+        }
+        static string PrefsKey() => PrefsKeyBase + InstanceKeySuffix();
+        static bool MatchesCurrentProfile(RecentFusionSessionEntry e)
+        {
+            if (e == null) return false;
+            // Entries saved before profileKey existed would never list — treat as belonging to this machine's history.
+            if (string.IsNullOrWhiteSpace(e.profileKey))
+                return true;
+            return string.Equals(NormalizeProfileKey(e.profileKey), CurrentProfileKey(), StringComparison.Ordinal);
+        }
+
+        public static int Count => GetOrderedForCurrentProfile().Count;
 
         public static IReadOnlyList<RecentFusionSessionEntry> GetOrdered()
         {
             var list = LoadList();
+            list.Sort((a, b) => b.lastUsedUtcTicks.CompareTo(a.lastUsedUtcTicks));
+            return list;
+        }
+
+        public static IReadOnlyList<RecentFusionSessionEntry> GetOrderedForCurrentProfile()
+        {
+            var list = LoadList();
+            list.RemoveAll(e => !MatchesCurrentProfile(e));
             list.Sort((a, b) => b.lastUsedUtcTicks.CompareTo(a.lastUsedUtcTicks));
             return list;
         }
@@ -45,12 +83,14 @@ namespace Artsystack.ArtsystackGui
 
             entry.roomName = entry.roomName.Trim();
             entry.password ??= "";
+            entry.profileKey = CurrentProfileKey();
             entry.lastUsedUtcTicks = DateTime.UtcNow.Ticks;
 
             var list = LoadList();
             int idx = list.FindIndex(e =>
                 string.Equals(e.roomName, entry.roomName, StringComparison.Ordinal) &&
-                e.wasHost == entry.wasHost);
+                e.wasHost == entry.wasHost &&
+                string.Equals(NormalizeProfileKey(e.profileKey), entry.profileKey, StringComparison.Ordinal));
 
             if (idx >= 0)
             {
@@ -72,9 +112,12 @@ namespace Artsystack.ArtsystackGui
         {
             if (string.IsNullOrWhiteSpace(roomName)) return;
             roomName = roomName.Trim();
+            string profile = CurrentProfileKey();
             var list = LoadList();
             list.RemoveAll(e =>
-                string.Equals(e.roomName, roomName, StringComparison.Ordinal) && e.wasHost == wasHost);
+                string.Equals(e.roomName, roomName, StringComparison.Ordinal) &&
+                e.wasHost == wasHost &&
+                string.Equals(NormalizeProfileKey(e.profileKey), profile, StringComparison.Ordinal));
             SaveList(list);
         }
 
@@ -83,11 +126,14 @@ namespace Artsystack.ArtsystackGui
         {
             if (string.IsNullOrWhiteSpace(roomName)) return false;
             roomName = roomName.Trim();
+            string profile = CurrentProfileKey();
             var list = LoadList();
             bool changed = false;
             for (int i = 0; i < list.Count; i++)
             {
-                if (list[i].wasHost && string.Equals(list[i].roomName, roomName, StringComparison.Ordinal))
+                if (list[i].wasHost &&
+                    string.Equals(list[i].roomName, roomName, StringComparison.Ordinal) &&
+                    string.Equals(NormalizeProfileKey(list[i].profileKey), profile, StringComparison.Ordinal))
                 {
                     if (!string.IsNullOrEmpty(list[i].password))
                         changed = true;
@@ -103,7 +149,7 @@ namespace Artsystack.ArtsystackGui
         {
             try
             {
-                string json = PlayerPrefs.GetString(PrefsKey, "");
+                string json = PlayerPrefs.GetString(PrefsKey(), "");
                 if (string.IsNullOrEmpty(json))
                     return new List<RecentFusionSessionEntry>();
 
@@ -122,7 +168,7 @@ namespace Artsystack.ArtsystackGui
         static void SaveList(List<RecentFusionSessionEntry> list)
         {
             var wrap = new RecentFusionSessionsJson { entries = list.ToArray() };
-            PlayerPrefs.SetString(PrefsKey, JsonUtility.ToJson(wrap));
+            PlayerPrefs.SetString(PrefsKey(), JsonUtility.ToJson(wrap));
             PlayerPrefs.Save();
         }
     }

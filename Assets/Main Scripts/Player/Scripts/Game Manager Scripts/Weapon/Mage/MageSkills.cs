@@ -166,7 +166,14 @@ public class MageSkills : MonoBehaviour
         if (WeaponMasteryManager.Instance != null && !WeaponMasteryManager.Instance.IsSkillUnlocked(WeaponType.Mage, input))
             return;
 
+        if (character != null && character.Runner != null && character.Runner.IsRunning && !character.HasInputAuthority)
+            return;
+
         if (CanTouchLocalHud() && AbilityIconManager.Instance != null && AbilityIconManager.Instance.IsOnCooldown(input))
+            return;
+
+        float cooldownSeconds = ability.GetModifiedCooldown(WeaponType.Mage);
+        if (character != null && !character.TryBeginSkillUse(input, cooldownSeconds))
             return;
 
         if (enemyDetection == null && character != null)
@@ -180,6 +187,8 @@ public class MageSkills : MonoBehaviour
             character.SetTriggerSafe(skillTriggerParam);
         else
             animator.SetTrigger(skillTriggerParam);
+        if (character != null)
+            character.TryBroadcastSkillVisual(WeaponType.Mage, idx);
 
         // Cooldown should not depend on Animation Events (AE can be skipped in chaotic combat / networking).
         if (CanTouchLocalHud() && AbilityIconManager.Instance != null)
@@ -187,7 +196,7 @@ public class MageSkills : MonoBehaviour
             AbilityIconManager.Instance.TriggerCooldownFromSource(input, wc);
         }
 
-        if (skillLock != null) skillLock.BeginSkillRootMotion(animator);
+        if (skillLock != null) skillLock.BeginSkillRootMotion(animator, enableRootMotion: false);
         skillLockExpireAt = Time.time + maxSkillLockSeconds;
 
         if (input == AbilityInput.Q_Ultimate && ultimateDirector != null)
@@ -248,9 +257,15 @@ public class MageSkills : MonoBehaviour
             // Attach FollowPlayer component d? follow player
             var follow = v.GetComponent<FollowPlayer>();
             if (follow == null) follow = v.AddComponent<FollowPlayer>();
+            follow.followSpeed = 1f;
             follow.offset = ev.spawnRule.localOffset;
             if (character != null)
+            {
                 follow.target = character.transform;
+                var shields = v.GetComponentsInChildren<ShieldActivate>(true);
+                foreach (var shield in shields)
+                    shield.SetOwner(character.transform);
+            }
             if (character != null)
                 BaseEffectScript.WireSpellOwnership(character, v);
             // ShieldActivate tr�n prefab t? qu?n l� NavMeshObstacle + ch?n damage

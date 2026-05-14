@@ -139,7 +139,14 @@ public class AxeSkill : MonoBehaviour
         if (WeaponMasteryManager.Instance != null && !WeaponMasteryManager.Instance.IsSkillUnlocked(WeaponType.Axe, input))
             return;
 
+        if (character != null && character.Runner != null && character.Runner.IsRunning && !character.HasInputAuthority)
+            return;
+
         if (CanTouchLocalHud() && AbilityIconManager.Instance != null && AbilityIconManager.Instance.IsOnCooldown(input))
+            return;
+
+        float cooldownSeconds = ability.GetModifiedCooldown(WeaponType.Axe);
+        if (character != null && !character.TryBeginSkillUse(input, cooldownSeconds))
             return;
 
         if (enemyDetection == null && character != null)
@@ -153,13 +160,15 @@ public class AxeSkill : MonoBehaviour
             character.SetTriggerSafe(skillTriggerParam);
         else
             animator.SetTrigger(skillTriggerParam);
+        if (character != null)
+            character.TryBroadcastSkillVisual(WeaponType.Axe, idx);
         // Cooldown should not depend on Animation Events (AE can be skipped in chaotic combat / networking).
         if (CanTouchLocalHud() && AbilityIconManager.Instance != null)
         {
             AbilityIconManager.Instance.TriggerCooldownFromSource(input, wc);
         }
 
-        if (skillLock != null) skillLock.BeginSkillRootMotion(animator);
+        if (skillLock != null) skillLock.BeginSkillRootMotion(animator, enableRootMotion: false);
         skillLockExpireAt = Time.time + maxSkillLockSeconds;
 
         if (input == AbilityInput.Q_Ultimate && ultimateDirector != null)

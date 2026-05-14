@@ -55137,7 +55137,7 @@ GameObject:
   - component: {fileID: 7059262754436396134}
   m_Layer: 8
   m_Name: Player_3.0
-  m_TagString: Player
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -55280,7 +55280,8 @@ MonoBehaviour:
   crouchColliderHeight: 1.35
   resyncCharacterControllerCache: 1
   resyncCcOnlyOnResimulation: 1
-  debugCritFsmLogs: 1
+  debugCritFsmLogs: 0
+  debugTeleportCritLogs: 1
   dashDuration: 0.6
   maxConsecutiveDashes: 2
   dashCooldown: 1
@@ -55352,12 +55353,20 @@ MonoBehaviour:
     _data:
       Data: 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
   _DisplayNameColorArgb: 0
+  localInteractProbeRadius: 2.25
+  localInteractProbeMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
   CalculatedVelocity: {x: 0, y: 0, z: 0}
   lastAttackInputTime: 0
   _NetIsWeaponDrawn:
     _value: 0
   _NetEquippedWeaponType: 0
-  debugNetEquippedWeaponLog: 1
+  _NetSkillCooldownEndE: 0
+  _NetSkillCooldownEndR: 0
+  _NetSkillCooldownEndT: 0
+  _NetSkillCooldownEndQ: 0
+  debugNetEquippedWeaponLog: 0
   dashLockUntil: 0
   lastJumpTime: 0
   groundLayers:

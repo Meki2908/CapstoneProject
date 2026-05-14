@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.AI;
 using System.Collections;
+using Fusion;
 
 /// <summary>
 /// Simple enemy spawner for desert biome dungeon.
@@ -31,6 +32,32 @@ public class EnemySpawner : MonoBehaviour
 
     // Track spawned enemies for debugging
     private System.Collections.Generic.List<GameObject> spawnedEnemies = new System.Collections.Generic.List<GameObject>();
+    private NetworkRunner _fusionRunner;
+    private bool _spawnViaFusion;
+
+    static bool IsAnyFusionRunnerRunning()
+    {
+        foreach (var runner in NetworkRunner.Instances)
+        {
+            if (runner != null && runner.IsRunning)
+                return true;
+        }
+        return false;
+    }
+
+    static bool TryGetServerRunner(out NetworkRunner runner)
+    {
+        foreach (var r in NetworkRunner.Instances)
+        {
+            if (r != null && r.IsRunning && r.IsServer)
+            {
+                runner = r;
+                return true;
+            }
+        }
+        runner = null;
+        return false;
+    }
 
     void Start()
     {
@@ -41,6 +68,18 @@ public class EnemySpawner : MonoBehaviour
     private IEnumerator SpawnEnemiesDelayed()
     {
         yield return null; // Wait one frame
+
+        if (TryGetServerRunner(out _fusionRunner))
+        {
+            _spawnViaFusion = true;
+            Debug.Log("[EnemySpawner] Fusion server runner detected. Enemies will spawn via Runner.Spawn.");
+        }
+        else if (IsAnyFusionRunnerRunning())
+        {
+            Debug.LogWarning(
+                "[EnemySpawner] A Fusion session is active on this peer but no server runner is available here. Skip local enemy spawn.");
+            yield break;
+        }
 
         Debug.Log("[EnemySpawner] Starting enemy spawn...");
 
@@ -80,8 +119,30 @@ public class EnemySpawner : MonoBehaviour
             return false;
         }
 
-        // Spawn enemy
-        GameObject enemy = Instantiate(prefab, spawnPos, Quaternion.identity);
+        // Spawn enemy (Fusion-aware path first)
+        GameObject enemy;
+        if (_spawnViaFusion && _fusionRunner != null && _fusionRunner.IsRunning)
+        {
+            var netObjOnPrefab = prefab.GetComponent<NetworkObject>();
+            if (netObjOnPrefab == null)
+            {
+                Debug.LogError($"[EnemySpawner] {enemyType} prefab is missing NetworkObject. Cannot spawn in Fusion mode.");
+                return false;
+            }
+
+            var spawnedNetObj = _fusionRunner.Spawn(netObjOnPrefab, spawnPos, Quaternion.identity);
+            if (spawnedNetObj == null)
+            {
+                Debug.LogError($"[EnemySpawner] Runner.Spawn failed for {enemyType}.");
+                return false;
+            }
+
+            enemy = spawnedNetObj.gameObject;
+        }
+        else
+        {
+            enemy = Instantiate(prefab, spawnPos, Quaternion.identity);
+        }
 
         // Ensure enemy has required components
         if (enemy.GetComponent<NavMeshAgent>() == null)
@@ -175,6 +236,12 @@ public class EnemySpawner : MonoBehaviour
     // Public method to respawn all enemies (useful for testing)
     public void RespawnAllEnemies()
     {
+        if (_spawnViaFusion || IsAnyFusionRunnerRunning())
+        {
+            Debug.LogWarning("[EnemySpawner] RespawnAllEnemies skipped while Fusion is running. Use a Fusion network spawner flow instead.");
+            return;
+        }
+
         // Clean up existing enemies
         foreach (var enemy in spawnedEnemies)
         {

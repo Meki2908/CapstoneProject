@@ -205,19 +205,12 @@ public class PlayerHealth : NetworkBehaviour
             return;
         }
 
-        // === SHIELD CHECK (+ anti-stuck) ===
-        if (ShieldActivate.IsShieldActive && !forceHitAnimation)
+        // === SHIELD CHECK (owner-scoped) ===
+        if (!forceHitAnimation)
         {
-            // Safety: nếu không còn ShieldActivate nào trong scene → reset flag
-            if (FindFirstObjectByType<ShieldActivate>() == null)
-            {
-                Debug.LogWarning("[PlayerHealth] Shield flag stuck! No ShieldActivate in scene → resetting");
-                ShieldActivate.ForceReset();
-            }
-            else
-            {
+            Transform shieldOwner = character != null ? character.transform : transform;
+            if (ShieldActivate.IsShieldActiveFor(shieldOwner))
                 return;
-            }
         }
 
         // === INVULNERABLE CHECK (+ anti-stuck safety) ===

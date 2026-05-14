@@ -35,6 +35,14 @@ namespace Artsystack.ArtsystackGui
         [Tooltip("If client StartGame never completes (stuck join), force Shutdown after this many seconds so loading UI can clear and the session can recover.")]
         [SerializeField, Min(8f)] private float clientJoinStartGameTimeoutSeconds = 22f;
 
+        [Header("Runtime disconnect recovery")]
+        [Tooltip("Build index of menu scene (UI_Game). Used when a fatal disconnect happens while player is already in gameplay scenes.")]
+        [SerializeField] private int menuSceneBuildIndex = 0;
+        [Tooltip("When true, fatal disconnects auto-return to menu to avoid indefinite loading screens.")]
+        [SerializeField] private bool autoReturnToMenuOnFatalDisconnect = true;
+        [Tooltip("When true, always force-close networking loading UI on fatal disconnect.")]
+        [SerializeField] private bool forceFinishLoadingUiOnFatalDisconnect = true;
+
         public static FusionConnectionManager Instance { get; private set; }
 
         /// <summary>
@@ -112,6 +120,8 @@ namespace Artsystack.ArtsystackGui
 
         /// <summary>Tracks <see cref="NetworkRunner.GetInstanceID"/> we called <see cref="NetworkRunner.AddCallbacks"/> for (runner lives on child, not on this component's GO).</summary>
         int _callbacksRegisteredForRunnerId = int.MinValue;
+        bool _fatalDisconnectHandlingInProgress;
+        bool _runnerRecoveryInProgress;
 
         private void Awake()
         {
@@ -290,6 +300,62 @@ namespace Artsystack.ArtsystackGui
             return !Runner.IsRunning && !Runner.IsCloudReady;
         }
 
+        void ReportFatalConnectionError(string message)
+        {
+            if (_fatalDisconnectHandlingInProgress)
+                return;
+            _fatalDisconnectHandlingInProgress = true;
+
+            if (forceFinishLoadingUiOnFatalDisconnect && SceneTransitionManager.Instance != null)
+                SceneTransitionManager.Instance.FinishLoadingUI();
+
+            OnConnectionError?.Invoke(message);
+
+            if (autoReturnToMenuOnFatalDisconnect && menuSceneBuildIndex >= 0)
+            {
+                var active = SceneManager.GetActiveScene();
+                if (active.buildIndex != menuSceneBuildIndex)
+                {
+                    Debug.LogWarning($"[Fusion] Fatal disconnect → loading menu scene index {menuSceneBuildIndex} from '{active.name}'");
+                    SceneManager.LoadScene(menuSceneBuildIndex);
+                }
+            }
+
+            _ = RecoverRunnerAfterFatalDisconnectAsync();
+        }
+
+        async Task RecoverRunnerAfterFatalDisconnectAsync()
+        {
+            if (_runnerRecoveryInProgress)
+                return;
+            _runnerRecoveryInProgress = true;
+            try
+            {
+                var oldRunner = Runner;
+                if (oldRunner != null && (oldRunner.IsRunning || oldRunner.IsCloudReady))
+                {
+                    bool destroyChild = oldRunner.gameObject != gameObject;
+                    try
+                    {
+                        await oldRunner.Shutdown(destroyGameObject: destroyChild, shutdownReason: ShutdownReason.Error);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.LogWarning($"[Fusion] RecoverRunnerAfterFatalDisconnect Shutdown: {ex.Message}");
+                    }
+                }
+
+                Runner = null;
+                _callbacksRegisteredForRunnerId = int.MinValue;
+                EnsureRunnerExists();
+            }
+            finally
+            {
+                _runnerRecoveryInProgress = false;
+                _fatalDisconnectHandlingInProgress = false;
+            }
+        }
+
         /// <summary>Join the default Photon session lobby so <see cref="OnSessionListUpdated"/> / <see cref="OnSessionListUpdatedEvent"/> receive public rooms.</summary>
         public async Task JoinLobbyAsync()
         {
@@ -299,8 +365,10 @@ namespace Artsystack.ArtsystackGui
 
             if (Runner.IsRunning)
             {
-                Debug.LogWarning("[Fusion] JoinLobbyAsync skipped: runner already in a game session.");
-                OnSessionListUpdatedEvent?.Invoke(new List<SessionInfo>());
+                // Do NOT fire OnSessionListUpdatedEvent with an empty list: MultiplayerMenuUI treats that as
+                // "lobby returned zero rooms" and hides recent join rows. Leave lobby state unknown until runner is idle.
+                Debug.LogWarning("[Fusion] JoinLobbyAsync skipped: runner already in a game session. " +
+                                 "Recent join sessions will show as 'pending' until you leave Single/Host or shutdown Fusion.");
                 return;
             }
 
@@ -311,7 +379,7 @@ namespace Artsystack.ArtsystackGui
             catch (Exception ex)
             {
                 Debug.LogError($"[Fusion] JoinLobbyAsync failed: {ex.Message}");
-                OnSessionListUpdatedEvent?.Invoke(new List<SessionInfo>());
+                // Same as above: empty list makes UI think Photon confirmed zero rooms — keep unknown (null) instead.
             }
         }
 
@@ -675,7 +743,7 @@ namespace Artsystack.ArtsystackGui
                 return;
             }
             Debug.LogError($"[Fusion] Connect Failed: {reason}");
-            OnConnectionError?.Invoke($"Kết nối thất bại: {reason}");
+            ReportFatalConnectionError($"Kết nối thất bại: {reason}");
         }
 
         public void OnShutdown(NetworkRunner runner, ShutdownReason shutdownReason)
@@ -692,7 +760,7 @@ namespace Artsystack.ArtsystackGui
                 }
                 if (_joinFailureFrame >= 0 && Time.frameCount <= _joinFailureFrame + 1)
                     return;
-                OnConnectionError?.Invoke($"Mất kết nối: {shutdownReason}");
+                ReportFatalConnectionError($"Mất kết nối: {shutdownReason}");
             }
         }
 
@@ -707,7 +775,12 @@ namespace Artsystack.ArtsystackGui
         }
         public void OnInputMissing(NetworkRunner runner, PlayerRef player, NetworkInput input) { }
         public void OnConnectedToServer(NetworkRunner runner) { Debug.Log("[Fusion] Connected to Server!"); }
-        public void OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason) { }
+        public void OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason)
+        {
+            if (_joinStartGameInFlight || IsJoinWizardSuppressingGlobalErrors())
+                return;
+            ReportFatalConnectionError($"Mất kết nối server: {reason}");
+        }
         public void OnConnectRequest(NetworkRunner runner, NetworkRunnerCallbackArgs.ConnectRequest request, byte[] token)
         {
             bool hostHasPassword = !string.IsNullOrEmpty(hostPassword);

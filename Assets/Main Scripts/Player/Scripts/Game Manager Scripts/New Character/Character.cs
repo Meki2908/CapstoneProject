@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Fusion;
@@ -46,6 +47,146 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
     [Header("Debug — FSM / Animator (Crit test)")]
     [Tooltip("Bật log [CritFSM] (landing, draw/sheath, trigger). Mặc định tắt; bật trên prefab khi cần debug.")]
     [SerializeField] bool debugCritFsmLogs = false;
+
+    [Tooltip("Bật log [CritFSM][Teleport] + [DIAG-FRAME]/[DIAG-THU-PHAM] (sau sim) để tìm ghi đè vị trí. Tách khỏi debugCritFsmLogs.")]
+    [SerializeField] bool debugTeleportCritLogs = false;
+
+    /// <summary>Teleport / portal diagnostics; filter Console by <c>[CritFSM][Teleport]</c>.</summary>
+    public void LogTeleportCrit(string message)
+    {
+        if (!debugTeleportCritLogs)
+            return;
+        float t = Runner != null && Runner.IsRunning ? (float)Runner.SimulationTime : Time.time;
+        bool run = Runner != null && Runner.IsRunning;
+        bool valid = Object != null && Object.IsValid;
+        Debug.Log(
+            $"[CritFSM][Teleport][{name}] t={t:F3} run={run} valid={valid} SA={HasStateAuthority} IA={HasInputAuthority} pos={transform.position} | {message}",
+            this);
+    }
+
+    // --- Teleport forensic: tìm "thủ phạm" ghi đè vị trí sau ApplyTeleportLocal (chỉ khi debugTeleportCritLogs) ---
+    Vector3 _teleportDiagDest;
+    bool _teleportDiagWatchActive;
+    bool _teleportDiagMajorLogged;
+    bool _teleportDiagMinorLogged;
+    bool _teleportDiagStableSummaryLogged;
+    int _teleportDiagApplyTick;
+    int _teleportDiagWatchEndTick;
+    Coroutine _teleportDiagCoroutine;
+
+    void BeginTeleportDiagIfNeeded(Vector3 destination)
+    {
+        if (!debugTeleportCritLogs)
+            return;
+
+        _teleportDiagDest = destination;
+        _teleportDiagWatchActive = true;
+        _teleportDiagMajorLogged = false;
+        _teleportDiagMinorLogged = false;
+        _teleportDiagStableSummaryLogged = false;
+
+        if (Runner != null && Runner.IsRunning)
+        {
+            _teleportDiagApplyTick = (int)Runner.Tick;
+            _teleportDiagWatchEndTick = _teleportDiagApplyTick + 320;
+        }
+        else
+        {
+            _teleportDiagApplyTick = -1;
+            _teleportDiagWatchEndTick = -1;
+        }
+
+        if (_teleportDiagCoroutine != null)
+        {
+            StopCoroutine(_teleportDiagCoroutine);
+            _teleportDiagCoroutine = null;
+        }
+        _teleportDiagCoroutine = StartCoroutine(CoTeleportDiagWatchFrames(destination));
+    }
+
+    IEnumerator CoTeleportDiagWatchFrames(Vector3 dest)
+    {
+        yield return new WaitForEndOfFrame();
+        LogTeleportDiagFrame_("WaitEndOfFrame", dest);
+
+        yield return null;
+        LogTeleportDiagFrame_("After+1UnityUpdate", dest);
+
+        yield return new WaitForFixedUpdate();
+        LogTeleportDiagFrame_("AfterWaitForFixedUpdate", dest);
+
+        for (int i = 0; i < 24; i++)
+        {
+            yield return null;
+            if (i == 0 || i == 3 || i == 7 || i == 15 || i == 23)
+                LogTeleportDiagFrame_($"UnityUpdate+{i + 2}", dest);
+        }
+
+        if (Runner == null || !Runner.IsRunning)
+            _teleportDiagWatchActive = false;
+
+        _teleportDiagCoroutine = null;
+    }
+
+    void LogTeleportDiagFrame_(string tag, Vector3 dest)
+    {
+        if (!debugTeleportCritLogs)
+            return;
+        float d = Vector3.Distance(transform.position, dest);
+        int tick = Runner != null && Runner.IsRunning ? (int)Runner.Tick : -1;
+        LogTeleportCrit($"[DIAG-FRAME:{tag}] distToDest={d:F4} pos={transform.position} fusionTick={tick}");
+    }
+
+    void TeleportDiagAfterSimulationStep_()
+    {
+        if (!debugTeleportCritLogs || !_teleportDiagWatchActive)
+            return;
+
+        bool fusion = Runner != null && Runner.IsRunning;
+        if (!fusion)
+            return;
+
+        int tick = (int)Runner.Tick;
+
+        if (fusion && tick > _teleportDiagWatchEndTick)
+        {
+            if (!_teleportDiagMajorLogged && !_teleportDiagStableSummaryLogged)
+            {
+                float d = Vector3.Distance(transform.position, _teleportDiagDest);
+                LogTeleportCrit($"[DIAG] Het cua so ~{(_teleportDiagWatchEndTick - _teleportDiagApplyTick)} sim ticks: chua co drift lon >0.75m. finalDist={d:F3} pos={transform.position}");
+                _teleportDiagStableSummaryLogged = true;
+            }
+            _teleportDiagWatchActive = false;
+            return;
+        }
+
+        // Tránh báo drift trên cùng tick apply (teleport gọi từ coroutine giữa sim — tick có thể trùng).
+        if (fusion && tick == _teleportDiagApplyTick)
+            return;
+
+        float dist = Vector3.Distance(transform.position, _teleportDiagDest);
+        if (_teleportDiagMajorLogged)
+            return;
+
+        if (dist > 0.75f)
+        {
+            _teleportDiagMajorLogged = true;
+            var ncc = GetComponent<NetworkCharacterController>();
+            string nccInfo = ncc != null ? $"NCC={ncc.GetType().Name} en={ncc.isActiveAndEnabled}" : "NCC=absent";
+            bool rb = GetComponent<Rigidbody>() != null;
+            LogTeleportCrit(
+                $"[DIAG-THU-PHAM] Sau FixedUpdateNetwork (sau controller.Move neu co): xa khoi dest | dist={dist:F2}m tick={tick} " +
+                $"PV={PlayerVelocity} CalcVel={CalculatedVelocity} cc.en={controller != null && controller.enabled} cc.vel={(controller != null ? controller.velocity.ToString() : "null")} " +
+                $"state={(movementSM != null && movementSM.currentState != null ? movementSM.currentState.GetType().Name : "?")} {nccInfo} RB={(rb ? "yes" : "no")} " +
+                $"resyncCCcache={resyncCharacterControllerCache}");
+        }
+        else if (!_teleportDiagMinorLogged && dist > 0.12f && fusion && tick > _teleportDiagApplyTick + 1)
+        {
+            _teleportDiagMinorLogged = true;
+            LogTeleportCrit(
+                $"[DIAG-DRIFT-MINOR] dist={dist:F3}m tick={tick} pos={transform.position} — thuong do controller.Move / doc hoac slope. PV={PlayerVelocity} cc.vel={(controller != null ? controller.velocity.ToString() : "null")}");
+        }
+    }
 
     /// <summary>Log một dòng có tag cố định để lọc Console. Chỉ chạy khi <see cref="debugCritFsmLogs"/> bật.</summary>
     public void LogCritFsm(string tag, string message)
@@ -237,6 +378,12 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
     private ChangeDetector _changeDetector;
     WeaponController _weaponControllerCache;
     bool _weaponControllerCacheResolved;
+    [Header("Local Interact Probe (Portal/Gate)")]
+    [SerializeField] float localInteractProbeRadius = 2.25f;
+    [SerializeField] LayerMask localInteractProbeMask = ~0;
+    readonly Collider[] _localInteractProbeHits = new Collider[24];
+    PortalNode _activePortalNode;
+    GateTeleporter _activeGateTeleporter;
 
     /// <summary>
     /// <see cref="WeaponController"/> is on the child rig (e.g. <c>player</c>) on Player_3.0 — not on the same GameObject as <see cref="Character"/>.
@@ -265,6 +412,7 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
     int _inputEdgeReplayCount;
     int _lastStateTransitionTick = int.MinValue;
     int _stateTransitionsThisTick;
+    readonly float[] _localSkillCooldownEnds = new float[4];
 
     static bool s_warnedMissingNetworkMecanimAnimator;
     
@@ -275,6 +423,10 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
     [Networked] public NetworkBool NetIsWeaponDrawn { get; set; }
     /// <summary>Single source of truth for equipped weapon type across peers.</summary>
     [Networked] public int NetEquippedWeaponType { get; set; }
+    [Networked] public float NetSkillCooldownEndE { get; set; }
+    [Networked] public float NetSkillCooldownEndR { get; set; }
+    [Networked] public float NetSkillCooldownEndT { get; set; }
+    [Networked] public float NetSkillCooldownEndQ { get; set; }
     [Header("Debug — networked weapon")]
     [Tooltip("Log [NetWeapon] when NetEquippedWeaponType syncs (RPC host + Render peers + delayed read after swap). Tắt khi không test.")]
     [SerializeField] bool debugNetEquippedWeaponLog = false;
@@ -421,6 +573,8 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
             string saved = PlayerDisplayNamePrefs.GetSavedOrDefault();
             RPC_SetDisplayName(saved);
         }
+        for (int i = 0; i < _localSkillCooldownEnds.Length; i++)
+            _localSkillCooldownEnds[i] = 0f;
         _changeDetector = GetChangeDetector(ChangeDetector.Source.SimulationState);
 
         RefreshAnimatorLayerCaches();
@@ -442,6 +596,10 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
             NetLandingRecoveryTimer = TickTimer.None;
             NetJumpBufferRemaining = 0f;
             NetAnimSpeedTarget = 0f;
+            NetSkillCooldownEndE = 0f;
+            NetSkillCooldownEndR = 0f;
+            NetSkillCooldownEndT = 0f;
+            NetSkillCooldownEndQ = 0f;
         }
 
         if (animator != null)
@@ -461,6 +619,7 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
     public override void Despawned(NetworkRunner runner, bool hasState)
     {
         CancelInvoke(nameof(DebugLogNetEquippedWeaponDelayedTick));
+        ClearLocalInteractionTargets();
         if (HasInputAuthority && LocalCharacter == this)
             LocalCharacter = null;
         base.Despawned(runner, hasState);
@@ -679,6 +838,82 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
 
         // Animator bool (optional): Running Jump → Unarmed locomotion; add param "isGrounded" on controller.
         TrySetAnimatorBool("isGrounded", IsGroundedStable());
+        UpdateLocalInteractHints();
+        TeleportDiagAfterSimulationStep_();
+    }
+
+    void UpdateLocalInteractHints()
+    {
+        bool canProbe = HasInputAuthority && isActiveAndEnabled;
+        if (!canProbe)
+        {
+            ClearLocalInteractionTargets();
+            return;
+        }
+
+        float radius = Mathf.Max(0.2f, localInteractProbeRadius);
+        int hitCount = Physics.OverlapSphereNonAlloc(
+            transform.position,
+            radius,
+            _localInteractProbeHits,
+            localInteractProbeMask,
+            QueryTriggerInteraction.Collide);
+
+        PortalNode bestPortal = null;
+        float bestPortalSqr = float.MaxValue;
+        GateTeleporter bestGate = null;
+        float bestGateSqr = float.MaxValue;
+
+        for (int i = 0; i < hitCount; i++)
+        {
+            var col = _localInteractProbeHits[i];
+            if (col == null) continue;
+
+            var portal = col.GetComponentInParent<PortalNode>();
+            if (portal != null && portal.CanBeUsedBy(this))
+            {
+                float sqr = (col.ClosestPoint(transform.position) - transform.position).sqrMagnitude;
+                if (sqr < bestPortalSqr)
+                {
+                    bestPortalSqr = sqr;
+                    bestPortal = portal;
+                }
+            }
+
+            var gate = col.GetComponentInParent<GateTeleporter>();
+            if (gate != null && gate.CanBeUsedBy(this))
+            {
+                float sqr = (col.ClosestPoint(transform.position) - transform.position).sqrMagnitude;
+                if (sqr < bestGateSqr)
+                {
+                    bestGateSqr = sqr;
+                    bestGate = gate;
+                }
+            }
+        }
+
+        if (_activePortalNode != null && _activePortalNode != bestPortal)
+            _activePortalNode.ExternalClearLocalCharacter(this);
+        if (_activeGateTeleporter != null && _activeGateTeleporter != bestGate)
+            _activeGateTeleporter.ExternalClearLocalCharacter(this);
+
+        _activePortalNode = bestPortal;
+        _activeGateTeleporter = bestGate;
+
+        if (_activePortalNode != null)
+            _activePortalNode.ExternalSetLocalCharacter(this);
+        if (_activeGateTeleporter != null)
+            _activeGateTeleporter.ExternalSetLocalCharacter(this);
+    }
+
+    void ClearLocalInteractionTargets()
+    {
+        if (_activePortalNode != null)
+            _activePortalNode.ExternalClearLocalCharacter(this);
+        if (_activeGateTeleporter != null)
+            _activeGateTeleporter.ExternalClearLocalCharacter(this);
+        _activePortalNode = null;
+        _activeGateTeleporter = null;
     }
     
     public override void Render()
@@ -766,6 +1001,42 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
         }
     }
 
+    [Rpc(RpcSources.InputAuthority, RpcTargets.All)]
+    public void RPC_PlaySkillVisual(int weaponTypeValue, int skillIndex)
+    {
+        if (HasInputAuthority)
+            return;
+        if (animator == null)
+            return;
+
+        animator.SetInteger("skillIndex", Mathf.Clamp(skillIndex, 0, 3));
+        switch ((WeaponType)weaponTypeValue)
+        {
+            case WeaponType.Sword:
+                SetTriggerSafe("swordSkill");
+                break;
+            case WeaponType.Axe:
+                SetTriggerSafe("axeSkill");
+                break;
+            case WeaponType.Mage:
+                SetTriggerSafe("mageSkill");
+                break;
+        }
+    }
+
+    public bool TryBroadcastSkillVisual(WeaponType weaponType, int skillIndex)
+    {
+        if (Object == null || !Object.IsValid || Runner == null || !Runner.IsRunning)
+            return false;
+        if (!HasInputAuthority)
+            return false;
+        if (weaponType != WeaponType.Sword && weaponType != WeaponType.Axe && weaponType != WeaponType.Mage)
+            return false;
+
+        RPC_PlaySkillVisual((int)weaponType, skillIndex);
+        return true;
+    }
+
     /// <summary>
     /// Broadcast ultimate visual timeline from the local input owner.
     /// Returns true when an RPC was sent; false when caller should play local fallback.
@@ -778,6 +1049,75 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
             return false;
 
         RPC_PlayPlayerUltimate(kind);
+        return true;
+    }
+
+    /// <summary>
+    /// Play mage normal-attack projectile VFX on every peer.
+    /// The input owner already spawned locally in AttackState, so this RPC is for observers.
+    /// </summary>
+    [Rpc(RpcSources.InputAuthority, RpcTargets.All)]
+    public void RPC_PlayMageNormalAttackVFX(int hitIndex, Vector3 origin, Quaternion rotation)
+    {
+        if (hitIndex < 0)
+            return;
+        if (HasInputAuthority)
+            return;
+
+        var mageAtk = GetComponentInChildren<MageNormalAttack>(true);
+        if (mageAtk != null)
+            mageAtk.SpawnVFXDirect(hitIndex, origin, rotation);
+    }
+
+    /// <summary>
+    /// Broadcast mage normal-attack visual event from local input owner.
+    /// Returns true when an RPC is sent.
+    /// </summary>
+    public bool TryBroadcastMageNormalAttackVFX(int hitIndex, Vector3 origin, Quaternion rotation)
+    {
+        if (hitIndex < 0)
+            return false;
+        if (Object == null || !Object.IsValid || Runner == null || !Runner.IsRunning)
+            return false;
+        if (!HasInputAuthority)
+            return false;
+
+        RPC_PlayMageNormalAttackVFX(hitIndex, origin, rotation);
+        return true;
+    }
+
+    /// <summary>
+    /// Host-only broadcast of quest state snapshot to every peer (including Host).
+    /// Used by world triggers that should be authoritative in Host mode.
+    /// </summary>
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    public void RPC_SyncQuestState(int questID, byte questState, int questStep)
+    {
+        if (QuestManager.Instance == null)
+            return;
+        if (!Enum.IsDefined(typeof(QuestManager.QuestState), (int)questState))
+            return;
+
+        QuestManager.Instance.ApplyNetworkQuestState(
+            questID,
+            (QuestManager.QuestState)questState,
+            questStep);
+    }
+
+    /// <summary>StateAuthority helper for host-side world scripts.</summary>
+    public bool TryBroadcastQuestState(int questID)
+    {
+        if (Object == null || !Object.IsValid || Runner == null || !Runner.IsRunning)
+            return false;
+        if (!HasStateAuthority)
+            return false;
+        if (QuestManager.Instance == null)
+            return false;
+
+        RPC_SyncQuestState(
+            questID,
+            (byte)QuestManager.Instance.GetState(questID),
+            QuestManager.Instance.GetStepIndex(questID));
         return true;
     }
 
@@ -910,6 +1250,22 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
         LandEventCount++;
     }
 
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    void RPC_RequestStartSkillCooldown(byte inputRaw, float cooldownSeconds)
+    {
+        if (!HasStateAuthority)
+            return;
+        if (cooldownSeconds <= 0f)
+            return;
+        if (!TryParseAbilityInput(inputRaw, out var input))
+            return;
+
+        float now = Runner != null && Runner.IsRunning ? Runner.SimulationTime : Time.time;
+        if (now < GetNetworkSkillCooldownEnd(input))
+            return;
+        SetNetworkSkillCooldownEnd(input, now + cooldownSeconds);
+    }
+
     /// <summary>Replicated knee-landing flag (InputAuthority → StateAuthority RPC). Animator mirrors in <see cref="Render"/>.</summary>
     public void SetNetworkedKneeLanding(bool value)
     {
@@ -953,6 +1309,88 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
         string s = PlayerDisplayNamePrefs.Sanitize(name ?? "");
         DisplayName = s;
         DisplayNameColorArgb = PlayerNameplate.StableColorArgbFromString(s);
+    }
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    void RPC_RequestTeleportToWorldPosition(Vector3 destination)
+    {
+        LogTeleportCrit($"RPC_RequestTeleport dest={destination}");
+        ApplyTeleportAuthority(destination);
+    }
+
+    /// <summary>
+    /// Teleport this character in a Fusion-safe path:
+    /// - offline: move immediately
+    /// - online + SA: apply directly
+    /// - online + IA: request SA via RPC
+    /// </summary>
+    public void RequestTeleportToWorldPosition(Vector3 destination)
+    {
+        LogTeleportCrit($"RequestTeleport ENTER dest={destination} cc={(controller != null ? controller.enabled.ToString() : "null")}");
+
+        if (Object == null || !Object.IsValid || Runner == null || !Runner.IsRunning)
+        {
+            LogTeleportCrit("branch offline / runner off -> ApplyTeleportLocal");
+            ApplyTeleportLocal(destination);
+            return;
+        }
+
+        if (HasStateAuthority)
+        {
+            LogTeleportCrit("branch HasStateAuthority -> ApplyTeleportAuthority");
+            ApplyTeleportAuthority(destination);
+        }
+        else if (HasInputAuthority)
+        {
+            LogTeleportCrit("branch HasInputAuthority -> RPC_RequestTeleport");
+            RPC_RequestTeleportToWorldPosition(destination);
+        }
+        else
+            Debug.LogWarning("[Character] RequestTeleportToWorldPosition ignored: no StateAuthority/InputAuthority on this peer.", this);
+    }
+
+    void ApplyTeleportAuthority(Vector3 destination)
+    {
+        if (!HasStateAuthority)
+        {
+            LogTeleportCrit("ApplyTeleportAuthority SKIP (no SA)");
+            return;
+        }
+        ApplyTeleportLocal(destination);
+        PlayerVelocity = Vector3.zero;
+        LogTeleportCrit("ApplyTeleportAuthority done PlayerVelocity=0");
+    }
+
+    void ApplyTeleportLocal(Vector3 destination)
+    {
+        Vector3 before = transform.position;
+
+        // Fusion: NetworkCharacterController owns replicated TRSP — gán transform thuần bị CopyToEngine() ghi đè tick sau.
+        // Phải Teleport qua NCC trên StateAuthority để cập nhật buffer mạng + transform.
+        if (TryGetComponent<NetworkCharacterController>(out var ncc)
+            && Runner != null
+            && Runner.IsRunning
+            && HasStateAuthority)
+        {
+            ncc.Teleport(destination, transform.rotation);
+            ncc.Velocity = Vector3.zero;
+            LogTeleportCrit($"ApplyTeleportLocal NCC.Teleport before={before} after={transform.position} (Fusion TRSP)");
+        }
+        else
+        {
+            bool ccWasEnabled = controller != null && controller.enabled;
+            if (ccWasEnabled)
+                controller.enabled = false;
+
+            transform.position = destination;
+
+            if (ccWasEnabled)
+                controller.enabled = true;
+
+            LogTeleportCrit($"ApplyTeleportLocal transform-only before={before} after={transform.position} ccWasOn={ccWasEnabled} ccNull={controller == null}");
+        }
+
+        BeginTeleportDiagIfNeeded(destination);
     }
     
     private void Update()
@@ -1050,6 +1488,102 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
         if (Runner.SimulationTime < jumpAllowedAfterTime) return false;
         if (!IsGroundedForJump()) return false;
         NetJumpBufferRemaining = 0f;
+        return true;
+    }
+
+    static int SkillIndexFromInput(AbilityInput input)
+    {
+        return input switch
+        {
+            AbilityInput.E => 0,
+            AbilityInput.R => 1,
+            AbilityInput.T => 2,
+            AbilityInput.Q_Ultimate => 3,
+            _ => -1
+        };
+    }
+
+    static bool TryParseAbilityInput(byte raw, out AbilityInput input)
+    {
+        input = raw switch
+        {
+            (byte)AbilityInput.E => AbilityInput.E,
+            (byte)AbilityInput.R => AbilityInput.R,
+            (byte)AbilityInput.T => AbilityInput.T,
+            (byte)AbilityInput.Q_Ultimate => AbilityInput.Q_Ultimate,
+            _ => AbilityInput.None
+        };
+        return input != AbilityInput.None;
+    }
+
+    float GetNetworkSkillCooldownEnd(AbilityInput input)
+    {
+        return input switch
+        {
+            AbilityInput.E => NetSkillCooldownEndE,
+            AbilityInput.R => NetSkillCooldownEndR,
+            AbilityInput.T => NetSkillCooldownEndT,
+            AbilityInput.Q_Ultimate => NetSkillCooldownEndQ,
+            _ => 0f
+        };
+    }
+
+    void SetNetworkSkillCooldownEnd(AbilityInput input, float end)
+    {
+        switch (input)
+        {
+            case AbilityInput.E: NetSkillCooldownEndE = end; break;
+            case AbilityInput.R: NetSkillCooldownEndR = end; break;
+            case AbilityInput.T: NetSkillCooldownEndT = end; break;
+            case AbilityInput.Q_Ultimate: NetSkillCooldownEndQ = end; break;
+        }
+    }
+
+    float GetEffectiveSkillCooldownEnd(AbilityInput input)
+    {
+        float networkEnd = GetNetworkSkillCooldownEnd(input);
+        int idx = SkillIndexFromInput(input);
+        if (idx < 0 || idx >= _localSkillCooldownEnds.Length)
+            return networkEnd;
+        return Mathf.Max(networkEnd, _localSkillCooldownEnds[idx]);
+    }
+
+    public bool IsSkillOnCooldown(AbilityInput input)
+    {
+        int idx = SkillIndexFromInput(input);
+        if (idx < 0)
+            return false;
+        float now = Runner != null && Runner.IsRunning ? Runner.SimulationTime : Time.time;
+        return now < GetEffectiveSkillCooldownEnd(input);
+    }
+
+    /// <summary>
+    /// Shared gameplay gate for skill cooldown. Returns true only when this skill use is accepted.
+    /// On acceptance, it immediately updates local cooldown and syncs to authority when needed.
+    /// </summary>
+    public bool TryBeginSkillUse(AbilityInput input, float cooldownSeconds)
+    {
+        int idx = SkillIndexFromInput(input);
+        if (idx < 0)
+            return false;
+        if (cooldownSeconds <= 0f)
+            return true;
+
+        float now = Runner != null && Runner.IsRunning ? Runner.SimulationTime : Time.time;
+        if (now < GetEffectiveSkillCooldownEnd(input))
+            return false;
+
+        float end = now + cooldownSeconds;
+        _localSkillCooldownEnds[idx] = end;
+
+        if (Runner != null && Runner.IsRunning)
+        {
+            if (HasStateAuthority)
+                SetNetworkSkillCooldownEnd(input, end);
+            else if (HasInputAuthority)
+                RPC_RequestStartSkillCooldown((byte)input, cooldownSeconds);
+        }
+
         return true;
     }
 

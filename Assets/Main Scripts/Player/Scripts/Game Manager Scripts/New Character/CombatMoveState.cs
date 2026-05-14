@@ -55,7 +55,11 @@ public class CombatMoveState : BaseMoveState
             return;
         }
 
-        if (character.isWeaponDrawn)
+        bool canIssueSkillCommands = character.Runner == null
+            || !character.Runner.IsRunning
+            || character.HasInputAuthority;
+
+        if (character.isWeaponDrawn && canIssueSkillCommands)
         {
             if (character.currentInput.buttons.IsSet(NetworkInputButtons.Skill_E) && !character.previousInput.buttons.IsSet(NetworkInputButtons.Skill_E))
             {

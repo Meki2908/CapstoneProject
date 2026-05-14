@@ -94,10 +94,16 @@ public class MultiplayerMenuUI : MonoBehaviour
     private RectTransform _recentHostListContent;
     private RectTransform _recentJoinListContent;
 
-    /// <summary>Normalized session names from <see cref="OnSessionListUpdated"/> while recent panel is open; null = lobby list not received yet.</summary>
+    /// <summary>Normalized session names from Photon after the first <see cref="OnSessionListUpdated"/> while recent panel is open.</summary>
     HashSet<string> _activeLobbyRooms;
 
     bool _isFetchingLobby;
+
+    /// <summary>Until the first lobby list callback (or fetch end), join rows show "Checking…" and hide JOIN.</summary>
+    bool _waitingForFirstLobbySnapshot = true;
+
+    /// <summary>JoinLobby finished without a snapshot (runner busy, error) — show rows without checking text and allow JOIN.</summary>
+    bool _lobbyUnverifiedAfterFetch;
 
     static string NormalizeRoomKey(string roomName)
     {
@@ -557,6 +563,8 @@ public class MultiplayerMenuUI : MonoBehaviour
 
         EnsureRecentSessionsPanel();
         _activeLobbyRooms = null;
+        _waitingForFirstLobbySnapshot = true;
+        _lobbyUnverifiedAfterFetch = false;
         RefreshRecentSessionsList();
         if (_recentSessionsPanelRoot != null)
         {
@@ -570,6 +578,8 @@ public class MultiplayerMenuUI : MonoBehaviour
     public void CloseRecentSessionsPanel()
     {
         _isFetchingLobby = false;
+        _waitingForFirstLobbySnapshot = false;
+        _lobbyUnverifiedAfterFetch = false;
         if (FusionConnectionManager.Instance != null)
             FusionConnectionManager.Instance.OnSessionListUpdatedEvent -= OnLobbyUpdated;
 
@@ -588,16 +598,27 @@ public class MultiplayerMenuUI : MonoBehaviour
 
         await FusionConnectionManager.Instance.JoinLobbyAsync();
 
-        if (_isFetchingLobby && _activeLobbyRooms == null)
+        // Let Fusion deliver OnSessionListUpdated next frame if it is queued after JoinSessionLobby returns.
+        await Task.Yield();
+        await Task.Yield();
+
+        if (_isFetchingLobby && _waitingForFirstLobbySnapshot)
         {
-            _activeLobbyRooms = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            RefreshRecentSessionsList();
+            // No OnSessionListUpdated (runner still in session, JoinSessionLobby failed, etc.)
+            _waitingForFirstLobbySnapshot = false;
+            _lobbyUnverifiedAfterFetch = true;
         }
+
+        if (_isFetchingLobby)
+            RefreshRecentSessionsList();
     }
 
     void OnLobbyUpdated(List<SessionInfo> sessions)
     {
         if (!_isFetchingLobby) return;
+
+        _waitingForFirstLobbySnapshot = false;
+        _lobbyUnverifiedAfterFetch = false;
 
         var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (sessions != null)
@@ -622,7 +643,7 @@ public class MultiplayerMenuUI : MonoBehaviour
             Destroy(_recentJoinListContent.GetChild(i).gameObject);
 
         var style = lobbyRuntimeStyle ?? new LobbyRuntimeUiStyle();
-        foreach (var e in RecentFusionSessionsStore.GetOrdered())
+        foreach (var e in RecentFusionSessionsStore.GetOrderedForCurrentProfile())
         {
             if (e.wasHost)
             {
@@ -631,25 +652,30 @@ public class MultiplayerMenuUI : MonoBehaviour
             }
 
             string key = NormalizeRoomKey(e.roomName);
-            if (_activeLobbyRooms == null)
+
+            if (_waitingForFirstLobbySnapshot)
             {
-                LobbyRuntimePanels.AddRecentJoinSessionRow(_recentJoinListContent, style, e, OnRecentJoinClicked, OnRecentDeleteClicked, lobbyCheckPending: true);
+                LobbyRuntimePanels.AddRecentJoinSessionRow(
+                    _recentJoinListContent, style, e, OnRecentJoinClicked, OnRecentDeleteClicked,
+                    showJoinButton: false, statusSubtitle: "Checking lobby…");
                 continue;
             }
 
-            if (_activeLobbyRooms.Contains(key))
+            if (_lobbyUnverifiedAfterFetch)
             {
-                LobbyRuntimePanels.AddRecentJoinSessionRow(_recentJoinListContent, style, e, OnRecentJoinClicked, OnRecentDeleteClicked);
+                LobbyRuntimePanels.AddRecentJoinSessionRow(
+                    _recentJoinListContent, style, e, OnRecentJoinClicked, OnRecentDeleteClicked,
+                    showJoinButton: true,
+                    statusSubtitle: "Could not verify lobby — you can still try Join");
                 continue;
             }
 
-            if (e.hostIsPrivate)
-            {
-                LobbyRuntimePanels.AddRecentJoinSessionRow(_recentJoinListContent, style, e, OnRecentJoinClicked, OnRecentDeleteClicked);
+            if (_activeLobbyRooms == null || !_activeLobbyRooms.Contains(key))
                 continue;
-            }
 
-            // Public room not in lobby list — treat as host offline / session gone.
+            LobbyRuntimePanels.AddRecentJoinSessionRow(
+                _recentJoinListContent, style, e, OnRecentJoinClicked, OnRecentDeleteClicked,
+                showJoinButton: true, statusSubtitle: null);
         }
     }
 
@@ -1544,7 +1570,7 @@ public static class LobbyRuntimePanels
         delBtn.onClick.AddListener(() => onDelete?.Invoke(entryDel));
     }
 
-    public static void AddRecentJoinSessionRow(RectTransform listContent, LobbyRuntimeUiStyle style, RecentFusionSessionEntry entry, Action<RecentFusionSessionEntry> onJoin, Action<RecentFusionSessionEntry> onDelete, bool lobbyCheckPending = false)
+    public static void AddRecentJoinSessionRow(RectTransform listContent, LobbyRuntimeUiStyle style, RecentFusionSessionEntry entry, Action<RecentFusionSessionEntry> onJoin, Action<RecentFusionSessionEntry> onDelete, bool showJoinButton, string statusSubtitle)
     {
         if (listContent == null || entry == null) return;
         BeginBuild(style);
@@ -1558,18 +1584,19 @@ public static class LobbyRuntimePanels
         rowH.childControlWidth = true;
         rowH.childControlHeight = true;
         var rowLe = row.GetComponent<LayoutElement>();
-        rowLe.minHeight = lobbyCheckPending ? 64f : 56f;
-        rowLe.preferredHeight = lobbyCheckPending ? 64f : 56f;
+        bool hasSubtitle = !string.IsNullOrEmpty(statusSubtitle);
+        rowLe.minHeight = hasSubtitle ? 64f : 56f;
+        rowLe.preferredHeight = hasSubtitle ? 64f : 56f;
 
         var labelGo = new GameObject("Label", typeof(RectTransform));
         labelGo.transform.SetParent(row.transform, false);
         var labelTmp = labelGo.AddComponent<TextMeshProUGUI>();
         labelTmp.richText = true;
-        if (lobbyCheckPending)
+        string name = string.IsNullOrEmpty(entry.roomName) ? "—" : entry.roomName;
+        if (hasSubtitle)
         {
-            string name = string.IsNullOrEmpty(entry.roomName) ? "—" : entry.roomName;
-            labelTmp.text = $"{name}\n<size=60%><color=#8899aa>Checking lobby…</color></size>";
-            labelTmp.color = new Color(1f, 1f, 1f, 0.75f);
+            labelTmp.text = $"{name}\n<size=60%><color=#8899aa>{statusSubtitle}</color></size>";
+            labelTmp.color = new Color(1f, 1f, 1f, 0.92f);
         }
         else
         {
@@ -1584,10 +1611,19 @@ public static class LobbyRuntimePanels
         labelLe.flexibleWidth = 1f;
         labelLe.minWidth = 120f;
 
-        var joinBtn = AddButton(row.transform, "JOIN", new Color(0.22f, 0.45f, 0.75f, 1f), Color.white, 52f);
-        joinBtn.GetComponent<LayoutElement>().preferredWidth = 140f;
-        var entryJoin = CloneRecentEntry(entry);
-        joinBtn.onClick.AddListener(() => onJoin?.Invoke(entryJoin));
+        if (showJoinButton)
+        {
+            var joinBtn = AddButton(row.transform, "JOIN", new Color(0.22f, 0.45f, 0.75f, 1f), Color.white, 52f);
+            joinBtn.GetComponent<LayoutElement>().preferredWidth = 140f;
+            var entryJoin = CloneRecentEntry(entry);
+            joinBtn.onClick.AddListener(() => onJoin?.Invoke(entryJoin));
+        }
+        else
+        {
+            var spacer = new GameObject("JoinSpacer", typeof(RectTransform), typeof(LayoutElement));
+            spacer.transform.SetParent(row.transform, false);
+            spacer.GetComponent<LayoutElement>().preferredWidth = 140f;
+        }
 
         var delBtn = AddButton(row.transform, "DELETE", new Color(0.35f, 0.2f, 0.2f, 1f), Color.white, 52f);
         delBtn.GetComponent<LayoutElement>().preferredWidth = 120f;
@@ -1602,6 +1638,7 @@ public static class LobbyRuntimePanels
             roomName = e.roomName,
             password = e.password,
             wasHost = e.wasHost,
+            profileKey = e.profileKey,
             lastUsedUtcTicks = e.lastUsedUtcTicks,
             hostPlayerCount = e.hostPlayerCount,
             hostIsPrivate = e.hostIsPrivate

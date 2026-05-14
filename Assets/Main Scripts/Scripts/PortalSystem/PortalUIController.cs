@@ -65,7 +65,59 @@ public class PortalUIController : MonoBehaviour
     [Tooltip("Thời gian (giây) camera di chuyển từ điểm nguồn đến điểm đích")]
     public float cameraPanDuration = 1.2f;
 
+    [Header("Debug — Teleport (Crit-style)")]
+    [Tooltip("Bật log [CritFSM][Teleport][PortalUI] trước/sau bước 3 và sau vài frame (bắt rollback). Bật thêm debugTeleportCritLogs trên Character prefab để thấy ApplyTeleportLocal.")]
+    [SerializeField] bool debugPortalTeleportCritLogs = false;
+
     private Transform currentPlayer;
+    private Character currentCharacter;
+
+    void LogPortalTeleportCrit(string message)
+    {
+        if (!debugPortalTeleportCritLogs)
+            return;
+        Debug.Log($"[CritFSM][Teleport][PortalUI] t={Time.unscaledTime:F3} | {message}", this);
+    }
+
+    System.Collections.IEnumerator CoTeleportPostStepWatch(Character ch, Vector3 appliedDest, Transform playerTf)
+    {
+        if (!debugPortalTeleportCritLogs)
+            yield break;
+
+        string cmInfo = "cm=null";
+        if (cinemachineCamera != null)
+        {
+            var f = cinemachineCamera.Follow;
+            cmInfo = $"cm.follow={(f != null ? f.name : "null")} cm.pos={cinemachineCamera.transform.position}";
+        }
+
+        yield return null;
+        if (ch != null)
+            LogPortalTeleportCrit($"after1Update ch.pos={ch.transform.position} want={appliedDest} delta={(ch.transform.position - appliedDest).magnitude:F4} | {cmInfo}");
+        if (playerTf != null)
+            LogPortalTeleportCrit($"after1Update playerTf.pos={playerTf.position} | {cmInfo}");
+
+        yield return new WaitForFixedUpdate();
+        if (ch != null)
+            LogPortalTeleportCrit($"afterFixed ch.pos={ch.transform.position} want={appliedDest} delta={(ch.transform.position - appliedDest).magnitude:F4} | {cmInfo}");
+        if (playerTf != null)
+            LogPortalTeleportCrit($"afterFixed playerTf.pos={playerTf.position} | {cmInfo}");
+
+        for (int i = 0; i < 18; i++)
+        {
+            yield return null;
+            if (i == 2 || i == 8 || i == 17)
+            {
+                if (cinemachineCamera != null)
+                {
+                    var f = cinemachineCamera.Follow;
+                    cmInfo = $"cm.follow={(f != null ? f.name : "null")} f.pos={(f != null ? f.position.ToString() : "-")} cmCam.pos={cinemachineCamera.transform.position}";
+                }
+                if (ch != null)
+                    LogPortalTeleportCrit($"late+{i + 2}Updates ch.delta={(ch.transform.position - appliedDest).magnitude:F3} ch.pos={ch.transform.position} | {cmInfo}");
+            }
+        }
+    }
 
     private void Awake()
     {
@@ -93,7 +145,25 @@ public class PortalUIController : MonoBehaviour
 
     public void OpenPortalMenu(Transform triggeredPlayer)
     {
-        currentPlayer = (playerOverride != null) ? playerOverride : triggeredPlayer;
+        // Prefer the trigger source from local interact probe, then local character, then inspector override.
+        currentPlayer = triggeredPlayer != null ? triggeredPlayer : playerOverride;
+        currentCharacter = currentPlayer != null ? currentPlayer.GetComponentInParent<Character>() : null;
+        if (currentCharacter == null && Character.Local != null)
+        {
+            currentCharacter = Character.Local;
+            currentPlayer = currentCharacter.transform;
+        }
+
+        // Host/Client safety: this menu must operate on a character controlled by this peer.
+        if (currentCharacter != null &&
+            currentCharacter.Runner != null &&
+            currentCharacter.Runner.IsRunning &&
+            !currentCharacter.HasInputAuthority &&
+            !currentCharacter.HasStateAuthority)
+        {
+            return;
+        }
+
         // Nếu rootPanel có CursorUiOverlayWhenActive (vd. PortalRoundCanvas trên Canvas_MapChinh), OnEnable sẽ BeginUiOverlay.
         bool overlayOnPanel = rootPanel != null && rootPanel.GetComponent<CursorUiOverlayWhenActive>() != null;
         if (!overlayOnPanel)
@@ -139,19 +209,79 @@ public class PortalUIController : MonoBehaviour
         SoundManager.PlayUICloseMenu();
     }
 
+    /// <summary>Prefer the local input Character when Fusion is running (avoids stale inspector references).</summary>
+    static bool TryResolveLocalPlayableCharacter(out Character ch)
+    {
+        if (Character.Local != null)
+        {
+            ch = Character.Local;
+            return true;
+        }
+
+        ch = null;
+        var players = FindObjectsByType<Character>(FindObjectsSortMode.None);
+        for (int i = 0; i < players.Length; i++)
+        {
+            var c = players[i];
+            if (c == null) continue;
+            if (c.Runner != null && c.Runner.IsRunning)
+            {
+                if (!c.HasInputAuthority && !c.HasStateAuthority) continue;
+                ch = c;
+                return true;
+            }
+        }
+
+        for (int i = 0; i < players.Length; i++)
+        {
+            var c = players[i];
+            if (c == null) continue;
+            if (c.Runner == null || !c.Runner.IsRunning)
+            {
+                ch = c;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private void TeleportTo(Transform destination, int portalIndex = 0)
     {
         _lastPortalIndex = portalIndex;
 
-        // Fallback: Nếu vẫn chưa có Player, thử tìm bằng Tag
+        // Fallback: resolve local playable Character first (online), then optional override, then any Character offline.
         if (currentPlayer == null)
         {
-            if (playerOverride != null) currentPlayer = playerOverride;
+            if (TryResolveLocalPlayableCharacter(out var localCh))
+            {
+                currentCharacter = localCh;
+                currentPlayer = localCh.transform;
+            }
+            else if (playerOverride != null)
+            {
+                currentPlayer = playerOverride;
+            }
             else
             {
-                GameObject p = GameObject.FindGameObjectWithTag("Player");
-                if (p != null) currentPlayer = p.transform;
+                var players = FindObjectsByType<Character>(FindObjectsSortMode.None);
+                for (int i = 0; i < players.Length; i++)
+                {
+                    var ch = players[i];
+                    if (ch == null) continue;
+                    if (ch.Runner != null && ch.Runner.IsRunning)
+                    {
+                        if (!ch.HasInputAuthority && !ch.HasStateAuthority) continue;
+                    }
+                    currentCharacter = ch;
+                    currentPlayer = ch.transform;
+                    break;
+                }
             }
+        }
+        else if (currentCharacter == null)
+        {
+            currentCharacter = currentPlayer.GetComponentInParent<Character>();
         }
 
         if (currentPlayer == null)
@@ -166,9 +296,7 @@ public class PortalUIController : MonoBehaviour
             return;
         }
 
-        Debug.Log($"[Portal] Dịch chuyển {currentPlayer.name} → {destination.name} tại {destination.position}");
-
-        // Tìm CharacterController
+        // Tìm CharacterController (host thường là SA-only; sync currentCharacter sau khi gắn đúng transform)
         CharacterController cc = currentPlayer.GetComponent<CharacterController>();
         if (cc == null) cc = currentPlayer.GetComponentInChildren<CharacterController>();
         if (cc == null) cc = currentPlayer.GetComponentInParent<CharacterController>();
@@ -176,8 +304,22 @@ public class PortalUIController : MonoBehaviour
         if (cc != null && cc.transform != currentPlayer)
             currentPlayer = cc.transform;
 
+        currentCharacter = currentPlayer != null ? currentPlayer.GetComponentInParent<Character>() : null;
+
+        if (currentCharacter != null &&
+            currentCharacter.Runner != null &&
+            currentCharacter.Runner.IsRunning &&
+            !currentCharacter.HasInputAuthority &&
+            !currentCharacter.HasStateAuthority)
+        {
+            Debug.LogWarning("[Portal] Từ chối teleport vì player hiện tại không có quyền điều khiển trên peer này.");
+            return;
+        }
+
+        Debug.Log($"[Portal] Dịch chuyển {currentPlayer.name} → {destination.name} tại {destination.position}");
+
         ClosePortalMenu();
-        StartCoroutine(TeleportSequence(destination, cc));
+        StartCoroutine(TeleportSequence(destination));
     }
 
     /// <summary>
@@ -188,7 +330,7 @@ public class PortalUIController : MonoBehaviour
     /// 4. Spawn VFX tại điểm đích
     /// 5. Advance quest
     /// </summary>
-    private IEnumerator TeleportSequence(Transform destination, CharacterController cc)
+    private IEnumerator TeleportSequence(Transform destination)
     {
         // ── Bước 1: Spawn VFX + SFX tại điểm xuất phát ──
         SoundManager.PlayTeleportStart();
@@ -213,7 +355,7 @@ public class PortalUIController : MonoBehaviour
 
                 while (elapsed < cameraPanDuration)
                 {
-                    elapsed += Time.deltaTime;
+                    elapsed += Time.unscaledDeltaTime;
                     float t = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / cameraPanDuration));
                     dummy.transform.position = Vector3.Lerp(startPos, endPos, t);
                     yield return null;
@@ -234,22 +376,48 @@ public class PortalUIController : MonoBehaviour
         }
 
         // ── Bước 3: Dịch chuyển player ──
-        if (cc != null) cc.enabled = false;
-        currentPlayer.position = destination.position;
-        currentPlayer.rotation = destination.rotation;
-        Physics.SyncTransforms();
-        if (cc != null) cc.enabled = true;
+        if (currentCharacter != null)
+        {
+            LogPortalTeleportCrit(
+                $"step3 BEFORE RequestTeleport currentPlayer={currentPlayer?.name} pos={currentPlayer?.position} ch={currentCharacter.name} ch.pos={currentCharacter.transform.position} dest={destination.position}");
+            currentCharacter.LogTeleportCrit(
+                $"Portal calling RequestTeleport dest={destination.position} (portal UI step3)");
+            currentCharacter.RequestTeleportToWorldPosition(destination.position);
+            currentPlayer = currentCharacter.transform;
+            currentPlayer.rotation = destination.rotation;
+            LogPortalTeleportCrit(
+                $"step3 AFTER RequestTeleport currentPlayer={currentPlayer.name} pos={currentPlayer.position}");
+            currentCharacter.LogTeleportCrit(
+                $"Portal after RequestTeleport ch.pos={currentCharacter.transform.position}");
+            if (debugPortalTeleportCritLogs)
+                StartCoroutine(CoTeleportPostStepWatch(currentCharacter, destination.position, currentPlayer));
+        }
+        else if (currentPlayer != null)
+        {
+            LogPortalTeleportCrit(
+                $"step3 FALLBACK no Character; playerTf={currentPlayer.name} pos={currentPlayer.position} dest={destination.position}");
+            // Fallback for non-networked objects without Character.
+            var cc = currentPlayer.GetComponent<CharacterController>();
+            if (cc == null) cc = currentPlayer.GetComponentInChildren<CharacterController>();
+            if (cc == null) cc = currentPlayer.GetComponentInParent<CharacterController>();
+            if (cc != null) cc.enabled = false;
+            currentPlayer.position = destination.position;
+            currentPlayer.rotation = destination.rotation;
+            Physics.SyncTransforms();
+            if (cc != null) cc.enabled = true;
+            LogPortalTeleportCrit($"step3 FALLBACK done playerTf.pos={currentPlayer.position}");
+        }
 
         // ── Bước 4: Spawn VFX + SFX tại điểm đích ──
         SoundManager.PlayTeleportArrive();
         SpawnEffect(destination.position, destination.rotation);
 
-        // ── Bước 5: Reset tất cả PortalNode ──────────────────────────────
-        // CharacterController.enabled = false/true + warp làm Unity không gửi
-        // OnTriggerExit cho portal cũ → _playerInRange bị giữ true → nhấn F
-        // vẫn mở portal UI. ForceExit() trên tất cả nodes giải quyết triệt để.
+        // ── Bước 5: Reset tương tác cổng CHỈ cho local player hiện tại ──────────────────────────────
+        // Tránh ảnh hưởng peer khác đang đứng gần cổng.
         foreach (var node in FindObjectsByType<PortalNode>(FindObjectsSortMode.None))
-            node.ForceExit();
+            node.ExternalClearLocalCharacter(currentCharacter);
+        foreach (var gate in FindObjectsByType<GateTeleporter>(FindObjectsSortMode.None))
+            gate.ExternalClearLocalCharacter(currentCharacter);
 
         // ── Bước 6: Advance quest ──
         TryAdvanceQuest();

@@ -27,9 +27,20 @@ public class QuestLocationTrigger : MonoBehaviour
     {
         if (_triggered) return;
         if (!other.CompareTag(playerTag)) return;
+        var character = other.GetComponentInParent<Character>();
+        if (character == null) return;
+
+        // Host mode hard gate:
+        // - online: only host's local player can advance quest via world trigger
+        // - offline: allow normal local flow
+        if (character.Runner != null && character.Runner.IsRunning)
+        {
+            if (!character.Runner.IsServer || !character.HasInputAuthority)
+                return;
+        }
+
         if (QuestManager.Instance == null) return;
 
-        var qd    = QuestManager.Instance.GetQuestData(questID);
         var state = QuestManager.Instance.GetState(questID);
         int step  = QuestManager.Instance.GetStepIndex(questID);
 
@@ -48,6 +59,7 @@ public class QuestLocationTrigger : MonoBehaviour
 
         _triggered = true;
         QuestManager.Instance.AdvanceStep(questID);
+        character.TryBroadcastQuestState(questID);
 
         foreach (var go in activateOnAdvance)   if (go) go.SetActive(true);
         foreach (var go in deactivateOnAdvance) if (go) go.SetActive(false);

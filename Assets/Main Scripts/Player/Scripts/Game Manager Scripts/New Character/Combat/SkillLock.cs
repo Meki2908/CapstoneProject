@@ -17,8 +17,13 @@ public class SkillLock : MonoBehaviour
     // Bắt đầu skill: Bật cờ khóa skill và khiên bất tử
     public void BeginSkillRootMotion(Animator animator, bool enableRootMotion = true)
     {
-        isPerformingSkill = true;
-        if (_playerHealth != null) _playerHealth.SetInvulnerable(true);
+        // Do not lock immediately at input frame; lock should be driven by animation events
+        // (AE_LockCCAndApplyRootMotion / AE_UnlockCCAndDisableRootMotion) to avoid startup stutter.
+        if (enableRootMotion)
+        {
+            isPerformingSkill = true;
+            if (_playerHealth != null) _playerHealth.SetInvulnerable(true);
+        }
     }
 
     // Kết thúc skill: Tắt cờ và khiên

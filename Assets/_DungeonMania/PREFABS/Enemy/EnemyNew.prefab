@@ -9657,7 +9657,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1981453737500180962}
-  m_Layer: 6
+  m_Layer: 21
   m_Name: Bow
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -34153,6 +34153,10 @@ PrefabInstance:
       propertyPath: showDebugInfo
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2951644644755427913, guid: b7e0655ac6ffc92418e550a06001dd34, type: 3}
+      propertyPath: playerLayerMask.m_Bits
+      value: 384
+      objectReference: {fileID: 0}
     - target: {fileID: 3616483005751497328, guid: b7e0655ac6ffc92418e550a06001dd34, type: 3}
       propertyPath: m_Height
       value: 1.17
@@ -34737,7 +34741,7 @@ MonoBehaviour:
   detectionAngle: 120
   playerLayerMask:
     serializedVersion: 2
-    m_Bits: 256
+    m_Bits: 384
   obstacleLayerMask:
     serializedVersion: 2
     m_Bits: 0
@@ -34942,7 +34946,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1790603423183058, guid: 346ba3a1eaf376a4ca0795fa2bf70d7f, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 21
       objectReference: {fileID: 0}
     - target: {fileID: 4737389328110992, guid: 346ba3a1eaf376a4ca0795fa2bf70d7f, type: 3}
       propertyPath: m_RootOrder
@@ -35706,7 +35710,7 @@ MonoBehaviour:
   detectionAngle: 120
   playerLayerMask:
     serializedVersion: 2
-    m_Bits: 256
+    m_Bits: 384
   obstacleLayerMask:
     serializedVersion: 2
     m_Bits: 0
@@ -36262,7 +36266,7 @@ MonoBehaviour:
   detectionAngle: 120
   playerLayerMask:
     serializedVersion: 2
-    m_Bits: 256
+    m_Bits: 384
   obstacleLayerMask:
     serializedVersion: 2
     m_Bits: 0
@@ -36704,11 +36708,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1458270801794820, guid: 1301d7e969ef5404f925a74e1d1093b8, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 21
       objectReference: {fileID: 0}
     - target: {fileID: 1569979552691112, guid: 1301d7e969ef5404f925a74e1d1093b8, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 21
       objectReference: {fileID: 0}
     - target: {fileID: 1976014488594992, guid: 1301d7e969ef5404f925a74e1d1093b8, type: 3}
       propertyPath: m_Name
@@ -36716,7 +36720,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1976014488594992, guid: 1301d7e969ef5404f925a74e1d1093b8, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 21
       objectReference: {fileID: 0}
     - target: {fileID: 4318939935124346, guid: 1301d7e969ef5404f925a74e1d1093b8, type: 3}
       propertyPath: m_RootOrder
@@ -36857,7 +36861,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1057565053779504, guid: f6851774d5c4f874a8898919daf26f9f, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 21
       objectReference: {fileID: 0}
     - target: {fileID: 1099989291834194, guid: f6851774d5c4f874a8898919daf26f9f, type: 3}
       propertyPath: m_Name
@@ -36865,15 +36869,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1099989291834194, guid: f6851774d5c4f874a8898919daf26f9f, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 21
       objectReference: {fileID: 0}
     - target: {fileID: 1416822684716164, guid: f6851774d5c4f874a8898919daf26f9f, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 21
       objectReference: {fileID: 0}
     - target: {fileID: 1476808952616632, guid: f6851774d5c4f874a8898919daf26f9f, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 21
       objectReference: {fileID: 0}
     - target: {fileID: 4562464733809718, guid: f6851774d5c4f874a8898919daf26f9f, type: 3}
       propertyPath: m_RootOrder
@@ -37012,11 +37016,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1249710063744722, guid: 5c860473f6aec0742861a2be958fbc70, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 21
       objectReference: {fileID: 0}
     - target: {fileID: 1655099193879956, guid: 5c860473f6aec0742861a2be958fbc70, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 21
       objectReference: {fileID: 0}
     - target: {fileID: 4010747606481394, guid: 5c860473f6aec0742861a2be958fbc70, type: 3}
       propertyPath: m_RootOrder
@@ -37150,7 +37154,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1481244868773408, guid: 199ba2ead65221d4286d5b715b8aef0f, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 21
       objectReference: {fileID: 0}
     - target: {fileID: 4738368735309472, guid: 199ba2ead65221d4286d5b715b8aef0f, type: 3}
       propertyPath: m_RootOrder
@@ -37468,15 +37472,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1046945035460126, guid: 90b685dd555e0c848806f1fb6209e1e9, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 21
       objectReference: {fileID: 0}
     - target: {fileID: 1251926137611724, guid: 90b685dd555e0c848806f1fb6209e1e9, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 21
       objectReference: {fileID: 0}
     - target: {fileID: 1556295860634760, guid: 90b685dd555e0c848806f1fb6209e1e9, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 21
       objectReference: {fileID: 0}
     - target: {fileID: 1878987882032996, guid: 90b685dd555e0c848806f1fb6209e1e9, type: 3}
       propertyPath: m_Name
@@ -37484,7 +37488,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1878987882032996, guid: 90b685dd555e0c848806f1fb6209e1e9, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 21
       objectReference: {fileID: 0}
     - target: {fileID: 4712672407335628, guid: 90b685dd555e0c848806f1fb6209e1e9, type: 3}
       propertyPath: m_RootOrder
@@ -38670,7 +38674,7 @@ MonoBehaviour:
   detectionAngle: 120
   playerLayerMask:
     serializedVersion: 2
-    m_Bits: 256
+    m_Bits: 384
   obstacleLayerMask:
     serializedVersion: 2
     m_Bits: 0
@@ -39233,7 +39237,7 @@ MonoBehaviour:
   detectionAngle: 120
   playerLayerMask:
     serializedVersion: 2
-    m_Bits: 256
+    m_Bits: 384
   obstacleLayerMask:
     serializedVersion: 2
     m_Bits: 0
@@ -41137,7 +41141,7 @@ MonoBehaviour:
   detectionAngle: 120
   playerLayerMask:
     serializedVersion: 2
-    m_Bits: 256
+    m_Bits: 384
   obstacleLayerMask:
     serializedVersion: 2
     m_Bits: 0
@@ -41644,11 +41648,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1445071269435380, guid: cfc911e7da8eb62499dff1c810e59571, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 21
       objectReference: {fileID: 0}
     - target: {fileID: 1529466960235312, guid: cfc911e7da8eb62499dff1c810e59571, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 21
       objectReference: {fileID: 0}
     - target: {fileID: 1580133494715678, guid: cfc911e7da8eb62499dff1c810e59571, type: 3}
       propertyPath: m_Name
@@ -41656,15 +41660,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1580133494715678, guid: cfc911e7da8eb62499dff1c810e59571, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 21
       objectReference: {fileID: 0}
     - target: {fileID: 1608430684871792, guid: cfc911e7da8eb62499dff1c810e59571, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 21
       objectReference: {fileID: 0}
     - target: {fileID: 1923222987863918, guid: cfc911e7da8eb62499dff1c810e59571, type: 3}
       propertyPath: m_Layer
-      value: 6
+      value: 21
       objectReference: {fileID: 0}
     - target: {fileID: 4118756434896196, guid: cfc911e7da8eb62499dff1c810e59571, type: 3}
       propertyPath: m_RootOrder
@@ -43785,7 +43789,7 @@ MonoBehaviour:
   detectionAngle: 120
   playerLayerMask:
     serializedVersion: 2
-    m_Bits: 256
+    m_Bits: 384
   obstacleLayerMask:
     serializedVersion: 2
     m_Bits: 0
@@ -43982,6 +43986,10 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1077076178720830802, guid: f1873437b2d97fe41aa955087047982f, type: 3}
+      propertyPath: playerLayerMask.m_Bits
+      value: 384
+      objectReference: {fileID: 0}
     - target: {fileID: 2873685939109971228, guid: f1873437b2d97fe41aa955087047982f, type: 3}
       propertyPath: enemyNewPrefab
       value: 
@@ -44083,6 +44091,10 @@ PrefabInstance:
     - target: {fileID: 3879513559348616872, guid: 29e3d8521a2be704ca92cfc9151717f5, type: 3}
       propertyPath: m_IsTrigger
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4397696924408593742, guid: 29e3d8521a2be704ca92cfc9151717f5, type: 3}
+      propertyPath: playerLayerMask.m_Bits
+      value: 384
       objectReference: {fileID: 0}
     - target: {fileID: 6089846374273038610, guid: 29e3d8521a2be704ca92cfc9151717f5, type: 3}
       propertyPath: m_LocalPosition.x
@@ -45687,6 +45699,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1976825276289276082}
     m_Modifications:
+    - target: {fileID: 1291034746905298081, guid: 83c30fc4cf94ceb4783c197f2c122d3b, type: 3}
+      propertyPath: playerLayerMask.m_Bits
+      value: 384
+      objectReference: {fileID: 0}
     - target: {fileID: 3925689727373752578, guid: 83c30fc4cf94ceb4783c197f2c122d3b, type: 3}
       propertyPath: enemyNewPrefab
       value: 

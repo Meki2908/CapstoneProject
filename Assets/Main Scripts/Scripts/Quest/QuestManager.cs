@@ -258,6 +258,54 @@ public class QuestManager : MonoBehaviour
         OnQuestCompleted?.Invoke(questID);
     }
 
+    /// <summary>
+    /// Apply quest state received from network authority (Host in Fusion Host mode).
+    /// This is idempotent and only fires events when a real state/step change happened.
+    /// </summary>
+    public bool ApplyNetworkQuestState(int questID, QuestState newState, int newStep)
+    {
+        var qd = GetQuestData(questID);
+        if (qd == null || qd.steps == null || qd.steps.Length == 0)
+            return false;
+
+        QuestState oldState = GetState(questID);
+        int oldStep = GetStepIndex(questID);
+
+        int clampedStep = Mathf.Clamp(newStep, 0, qd.steps.Length - 1);
+        bool changed = oldState != newState || oldStep != clampedStep;
+        if (!changed)
+            return false;
+
+        _states[questID] = newState;
+        _stepIndex[questID] = clampedStep;
+
+        // Persist mirrored state so scene reload still matches latest host snapshot.
+        int rawState = newState == QuestState.Completed ? 2 : (newState == QuestState.Active ? 1 : 0);
+        PlayerPrefs.SetInt(QKey(questID), rawState);
+        PlayerPrefs.SetInt(QKey(questID) + "_STEP", clampedStep);
+        if (newState == QuestState.Active || newState == QuestState.Completed)
+        {
+            if (PlayerPrefs.GetInt(KEY_COUNT, 0) < questID)
+                PlayerPrefs.SetInt(KEY_COUNT, questID);
+        }
+        PlayerPrefs.Save();
+
+        if (newState == QuestState.Completed)
+        {
+            OnQuestCompleted?.Invoke(questID);
+        }
+        else if (oldState != QuestState.Active && newState == QuestState.Active && clampedStep == 0)
+        {
+            OnQuestAccepted?.Invoke(questID);
+        }
+        else
+        {
+            OnQuestStepAdvanced?.Invoke(questID);
+        }
+
+        return true;
+    }
+
     // ─── Reset ───────────────────────────────────────────────────────────
 
     /// <summary>Reset toàn bộ quest (dùng khi tạo game mới, tương đương SetGlobalVar).</summary>

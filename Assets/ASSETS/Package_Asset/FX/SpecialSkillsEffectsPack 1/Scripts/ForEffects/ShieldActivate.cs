@@ -22,14 +22,39 @@ public class ShieldActivate : MonoBehaviour
 
     // === SỬA LỖI 2: Dùng Dictionary để nhớ cả Agent lẫn Rigidbody ===
     private readonly Dictionary<int, (NavMeshAgent agent, Rigidbody rb)> _stunnedEnemies = new Dictionary<int, (NavMeshAgent, Rigidbody)>();
-    
-    public static bool IsShieldActive { get; private set; }
-    
-    public static void ForceReset() => IsShieldActive = false;
+
+    // Owner injection (multiplayer-safe): mỗi shield biết nó thuộc về ai.
+    private Transform ownerTarget;
+    private int ownerId = -1;
+    private bool ownerRegistered;
+
+    // Track shield activation per owner instead of one global bool.
+    private static readonly Dictionary<int, int> s_activeOwnerCounts = new Dictionary<int, int>();
+
+    public static bool IsShieldActive => s_activeOwnerCounts.Count > 0;
+    public bool IsThisShieldActive { get; private set; }
+
+    public static void ForceReset() => s_activeOwnerCounts.Clear();
+
+    public static bool IsShieldActiveFor(Transform owner)
+    {
+        if (owner == null) return false;
+        return s_activeOwnerCounts.ContainsKey(owner.GetInstanceID());
+    }
+
+    public void SetOwner(Transform target)
+    {
+        UnregisterOwner();
+        ownerTarget = target;
+        ownerId = ownerTarget != null ? ownerTarget.GetInstanceID() : -1;
+        RegisterOwnerIfPossible();
+        UpdateShieldActiveFlag();
+    }
 
     void OnEnable()
     {
-        IsShieldActive = true;
+        RegisterOwnerIfPossible();
+        UpdateShieldActiveFlag();
     }
 
     void FixedUpdate() 
@@ -39,7 +64,8 @@ public class ShieldActivate : MonoBehaviour
 
     void OnDisable()
     {
-        IsShieldActive = false;
+        UnregisterOwner();
+        IsThisShieldActive = false;
         
         // === BẢO HIỂM LỖI 2: TRẢ LẠI AI KHI CẤT KHIÊN ĐỘT NGỘT ===
         // Nếu Coroutine bị giết ngang, ta phải tự tay giải cứu bọn quái đang bị choáng
@@ -56,7 +82,7 @@ public class ShieldActivate : MonoBehaviour
             {
                 data.agent.enabled = true;
                 // Đánh thức ngay lập tức: ép tìm đường lại tới Player
-                if (data.agent.isOnNavMesh) data.agent.SetDestination(transform.root.position);
+                if (data.agent.isOnNavMesh) data.agent.SetDestination(GetOwnerPosition());
             }
         }
         _stunnedEnemies.Clear();
@@ -71,7 +97,7 @@ public class ShieldActivate : MonoBehaviour
             if (agent != null && agent.enabled && agent.isOnNavMesh)
             {
                 agent.ResetPath();
-                agent.SetDestination(transform.root.position);
+                agent.SetDestination(GetOwnerPosition());
             }
         }
         // ==========================================================
@@ -174,7 +200,7 @@ public class ShieldActivate : MonoBehaviour
                 // Ép quái xác định lại mục tiêu ngay lập tức (tránh đứng chờ player di chuyển)
                 if (agent.isOnNavMesh)
                 {
-                    agent.SetDestination(transform.root.position);
+                    agent.SetDestination(GetOwnerPosition());
                 }
             }
 
@@ -187,6 +213,51 @@ public class ShieldActivate : MonoBehaviour
 
     private void OnDestroy()
     {
-        IsShieldActive = false;
+        UnregisterOwner();
+        IsThisShieldActive = false;
+    }
+
+    private Vector3 GetOwnerPosition()
+    {
+        if (ownerTarget != null) return ownerTarget.position;
+        return transform.root.position;
+    }
+
+    private void RegisterOwnerIfPossible()
+    {
+        if (ownerRegistered) return;
+        if (!isActiveAndEnabled) return;
+        if (ownerId == -1) return;
+
+        if (s_activeOwnerCounts.TryGetValue(ownerId, out int count))
+            s_activeOwnerCounts[ownerId] = count + 1;
+        else
+            s_activeOwnerCounts[ownerId] = 1;
+
+        ownerRegistered = true;
+    }
+
+    private void UnregisterOwner()
+    {
+        if (!ownerRegistered) return;
+        if (ownerId == -1)
+        {
+            ownerRegistered = false;
+            return;
+        }
+
+        if (s_activeOwnerCounts.TryGetValue(ownerId, out int count))
+        {
+            count--;
+            if (count <= 0) s_activeOwnerCounts.Remove(ownerId);
+            else s_activeOwnerCounts[ownerId] = count;
+        }
+
+        ownerRegistered = false;
+    }
+
+    private void UpdateShieldActiveFlag()
+    {
+        IsThisShieldActive = ownerTarget != null && isActiveAndEnabled && ownerRegistered;
     }
 }
