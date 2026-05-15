@@ -34,6 +34,10 @@ namespace Artsystack.ArtsystackGui
         [Header("Join safety")]
         [Tooltip("If client StartGame never completes (stuck join), force Shutdown after this many seconds so loading UI can clear and the session can recover.")]
         [SerializeField, Min(8f)] private float clientJoinStartGameTimeoutSeconds = 22f;
+        [Tooltip("When GameNotFound happens, auto retry join this many times (handles host just-created race).")]
+        [SerializeField, Min(0)] private int joinRetryOnGameNotFound = 2;
+        [Tooltip("Delay between GameNotFound retries (seconds).")]
+        [SerializeField, Min(0.1f)] private float joinRetryDelaySeconds = 0.8f;
 
         [Header("Runtime disconnect recovery")]
         [Tooltip("Build index of menu scene (UI_Game). Used when a fatal disconnect happens while player is already in gameplay scenes.")]
@@ -394,6 +398,11 @@ namespace Artsystack.ArtsystackGui
             return Encoding.UTF8.GetBytes(password);
         }
 
+        static string NormalizeRoomName(string roomName)
+        {
+            return string.IsNullOrWhiteSpace(roomName) ? string.Empty : roomName.Trim();
+        }
+
         void LogJoinDiag(string message)
         {
             if (fusionVerboseJoinLogging)
@@ -431,6 +440,15 @@ namespace Artsystack.ArtsystackGui
 
         async Task StartHostInternalAsync(string roomName, string password, int? playerCount, bool? isPrivateRoom)
         {
+            roomName = NormalizeRoomName(roomName);
+            if (string.IsNullOrEmpty(roomName))
+            {
+                if (SceneTransitionManager.Instance != null)
+                    SceneTransitionManager.Instance.FinishLoadingUI();
+                OnConnectionError?.Invoke("Tên phòng trống.");
+                return;
+            }
+
             if (SceneTransitionManager.Instance != null)
                 SceneTransitionManager.Instance.StartNetworkingLoadingUI();
 
@@ -480,8 +498,9 @@ namespace Artsystack.ArtsystackGui
         }
 
         /// <summary>Join as client with the same scene setup as host. Does not raise <see cref="OnConnectionError"/> on failure if <paramref name="suppressGlobalConnectionErrors"/> is true.</summary>
-        public async Task<StartGameResult> TryJoinRoomAsync(string roomName, string password, bool startNetworkLoadingUi, bool suppressGlobalConnectionErrors)
+        public async Task<StartGameResult> TryJoinRoomAsync(string roomName, string password, bool startNetworkLoadingUi, bool suppressGlobalConnectionErrors, int gameNotFoundRetryAttempt = 0)
         {
+            roomName = NormalizeRoomName(roomName);
             if (string.IsNullOrWhiteSpace(roomName))
             {
                 if (startNetworkLoadingUi && SceneTransitionManager.Instance != null)
@@ -496,7 +515,7 @@ namespace Artsystack.ArtsystackGui
             bool passWizardClientJoin = startNetworkLoadingUi && suppressGlobalConnectionErrors;
             if (passWizardClientJoin)
             {
-                LogJoinPassCrit($"TryJoin ENTRY session=\"{roomName.Trim()}\" pwdLen={password?.Length ?? 0} " +
+                LogJoinPassCrit($"TryJoin ENTRY session=\"{roomName}\" pwdLen={password?.Length ?? 0} retry={gameNotFoundRetryAttempt} " +
                                 $"frame={Time.frameCount} realtime={Time.realtimeSinceStartup:F3}");
             }
 
@@ -505,7 +524,7 @@ namespace Artsystack.ArtsystackGui
             byte[] token = BuildPasswordConnectionToken(password);
 
             // Client: do not pass Scene — host / NetworkSceneManager drives loaded scene (avoids local load before auth → blue screen / desync).
-            LogJoinDiag($"TryJoinRoomAsync start session=\"{roomName.Trim()}\" pwdLen={(password?.Length ?? 0)} " +
+            LogJoinDiag($"TryJoinRoomAsync start session=\"{roomName}\" pwdLen={(password?.Length ?? 0)} " +
                         $"token={(token == null ? "null" : token.Length.ToString())} scene=host-driven " +
                         $"runnerIsRunning={(Runner != null && Runner.IsRunning)} startNetLoad={startNetworkLoadingUi} " +
                         $"suppressGlobalErr={suppressGlobalConnectionErrors}");
@@ -524,12 +543,12 @@ namespace Artsystack.ArtsystackGui
             try
             {
                 if (passWizardClientJoin)
-                    LogJoinPassCrit($"TryJoin calling StartGame Client session=\"{roomName.Trim()}\" …");
+                    LogJoinPassCrit($"TryJoin calling StartGame Client session=\"{roomName}\" …");
 
                 var joinArgs = new StartGameArgs()
                 {
                     GameMode = GameMode.Client,
-                    SessionName = roomName.Trim(),
+                    SessionName = roomName,
                     ConnectionToken = token,
                     SceneManager = GetSceneManagerForRunner()
                 };
@@ -606,6 +625,17 @@ namespace Artsystack.ArtsystackGui
 
             if (!result.Ok)
             {
+                if (result.ShutdownReason == ShutdownReason.GameNotFound &&
+                    gameNotFoundRetryAttempt < Mathf.Max(0, joinRetryOnGameNotFound))
+                {
+                    float retryDelay = Mathf.Max(0.1f, joinRetryDelaySeconds);
+                    LogJoinDiag($"TryJoinRoomAsync GameNotFound for '{roomName}' -> retry {gameNotFoundRetryAttempt + 1}/{joinRetryOnGameNotFound} in {retryDelay:F1}s");
+                    if (passWizardClientJoin)
+                        LogJoinPassCrit($"TryJoin GameNotFound -> retry {gameNotFoundRetryAttempt + 1}/{joinRetryOnGameNotFound}");
+                    await Task.Delay(TimeSpan.FromSeconds(retryDelay));
+                    return await TryJoinRoomAsync(roomName, password, startNetworkLoadingUi, suppressGlobalConnectionErrors, gameNotFoundRetryAttempt + 1);
+                }
+
                 _joinFailureFrame = Time.frameCount;
                 if (passWizardClientJoin)
                     LogJoinPassCrit($"TryJoin FAIL reason={result.ShutdownReason} (ConnectionRefused often = wrong/missing password on host)");
@@ -625,7 +655,7 @@ namespace Artsystack.ArtsystackGui
             }
 
             if (passWizardClientJoin)
-                LogJoinPassCrit($"TryJoin SUCCESS session=\"{roomName.Trim()}\" → OnSessionConnected (client)");
+                LogJoinPassCrit($"TryJoin SUCCESS session=\"{roomName}\" → OnSessionConnected (client)");
 
             if (startNetworkLoadingUi && SceneTransitionManager.Instance != null)
             {
@@ -635,7 +665,7 @@ namespace Artsystack.ArtsystackGui
 
             OnSessionConnected?.Invoke(new RecentFusionSessionEntry
             {
-                roomName = roomName.Trim(),
+                roomName = roomName,
                 password = password ?? "",
                 wasHost = false,
                 lastUsedUtcTicks = DateTime.UtcNow.Ticks,
@@ -672,7 +702,7 @@ namespace Artsystack.ArtsystackGui
 
         public async void JoinRoom(string roomName, string password)
         {
-            await TryJoinRoomAsync(roomName, password ?? "", true, false);
+            await TryJoinRoomAsync(NormalizeRoomName(roomName), password ?? "", true, false);
         }
 
         public async void StartSinglePlayer(string sceneName = "")

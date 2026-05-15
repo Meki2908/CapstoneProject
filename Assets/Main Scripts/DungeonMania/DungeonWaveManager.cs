@@ -208,6 +208,8 @@ public class DungeonWaveManager : MonoBehaviour
     private bool isWaveCompleting = false; // Guard: tránh gọi OnWaveComplete() 2 lần
     private Coroutine failsafeCoroutine;
     private GameObject _preEnterSkipUiRoot;
+    readonly List<PlayerHealth> _subscribedPlayerHealths = new List<PlayerHealth>();
+    bool _partyFailedTriggered;
     
     // Trackers for enemy spawn (tránh gọi GetEnemyCounts nhiều lần)
     private int currentSkeletCount = 0;
@@ -248,16 +250,14 @@ public class DungeonWaveManager : MonoBehaviour
 
     void OnDestroy()
     {
-        // FIX: Unsubscribe OnPlayerDied để tránh MissingReferenceException
-        if (player != null)
+        // FIX: Unsubscribe toàn bộ hook OnPlayerDied
+        for (int i = 0; i < _subscribedPlayerHealths.Count; i++)
         {
-            PlayerHealth ph = player.GetComponent<PlayerHealth>();
-            if (ph == null) ph = player.GetComponentInChildren<PlayerHealth>();
+            PlayerHealth ph = _subscribedPlayerHealths[i];
             if (ph != null)
-            {
                 ph.OnPlayerDied -= OnPlayerDied;
-            }
         }
+        _subscribedPlayerHealths.Clear();
 
         // Cleanup singleton
         if (Instance == this)
@@ -494,20 +494,60 @@ public class DungeonWaveManager : MonoBehaviour
             playerLower.transform.rotation = player.rotation;
         }
         
-        // Đăng ký nhận sự kiện player chết để hiện UI thua + quay về map
-        if (player != null)
+        // Đăng ký nhận sự kiện chết cho toàn party (không fail ngay khi 1 người chết).
+        for (int i = 0; i < _subscribedPlayerHealths.Count; i++)
         {
-            PlayerHealth ph = player.GetComponent<PlayerHealth>();
-            if (ph == null) ph = player.GetComponentInChildren<PlayerHealth>();
-            if (ph != null)
-            {
-                ph.OnPlayerDied -= OnPlayerDied; // Tránh đăng ký 2 lần
-                ph.OnPlayerDied += OnPlayerDied;
-                Debug.Log("[DungeonWave] Subscribed to PlayerHealth.OnPlayerDied");
-            }
+            PlayerHealth oldPh = _subscribedPlayerHealths[i];
+            if (oldPh != null) oldPh.OnPlayerDied -= OnPlayerDied;
         }
+        _subscribedPlayerHealths.Clear();
+
+        PlayerHealth[] allHealths = FindObjectsByType<PlayerHealth>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        for (int i = 0; i < allHealths.Length; i++)
+        {
+            PlayerHealth ph = allHealths[i];
+            if (ph == null || !ph.gameObject.CompareTag("Player"))
+                continue;
+            ph.OnPlayerDied -= OnPlayerDied;
+            ph.OnPlayerDied += OnPlayerDied;
+            _subscribedPlayerHealths.Add(ph);
+        }
+        Debug.Log($"[DungeonWave] Subscribed PlayerHealth.OnPlayerDied count={_subscribedPlayerHealths.Count}");
 
         Debug.Log("[DungeonWave] Player reference ready for enemies");
+    }
+
+    bool IsOnlineMultiplayerSession()
+    {
+        var localChar = Character.LocalCharacter;
+        return localChar != null &&
+               localChar.Runner != null &&
+               localChar.Runner.IsRunning &&
+               localChar.Runner.GameMode != Fusion.GameMode.Single;
+    }
+
+    int CountAlivePlayers(out int totalPlayers)
+    {
+        totalPlayers = 0;
+        int alive = 0;
+        PlayerHealth[] allHealths = FindObjectsByType<PlayerHealth>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        for (int i = 0; i < allHealths.Length; i++)
+        {
+            PlayerHealth ph = allHealths[i];
+            if (ph == null || !ph.gameObject.CompareTag("Player"))
+                continue;
+            totalPlayers++;
+            if (ph.IsAlive) alive++;
+        }
+        return alive;
+    }
+
+    void SyncAliveStateToPartyRuntime()
+    {
+        int totalPlayers;
+        int alive = CountAlivePlayers(out totalPlayers);
+        bool allDead = totalPlayers > 0 && alive <= 0;
+        Character.LocalCharacter?.TryHostSyncDungeonAliveState(alive, totalPlayers, allDead);
     }
 
     void Update()
@@ -525,6 +565,18 @@ public class DungeonWaveManager : MonoBehaviour
         #endif
 
         if (!isDungeonActive) return;
+
+        SyncAliveStateToPartyRuntime();
+        if (!_partyFailedTriggered)
+        {
+            int totalPlayers;
+            int alive = CountAlivePlayers(out totalPlayers);
+            if (totalPlayers > 0 && alive <= 0)
+            {
+                OnPlayerDied();
+                return;
+            }
+        }
 
         // Kiểm tra enemy còn sống
         if (isWaveActive && !isWaveCompleting && enemiesAlive <= 0 && !isCountingDown)
@@ -562,8 +614,11 @@ public class DungeonWaveManager : MonoBehaviour
     {
         isDungeonActive = true;
         isDungeonComplete = false;
+        _partyFailedTriggered = false;
         currentWave = 0;
         totalExpGained = 0;
+        DungeonPartyRuntime.ClearRetryState();
+        Character.LocalCharacter?.ResetDungeonPartyFlowState();
 
         Debug.Log($"[DungeonWave] Bắt đầu dungeon: {dungeonName}");
 
@@ -947,13 +1002,26 @@ public class DungeonWaveManager : MonoBehaviour
 
     public void OnPlayerDied()
     {
-        if (!isDungeonActive || isDungeonComplete) return;
+        if (!isDungeonActive || isDungeonComplete || _partyFailedTriggered) return;
+
+        int totalPlayers;
+        int alive = CountAlivePlayers(out totalPlayers);
+        bool allDead = totalPlayers <= 1 || alive <= 0;
+
+        // Trong co-op: còn người sống thì dungeon vẫn tiếp tục.
+        if (IsOnlineMultiplayerSession() && !allDead)
+        {
+            Debug.Log($"[DungeonWave] Một người chơi đã chết, còn {alive}/{totalPlayers} người sống. Dungeon tiếp tục.");
+            SyncAliveStateToPartyRuntime();
+            return;
+        }
 
         if (DungeonOSTManager.Instance != null)
             DungeonOSTManager.Instance.OnDungeonMusicEnd();
 
         Debug.Log("[DungeonWave] Player đã chết! Đợi animation chết xong...");
         
+        _partyFailedTriggered = true;
         isDungeonActive = false;
 
         // === NGAY LẬP TỨC: Chặn input nhưng KHÔNG tắt CharacterController ===
@@ -1001,6 +1069,8 @@ public class DungeonWaveManager : MonoBehaviour
 
         // Hiển thị UI thua
         ShowDungeonFailed();
+
+        Character.LocalCharacter?.TryHostFinalizeLootCompensation();
         
         OnDungeonFailed?.Invoke();
     }
@@ -1051,6 +1121,7 @@ public class DungeonWaveManager : MonoBehaviour
 
         GameCursorManager.TryApplyNormalCursorTextureFromScene();
 
+        Character.LocalCharacter?.TryHostFinalizeLootCompensation();
         OnDungeonCompleted?.Invoke();
     }
 
@@ -2019,6 +2090,32 @@ public class DungeonWaveManager : MonoBehaviour
     /// </summary>
     public void ReturnToMainMap()
     {
+        if (IsOnlineMultiplayerSession())
+        {
+            var c = Character.LocalCharacter;
+            if (c != null && !c.IsHostAuthorityForParty())
+            {
+                c.TryRequestDungeonReturnMap();
+                return;
+            }
+            // Host bấm Return: broadcast lệnh return cho toàn party.
+            if (c != null && c.IsHostAuthorityForParty())
+            {
+                c.TryRequestDungeonReturnMap();
+                return;
+            }
+        }
+
+        ExecuteReturnToMainMapLocal();
+    }
+
+    public void ForceReturnToMainMapForParty()
+    {
+        ExecuteReturnToMainMapLocal();
+    }
+
+    void ExecuteReturnToMainMapLocal()
+    {
         Debug.Log($"[DungeonWave] Đang quay về {mainMapSceneName}...");
 
         SoundManager.StopDungeonResultMusic();
@@ -2082,6 +2179,26 @@ public class DungeonWaveManager : MonoBehaviour
     /// Restart dungeon (chơi lại)
     /// </summary>
     public void RestartDungeon()
+    {
+        if (IsOnlineMultiplayerSession())
+        {
+            var c = Character.LocalCharacter;
+            if (c != null)
+            {
+                c.TryRequestDungeonRetryVote();
+                return;
+            }
+        }
+
+        ExecuteRestartDungeonLocal();
+    }
+
+    public void ForceRestartDungeonForParty()
+    {
+        ExecuteRestartDungeonLocal();
+    }
+
+    void ExecuteRestartDungeonLocal()
     {
         Debug.Log("[DungeonWave] Restart dungeon...");
 

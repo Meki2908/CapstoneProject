@@ -231,6 +231,8 @@ public class ItemDropOrb : MonoBehaviour
             }
 
             Debug.Log($"[ItemDrop] ✅ Added to inventory: {itemSO.itemName} [{runtimeRarity}] ×{quantity} (success={added})");
+            if (added && Character.LocalCharacter != null)
+                Character.LocalCharacter.TryReportDungeonLootPickup(quantity);
         }
         else if (itemName.StartsWith("EXP"))
         {

@@ -47,10 +47,26 @@ public class TakeDamageTest : NetworkBehaviour
     // [SerializeField] private float CurrentHealth; // Removed for Fusion
     [Networked, OnChangedRender(nameof(OnHPChanged))]
     public float CurrentHealth { get; set; }
+    [Networked, OnChangedRender(nameof(OnNetworkDeathChanged))]
+    public NetworkBool NetIsDead { get; set; }
 
     public override void Spawned()
     {
-        if (HasStateAuthority) CurrentHealth = maxHealth;
+        if (HasStateAuthority)
+        {
+            CurrentHealth = maxHealth;
+            NetIsDead = false;
+        }
+
+        isAlive = !NetIsDead;
+        if (NetIsDead && !HasStateAuthority)
+            ApplyProxyDeathState();
+    }
+
+    public override void Render()
+    {
+        if (NetIsDead && !HasStateAuthority && isAlive)
+            ApplyProxyDeathState();
     }
     [SerializeField] private bool isAlive = true;
 
@@ -482,6 +498,18 @@ public class TakeDamageTest : NetworkBehaviour
     // Full overload with weapon type, crit status, skill flag, and hit direction
     public void TakeDamage(float damage, WeaponType weaponType, bool isCrit, bool isSkill, Vector3 hitDirection)
     {
+        // Network mode: only StateAuthority applies HP/death. Others send a request.
+        if (Runner != null && Runner.IsRunning && Object != null && Object.IsValid && !HasStateAuthority)
+        {
+            RPC_RequestDamage(damage, (int)weaponType, isCrit, isSkill, hitDirection);
+            return;
+        }
+
+        ApplyDamageInternal(damage, weaponType, isCrit, isSkill, hitDirection);
+    }
+
+    private void ApplyDamageInternal(float damage, WeaponType weaponType, bool isCrit, bool isSkill, Vector3 hitDirection)
+    {
         if (!isAlive)
         {
             return; // Already dead, don't process damage
@@ -505,10 +533,15 @@ public class TakeDamageTest : NetworkBehaviour
         }
 
         // Apply damage
-        if (HasStateAuthority)
+        if (Runner != null && Runner.IsRunning)
         {
+            if (!HasStateAuthority) return;
             CurrentHealth -= damage;
             CurrentHealth = Mathf.Max(0f, CurrentHealth);
+        }
+        else
+        {
+            CurrentHealth = Mathf.Max(0f, CurrentHealth - damage);
         }
 
         // Visual feedback
@@ -553,6 +586,12 @@ public class TakeDamageTest : NetworkBehaviour
         }
     }
 
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    void RPC_RequestDamage(float damage, int weaponTypeIndex, bool isCrit, bool isSkill, Vector3 hitDirection)
+    {
+        ApplyDamageInternal(damage, (WeaponType)weaponTypeIndex, isCrit, isSkill, hitDirection);
+    }
+
     [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
     void RPC_SyncEnemyDamageFloat(Vector3 worldPosition, float damage, int weaponTypeIndex, bool isCrit)
     {
@@ -577,12 +616,53 @@ public class TakeDamageTest : NetworkBehaviour
         }
     }
 
+    public void OnNetworkDeathChanged()
+    {
+        if (!NetIsDead || HasStateAuthority)
+            return;
+
+        ApplyProxyDeathState();
+    }
+
+    private void ApplyProxyDeathState()
+    {
+        if (!isAlive) return;
+        isAlive = false;
+
+        if (enableDetection)
+            SetDetectionEnabled(false);
+        enableRaycastDamage = false;
+
+        var enemyScript = GetComponent<EnemyScript>();
+        if (enemyScript == null) enemyScript = GetComponentInParent<EnemyScript>();
+        if (enemyScript != null)
+            enemyScript.alive = false;
+
+        var col = GetComponent<Collider>();
+        if (col != null) col.enabled = false;
+
+        if (enemyScript != null && enemyScript.navMeshAgent != null && enemyScript.navMeshAgent.isOnNavMesh)
+        {
+            enemyScript.navMeshAgent.isStopped = true;
+            enemyScript.navMeshAgent.velocity = Vector3.zero;
+            enemyScript.navMeshAgent.enabled = false;
+        }
+
+        // Proxy chỉ cần đồng bộ trạng thái "đã chết/biến mất", không chạy logic reward/counter.
+        gameObject.SetActive(false);
+    }
+
     private void Die()
     {
         if (!isAlive) return; // Already dead
+        if (Runner != null && Runner.IsRunning && !HasStateAuthority) return;
 
         isAlive = false;
-        if (HasStateAuthority) CurrentHealth = 0f;
+        if (HasStateAuthority)
+        {
+            CurrentHealth = 0f;
+            NetIsDead = true;
+        }
         OnEnemyDied?.Invoke();
 
         // === ENEMY DIE SOUND ===

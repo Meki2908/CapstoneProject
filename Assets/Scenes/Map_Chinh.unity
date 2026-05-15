@@ -724,6 +724,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: UI_HP+Invetory_1.0
       objectReference: {fileID: 0}
+    - target: {fileID: 2016107385648365335, guid: 211bef7c77bec47449bd74f57b57e44e, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 4364769385614431956, guid: 211bef7c77bec47449bd74f57b57e44e, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -4402,10 +4406,6 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 116380263}
     - target: {fileID: 2021974119344358853, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
-      propertyPath: portalCanvas
-      value: 
-      objectReference: {fileID: 9113862226382640979}
-    - target: {fileID: 2021974119344358853, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
       propertyPath: portalEffect
       value: 
       objectReference: {fileID: 2602143417993216822}
@@ -4440,6 +4440,18 @@ PrefabInstance:
     - target: {fileID: 3523773929875930727, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
       propertyPath: m_IsActive
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3526484100352793675, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0.1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3526484100352793675, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.68
+      objectReference: {fileID: 0}
+    - target: {fileID: 3526484100352793675, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -1.86
       objectReference: {fileID: 0}
     - target: {fileID: 3651575567317580544, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
       propertyPath: markerObject
@@ -4485,6 +4497,10 @@ PrefabInstance:
       propertyPath: pressFHintCanvas
       value: 
       objectReference: {fileID: 116380263}
+    - target: {fileID: 5603957517895736996, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
+      propertyPath: m_Size.x
+      value: 6.29
+      objectReference: {fileID: 0}
     - target: {fileID: 5630105597604377843, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
       propertyPath: m_Name
       value: Portal
@@ -4577,10 +4593,6 @@ PrefabInstance:
       propertyPath: m_LocalPosition.z
       value: -0.37
       objectReference: {fileID: 0}
-    - target: {fileID: 8598530347411700774, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
-      propertyPath: portalCanvas
-      value: 
-      objectReference: {fileID: 9113862226382640980}
     - target: {fileID: 9142131904248293038, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
       propertyPath: portalUI
       value: 
@@ -4589,10 +4601,6 @@ PrefabInstance:
       propertyPath: pressFHintCanvas
       value: 
       objectReference: {fileID: 116380263}
-    - target: {fileID: 9184614343187287146, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
-      propertyPath: portalCanvas
-      value: 
-      objectReference: {fileID: 9113862226382640981}
     - target: {fileID: 9184614343187287146, guid: d28d23023595ec94ba3ce73c06411b06, type: 3}
       propertyPath: portalEffect
       value: 
@@ -5251,6 +5259,26 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 936657275437199251, guid: 2fe1e0bda42d5504583cd67c68080b0c, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 936657275437199251, guid: 2fe1e0bda42d5504583cd67c68080b0c, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 936657275437199251, guid: 2fe1e0bda42d5504583cd67c68080b0c, type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3113408144084441007, guid: 2fe1e0bda42d5504583cd67c68080b0c, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3113408144084441007, guid: 2fe1e0bda42d5504583cd67c68080b0c, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3573993465489221816, guid: 2fe1e0bda42d5504583cd67c68080b0c, type: 3}
       propertyPath: m_Pivot.x
       value: 0
@@ -5331,14 +5359,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 4011216888926050270, guid: 2fe1e0bda42d5504583cd67c68080b0c, type: 3}
-      propertyPath: m_Texture
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: 5632116279853538550, guid: 2fe1e0bda42d5504583cd67c68080b0c, type: 3}
-      propertyPath: destination
-      value: 
-      objectReference: {fileID: 0}
     - target: {fileID: 8062228597478252791, guid: 2fe1e0bda42d5504583cd67c68080b0c, type: 3}
       propertyPath: portal1_Dest
       value: 
@@ -5355,14 +5375,6 @@ PrefabInstance:
       propertyPath: portal4_Dest
       value: 
       objectReference: {fileID: 1889747443}
-    - target: {fileID: 8062228597478252791, guid: 2fe1e0bda42d5504583cd67c68080b0c, type: 3}
-      propertyPath: playerOverride
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: 8062228597478252791, guid: 2fe1e0bda42d5504583cd67c68080b0c, type: 3}
-      propertyPath: cinemachineCamera
-      value: 
-      objectReference: {fileID: 0}
     - target: {fileID: 8325912161616475087, guid: 2fe1e0bda42d5504583cd67c68080b0c, type: 3}
       propertyPath: m_Name
       value: Canvas_MapChinh

@@ -336,6 +336,7 @@ public class EnemyState : MonoBehaviour{
 
         if(HeroInformation.alive){
             if (!enemyScript.delay && !enemyScript.wait){
+                enemyScript.RefreshTargetIfNeeded();
 
                 if (enemyScript.target != null) {
                     enemyScript.Distance();

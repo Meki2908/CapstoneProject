@@ -47,6 +47,8 @@ public class EnemyScript : MonoBehaviour {
     public float minRangedDistance = 0f;
     [Tooltip("Thời gian hiển thị warning zone trước khi boss dùng skill (giây)")]
     public float skillWarningDuration = 1.2f;
+    [Tooltip("Tần suất enemy tự quét lại mục tiêu player gần nhất (giây).")]
+    [SerializeField] float retargetInterval = 0.45f;
     
     [Header("=== ENEMY TYPE ===")]
     [Tooltip("Loại enemy (phân loại chính)")]
@@ -153,6 +155,7 @@ public class EnemyScript : MonoBehaviour {
     public delegate void WinAudio(int i);
     public static event WinAudio WinAudioEvent;
     Vector3 direction;
+    float _nextRetargetTime;
     public void RunWinAudio(int i){
         WinAudioEvent?.Invoke(i);
     }
@@ -393,12 +396,8 @@ public class EnemyScript : MonoBehaviour {
             StartCoroutine(SpawnVfxDelayed());
         }
         
-        // Re-find player nếu target bị null
-        if (target == null)
-        {
-            target = FindBestPlayerTarget();
-            SetupPlayerManagerReference();
-        }
+        // Re-find player target whenever pooled enemy gets enabled.
+        RefreshTargetIfNeeded(force: true);
         
         // ÁP DỤNG GIÁ TRỊ TỪ INSPECTOR (chạy mỗi lần enemy được kích hoạt)
         ApplyInspectorValues();
@@ -511,28 +510,84 @@ public class EnemyScript : MonoBehaviour {
         enemyState.distance = toTarget.magnitude;
     }
 
+    bool IsValidPlayerTarget(Transform t)
+    {
+        if (t == null || !t.gameObject.activeInHierarchy)
+            return false;
+
+        // Prefer alive players only (if health bridge/health exists).
+        var bridge = t.GetComponent<DungeonManiaPlayerBridge>();
+        if (bridge == null) bridge = t.GetComponentInChildren<DungeonManiaPlayerBridge>(true);
+        if (bridge == null && t.parent != null) bridge = t.parent.GetComponent<DungeonManiaPlayerBridge>();
+        if (bridge != null && !bridge.IsAlive())
+            return false;
+
+        var hp = t.GetComponent<PlayerHealth>();
+        if (hp == null) hp = t.GetComponentInChildren<PlayerHealth>(true);
+        if (hp == null && t.parent != null) hp = t.parent.GetComponent<PlayerHealth>();
+        if (hp != null && !hp.IsAlive)
+            return false;
+
+        return true;
+    }
+
     Transform FindBestPlayerTarget()
     {
-        Character local = Character.LocalCharacter;
-        if (local != null && local.gameObject.activeInHierarchy)
-            return local.transform;
+        // Multiplayer-safe: pick nearest valid Character instead of local-only target.
+        Character[] characters = FindObjectsByType<Character>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        Transform nearest = null;
+        float bestSqr = float.MaxValue;
+        Vector3 selfPos = transform.position;
+        for (int i = 0; i < characters.Length; i++)
+        {
+            var c = characters[i];
+            if (c == null) continue;
+            var tr = c.transform;
+            if (!IsValidPlayerTarget(tr)) continue;
+            float sqr = (tr.position - selfPos).sqrMagnitude;
+            if (sqr < bestSqr)
+            {
+                bestSqr = sqr;
+                nearest = tr;
+            }
+        }
+        if (nearest != null)
+            return nearest;
 
         GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
-        if (playerObj != null)
+        if (playerObj != null && IsValidPlayerTarget(playerObj.transform))
             return playerObj.transform;
 
         playerObj = GameObject.Find("player");
-        if (playerObj != null)
+        if (playerObj != null && IsValidPlayerTarget(playerObj.transform))
             return playerObj.transform;
 
-        Character[] characters = FindObjectsByType<Character>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-        foreach (Character c in characters)
+        // Last resort: any Character (even include-inactive), keeps compatibility on loading transitions.
+        characters = FindObjectsByType<Character>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < characters.Length; i++)
         {
+            Character c = characters[i];
             if (c != null && c.gameObject.activeInHierarchy)
                 return c.transform;
         }
 
         return null;
+    }
+
+    public void RefreshTargetIfNeeded(bool force = false)
+    {
+        float now = Time.time;
+        if (!force && now < _nextRetargetTime && IsValidPlayerTarget(target))
+            return;
+
+        _nextRetargetTime = now + Mathf.Max(0.08f, retargetInterval);
+        Transform best = FindBestPlayerTarget();
+        if (best == null || best == target)
+            return;
+
+        target = best;
+        SetupPlayerManagerReference();
+        Debug.Log($"[EnemyScript] Retarget -> {target.name}");
     }
 
     /// <summary>

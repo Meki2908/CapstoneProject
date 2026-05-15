@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Fusion;
@@ -353,6 +354,21 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
     public static Character LocalCharacter;
     /// <summary>Alias for readability in UI code.</summary>
     public static Character Local => LocalCharacter;
+    // === Dungeon party runtime state (host-authoritative via RPCs) ===
+    static int s_dungeonInviteId;
+    static bool s_dungeonInviteActive;
+    static float s_dungeonInviteEndRealtime;
+    static string s_dungeonInviteSceneName = string.Empty;
+    static DungeonDifficulty s_dungeonInviteDifficulty = DungeonDifficulty.Normal;
+    static int s_dungeonInviteMapType;
+    static readonly HashSet<PlayerRef> s_dungeonAcceptedPlayers = new HashSet<PlayerRef>();
+    static readonly HashSet<PlayerRef> s_dungeonDeclinedPlayers = new HashSet<PlayerRef>();
+    static readonly HashSet<PlayerRef> s_dungeonRetryVotes = new HashSet<PlayerRef>();
+    static readonly Dictionary<PlayerRef, int> s_dungeonPickedQuantities = new Dictionary<PlayerRef, int>();
+    static int s_lastAlivePlayers = -1;
+    static int s_lastTotalPlayers = -1;
+    static bool s_lastAllDeadState;
+
     [Networked] public CharacterStateSync NetworkedState { get; set; }
     [Networked] public bool NetworkedIsLanding { get; set; }
 
@@ -740,8 +756,84 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
         UpdateSpeedWithGems();
     }
 
+    public bool IsHostAuthorityForParty()
+    {
+        return Runner != null && Runner.IsRunning && Runner.IsServer && HasInputAuthority;
+    }
+
+    static List<PlayerRef> GetActivePlayers(NetworkRunner runner)
+    {
+        var list = new List<PlayerRef>();
+        if (runner == null || !runner.IsRunning)
+            return list;
+        foreach (var p in runner.ActivePlayers)
+            list.Add(p);
+        return list;
+    }
+
+    int GetHostRequiredAcceptCount()
+    {
+        if (Runner == null || !Runner.IsRunning)
+            return 0;
+        int total = 0;
+        foreach (var _ in Runner.ActivePlayers) total++;
+        return Mathf.Max(0, total - 1);
+    }
+
+    void HostBroadcastInviteState()
+    {
+        if (!HasStateAuthority || Runner == null || !Runner.IsRunning)
+            return;
+        int required = GetHostRequiredAcceptCount();
+        int accepted = Mathf.Min(required, s_dungeonAcceptedPlayers.Count);
+        bool canStart = s_dungeonInviteActive && accepted >= required && required >= 0 && s_dungeonDeclinedPlayers.Count == 0;
+        float remaining = s_dungeonInviteActive ? Mathf.Max(0f, s_dungeonInviteEndRealtime - Time.realtimeSinceStartup) : 0f;
+        if (DungeonPartyRuntime.EnableDebugLogs)
+            Debug.Log(
+                $"[Character] HostBroadcastInviteState id={s_dungeonInviteId} active={s_dungeonInviteActive} " +
+                $"accepted={accepted}/{required} declined={s_dungeonDeclinedPlayers.Count} remaining={remaining:F1}s " +
+                $"scene='{s_dungeonInviteSceneName}' diff={s_dungeonInviteDifficulty} map={s_dungeonInviteMapType}");
+        RPC_SyncDungeonInviteState(
+            s_dungeonInviteId,
+            s_dungeonInviteActive,
+            accepted,
+            required,
+            remaining,
+            s_dungeonInviteSceneName ?? string.Empty,
+            (int)s_dungeonInviteDifficulty,
+            s_dungeonInviteMapType,
+            canStart,
+            s_dungeonDeclinedPlayers.Count > 0);
+    }
+
+    void HostBroadcastRetryState()
+    {
+        if (!HasStateAuthority || Runner == null || !Runner.IsRunning)
+            return;
+        int total = 0;
+        foreach (var _ in Runner.ActivePlayers) total++;
+        int votes = Mathf.Min(total, s_dungeonRetryVotes.Count);
+        bool allReady = total > 0 && votes >= total;
+        RPC_SyncDungeonRetryState(votes, total, votes > 0, allReady);
+    }
+
+    void HostTickDungeonPartyState()
+    {
+        if (!IsHostAuthorityForParty())
+            return;
+        if (!s_dungeonInviteActive)
+            return;
+        if (Time.realtimeSinceStartup < s_dungeonInviteEndRealtime)
+            return;
+
+        s_dungeonInviteActive = false;
+        HostBroadcastInviteState();
+    }
+
     public override void FixedUpdateNetwork()
     {
+        HostTickDungeonPartyState();
+
         if (movementSM == null || movementSM.currentState == null) return;
         
         if (GetInput<NetworkInputData>(out var input))
@@ -1119,6 +1211,431 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
             (byte)QuestManager.Instance.GetState(questID),
             QuestManager.Instance.GetStepIndex(questID));
         return true;
+    }
+
+    public bool TryHostRequestDungeonInvite(string targetSceneName, DungeonDifficulty difficulty, int mapType, float inviteDurationSeconds = 20f)
+    {
+        if (Object == null || !Object.IsValid || Runner == null || !Runner.IsRunning)
+        {
+            if (DungeonPartyRuntime.EnableDebugLogs)
+                Debug.Log("[Character] TryHostRequestDungeonInvite FAIL: runner/object invalid.");
+            return false;
+        }
+        if (!IsHostAuthorityForParty())
+        {
+            if (DungeonPartyRuntime.EnableDebugLogs)
+                Debug.Log($"[Character] TryHostRequestDungeonInvite FAIL: not host authority | isServer={Runner.IsServer} hasInput={HasInputAuthority}");
+            return false;
+        }
+        if (string.IsNullOrWhiteSpace(targetSceneName))
+        {
+            if (DungeonPartyRuntime.EnableDebugLogs)
+                Debug.Log("[Character] TryHostRequestDungeonInvite FAIL: targetSceneName empty.");
+            return false;
+        }
+
+        float duration = Mathf.Clamp(inviteDurationSeconds, 5f, 120f);
+        RPC_RequestDungeonInvite(targetSceneName.Trim(), (int)difficulty, mapType, duration);
+        if (DungeonPartyRuntime.EnableDebugLogs)
+            Debug.Log($"[Character] TryHostRequestDungeonInvite → RPC scene={targetSceneName} diff={difficulty} map={mapType} duration={duration:F1}s");
+        return true;
+    }
+
+    public bool TryRespondDungeonInvite(bool accept)
+    {
+        if (Object == null || !Object.IsValid || Runner == null || !Runner.IsRunning)
+            return false;
+        if (!HasInputAuthority)
+            return false;
+
+        DungeonPartyRuntime.MarkLocalInviteResponded();
+        RPC_SubmitDungeonInviteResponse(accept);
+        return true;
+    }
+
+    public bool TryHostStartDungeonFromInvite()
+    {
+        if (Object == null || !Object.IsValid || Runner == null || !Runner.IsRunning)
+            return false;
+        if (!HasInputAuthority)
+            return false;
+        RPC_RequestDungeonStartByHost();
+        return true;
+    }
+
+    public bool TryRequestDungeonRetryVote()
+    {
+        if (Object == null || !Object.IsValid || Runner == null || !Runner.IsRunning)
+            return false;
+        if (!HasInputAuthority)
+            return false;
+        RPC_SubmitDungeonRetryVote();
+        return true;
+    }
+
+    public bool TryRequestDungeonReturnMap()
+    {
+        if (Object == null || !Object.IsValid || Runner == null || !Runner.IsRunning)
+            return false;
+        if (!HasInputAuthority)
+            return false;
+        RPC_RequestDungeonReturnMap();
+        return true;
+    }
+
+    public bool TryReportDungeonLootPickup(int quantity)
+    {
+        if (quantity <= 0)
+            return false;
+        if (Object == null || !Object.IsValid || Runner == null || !Runner.IsRunning)
+            return false;
+        if (!HasInputAuthority)
+            return false;
+
+        RPC_ReportDungeonLootPickup(quantity);
+        return true;
+    }
+
+    public bool TryHostSyncDungeonAliveState(int alivePlayers, int totalPlayers, bool allDead)
+    {
+        if (!IsHostAuthorityForParty())
+            return false;
+        if (alivePlayers == s_lastAlivePlayers && totalPlayers == s_lastTotalPlayers && allDead == s_lastAllDeadState)
+            return true;
+
+        s_lastAlivePlayers = alivePlayers;
+        s_lastTotalPlayers = totalPlayers;
+        s_lastAllDeadState = allDead;
+        RPC_SyncDungeonAliveState(alivePlayers, totalPlayers, allDead);
+        return true;
+    }
+
+    public bool TryHostFinalizeLootCompensation()
+    {
+        if (!IsHostAuthorityForParty() || Runner == null || !Runner.IsRunning)
+            return false;
+
+        int maxQty = 0;
+        foreach (var kv in s_dungeonPickedQuantities)
+            if (kv.Value > maxQty) maxQty = kv.Value;
+
+        foreach (var p in Runner.ActivePlayers)
+        {
+            int cur = 0;
+            s_dungeonPickedQuantities.TryGetValue(p, out cur);
+            int compensation = Mathf.Max(0, maxQty - cur);
+            RPC_GrantDungeonCompensation(p.RawEncoded, compensation);
+        }
+        return true;
+    }
+
+    public void ResetDungeonPartyFlowState()
+    {
+        if (!IsHostAuthorityForParty())
+            return;
+        s_dungeonInviteActive = false;
+        s_dungeonInviteSceneName = string.Empty;
+        s_dungeonAcceptedPlayers.Clear();
+        s_dungeonDeclinedPlayers.Clear();
+        s_dungeonRetryVotes.Clear();
+        s_dungeonPickedQuantities.Clear();
+        HostBroadcastInviteState();
+        HostBroadcastRetryState();
+        RPC_SyncDungeonAliveState(0, 0, false);
+    }
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    void RPC_RequestDungeonInvite(string targetSceneName, int difficultyRaw, int mapType, float inviteDurationSeconds, RpcInfo info = default)
+    {
+        if (!HasStateAuthority || Runner == null || !Runner.IsRunning)
+        {
+            if (DungeonPartyRuntime.EnableDebugLogs)
+                Debug.Log("[Character] RPC_RequestDungeonInvite IGNORE: state authority/runner invalid.");
+            return;
+        }
+        if (!Runner.IsServer)
+        {
+            if (DungeonPartyRuntime.EnableDebugLogs)
+                Debug.Log($"[Character] RPC_RequestDungeonInvite IGNORE: not server | source={info.Source} local={Runner.LocalPlayer}");
+            return;
+        }
+        if (info.Source != PlayerRef.None && info.Source != Runner.LocalPlayer)
+        {
+            if (DungeonPartyRuntime.EnableDebugLogs)
+                Debug.Log($"[Character] RPC_RequestDungeonInvite IGNORE: source={info.Source} local={Runner.LocalPlayer} isServer={Runner.IsServer}");
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(targetSceneName))
+        {
+            if (DungeonPartyRuntime.EnableDebugLogs)
+                Debug.Log("[Character] RPC_RequestDungeonInvite IGNORE: empty target scene.");
+            return;
+        }
+
+        s_dungeonInviteId++;
+        s_dungeonInviteActive = true;
+        s_dungeonInviteSceneName = targetSceneName.Trim();
+        s_dungeonInviteDifficulty = Enum.IsDefined(typeof(DungeonDifficulty), difficultyRaw)
+            ? (DungeonDifficulty)difficultyRaw
+            : DungeonDifficulty.Normal;
+        s_dungeonInviteMapType = mapType;
+        s_dungeonInviteEndRealtime = Time.realtimeSinceStartup + Mathf.Clamp(inviteDurationSeconds, 5f, 120f);
+        s_dungeonAcceptedPlayers.Clear();
+        s_dungeonDeclinedPlayers.Clear();
+        if (DungeonPartyRuntime.EnableDebugLogs)
+            Debug.Log(
+                $"[Character] RPC_RequestDungeonInvite ACCEPT id={s_dungeonInviteId} scene='{s_dungeonInviteSceneName}' " +
+                $"diff={s_dungeonInviteDifficulty} map={s_dungeonInviteMapType} duration={inviteDurationSeconds:F1}s");
+
+        HostBroadcastInviteState();
+    }
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    void RPC_SubmitDungeonInviteResponse(bool accept, RpcInfo info = default)
+    {
+        if (!HasStateAuthority || Runner == null || !Runner.IsRunning || !s_dungeonInviteActive)
+            return;
+
+        PlayerRef src = info.Source;
+        if (src == Runner.LocalPlayer)
+            return;
+
+        if (accept)
+        {
+            s_dungeonDeclinedPlayers.Remove(src);
+            s_dungeonAcceptedPlayers.Add(src);
+        }
+        else
+        {
+            s_dungeonAcceptedPlayers.Remove(src);
+            s_dungeonDeclinedPlayers.Add(src);
+        }
+
+        HostBroadcastInviteState();
+    }
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    void RPC_RequestDungeonStartByHost(RpcInfo info = default)
+    {
+        if (!HasStateAuthority || Runner == null || !Runner.IsRunning || !s_dungeonInviteActive)
+            return;
+        if (!Runner.IsServer)
+            return;
+        if (info.Source != PlayerRef.None && info.Source != Runner.LocalPlayer)
+            return;
+
+        int required = GetHostRequiredAcceptCount();
+        bool canStart = s_dungeonAcceptedPlayers.Count >= required && s_dungeonDeclinedPlayers.Count == 0;
+        if (!canStart)
+            return;
+
+        s_dungeonInviteActive = false;
+        HostBroadcastInviteState();
+        RPC_BeginDungeonForAll(s_dungeonInviteSceneName, (int)s_dungeonInviteDifficulty, s_dungeonInviteMapType);
+    }
+
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    void RPC_BeginDungeonForAll(string targetSceneName, int difficultyRaw, int mapType)
+    {
+        if (string.IsNullOrWhiteSpace(targetSceneName))
+            return;
+        DungeonConfig.SelectedDifficulty = Enum.IsDefined(typeof(DungeonDifficulty), difficultyRaw)
+            ? (DungeonDifficulty)difficultyRaw
+            : DungeonDifficulty.Normal;
+        DungeonConfig.SelectedMapType = mapType;
+
+        CursorUIPriority.EndAllUiOverlays();
+        SceneTransitionManager.Instance?.StartNetworkingLoadingUI();
+
+        NetworkRunner runner = Runner;
+        if (runner != null && runner.IsRunning)
+        {
+            if (runner.IsServer)
+            {
+                int buildIndex = ResolveBuildIndexFromSceneNameOrPath(targetSceneName);
+                if (buildIndex >= 0)
+                {
+                    if (DungeonPartyRuntime.EnableDebugLogs)
+                        Debug.Log($"[Character] RPC_BeginDungeonForAll host load via Runner.LoadScene index={buildIndex} target='{targetSceneName}'");
+                    runner.LoadScene(SceneRef.FromIndex(buildIndex));
+                }
+                else
+                {
+                    Debug.LogError($"[Character] RPC_BeginDungeonForAll: scene '{targetSceneName}' not found in Build Settings.");
+                    SceneTransitionManager.Instance?.FinishLoadingUI();
+                }
+            }
+            else if (DungeonPartyRuntime.EnableDebugLogs)
+            {
+                Debug.Log($"[Character] RPC_BeginDungeonForAll client waiting for host scene sync target='{targetSceneName}'");
+            }
+            return;
+        }
+
+        if (SceneTransitionManager.Instance != null)
+            SceneTransitionManager.Instance.GoToScene(targetSceneName, "Đang vào dungeon...");
+        else
+            UnityEngine.SceneManagement.SceneManager.LoadScene(targetSceneName);
+    }
+
+    static int ResolveBuildIndexFromSceneNameOrPath(string sceneNameOrPath)
+    {
+        if (string.IsNullOrWhiteSpace(sceneNameOrPath))
+            return -1;
+
+        int directIndex = UnityEngine.SceneManagement.SceneUtility.GetBuildIndexByScenePath(sceneNameOrPath);
+        if (directIndex >= 0)
+            return directIndex;
+
+        string normalized = sceneNameOrPath.Trim();
+        for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCountInBuildSettings; i++)
+        {
+            string path = UnityEngine.SceneManagement.SceneUtility.GetScenePathByBuildIndex(i);
+            if (string.IsNullOrWhiteSpace(path))
+                continue;
+
+            string name = System.IO.Path.GetFileNameWithoutExtension(path);
+            if (string.Equals(path, normalized, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(name, normalized, StringComparison.OrdinalIgnoreCase))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    void RPC_SyncDungeonInviteState(
+        int inviteId,
+        bool inviteActive,
+        int acceptedCount,
+        int requiredAcceptCount,
+        float remainingSeconds,
+        string targetSceneName,
+        int difficultyRaw,
+        int mapType,
+        bool canHostStart,
+        bool anyDeclined)
+    {
+        if (DungeonPartyRuntime.EnableDebugLogs)
+        {
+            bool localHost = DungeonPartyRuntime.IsLocalHost();
+            bool localRespondedCurrent = DungeonPartyRuntime.LocalRespondedCurrentInvite && DungeonPartyRuntime.InviteId == inviteId;
+            bool localShouldShow = inviteActive && !localHost && !localRespondedCurrent;
+            Debug.Log(
+                $"[Character] RPC_SyncDungeonInviteState | hasInput={HasInputAuthority} isServer={Runner?.IsServer} " +
+                $"id={inviteId} active={inviteActive} accepted={acceptedCount}/{requiredAcceptCount} " +
+                $"scene={targetSceneName} diff={difficultyRaw} map={mapType} canStart={canHostStart} declined={anyDeclined} " +
+                $"localHost={localHost} localResponded≈{localRespondedCurrent} localShouldShow≈{localShouldShow}");
+        }
+
+        DungeonPartyRuntime.ApplyInviteState(
+            inviteId,
+            inviteActive,
+            acceptedCount,
+            requiredAcceptCount,
+            remainingSeconds,
+            targetSceneName,
+            difficultyRaw,
+            mapType,
+            canHostStart,
+            anyDeclined);
+    }
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    void RPC_SubmitDungeonRetryVote(RpcInfo info = default)
+    {
+        if (!HasStateAuthority || Runner == null || !Runner.IsRunning)
+            return;
+        s_dungeonRetryVotes.Add(info.Source);
+        HostBroadcastRetryState();
+
+        int total = 0;
+        foreach (var _ in Runner.ActivePlayers) total++;
+        if (total > 0 && s_dungeonRetryVotes.Count >= total)
+        {
+            s_dungeonRetryVotes.Clear();
+            HostBroadcastRetryState();
+            RPC_CommandDungeonRestartForAll();
+        }
+    }
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    void RPC_RequestDungeonReturnMap(RpcInfo info = default)
+    {
+        if (!HasStateAuthority || Runner == null || !Runner.IsRunning)
+            return;
+        RPC_CommandDungeonReturnMapForAll();
+    }
+
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    void RPC_CommandDungeonRestartForAll()
+    {
+        var wave = DungeonWaveManager.Instance;
+        if (wave != null)
+            wave.ForceRestartDungeonForParty();
+    }
+
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    void RPC_CommandDungeonReturnMapForAll()
+    {
+        var wave = DungeonWaveManager.Instance;
+        if (wave != null)
+            wave.ForceReturnToMainMapForParty();
+    }
+
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    void RPC_SyncDungeonRetryState(int votes, int required, bool active, bool allReady)
+    {
+        DungeonPartyRuntime.ApplyRetryState(votes, required, active, allReady);
+    }
+
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    void RPC_SyncDungeonAliveState(int alivePlayers, int totalPlayers, bool allDead)
+    {
+        DungeonPartyRuntime.ApplyAliveState(alivePlayers, totalPlayers, allDead);
+    }
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    void RPC_ReportDungeonLootPickup(int quantity, RpcInfo info = default)
+    {
+        if (!HasStateAuthority || Runner == null || !Runner.IsRunning)
+            return;
+        if (quantity <= 0)
+            return;
+
+        int cur = 0;
+        s_dungeonPickedQuantities.TryGetValue(info.Source, out cur);
+        s_dungeonPickedQuantities[info.Source] = cur + quantity;
+    }
+
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    void RPC_GrantDungeonCompensation(int playerRawRef, int quantity)
+    {
+        if (quantity <= 0 || Character.LocalCharacter == null || Character.LocalCharacter.Object == null)
+            return;
+        if (Character.LocalCharacter.Object.InputAuthority.RawEncoded != playerRawRef)
+            return;
+
+        if (InventoryManager.Instance == null)
+            return;
+        Item[] allItems = Resources.FindObjectsOfTypeAll<Item>();
+        if (allItems == null || allItems.Length == 0)
+            return;
+
+        int granted = 0;
+        for (int i = 0; i < quantity; i++)
+        {
+            Item item = allItems[UnityEngine.Random.Range(0, allItems.Length)];
+            if (item == null) continue;
+            Rarity rr = item.useRandomRarity ? (Rarity)UnityEngine.Random.Range(1, 6) : item.rarity;
+            if (InventoryManager.Instance.AddItem(item, 1, rr))
+                granted++;
+        }
+
+        if (granted > 0)
+            Debug.Log($"[DungeonParty] Compensation granted for {quantity} missing pickups (added={granted}).");
     }
 
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]

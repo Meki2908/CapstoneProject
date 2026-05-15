@@ -13,6 +13,10 @@ public class PortalNode : MonoBehaviour
     [Tooltip("Kéo GameObject/Canvas 'Press F' vào đây (sẽ bật/tắt tự động)")]
     public GameObject pressFHintCanvas;
 
+    [Header("Debug")]
+    [Tooltip("Log khi vào vùng Beacon (menu F, KHÔNG phải dungeon canvas). Lọc Console: PortalNode")]
+    public bool enableDebugLogs = true;
+
     private bool _playerInRange = false;
     private Transform _playerTransform;
     private Character _playerCharacter;
@@ -43,17 +47,37 @@ public class PortalNode : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (!other.CompareTag("Player")) return;
+        if (enableDebugLogs)
+            Debug.Log($"[PortalNode] OnTriggerEnter Beacon '{name}' | other='{other.name}' tag='{other.tag}' (đây là menu bấm F, không phải dungeon canvas)", this);
+
+        if (!other.CompareTag("Player"))
+        {
+            if (enableDebugLogs)
+                Debug.Log($"[PortalNode] REJECTED tag '{other.tag}' (cần Player)", this);
+            return;
+        }
 
         var ch = other.GetComponentInParent<Character>();
-        if (ch == null) return;
+        if (ch == null)
+        {
+            if (enableDebugLogs)
+                Debug.Log("[PortalNode] REJECTED: không có Character trên parent", this);
+            return;
+        }
 
         if (!CanBeUsedBy(ch))
+        {
+            if (enableDebugLogs)
+                Debug.Log($"[PortalNode] REJECTED: không phải local player (Fusion) char={ch.name}", this);
             return;
+        }
+
         SetLocalCharacter(ch);
 
         if (portalUI == null)
             Debug.LogWarning("[PortalNode] Chưa gán UI Canvas vào PortalNode!");
+        else if (enableDebugLogs)
+            Debug.Log("[PortalNode] OK — hiện gợi ý Press F; bấm F để mở menu 4 cổng", this);
     }
 
     private void OnTriggerExit(Collider other)

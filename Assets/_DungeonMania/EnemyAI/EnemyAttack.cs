@@ -8,6 +8,7 @@ public class EnemyAttack : MonoBehaviour {
     
     // Cache bridge reference để không phải tìm lại mỗi lần attack
     private DungeonManiaPlayerBridge cachedBridge;
+    private Transform cachedBridgeTarget;
     private bool hasSearchedBridge = false;
     private BossMultiSkill cachedBossMultiSkill;
 
@@ -36,6 +37,7 @@ public class EnemyAttack : MonoBehaviour {
     private void OnEnable()
     {
         cachedBridge = null;
+        cachedBridgeTarget = null;
         hasSearchedBridge = false;
         cachedBossMultiSkill = null;
     }
@@ -45,17 +47,20 @@ public class EnemyAttack : MonoBehaviour {
     /// </summary>
     private void FindAndCacheBridge()
     {
-        if (cachedBridge != null) return;
+        Transform currentTarget = enemyScript != null ? enemyScript.target : null;
+        if (cachedBridge != null && cachedBridgeTarget == currentTarget) return;
+        cachedBridge = null;
+        cachedBridgeTarget = currentTarget;
         
-        if (enemyScript != null && enemyScript.target != null) {
-            cachedBridge = enemyScript.target.GetComponent<DungeonManiaPlayerBridge>();
+        if (enemyScript != null && currentTarget != null) {
+            cachedBridge = currentTarget.GetComponent<DungeonManiaPlayerBridge>();
             if (cachedBridge == null)
-                cachedBridge = enemyScript.target.GetComponentInChildren<DungeonManiaPlayerBridge>(true);
+                cachedBridge = currentTarget.GetComponentInChildren<DungeonManiaPlayerBridge>(true);
             
-            if (cachedBridge == null && enemyScript.target.parent != null) {
-                cachedBridge = enemyScript.target.parent.GetComponent<DungeonManiaPlayerBridge>();
+            if (cachedBridge == null && currentTarget.parent != null) {
+                cachedBridge = currentTarget.parent.GetComponent<DungeonManiaPlayerBridge>();
                 if (cachedBridge == null)
-                    cachedBridge = enemyScript.target.parent.GetComponentInChildren<DungeonManiaPlayerBridge>(true);
+                    cachedBridge = currentTarget.parent.GetComponentInChildren<DungeonManiaPlayerBridge>(true);
             }
         }
         
@@ -108,10 +113,8 @@ public class EnemyAttack : MonoBehaviour {
 
         // Check if using DungeonManiaPlayerBridge (user's player system)
         if (enemyScript.playerManager == null) {
-            // Luôn tìm lại bridge nếu chưa có
-            if (cachedBridge == null) {
-                FindAndCacheBridge();
-            }
+            // Luôn verify lại cache theo target hiện tại.
+            FindAndCacheBridge();
             
             if (cachedBridge != null) {
                 float actualDistance = GetPlanarAttackDistance();
@@ -178,10 +181,8 @@ public class EnemyAttack : MonoBehaviour {
 
         // Check if using DungeonManiaPlayerBridge (user's player system)
         if (enemyScript.playerManager == null) {
-            // Luôn tìm lại bridge nếu chưa có
-            if (cachedBridge == null) {
-                FindAndCacheBridge();
-            }
+            // Luôn verify lại cache theo target hiện tại.
+            FindAndCacheBridge();
             
             if (cachedBridge != null) {
                 // Gọi skill effects trước khi gây damage
