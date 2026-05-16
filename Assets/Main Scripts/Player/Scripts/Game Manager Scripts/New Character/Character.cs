@@ -52,6 +52,9 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
     [Tooltip("Bật log [CritFSM][Teleport] + [DIAG-FRAME]/[DIAG-THU-PHAM] (sau sim) để tìm ghi đè vị trí. Tách khỏi debugCritFsmLogs.")]
     [SerializeField] bool debugTeleportCritLogs = false;
 
+    [Tooltip("Bật log [CritMageVfx] — spawn/aim/rotate Mage normal attack. Lọc Console: CritMageVfx")]
+    [SerializeField] bool debugMageVfxCritLogs = false;
+
     /// <summary>Teleport / portal diagnostics; filter Console by <c>[CritFSM][Teleport]</c>.</summary>
     public void LogTeleportCrit(string message)
     {
@@ -187,6 +190,20 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
             LogTeleportCrit(
                 $"[DIAG-DRIFT-MINOR] dist={dist:F3}m tick={tick} pos={transform.position} — thuong do controller.Move / doc hoac slope. PV={PlayerVelocity} cc.vel={(controller != null ? controller.velocity.ToString() : "null")}");
         }
+    }
+
+    /// <summary>Log Mage VFX/aim — lọc Console: <c>CritMageVfx</c>.</summary>
+    public void LogCritMageVfx(string message)
+    {
+        if (!debugMageVfxCritLogs)
+            return;
+        float t = Runner != null && Runner.IsRunning ? (float)Runner.SimulationTime : Time.time;
+        string st = movementSM != null && movementSM.currentState != null
+            ? movementSM.currentState.GetType().Name
+            : "?";
+        Debug.Log(
+            $"[CritMageVfx][{name}] t={t:F3} SA={HasStateAuthority} IA={HasInputAuthority} st={st} yaw={transform.eulerAngles.y:F1} | {message}",
+            this);
     }
 
     /// <summary>Log một dòng có tag cố định để lọc Console. Chỉ chạy khi <see cref="debugCritFsmLogs"/> bật.</summary>
@@ -434,6 +451,8 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
     
     public State lastStateBeforeHit; // Track state before getting hit
     public float lastAttackInputTime; // Track when attack was last pressed
+    /// <summary>Simulation time when <see cref="AttackState"/> last exited (anti spam re-enter on client).</summary>
+    public float lastAttackStateExitSimTime = -999f;
 
     /// <summary>Weapon considered drawn for gameplay + UI (replicated).</summary>
     [Networked] public NetworkBool NetIsWeaponDrawn { get; set; }
@@ -630,6 +649,10 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
             SyncEquippedWeaponType(weaponCtrl.GetCurrentWeapon().weaponType);
         if (weaponCtrl != null && NetEquippedWeaponType != (int)WeaponType.None)
             weaponCtrl.ApplyNetworkWeaponType((WeaponType)NetEquippedWeaponType);
+
+        // If replica joins with death already replicated (Host mode / late join edge cases)
+        if (NetworkedState == CharacterStateSync.Die)
+            SyncNetworkedDeathToMovementState();
     }
 
     public override void Despawned(NetworkRunner runner, bool hasState)
@@ -830,11 +853,29 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
         HostBroadcastInviteState();
     }
 
+    /// <summary>
+    /// Death is applied with movement FSM on state authority in <see cref="PlayerHealth.Die"/>.
+    /// Proxies need the same pose when <see cref="NetworkedState"/> replicates to <see cref="CharacterStateSync.Die"/>.
+    /// </summary>
+    public void SyncNetworkedDeathToMovementState()
+    {
+        if (movementSM == null || dieState == null || movementSM.currentState == null)
+            return;
+        if (NetworkedState != CharacterStateSync.Die)
+            return;
+        if (movementSM.currentState == dieState)
+            return;
+
+        movementSM.ChangeState(dieState);
+    }
+
     public override void FixedUpdateNetwork()
     {
         HostTickDungeonPartyState();
 
         if (movementSM == null || movementSM.currentState == null) return;
+
+        SyncNetworkedDeathToMovementState();
         
         if (GetInput<NetworkInputData>(out var input))
         {
@@ -1019,7 +1060,8 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
         {
             if (change == nameof(NetworkedState))
             {
-                // Proxy animation handling can go here
+                if (NetworkedState == CharacterStateSync.Die)
+                    SyncNetworkedDeathToMovementState();
             }
             else if (change == nameof(DisplayName) || change == nameof(DisplayNameColorArgb))
             {
@@ -1156,6 +1198,8 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
         if (HasInputAuthority)
             return;
 
+        LogCritMageVfx($"RPC observer spawn hit={hitIndex} pos={origin} fwd={rotation * Vector3.forward}");
+
         var mageAtk = GetComponentInChildren<MageNormalAttack>(true);
         if (mageAtk != null)
             mageAtk.SpawnVFXDirect(hitIndex, origin, rotation);
@@ -1174,6 +1218,7 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
         if (!HasInputAuthority)
             return false;
 
+        LogCritMageVfx($"RPC broadcast hit={hitIndex} pos={origin} fwd={rotation * Vector3.forward}");
         RPC_PlayMageNormalAttackVFX(hitIndex, origin, rotation);
         return true;
     }
@@ -2392,6 +2437,15 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
 
         queuedWeaponAction = QueuedWeaponAction.None;
         return true;
+    }
+
+    /// <summary>Clear pending weapon toggle/queue to avoid stale auto draw/sheath after interrupted states.</summary>
+    public void ClearWeaponToggleQueues(string reason = null)
+    {
+        queuedWeaponAction = QueuedWeaponAction.None;
+        NetToggleBuffer = 0f;
+        if (!string.IsNullOrEmpty(reason))
+            LogCritFsm("Queue", $"ClearWeaponToggleQueues: {reason}");
     }
 
     

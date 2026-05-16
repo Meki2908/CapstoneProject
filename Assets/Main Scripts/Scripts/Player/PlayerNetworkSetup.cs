@@ -37,6 +37,10 @@ public class PlayerNetworkSetup : NetworkBehaviour
         {
             Debug.Log($"[PlayerNetworkSetup] Spawned local player. Will setup camera. scene={gameObject.scene.name} player={name}");
 
+            // Entering a new network scene can leave stale overlay depth on clients.
+            // Force gameplay cursor state for local player before camera/input setup.
+            CursorUIPriority.EndAllUiOverlays();
+
             if (pi != null)
             {
                 pi.enabled = true;

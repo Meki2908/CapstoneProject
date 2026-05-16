@@ -32,11 +32,12 @@ public class MapChinhBootstrapper : MonoBehaviour
         var existingRunner = FindFirstObjectByType<NetworkRunner>();
         if (existingRunner != null && existingRunner.IsRunning)
         {
-            Debug.Log($"[MapChinhBootstrapper] Runner already running: {existingRunner.name} mode={existingRunner.GameMode}");
+            Debug.Log($"[MapChinhBootstrapper] Runner already running: {existingRunner.name} mode={existingRunner.GameMode} scene={UnityEngine.SceneManagement.SceneManager.GetActiveScene().name} isServer={existingRunner.IsServer}");
             if (spawner != null)
             {
                 existingRunner.AddCallbacks(spawner);
-                spawner.EnsureLocalPlayerSpawned(existingRunner);
+                // OnSceneLoadDone may have fired before callbacks were registered; debounced backup only.
+                spawner.EnsureMainMapReadyDeferred(existingRunner);
             }
             else
             {

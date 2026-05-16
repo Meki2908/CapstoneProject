@@ -19,6 +19,7 @@ public sealed class DrawWeaponState : State
         base.Enter();
 
         hasSwapped = false;
+        character.ClearWeaponToggleQueues("enter draw state");
 
         if (weaponController == null)
             weaponController = character.GetComponentInChildren<WeaponController>(true);
@@ -85,6 +86,7 @@ public sealed class DrawWeaponState : State
                 if (!hasSwapped && weaponController != null)
                     weaponController.EnsureDrawn(requestAnimation: false);
                 character.SyncWeaponDrawnState(true);
+                character.ClearWeaponToggleQueues("draw failsafe missing-layer");
                 if (character.animator != null)
                     character.animator.SetBool("combatMove", true);
                 character.currentLocomotionState = character.combatMove;
@@ -104,6 +106,7 @@ public sealed class DrawWeaponState : State
             if (!hasSwapped && weaponController != null)
                 weaponController.EnsureDrawn(requestAnimation: false);
             character.SyncWeaponDrawnState(true);
+            character.ClearWeaponToggleQueues("draw complete");
             if (character.animator != null)
                 character.animator.SetBool("combatMove", true);
             character.currentLocomotionState = character.combatMove;
@@ -117,6 +120,7 @@ public sealed class DrawWeaponState : State
             if (!hasSwapped && weaponController != null)
                 weaponController.EnsureDrawn(requestAnimation: false);
             character.SyncWeaponDrawnState(true);
+            character.ClearWeaponToggleQueues("draw failsafe timeout");
             if (character.animator != null)
                 character.animator.SetBool("combatMove", true);
             character.currentLocomotionState = character.combatMove;

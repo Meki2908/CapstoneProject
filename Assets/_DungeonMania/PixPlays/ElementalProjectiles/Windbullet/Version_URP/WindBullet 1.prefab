@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6946971362551371253}
   - component: {fileID: 997526328670155853}
-  m_Layer: 0
+  m_Layer: 22
   m_Name: WindBullet 1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -103,6 +103,22 @@ PrefabInstance:
       propertyPath: m_Name
       value: WindbulletCast
       objectReference: {fileID: 0}
+    - target: {fileID: 4516154863890805629, guid: 20500c467e5bd38409ade86cab21b4de, type: 3}
+      propertyPath: m_Layer
+      value: 22
+      objectReference: {fileID: 0}
+    - target: {fileID: 4516154863890805629, guid: 20500c467e5bd38409ade86cab21b4de, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6345249706414577381, guid: 20500c467e5bd38409ade86cab21b4de, type: 3}
+      propertyPath: m_Layer
+      value: 22
+      objectReference: {fileID: 0}
+    - target: {fileID: 6676547162747091293, guid: 20500c467e5bd38409ade86cab21b4de, type: 3}
+      propertyPath: m_Layer
+      value: 22
+      objectReference: {fileID: 0}
     - target: {fileID: 6732527246190524855, guid: 20500c467e5bd38409ade86cab21b4de, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -166,9 +182,21 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 6946971362551371253}
     m_Modifications:
+    - target: {fileID: 274486512451752193, guid: 67fe4ff493f9cd54fb27509991fb7b65, type: 3}
+      propertyPath: m_Layer
+      value: 22
+      objectReference: {fileID: 0}
     - target: {fileID: 2327102579080002057, guid: 67fe4ff493f9cd54fb27509991fb7b65, type: 3}
       propertyPath: m_Name
       value: WindbulletHit
+      objectReference: {fileID: 0}
+    - target: {fileID: 2327102579080002057, guid: 67fe4ff493f9cd54fb27509991fb7b65, type: 3}
+      propertyPath: m_Layer
+      value: 22
+      objectReference: {fileID: 0}
+    - target: {fileID: 2415683612860613678, guid: 67fe4ff493f9cd54fb27509991fb7b65, type: 3}
+      propertyPath: m_Layer
+      value: 22
       objectReference: {fileID: 0}
     - target: {fileID: 4429223407022416810, guid: 67fe4ff493f9cd54fb27509991fb7b65, type: 3}
       propertyPath: m_LocalPosition.x
@@ -210,6 +238,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6079998190528757052, guid: 67fe4ff493f9cd54fb27509991fb7b65, type: 3}
+      propertyPath: m_Layer
+      value: 22
+      objectReference: {fileID: 0}
+    - target: {fileID: 8624867066574282579, guid: 67fe4ff493f9cd54fb27509991fb7b65, type: 3}
+      propertyPath: m_Layer
+      value: 22
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -238,8 +274,16 @@ PrefabInstance:
       value: WindBulletProjectile
       objectReference: {fileID: 0}
     - target: {fileID: 315027223739610927, guid: afd9423e0344bc34ebfac6de045f83b4, type: 3}
+      propertyPath: m_Layer
+      value: 22
+      objectReference: {fileID: 0}
+    - target: {fileID: 315027223739610927, guid: afd9423e0344bc34ebfac6de045f83b4, type: 3}
       propertyPath: m_IsActive
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 972295691813769125, guid: afd9423e0344bc34ebfac6de045f83b4, type: 3}
+      propertyPath: m_Layer
+      value: 22
       objectReference: {fileID: 0}
     - target: {fileID: 2057061275317223461, guid: afd9423e0344bc34ebfac6de045f83b4, type: 3}
       propertyPath: CollisionModule.type
@@ -253,6 +297,10 @@ PrefabInstance:
       propertyPath: CollisionModule.collidesWith.m_Bits
       value: 256
       objectReference: {fileID: 0}
+    - target: {fileID: 2340711863287571856, guid: afd9423e0344bc34ebfac6de045f83b4, type: 3}
+      propertyPath: m_Layer
+      value: 22
+      objectReference: {fileID: 0}
     - target: {fileID: 3629367890179856867, guid: afd9423e0344bc34ebfac6de045f83b4, type: 3}
       propertyPath: m_Time
       value: 0.1
@@ -260,6 +308,10 @@ PrefabInstance:
     - target: {fileID: 3629367890179856867, guid: afd9423e0344bc34ebfac6de045f83b4, type: 3}
       propertyPath: m_Parameters.widthMultiplier
       value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3670192965513523030, guid: afd9423e0344bc34ebfac6de045f83b4, type: 3}
+      propertyPath: m_Layer
+      value: 22
       objectReference: {fileID: 0}
     - target: {fileID: 5080072319174603390, guid: afd9423e0344bc34ebfac6de045f83b4, type: 3}
       propertyPath: m_LocalScale.x
@@ -312,6 +364,10 @@ PrefabInstance:
     - target: {fileID: 5080072319174603390, guid: afd9423e0344bc34ebfac6de045f83b4, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5109775646276206326, guid: afd9423e0344bc34ebfac6de045f83b4, type: 3}
+      propertyPath: m_Layer
+      value: 22
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

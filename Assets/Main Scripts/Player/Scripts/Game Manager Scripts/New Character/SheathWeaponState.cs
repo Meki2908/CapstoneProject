@@ -19,6 +19,7 @@ public sealed class SheathWeaponState : State
         base.Enter();
 
         hasSwapped = false;
+        character.ClearWeaponToggleQueues("enter sheath state");
 
         if (weaponController == null)
             weaponController = character.GetComponentInChildren<WeaponController>(true);
@@ -75,6 +76,7 @@ public sealed class SheathWeaponState : State
                 if (!hasSwapped && weaponController != null)
                     weaponController.EnsureSheathed(requestAnimation: false);
                 character.SyncWeaponDrawnState(false);
+                character.ClearWeaponToggleQueues("sheath failsafe missing-layer");
                 if (character.animator != null)
                     character.animator.SetBool("combatMove", false);
                 character.currentLocomotionState = character.standing;
@@ -94,6 +96,7 @@ public sealed class SheathWeaponState : State
             if (!hasSwapped && weaponController != null)
                 weaponController.EnsureSheathed(requestAnimation: false);
             character.SyncWeaponDrawnState(false);
+            character.ClearWeaponToggleQueues("sheath complete");
             if (character.animator != null)
                 character.animator.SetBool("combatMove", false);
             character.currentLocomotionState = character.standing;
@@ -107,6 +110,7 @@ public sealed class SheathWeaponState : State
             if (!hasSwapped && weaponController != null)
                 weaponController.EnsureSheathed(requestAnimation: false);
             character.SyncWeaponDrawnState(false);
+            character.ClearWeaponToggleQueues("sheath failsafe timeout");
             if (character.animator != null)
                 character.animator.SetBool("combatMove", false);
             character.currentLocomotionState = character.standing;

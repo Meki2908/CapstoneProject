@@ -10,6 +10,10 @@ public class DungeonPlayerSpawner : MonoBehaviour, INetworkRunnerCallbacks
     [Header("=== Cấu hình Spawn ===")]
     public NetworkPrefabRef playerPrefab;
     public Transform spawnPoint;
+    [SerializeField, Min(0f)] private float spawnRadiusAroundPoint = 2.5f;
+    [SerializeField, Min(1)] private int spawnRingSteps = 3;
+    [SerializeField, Min(0.1f)] private float minPlayerSeparation = 1.5f;
+    [SerializeField, Min(0.1f)] private float ringStepRadius = 1.1f;
     [SerializeField] private bool verboseLogs = true;
 
     private NetworkRunner _runner;
@@ -61,24 +65,84 @@ public class DungeonPlayerSpawner : MonoBehaviour, INetworkRunnerCallbacks
             Debug.Log($"[DungeonPlayerSpawner] Registered callbacks on runner='{runner.name}' isServer={runner.IsServer}");
     }
 
-    Vector3 ResolveSpawnPosition(PlayerRef player)
+    Vector3 ResolveSpawnPosition(NetworkRunner runner, PlayerRef player)
+    {
+        Transform anchor = ResolveSpawnAnchor(player);
+        Vector3 center = anchor != null ? anchor.position : Vector3.zero;
+        float baseRadius = Mathf.Max(0f, spawnRadiusAroundPoint);
+
+        for (int ring = 0; ring < spawnRingSteps; ring++)
+        {
+            float ringRadius = baseRadius + ring * Mathf.Max(0.1f, ringStepRadius);
+            Vector3 candidate = center + DeterministicOffset(player, ringRadius, ring);
+            if (HasEnoughSeparation(runner, candidate))
+                return candidate;
+        }
+
+        if (verboseLogs)
+            Debug.LogWarning($"[DungeonPlayerSpawner] No clear spaced point found, fallback to center for player={player}");
+        return center;
+    }
+
+    Transform ResolveSpawnAnchor(PlayerRef player)
     {
         if (spawnPoint != null)
-            return spawnPoint.position;
+            return spawnPoint;
 
         GameObject[] taggedSpawnPoints = GameObject.FindGameObjectsWithTag("SpawnPoint");
         if (taggedSpawnPoints != null && taggedSpawnPoints.Length > 0)
         {
             int index = Mathf.Abs(player.PlayerId) % taggedSpawnPoints.Length;
-            return taggedSpawnPoints[index].transform.position;
+            return taggedSpawnPoints[index].transform;
         }
 
-        return Vector3.zero;
+        return null;
     }
 
-    Quaternion ResolveSpawnRotation()
+    Vector3 DeterministicOffset(PlayerRef player, float radius, int ring)
     {
-        return spawnPoint != null ? spawnPoint.rotation : Quaternion.identity;
+        if (radius <= 0f)
+            return Vector3.zero;
+
+        // Golden-angle style spacing to avoid players stacking on same side of spawn point.
+        float seed = Mathf.Abs(player.PlayerId) * 137.50776f + ring * 53.0f;
+        float angle = seed * Mathf.Deg2Rad;
+        return new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius;
+    }
+
+    bool HasEnoughSeparation(NetworkRunner runner, Vector3 candidate)
+    {
+        if (runner == null)
+            return true;
+
+        foreach (PlayerRef activePlayer in runner.ActivePlayers)
+        {
+            NetworkObject existing = null;
+            try
+            {
+                existing = runner.GetPlayerObject(activePlayer);
+            }
+            catch
+            {
+                // ignored
+            }
+
+            if (existing == null)
+                continue;
+
+            Vector3 delta = existing.transform.position - candidate;
+            delta.y = 0f;
+            if (delta.sqrMagnitude < minPlayerSeparation * minPlayerSeparation)
+                return false;
+        }
+
+        return true;
+    }
+
+    Quaternion ResolveSpawnRotation(PlayerRef player)
+    {
+        Transform anchor = ResolveSpawnAnchor(player);
+        return anchor != null ? anchor.rotation : Quaternion.identity;
     }
 
     void SpawnMissingForAllActivePlayers(NetworkRunner runner)
@@ -109,8 +173,8 @@ public class DungeonPlayerSpawner : MonoBehaviour, INetworkRunnerCallbacks
         if (existing != null)
             return existing;
 
-        Vector3 pos = ResolveSpawnPosition(player);
-        Quaternion rot = ResolveSpawnRotation();
+        Vector3 pos = ResolveSpawnPosition(runner, player);
+        Quaternion rot = ResolveSpawnRotation(player);
         NetworkObject obj = runner.Spawn(playerPrefab, pos, rot, player);
         if (obj == null)
         {
@@ -201,8 +265,20 @@ public class DungeonPlayerSpawner : MonoBehaviour, INetworkRunnerCallbacks
     public void OnCustomAuthenticationResponse(NetworkRunner runner, Dictionary<string, object> data) { }
     public void OnHostMigration(NetworkRunner runner, HostMigrationToken hostMigrationToken) { }
     public void OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ArraySegment<byte> data) { }
-    public void OnSceneLoadDone(NetworkRunner runner) { }
-    public void OnSceneLoadStart(NetworkRunner runner) { }
+    public void OnSceneLoadDone(NetworkRunner runner)
+    {
+        RegisterRunnerCallbacks(runner);
+        if (runner == null || !runner.IsRunning)
+            return;
+
+        if (runner.IsServer)
+            SpawnMissingForAllActivePlayers(runner);
+    }
+
+    public void OnSceneLoadStart(NetworkRunner runner)
+    {
+        RegisterRunnerCallbacks(runner);
+    }
     public void OnObjectExitAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
     public void OnObjectEnterAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
     public void OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ReliableKey key, ArraySegment<byte> data) { }

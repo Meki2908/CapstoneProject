@@ -1,4 +1,4 @@
-﻿//
+//
 //
 //NOTES:
 //
@@ -98,7 +98,7 @@ public class ProjectileMoveScript : MonoBehaviour
             if (direction.sqrMagnitude > 0.0001f)
             {
                 Quaternion rot = Quaternion.LookRotation(direction);
-                transform.localRotation = rot;
+                transform.rotation = rot;
                 if (DEBUG_PROJECTILE_AIM)
                     Debug.Log($"[MageAim] Projectile aiming target={target.name} aimPoint={aimPoint} self={transform.position}");
             }

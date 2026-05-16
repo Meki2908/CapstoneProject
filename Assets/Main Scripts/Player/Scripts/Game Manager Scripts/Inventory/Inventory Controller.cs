@@ -6,6 +6,7 @@ using UnityEngine.SceneManagement;
 using TMPro;
 using System.Collections;
 using System.Collections.Generic;
+using Fusion;
 
 public class InventoryController : MonoBehaviour
 {
@@ -44,6 +45,7 @@ public class InventoryController : MonoBehaviour
     // Snapshot camera Cinemachine (cursor do CursorUIPriority qu?n l�)
     private bool cameraLookWasEnabledBeforeInventory;
     private bool cameraZoomWasEnabledBeforeInventory;
+    private bool pausedTimeForInventory;
 
     private void Update()
     {
@@ -161,8 +163,10 @@ public class InventoryController : MonoBehaviour
         // UI ưu tiên: snapshot cursor (lần đầu trong stack) và chặn Alt/CameraCursor
         CursorUIPriority.BeginUiOverlay();
 
-        // Pause game khi mở inventory (để kéo thả item thoải mái)
-        Time.timeScale = 0f;
+        // Pause game chỉ ở single/local mode.
+        pausedTimeForInventory = ShouldPauseTimeForInventory();
+        if (pausedTimeForInventory)
+            Time.timeScale = 0f;
 
         // Snapshot trạng thái input camera (nếu có CinemachineInputProvider và dùng fixedCinemachineVersion)
         cameraLookWasEnabledBeforeInventory = true;
@@ -211,8 +215,10 @@ public class InventoryController : MonoBehaviour
         // NOTE: WeaponForgeUI and EquipmentPanelUI have been moved to BlacksmithUI (NPC Thợ Rèn)
         // Player no longer accesses forge/equipment panel from inventory
 
-        // Resume game khi đóng inventory
-        Time.timeScale = 1f;
+        // Resume game khi đóng inventory (chỉ nếu inventory đã pause trước đó)
+        if (pausedTimeForInventory)
+            Time.timeScale = 1f;
+        pausedTimeForInventory = false;
 
         // Khôi phục lại đúng trạng thái camera look/zoom trước đó
         EnableCameraControls();
@@ -250,6 +256,12 @@ public class InventoryController : MonoBehaviour
         {
             OpenInventory();
         }
+    }
+
+    private bool ShouldPauseTimeForInventory()
+    {
+        NetworkRunner runner = FindFirstObjectByType<NetworkRunner>();
+        return runner == null || !runner.IsRunning || runner.GameMode == GameMode.Single;
     }
 
     private void DisableCameraControls()

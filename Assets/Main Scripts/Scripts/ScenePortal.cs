@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -31,7 +32,8 @@ public class ScenePortal : MonoBehaviour
 
     bool _playerInRange;
     bool _portalUiOpen;
-    int _localPlayerTriggerCount;
+    readonly HashSet<int> _localColliderIdsInside = new HashSet<int>();
+    int _localCharacterInstanceId;
 
     static ScenePortal s_activePortal;
 
@@ -78,15 +80,21 @@ public class ScenePortal : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
-        if (!TryValidatePlayerCollider(other, out string rejectReason))
+        if (!TryValidatePlayerColliderForEnter(other, out Character character, out string rejectReason))
         {
             Dbg($"OnTriggerEnter REJECTED | reason={rejectReason} other='{other.name}'");
             return;
         }
 
-        _localPlayerTriggerCount++;
-        if (_localPlayerTriggerCount > 1)
+        int colliderId = other.GetInstanceID();
+        if (!_localColliderIdsInside.Add(colliderId))
+        {
+            Dbg($"OnTriggerEnter DUPLICATE | collider='{other.name}' id={colliderId} tracked={_localColliderIdsInside.Count}");
             return;
+        }
+
+        if (_localCharacterInstanceId == 0)
+            _localCharacterInstanceId = character.GetInstanceID();
 
         _playerInRange = true;
 
@@ -99,14 +107,28 @@ public class ScenePortal : MonoBehaviour
 
     void OnTriggerExit(Collider other)
     {
-        if (!TryValidatePlayerCollider(other, out _))
+        if (!TryValidatePlayerColliderForExit(other, out string rejectReason))
+        {
+            Dbg($"OnTriggerExit REJECTED | reason={rejectReason} other='{other.name}'");
             return;
+        }
 
-        _localPlayerTriggerCount = Mathf.Max(0, _localPlayerTriggerCount - 1);
-        if (_localPlayerTriggerCount > 0)
+        int colliderId = other.GetInstanceID();
+        bool removed = _localColliderIdsInside.Remove(colliderId);
+        if (!removed)
+        {
+            Dbg($"OnTriggerExit UNTRACKED | collider='{other.name}' id={colliderId} tracked={_localColliderIdsInside.Count}");
             return;
+        }
+
+        if (_localColliderIdsInside.Count > 0)
+        {
+            Dbg($"OnTriggerExit PARTIAL | collider='{other.name}' id={colliderId} remaining={_localColliderIdsInside.Count}");
+            return;
+        }
 
         _playerInRange = false;
+        _localCharacterInstanceId = 0;
         Dbg("OnTriggerExit | left gate volume (UI stays until player dismisses)");
     }
 
@@ -189,13 +211,14 @@ public class ScenePortal : MonoBehaviour
 
         CursorUIPriority.EndUiOverlay();
 
-        // Còn đứng trong cổng: giữ overlap count — phải bước ra hết mới chạm mở lại được.
-        if (!_playerInRange)
-            _localPlayerTriggerCount = 0;
+        // Reset latch cứng để tránh kẹt trigger count khi player có nhiều collider con.
+        _playerInRange = false;
+        _localColliderIdsInside.Clear();
+        _localCharacterInstanceId = 0;
 
         Dbg(
             $"DismissPortalUI | latch reset canvas='{(portalCanvas != null ? portalCanvas.name : "null")}' " +
-            $"inRange={_playerInRange} overlapCount={_localPlayerTriggerCount}");
+            $"inRange={_playerInRange} trackedColliders={_localColliderIdsInside.Count}");
     }
 
     /// <summary>Khi dungeon canvas bị SetActive(false) từ nút đóng — reset latch (không gọi SetActive lặp).</summary>
@@ -213,8 +236,10 @@ public class ScenePortal : MonoBehaviour
         s_activePortal._portalUiOpen = false;
         CursorUIPriority.EndUiOverlay();
 
-        if (!s_activePortal._playerInRange)
-            s_activePortal._localPlayerTriggerCount = 0;
+        // Đóng từ bên ngoài ScenePortal (SetActive false trực tiếp) cũng phải reset latch cứng.
+        s_activePortal._playerInRange = false;
+        s_activePortal._localColliderIdsInside.Clear();
+        s_activePortal._localCharacterInstanceId = 0;
 
         s_activePortal = null;
     }
@@ -237,8 +262,9 @@ public class ScenePortal : MonoBehaviour
         }
     }
 
-    bool TryValidatePlayerCollider(Collider other, out string rejectReason)
+    bool TryValidatePlayerColliderForEnter(Collider other, out Character character, out string rejectReason)
     {
+        character = null;
         rejectReason = null;
 
         if (other == null)
@@ -253,7 +279,7 @@ public class ScenePortal : MonoBehaviour
             return false;
         }
 
-        var character = other.GetComponentInParent<Character>();
+        character = other.GetComponentInParent<Character>();
         if (character == null)
         {
             rejectReason = "không có Character trên parent";
@@ -273,6 +299,38 @@ public class ScenePortal : MonoBehaviour
                 rejectReason = $"Fusion: không phải local player (local={Character.Local.name}, other={character.name})";
                 return false;
             }
+        }
+
+        return true;
+    }
+
+    bool TryValidatePlayerColliderForExit(Collider other, out string rejectReason)
+    {
+        rejectReason = null;
+
+        if (other == null)
+        {
+            rejectReason = "other collider null";
+            return false;
+        }
+
+        if (!other.CompareTag(playerTag))
+        {
+            rejectReason = $"tag mismatch (cần '{playerTag}', nhận '{other.tag}')";
+            return false;
+        }
+
+        Character character = other.GetComponentInParent<Character>();
+        if (character == null)
+        {
+            rejectReason = "không có Character trên parent";
+            return false;
+        }
+
+        if (_localCharacterInstanceId != 0 && character.GetInstanceID() != _localCharacterInstanceId)
+        {
+            rejectReason = $"character mismatch localId={_localCharacterInstanceId} otherId={character.GetInstanceID()}";
+            return false;
         }
 
         return true;

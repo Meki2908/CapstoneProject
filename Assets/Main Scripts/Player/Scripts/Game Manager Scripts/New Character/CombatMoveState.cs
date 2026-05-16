@@ -45,6 +45,14 @@ public class CombatMoveState : BaseMoveState
         if (character.currentInput.buttons.IsSet(NetworkInputButtons.Attack) &&
             !character.previousInput.buttons.IsSet(NetworkInputButtons.Attack))
         {
+            // Prevent rapid re-enter AttackState (client resim / spam click) before previous swing finishes.
+            if (character.Runner != null && character.Runner.IsRunning)
+            {
+                const float minReattackInterval = 0.28f;
+                if (character.Runner.SimulationTime - character.lastAttackStateExitSimTime < minReattackInterval)
+                    return;
+            }
+
             // Failsafe (idempotent): ensure visuals/scripts are in drawn state without spamming animator triggers.
             var wc = character.GetComponent<WeaponController>();
             if (wc != null)

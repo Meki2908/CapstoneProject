@@ -55281,7 +55281,8 @@ MonoBehaviour:
   resyncCharacterControllerCache: 1
   resyncCcOnlyOnResimulation: 1
   debugCritFsmLogs: 0
-  debugTeleportCritLogs: 1
+  debugTeleportCritLogs: 0
+  debugMageVfxCritLogs: 1
   dashDuration: 0.6
   maxConsecutiveDashes: 2
   dashCooldown: 1
@@ -90131,6 +90132,7 @@ MonoBehaviour:
   spawnForwardClearance: 0.38
   spawnHeightBias: 0.12
   ownerIgnoreCollisionSeconds: 0.14
+  spawnOffsetUsesBodyYawOnly: 1
 --- !u!114 &4792827371751194196
 MonoBehaviour:
   m_ObjectHideFlags: 0

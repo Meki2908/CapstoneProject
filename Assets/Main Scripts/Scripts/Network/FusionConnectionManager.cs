@@ -750,6 +750,11 @@ namespace Artsystack.ArtsystackGui
         {
             if (player == runner.LocalPlayer)
             {
+                // Dungeon flow controls loading dismissal via host-ready gate.
+                // Prevent closing loading too early on slow clients.
+                if (DungeonWaveManager.Instance != null)
+                    return;
+
                 // T?t Loading Screen khi ch?nh m?nh d? join
                 if (SceneTransitionManager.Instance != null)
                 {
@@ -857,6 +862,8 @@ namespace Artsystack.ArtsystackGui
         public void OnCustomAuthenticationResponse(NetworkRunner runner, Dictionary<string, object> data) { }
         public void OnHostMigration(NetworkRunner runner, HostMigrationToken hostMigrationToken) { }
         public void OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ArraySegment<byte> data) { }
+        // Map_Chinh respawn + loading dismissal: PlayerSpawner.OnSceneLoadDone (debounced).
+        // MapChinhBootstrapper.EnsureMainMapReadyDeferred is backup if callbacks registered late.
         public void OnSceneLoadDone(NetworkRunner runner) { }
         public void OnSceneLoadStart(NetworkRunner runner) { }
         

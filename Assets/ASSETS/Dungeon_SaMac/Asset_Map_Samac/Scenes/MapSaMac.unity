@@ -26000,6 +26000,10 @@ MonoBehaviour:
   playerPrefab:
     RawGuidValue: 83badadf57c803d4bb673774b34bb9c2
   spawnPoint: {fileID: 1268444592}
+  spawnRadiusAroundPoint: 2.5
+  spawnRingSteps: 3
+  minPlayerSeparation: 1.5
+  ringStepRadius: 1.1
   verboseLogs: 1
 --- !u!114 &1126657052
 MonoBehaviour:
@@ -39515,8 +39519,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1680606799}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.0029024507, y: -0.45205143, z: 0.0014709389, w: 0.891986}
-  m_LocalPosition: {x: -519.2365, y: 16.191309, z: 89.594574}
+  m_LocalRotation: {x: 0.047897566, y: 0.8910057, z: -0.09678142, w: 0.44096276}
+  m_LocalPosition: {x: -611.7865, y: 40.691307, z: 268.06458}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -51708,6 +51712,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 895050612079832084, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
+      propertyPath: m_fontSize
+      value: 125
+      objectReference: {fileID: 0}
+    - target: {fileID: 895050612079832084, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
+      propertyPath: m_fontSizeBase
+      value: 125
+      objectReference: {fileID: 0}
     - target: {fileID: 1496694872862905888, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.size
       value: 2
@@ -51784,6 +51796,10 @@ PrefabInstance:
       propertyPath: preEnterDungeonTimeline
       value: 
       objectReference: {fileID: 2119517537}
+    - target: {fileID: 3549649341855738058, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
+      propertyPath: dungeonFlowControllerPrefab
+      value: 
+      objectReference: {fileID: 1794255792585064524, guid: 78899f3cc87e95d40a69a9946d554ee8, type: 3}
     - target: {fileID: 3549649341855738058, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
       propertyPath: skeletDrops.Array.data[0].item
       value: 

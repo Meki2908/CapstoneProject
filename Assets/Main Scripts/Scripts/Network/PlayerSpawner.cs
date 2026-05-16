@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Fusion;
@@ -56,6 +57,10 @@ public class PlayerSpawner : MonoBehaviour, INetworkRunnerCallbacks
     
     [Tooltip("Nếu true: chỉ tắt loading sau khi thấy Player NetworkObject (Player_3.0(Clone)) xuất hiện trong scene.")]
     [SerializeField] private bool requireLocalPlayerObjectPresentToFinishLoading = true;
+    private Coroutine _finishLoadingRoutine;
+    private Coroutine _retryFinishLoadingRoutine;
+    private bool _mainMapSceneLoadHandled;
+    private bool _spawnMissingInProgress;
 
     /// <param name="usedReturnPoint">True when dungeon / return flow consumed <see cref="PlayerWorldData"/> return position.</param>
     Vector3 ResolveSpawnPosition(NetworkRunner runner, PlayerRef player, out bool usedReturnPoint)
@@ -210,38 +215,183 @@ public class PlayerSpawner : MonoBehaviour, INetworkRunnerCallbacks
         if (!runner.IsServer)
             return;
 
-        // Spawn loot broadcaster exactly once per session (server authority).
-        if (!_broadcasterSpawned && lootBroadcasterPrefab.IsValid)
-        {
-            runner.Spawn(lootBroadcasterPrefab, Vector3.zero, Quaternion.identity);
-            _broadcasterSpawned = true;
-        }
+        EnsureLootBroadcasterSpawned(runner);
+        EnsurePlayerSpawned(runner, player, "OnPlayerJoined");
+    }
 
-        if (!playerPrefab.IsValid)
-        {
-            Debug.LogError("[PlayerSpawner] playerPrefab is not set/invalid.");
+    void EnsureLootBroadcasterSpawned(NetworkRunner runner)
+    {
+        if (_broadcasterSpawned || !lootBroadcasterPrefab.IsValid || runner == null || !runner.IsServer)
             return;
+
+        runner.Spawn(lootBroadcasterPrefab, Vector3.zero, Quaternion.identity);
+        _broadcasterSpawned = true;
+    }
+
+    NetworkObject EnsurePlayerSpawned(NetworkRunner runner, PlayerRef player, string reason)
+    {
+        if (runner == null || !runner.IsServer || !player.IsRealPlayer || !playerPrefab.IsValid)
+            return null;
+
+        if (TryGetLivePlayerObject(runner, player, out var existing))
+        {
+            if (verboseLogs)
+                Debug.Log($"[PlayerSpawner] EnsurePlayerSpawned skip ({reason}) player={player} existing={existing.name}");
+            return existing;
         }
 
         Vector3 spawnPos = ResolveSpawnPosition(runner, player, out bool usedReturnPoint);
         TryRefreshNearHostSpawnBeforeSpawn(runner, player, usedReturnPoint, ref spawnPos);
         var obj = runner.Spawn(playerPrefab, spawnPos, Quaternion.identity, player);
-        if (obj != null)
+        if (obj == null)
         {
-            try
-            {
-                runner.SetPlayerObject(player, obj);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"[PlayerSpawner] SetPlayerObject failed for player={player}: {ex.Message}");
-            }
+            Debug.LogWarning($"[PlayerSpawner] EnsurePlayerSpawned FAILED ({reason}) player={player}");
+            return null;
+        }
+
+        try
+        {
+            runner.SetPlayerObject(player, obj);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"[PlayerSpawner] EnsurePlayerSpawned SetPlayerObject failed ({reason}) player={player}: {ex.Message}");
         }
 
         if (verboseLogs)
-            Debug.Log($"[PlayerSpawner] Spawned={(obj != null)} pos={spawnPos} objName={(obj != null ? obj.name : "null")}");
+            Debug.Log($"[PlayerSpawner] EnsurePlayerSpawned ({reason}) player={player} obj={obj.name} pos={spawnPos}");
 
         PostSpawnOnServer(runner, obj, player);
+        return obj;
+    }
+
+    static bool TryGetLivePlayerObject(NetworkRunner runner, PlayerRef player, out NetworkObject existing)
+    {
+        existing = null;
+        if (runner == null || !player.IsRealPlayer)
+            return false;
+
+        try
+        {
+            existing = runner.GetPlayerObject(player);
+        }
+        catch
+        {
+            return false;
+        }
+
+        if (existing == null)
+            return false;
+
+        // After Fusion scene unload, GetPlayerObject can still reference a despawned object.
+        if (!existing.IsValid)
+        {
+            existing = null;
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Called when Map_Chinh is ready after Fusion scene load (return from dungeon or bootstrap).
+    /// Server respawns all peers; every machine dismisses networking loading when not in a dungeon scene.
+    /// </summary>
+    public void HandleMainMapSceneLoaded(NetworkRunner runner)
+    {
+        if (runner == null || !runner.IsRunning)
+            return;
+
+        if (_mainMapSceneLoadHandled)
+        {
+            if (verboseLogs)
+                Debug.Log("[PlayerSpawner] HandleMainMapSceneLoaded skipped (already handled this scene load).");
+            return;
+        }
+
+        _mainMapSceneLoadHandled = true;
+
+        string scene = SceneManager.GetActiveScene().name;
+        if (verboseLogs)
+            Debug.Log($"[PlayerSpawner] HandleMainMapSceneLoaded scene={scene} isServer={runner.IsServer} local={runner.LocalPlayer}");
+
+        if (runner.IsServer)
+            SpawnMissingForAllActivePlayers(runner);
+
+        if (DungeonWaveManager.Instance != null)
+        {
+            if (verboseLogs)
+                Debug.Log("[PlayerSpawner] HandleMainMapSceneLoaded: DungeonWaveManager still active -> skip FinishLoading (dungeon flow).");
+            return;
+        }
+
+        StartFinishLoadingRoutine(runner, "HandleMainMapSceneLoaded");
+
+        if (_retryFinishLoadingRoutine != null)
+            StopCoroutine(_retryFinishLoadingRoutine);
+        _retryFinishLoadingRoutine = StartCoroutine(RetryFinishLoadingAfterReturn(runner));
+    }
+
+    /// <summary>Backup if <see cref="OnSceneLoadDone"/> ran before this component registered callbacks.</summary>
+    public void EnsureMainMapReadyDeferred(NetworkRunner runner)
+    {
+        if (runner == null || !runner.IsRunning)
+            return;
+        StartCoroutine(EnsureMainMapReadyDeferredRoutine(runner));
+    }
+
+    IEnumerator EnsureMainMapReadyDeferredRoutine(NetworkRunner runner)
+    {
+        yield return null;
+        if (runner == null || !runner.IsRunning)
+            yield break;
+        HandleMainMapSceneLoaded(runner);
+    }
+
+    IEnumerator RetryFinishLoadingAfterReturn(NetworkRunner runner)
+    {
+        const int attempts = 5;
+        for (int i = 0; i < attempts; i++)
+        {
+            yield return new WaitForSecondsRealtime(0.4f);
+            if (runner == null || !runner.IsRunning)
+                yield break;
+            if (DungeonWaveManager.Instance != null)
+                yield break;
+
+            if (runner.IsServer && !TryGetLivePlayerObject(runner, runner.LocalPlayer, out _))
+                SpawnMissingForAllActivePlayers(runner);
+
+            StartFinishLoadingRoutine(runner, $"RetryFinish#{i}");
+        }
+
+        _retryFinishLoadingRoutine = null;
+    }
+
+    void SpawnMissingForAllActivePlayers(NetworkRunner runner)
+    {
+        if (runner == null || !runner.IsRunning || !runner.IsServer)
+            return;
+
+        if (_spawnMissingInProgress)
+        {
+            if (verboseLogs)
+                Debug.Log("[PlayerSpawner] SpawnMissingForAllActivePlayers skipped (already in progress).");
+            return;
+        }
+
+        _spawnMissingInProgress = true;
+        try
+        {
+            EnsureLootBroadcasterSpawned(runner);
+
+            foreach (PlayerRef player in runner.ActivePlayers)
+                EnsurePlayerSpawned(runner, player, "SpawnMissingForAllActivePlayers");
+        }
+        finally
+        {
+            _spawnMissingInProgress = false;
+        }
     }
 
     /// <summary>
@@ -256,8 +406,20 @@ public class PlayerSpawner : MonoBehaviour, INetworkRunnerCallbacks
             return;
 
         if (verboseLogs) Debug.Log("[PlayerSpawner] Post-spawn loading UI (local player on server).");
+        StartFinishLoadingRoutine(runner, "PostSpawnOnServer");
+    }
 
-        StartCoroutine(FinishLoadingWhenReady(runner));
+    void StartFinishLoadingRoutine(NetworkRunner runner, string reason)
+    {
+        if (runner == null || !runner.IsRunning)
+            return;
+
+        if (_finishLoadingRoutine != null)
+            StopCoroutine(_finishLoadingRoutine);
+
+        if (verboseLogs)
+            Debug.Log($"[PlayerSpawner] StartFinishLoadingRoutine reason={reason} scene={SceneManager.GetActiveScene().name}");
+        _finishLoadingRoutine = StartCoroutine(FinishLoadingWhenReady(runner));
     }
 
     private System.Collections.IEnumerator FinishLoadingWhenReady(NetworkRunner runner)
@@ -273,20 +435,7 @@ public class PlayerSpawner : MonoBehaviour, INetworkRunnerCallbacks
             bool playerObjReady = true;
             if (requireLocalPlayerObjectPresentToFinishLoading)
             {
-                playerObjReady = false;
-                try
-                {
-                    // Fusion-compat: GetPlayerObject(localPlayer) when available.
-                    if (runner != null && runner.IsRunning && runner.LocalPlayer.IsRealPlayer)
-                    {
-                        var pobj = runner.GetPlayerObject(runner.LocalPlayer);
-                        if (pobj != null && pobj.name.StartsWith("Player_3.0", StringComparison.OrdinalIgnoreCase))
-                            playerObjReady = true;
-                        else if (pobj != null)
-                            playerObjReady = true; // still acceptable; name may differ
-                    }
-                }
-                catch { }
+                playerObjReady = TryGetLivePlayerObject(runner, runner.LocalPlayer, out _);
             }
 
             CinemachineCamera cam = PlayerNetworkSetup.LocalCinemachineCamera;
@@ -295,6 +444,12 @@ public class PlayerSpawner : MonoBehaviour, INetworkRunnerCallbacks
             if (playerObjReady && camReady)
                 break;
             yield return null;
+        }
+
+        if (verboseLogs)
+        {
+            bool hasPlayer = TryGetLivePlayerObject(runner, runner.LocalPlayer, out var po);
+            Debug.Log($"[PlayerSpawner] FinishLoadingWhenReady exit-wait hasPlayer={hasPlayer} player={(po != null ? po.name : "null")} cam={(PlayerNetworkSetup.LocalCinemachineCamera != null)} scene={SceneManager.GetActiveScene().name}");
         }
         
         // 2) Wait one extra frame after readiness to ensure render/camera has applied.
@@ -314,6 +469,8 @@ public class PlayerSpawner : MonoBehaviour, INetworkRunnerCallbacks
         {
             Debug.LogWarning("[PlayerSpawner] SceneTransitionManager.Instance is NULL at FinishLoadingWhenLocalCameraReady().");
         }
+
+        _finishLoadingRoutine = null;
     }
 
     /// <summary>
@@ -327,40 +484,13 @@ public class PlayerSpawner : MonoBehaviour, INetworkRunnerCallbacks
         if (!runner.IsServer) return;
         
         // Fusion version compatibility: use GetPlayerObject instead of LocalPlayerObject property.
-        try
-        {
-            var existing = runner.LocalPlayer.IsRealPlayer ? runner.GetPlayerObject(runner.LocalPlayer) : null;
-            if (existing != null) return;
-        }
-        catch
-        {
-            // If GetPlayerObject isn't available for some reason, continue to attempt spawn.
-        }
-
-        if (!playerPrefab.IsValid)
-        {
-            Debug.LogError("[PlayerSpawner] EnsureLocalPlayerSpawned: playerPrefab is not set/invalid.");
+        if (TryGetLivePlayerObject(runner, runner.LocalPlayer, out _))
             return;
-        }
 
-        PlayerRef p = runner.LocalPlayer;
-        Vector3 spawnPos = ResolveSpawnPosition(runner, p, out bool usedReturnPoint);
-        TryRefreshNearHostSpawnBeforeSpawn(runner, p, usedReturnPoint, ref spawnPos);
-        var obj = runner.Spawn(playerPrefab, spawnPos, Quaternion.identity, p);
-        if (obj != null)
-        {
-            try
-            {
-                runner.SetPlayerObject(p, obj);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"[PlayerSpawner] EnsureLocalPlayerSpawned SetPlayerObject failed: {ex.Message}");
-            }
-        }
-
-        Debug.Log($"[PlayerSpawner] EnsureLocalPlayerSpawned: Spawned={(obj != null)} pos={spawnPos} objName={(obj != null ? obj.name : "null")}");
-        PostSpawnOnServer(runner, obj, p);
+        EnsureLootBroadcasterSpawned(runner);
+        var obj = EnsurePlayerSpawned(runner, runner.LocalPlayer, "EnsureLocalPlayerSpawned");
+        if (verboseLogs)
+            Debug.Log($"[PlayerSpawner] EnsureLocalPlayerSpawned result={(obj != null ? obj.name : "null")}");
     }
 
     public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)
@@ -418,8 +548,26 @@ public class PlayerSpawner : MonoBehaviour, INetworkRunnerCallbacks
     public void OnCustomAuthenticationResponse(NetworkRunner runner, System.Collections.Generic.Dictionary<string, object> data) { }
     public void OnHostMigration(NetworkRunner runner, HostMigrationToken hostMigrationToken) { }
     public void OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ArraySegment<byte> data) { }
-    public void OnSceneLoadDone(NetworkRunner runner) { }
-    public void OnSceneLoadStart(NetworkRunner runner) { }
+    public void OnSceneLoadDone(NetworkRunner runner)
+    {
+        if (runner == null || !runner.IsRunning)
+            return;
+
+        // Only main-map spawner should handle Map_Chinh return; dungeon uses DungeonPlayerSpawner.
+        if (DungeonWaveManager.Instance != null)
+        {
+            if (verboseLogs)
+                Debug.Log("[PlayerSpawner] OnSceneLoadDone in dungeon scene -> loading managed by DungeonWaveManager flow.");
+            return;
+        }
+
+        HandleMainMapSceneLoaded(runner);
+    }
+
+    public void OnSceneLoadStart(NetworkRunner runner)
+    {
+        _mainMapSceneLoadHandled = false;
+    }
     public void OnObjectExitAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
     public void OnObjectEnterAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
     public void OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ReliableKey key, ArraySegment<byte> data) { }

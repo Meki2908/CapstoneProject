@@ -158,8 +158,9 @@ public sealed class MouseLockManager : MonoBehaviour
     // ── Priority Compute ──────────────────────────────────────────────────
 
     /// <summary>
-    /// Tính result ưu tiên từ 3 flags.
-    /// P1 || P2 || P3 → cursor hiện; tất cả false → cursor ẩn.
+    /// Tính result ưu tiên trong gameplay.
+    /// Chỉ P1 (UI overlay) hoặc P2 (giữ Alt) được phép hiện cursor.
+    /// P3 (HUD active) chỉ giữ để chẩn đoán, KHÔNG ép cursor hiện trong gameplay.
     /// </summary>
     private bool ComputeShouldCursorBeVisible()
     {
@@ -168,9 +169,9 @@ public sealed class MouseLockManager : MonoBehaviour
 
         bool p1 = _uiOverlayDepth  > 0; // UI overlay mở
         bool p2 = _isAltHeld;            // Giữ Alt
-        bool p3 = _hudVisibleCount > 0;  // HUD canvas active
+        bool p3 = _hudVisibleCount > 0;  // HUD canvas active (diagnostic only)
 
-        if (p1 || p2 || p3)
+        if (p1 || p2)
         {
             // DIANGNOSTIC: In ra nguyên nhân hiển thị cursor (giới hạn tần suất để đỡ spam log)
             if (Time.frameCount % 90 == 0)
@@ -178,6 +179,12 @@ public sealed class MouseLockManager : MonoBehaviour
                 Debug.Log($"[MouseLockManager] Cursors is visible because: UI_Overlay={_uiOverlayDepth}, Alt={_isAltHeld}, HUD={_hudVisibleCount}");
             }
             return true;
+        }
+
+        // Extra diagnostic: HUD vẫn active nhưng không còn quyền ép cursor hiện trong gameplay.
+        if (p3 && Time.frameCount % 180 == 0)
+        {
+            Debug.Log($"[MouseLockManager] HUD active without overlay (HUD={_hudVisibleCount}) -> keep gameplay cursor locked.");
         }
 
         return false;

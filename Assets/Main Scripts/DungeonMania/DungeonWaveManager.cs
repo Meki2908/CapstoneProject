@@ -7,6 +7,7 @@ using TMPro;
 using System;
 using Unity.Cinemachine;
 using UnityEngine.Playables;
+using Fusion;
 
 public class DungeonWaveManager : MonoBehaviour
 {
@@ -45,6 +46,8 @@ public class DungeonWaveManager : MonoBehaviour
     public float waveCountdownTime = 5f;
     [Tooltip("Rest time between waves (seconds)")]
     public float waveDelayTime = 3f;
+    [Tooltip("How long host keeps waiting for all clients to be scene-ready before starting intro.")]
+    public float readyGateTimeoutSeconds = 45f;
 
     [Header("=== INTRO TIMELINE (before wave 1) ===")]
     [Tooltip("PlayableDirector for intro cinematic. Leave empty to skip.")]
@@ -98,6 +101,9 @@ public class DungeonWaveManager : MonoBehaviour
 
     [Tooltip("Fusion NetworkObject prefab for loot broadcaster (recommended: LootBroadcaster_Prefab). If null, drops may not broadcast in online mode.")]
     public GameObject lootBroadcasterPrefab;
+
+    [Tooltip("Fusion NetworkObject prefab for dungeon flow sync controller.")]
+    public GameObject dungeonFlowControllerPrefab;
 
     [Tooltip("Drop table for Skeleton/Archer")]
     public List<DungeonDropEntry> skeletDrops = new List<DungeonDropEntry>();
@@ -210,6 +216,9 @@ public class DungeonWaveManager : MonoBehaviour
     private GameObject _preEnterSkipUiRoot;
     readonly List<PlayerHealth> _subscribedPlayerHealths = new List<PlayerHealth>();
     bool _partyFailedTriggered;
+    DungeonFlowNetworkController _flowController;
+    DungeonFlowNetworkController.DungeonFlowPhase _lastMirroredPhase = DungeonFlowNetworkController.DungeonFlowPhase.None;
+    int _lastMirroredWave = -1;
     
     // Trackers for enemy spawn (tránh gọi GetEnemyCounts nhiều lần)
     private int currentSkeletCount = 0;
@@ -266,9 +275,17 @@ public class DungeonWaveManager : MonoBehaviour
 
     IEnumerator Start()
     {
-        // 1. NGƯNG ĐỌNG THỜI GIAN: Chờ cho đến khi biến player không còn null
-        // (Biến này sẽ được DungeonPlayerSpawner tự động gán vào sau khi đẻ)
-        yield return new WaitUntil(() => player != null);
+        // 1) Resolve player reference on every peer (client can miss spawner-side assignment at scene start)
+        float timeout = Time.realtimeSinceStartup + 8f;
+        while (player == null && Time.realtimeSinceStartup < timeout)
+        {
+            TryResolvePlayerReference();
+            if (player != null)
+                break;
+            yield return null;
+        }
+        if (player == null)
+            Debug.LogWarning("[DungeonWave] Start: cannot resolve player after timeout; UI flow will continue.");
 
         // 2. SETUP CÁC THỨ CÒN LẠI
         ApplyBalanceConfig();
@@ -291,8 +308,58 @@ public class DungeonWaveManager : MonoBehaviour
             DungeonRewardUI.Instance.ClearTrackedItems();
         }
 
-        // Bắt đầu dungeon
-        StartDungeon();
+        // Bắt đầu dungeon logic chỉ trên host/state authority.
+        // Client sẽ mirror UI theo DungeonFlowNetworkController.
+        if (IsWaveStateAuthority())
+            StartDungeon();
+        else
+        {
+            PrepareClientMirrorFlow();
+            Debug.Log("[DungeonWave] Client mirror mode active: waiting host-synced dungeon flow.");
+        }
+    }
+
+    void PrepareClientMirrorFlow()
+    {
+        if (!IsOnlineMultiplayerSession())
+            return;
+
+        // Prevent local PlayOnAwake intro from running ahead of host phase sync.
+        if (preEnterDungeonTimeline != null)
+        {
+            preEnterDungeonTimeline.Stop();
+            preEnterDungeonTimeline.time = 0d;
+            preEnterDungeonTimeline.Evaluate();
+        }
+
+        isDungeonActive = false;
+        isWaveActive = false;
+        isCountingDown = false;
+    }
+
+    bool TryResolvePlayerReference()
+    {
+        if (player != null)
+            return true;
+
+        // Prefer local character on each peer for local UI/hints.
+        if (Character.LocalCharacter != null && Character.LocalCharacter.gameObject.activeInHierarchy)
+        {
+            player = Character.LocalCharacter.transform;
+            return true;
+        }
+
+        Character[] characters = FindObjectsByType<Character>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        for (int i = 0; i < characters.Length; i++)
+        {
+            Character c = characters[i];
+            if (c == null || !c.gameObject.activeInHierarchy)
+                continue;
+            player = c.transform;
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -474,6 +541,8 @@ public class DungeonWaveManager : MonoBehaviour
     /// </summary>
     private void SetupPlayerReference()
     {
+        TryResolvePlayerReference();
+
         // Tìm object "player" (lowercase) - EnemyScript cần cái này làm target
         GameObject playerLower = GameObject.Find("player");
         
@@ -519,11 +588,26 @@ public class DungeonWaveManager : MonoBehaviour
 
     bool IsOnlineMultiplayerSession()
     {
-        var localChar = Character.LocalCharacter;
-        return localChar != null &&
-               localChar.Runner != null &&
-               localChar.Runner.IsRunning &&
-               localChar.Runner.GameMode != Fusion.GameMode.Single;
+    var localChar = Character.LocalCharacter;
+    if (localChar != null &&
+        localChar.Runner != null &&
+        localChar.Runner.IsRunning &&
+        localChar.Runner.GameMode != Fusion.GameMode.Single)
+    {
+        return true;
+    }
+
+    var runner = FindFirstObjectByType<Fusion.NetworkRunner>();
+    return runner != null && runner.IsRunning && runner.GameMode != Fusion.GameMode.Single;
+    }
+
+    bool IsWaveStateAuthority()
+    {
+        if (!IsOnlineMultiplayerSession())
+            return true;
+
+        var runner = FindFirstObjectByType<Fusion.NetworkRunner>();
+        return runner != null && runner.IsRunning && runner.IsServer;
     }
 
     int CountAlivePlayers(out int totalPlayers)
@@ -554,7 +638,8 @@ public class DungeonWaveManager : MonoBehaviour
     {
         // === TEST: F9 = Win ngay lập tức ===
         #if UNITY_EDITOR
-        if (UnityEngine.InputSystem.Keyboard.current != null && 
+        if ((!IsOnlineMultiplayerSession() || IsWaveStateAuthority()) &&
+            UnityEngine.InputSystem.Keyboard.current != null && 
             UnityEngine.InputSystem.Keyboard.current.f9Key.wasPressedThisFrame &&
             isDungeonActive && !isDungeonComplete)
         {
@@ -565,6 +650,9 @@ public class DungeonWaveManager : MonoBehaviour
         #endif
 
         if (!isDungeonActive) return;
+
+        if (!IsWaveStateAuthority())
+            return;
 
         SyncAliveStateToPartyRuntime();
         if (!_partyFailedTriggered)
@@ -612,6 +700,12 @@ public class DungeonWaveManager : MonoBehaviour
     /// </summary>
     public void StartDungeon()
     {
+        if (IsOnlineMultiplayerSession() && !IsWaveStateAuthority())
+        {
+            Debug.Log("[DungeonWave] StartDungeon ignored on non-authority client.");
+            return;
+        }
+
         isDungeonActive = true;
         isDungeonComplete = false;
         _partyFailedTriggered = false;
@@ -623,6 +717,9 @@ public class DungeonWaveManager : MonoBehaviour
         Debug.Log($"[DungeonWave] Bắt đầu dungeon: {dungeonName}");
 
         EnsureLootBroadcasterSpawnedIfNeeded();
+        EnsureFlowControllerSpawnedIfNeeded();
+        if (_flowController != null)
+            _flowController.HostResetDungeonFlow();
 
         if (DungeonOSTManager.Instance != null)
             DungeonOSTManager.Instance.OnDungeonFlowStarted();
@@ -654,6 +751,28 @@ public class DungeonWaveManager : MonoBehaviour
         }
     }
 
+    private void EnsureFlowControllerSpawnedIfNeeded()
+    {
+        _flowController = DungeonFlowNetworkController.Instance;
+        if (_flowController != null)
+            return;
+
+        var runner = FindFirstObjectByType<Fusion.NetworkRunner>();
+        if (runner == null || !runner.IsRunning || !runner.IsServer || dungeonFlowControllerPrefab == null)
+            return;
+
+        try
+        {
+            var obj = runner.Spawn(dungeonFlowControllerPrefab, Vector3.zero, Quaternion.identity, null);
+            if (obj != null)
+                _flowController = obj.GetComponent<DungeonFlowNetworkController>();
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"[DungeonWave] EnsureFlowController: spawn failed. {ex}");
+        }
+    }
+
     /// <summary>
     /// Sequence bắt đầu wave: countdown → spawn
     /// </summary>
@@ -668,6 +787,30 @@ public class DungeonWaveManager : MonoBehaviour
         }
 
         Debug.Log($"[DungeonWave] === Starting Wave Sequence for Wave {currentWave} ===");
+
+        if (_flowController == null)
+            _flowController = DungeonFlowNetworkController.Instance;
+
+        if (currentWave == 1 && IsOnlineMultiplayerSession() && _flowController == null)
+        {
+            Debug.LogWarning("[DungeonWave] DungeonFlowNetworkController missing in online dungeon. Falling back to unsynced local intro flow.");
+            SceneTransitionManager.Instance?.FinishLoadingUI();
+        }
+
+        if (_flowController != null && currentWave == 1 && IsOnlineMultiplayerSession())
+        {
+            float gateTimeout = Mathf.Max(5f, readyGateTimeoutSeconds);
+            _flowController.HostSetPhase(DungeonFlowNetworkController.DungeonFlowPhase.WaitingPeers, currentWave, gateTimeout);
+            yield return _flowController.HostWaitForPartyReady(gateTimeout);
+            SceneTransitionManager.Instance?.FinishLoadingUI();
+        }
+
+        if (_flowController != null && currentWave == 1)
+        {
+            float introDuration = GetPreEnterTimelineDurationSeconds();
+            if (introDuration > 0f)
+                _flowController.HostSetPhase(DungeonFlowNetworkController.DungeonFlowPhase.Intro, currentWave, introDuration);
+        }
 
         // === CHỜ TIMELINE INTRO (Pre-enter desert) — chỉ wave 1, trước thông báo + countdown ===
         yield return WaitForPreEnterDungeonTimelineIfNeeded();
@@ -693,10 +836,12 @@ public class DungeonWaveManager : MonoBehaviour
             SetupPlayerReference(); // Tạo lại object "player" (lowercase) cho EnemyScript
         }
 
-        if (SceneTransitionManager.Instance != null)
+        if (SceneTransitionManager.Instance != null && !IsOnlineMultiplayerSession())
             SceneTransitionManager.Instance.HideLoadingPanelIfAny();
 
         // === HIỂN THỊ THÔNG BÁO WAVE ===
+        if (_flowController != null)
+            _flowController.HostSetPhase(DungeonFlowNetworkController.DungeonFlowPhase.WaveBanner, currentWave, 2f);
         ShowWaveNotification(currentWave);
         
         // Đợi 2 giây để đọc thông báo
@@ -704,6 +849,8 @@ public class DungeonWaveManager : MonoBehaviour
 
         // === ĐẾM NGƯỢC ===
         isCountingDown = true;
+        if (_flowController != null)
+            _flowController.HostSetPhase(DungeonFlowNetworkController.DungeonFlowPhase.Countdown, currentWave, waveCountdownTime);
         ShowCountdown(waveCountdownTime);
 
         float timer = waveCountdownTime;
@@ -722,10 +869,21 @@ public class DungeonWaveManager : MonoBehaviour
         isCountingDown = false;
 
         // === BẮT ĐẦU WAVE ===
+        if (_flowController != null)
+            _flowController.HostSetPhase(DungeonFlowNetworkController.DungeonFlowPhase.Combat, currentWave, 0f);
         Debug.Log($"[DungeonWave] Spawning Wave {currentWave}...");
         SpawnWave(currentWave);
         OnWaveStarted?.Invoke(currentWave);
         Debug.Log($"[DungeonWave] Wave {currentWave} spawned. enemiesAlive={enemiesAlive}, isWaveActive={isWaveActive}");
+    }
+
+    float GetPreEnterTimelineDurationSeconds()
+    {
+        if (!waitForPreEnterTimelineBeforeWave1 || preEnterDungeonTimeline == null)
+            return 0f;
+        if (double.IsNaN(preEnterDungeonTimeline.duration) || preEnterDungeonTimeline.duration <= 0d)
+            return 0f;
+        return (float)preEnterDungeonTimeline.duration;
     }
 
     /// <summary>
@@ -921,6 +1079,8 @@ public class DungeonWaveManager : MonoBehaviour
         else
         {
             // Nghỉ giữa các wave rồi bắt đầu wave mới
+            if (_flowController != null)
+                _flowController.HostSetPhase(DungeonFlowNetworkController.DungeonFlowPhase.BetweenWaves, currentWave, waveDelayTime);
             StartCoroutine(DelayBeforeNextWave());
         }
     }
@@ -1002,6 +1162,9 @@ public class DungeonWaveManager : MonoBehaviour
 
     public void OnPlayerDied()
     {
+        if (IsOnlineMultiplayerSession() && !IsWaveStateAuthority())
+            return;
+
         if (!isDungeonActive || isDungeonComplete || _partyFailedTriggered) return;
 
         int totalPlayers;
@@ -1070,6 +1233,9 @@ public class DungeonWaveManager : MonoBehaviour
         // Hiển thị UI thua
         ShowDungeonFailed();
 
+        if (_flowController != null)
+            _flowController.HostSetPhase(DungeonFlowNetworkController.DungeonFlowPhase.Defeat, currentWave, 0f);
+
         Character.LocalCharacter?.TryHostFinalizeLootCompensation();
         
         OnDungeonFailed?.Invoke();
@@ -1080,6 +1246,9 @@ public class DungeonWaveManager : MonoBehaviour
     /// </summary>
     private void CompleteDungeon()
     {
+        if (IsOnlineMultiplayerSession() && !IsWaveStateAuthority())
+            return;
+
         isDungeonComplete = true;
         isDungeonActive = false;
 
@@ -1122,6 +1291,8 @@ public class DungeonWaveManager : MonoBehaviour
         GameCursorManager.TryApplyNormalCursorTextureFromScene();
 
         Character.LocalCharacter?.TryHostFinalizeLootCompensation();
+        if (_flowController != null)
+            _flowController.HostSetPhase(DungeonFlowNetworkController.DungeonFlowPhase.Victory, currentWave, 0f);
         OnDungeonCompleted?.Invoke();
     }
 
@@ -1290,6 +1461,17 @@ public class DungeonWaveManager : MonoBehaviour
 
         Debug.Log($"[DungeonWave] Wave {waveIndex}: Skelet={currentSkeletCount} Monster={currentMonsterCount} Lich={currentLichCount} Stoneogre={currentStoneogreCount} Golem={currentGolemCount} Minotaur={currentMinotaurCount} Ifrit={currentIfritCount} Demon={currentDemonCount} (Tổng: {totalEnemies})");
 
+        bool canSpawnNetworkEnemies = IsWaveStateAuthority();
+        if (!canSpawnNetworkEnemies)
+        {
+            // Client mirror path: keep local counters for UI/kill tracking,
+            // but DO NOT rewrite enemiesAlive from spawnedCount=0.
+            isWaveActive = true;
+            isWaveCompleting = false;
+            Debug.Log($"[DungeonWave] Mirror wave {waveIndex} on client. Expecting host-spawned enemies: {totalEnemies}");
+            return;
+        }
+
         // === CẤU HÌNH GAMEPLAY MANAGER (CÁCH A) ===
         ConfigureGamePlayManager(currentSkeletCount, currentMonsterCount, currentLichCount, currentDemonCount,
             currentStoneogreCount, currentGolemCount, currentMinotaurCount, currentIfritCount);
@@ -1384,8 +1566,7 @@ public class DungeonWaveManager : MonoBehaviour
         // === QUAN TRỌNG: Tắt tất cả enemy con trong prefab ===
         DisableAllChildEnemies(enemy);
         
-        // Thiết lập SelectEnemyPos với vị trí spawn
-        SetupSelectEnemyPosForAllEnemies(spawnPos);
+        // Keep child variants anchored to replicated root transform in RandomEnemy.
         
         // Thêm EnemyWaveTracker
         EnemyWaveTracker tracker = enemy.AddComponent<EnemyWaveTracker>();
@@ -1822,13 +2003,19 @@ public class DungeonWaveManager : MonoBehaviour
     /// </summary>
     public void OnEnemyKilled(int enemyType, int expValue)
     {
+        if (IsOnlineMultiplayerSession() && !IsWaveStateAuthority())
+            return;
+
         if (!isDungeonActive)
         {
             Debug.LogWarning($"[DungeonWave] OnEnemyKilled called but isDungeonActive=false! Ignoring.");
             return;
         }
 
-        enemiesAlive--;
+        if (enemiesAlive <= 0)
+            return;
+
+        enemiesAlive = Mathf.Max(0, enemiesAlive - 1);
         totalExpGained += expValue;
 
         Debug.Log($"[DungeonWave] Enemy type {enemyType} died. Còn lại: {enemiesAlive}. EXP: {expValue}. isWaveActive={isWaveActive}, isWaveCompleting={isWaveCompleting}");
@@ -2104,6 +2291,9 @@ public class DungeonWaveManager : MonoBehaviour
                 c.TryRequestDungeonReturnMap();
                 return;
             }
+
+            ExecuteReturnToMainMapLocal(allowNetworkReturn: true);
+            return;
         }
 
         ExecuteReturnToMainMapLocal();
@@ -2111,10 +2301,10 @@ public class DungeonWaveManager : MonoBehaviour
 
     public void ForceReturnToMainMapForParty()
     {
-        ExecuteReturnToMainMapLocal();
+        ExecuteReturnToMainMapLocal(allowNetworkReturn: true);
     }
 
-    void ExecuteReturnToMainMapLocal()
+    void ExecuteReturnToMainMapLocal(bool allowNetworkReturn = false)
     {
         Debug.Log($"[DungeonWave] Đang quay về {mainMapSceneName}...");
 
@@ -2133,6 +2323,34 @@ public class DungeonWaveManager : MonoBehaviour
         ResetPlayerControls();
         EnableCameraInput();
         Time.timeScale = 1f;
+
+        if (allowNetworkReturn && IsOnlineMultiplayerSession())
+        {
+            var runnerOnline = FindFirstObjectByType<Fusion.NetworkRunner>();
+            if (runnerOnline != null && runnerOnline.IsRunning)
+            {
+                if (runnerOnline.IsServer)
+                {
+                    int buildIndex = ResolveBuildIndexFromSceneNameOrPath(mainMapSceneName);
+                    if (buildIndex >= 0)
+                    {
+                        if (SceneTransitionManager.Instance != null)
+                            SceneTransitionManager.Instance.StartNetworkingLoadingUI();
+                        Debug.Log($"[DungeonWave] Host returning to main map via Runner.LoadScene index={buildIndex}");
+                        runnerOnline.LoadScene(SceneRef.FromIndex(buildIndex));
+                        return;
+                    }
+                    Debug.LogWarning($"[DungeonWave] Main map scene '{mainMapSceneName}' not found in Build Settings, fallback to local return path.");
+                }
+                else
+                {
+                    if (SceneTransitionManager.Instance != null)
+                        SceneTransitionManager.Instance.StartNetworkingLoadingUI();
+                    Debug.Log("[DungeonWave] Client waiting host return-to-map via Fusion scene sync.");
+                    return;
+                }
+            }
+        }
 
         // === BƯỚC QUAN TRỌNG: TẮT FUSION RUNNER ===
         Debug.Log($"[RETURN-MAP] activeScene={UnityEngine.SceneManagement.SceneManager.GetActiveScene().name} " +
@@ -2175,6 +2393,33 @@ public class DungeonWaveManager : MonoBehaviour
         }
     }
 
+    static int ResolveBuildIndexFromSceneNameOrPath(string sceneNameOrPath)
+    {
+        if (string.IsNullOrWhiteSpace(sceneNameOrPath))
+            return -1;
+
+        int directIndex = UnityEngine.SceneManagement.SceneUtility.GetBuildIndexByScenePath(sceneNameOrPath);
+        if (directIndex >= 0)
+            return directIndex;
+
+        string normalized = sceneNameOrPath.Trim();
+        for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCountInBuildSettings; i++)
+        {
+            string path = UnityEngine.SceneManagement.SceneUtility.GetScenePathByBuildIndex(i);
+            if (string.IsNullOrWhiteSpace(path))
+                continue;
+
+            string name = System.IO.Path.GetFileNameWithoutExtension(path);
+            if (string.Equals(path, normalized, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(name, normalized, StringComparison.OrdinalIgnoreCase))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
     /// <summary>
     /// Restart dungeon (chơi lại)
     /// </summary>
@@ -2195,13 +2440,14 @@ public class DungeonWaveManager : MonoBehaviour
 
     public void ForceRestartDungeonForParty()
     {
-        ExecuteRestartDungeonLocal();
+        ExecuteRestartDungeonLocal(allowNetworkReload: true);
     }
 
-    void ExecuteRestartDungeonLocal()
+    void ExecuteRestartDungeonLocal(bool allowNetworkReload = false)
     {
         Debug.Log("[DungeonWave] Restart dungeon...");
 
+        DungeonPreEnterSession.SkipHudHideOnNextPreEnterTimeline = true;
         SoundManager.StopDungeonResultMusic();
         CursorUIPriority.EndAllUiOverlays();
 
@@ -2218,14 +2464,41 @@ public class DungeonWaveManager : MonoBehaviour
         EnableCameraInput();
         Time.timeScale = 1f;
 
-        // === TẮT FUSION RUNNER KHI RESTART CHƠI LẠI TỪ ĐẦU ===
+        if (allowNetworkReload && IsOnlineMultiplayerSession())
+        {
+            var runnerOnline = FindFirstObjectByType<Fusion.NetworkRunner>();
+            if (runnerOnline != null && runnerOnline.IsRunning)
+            {
+                if (runnerOnline.IsServer)
+                {
+                    int buildIndex = UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex;
+                    if (buildIndex >= 0)
+                    {
+                        if (SceneTransitionManager.Instance != null)
+                            SceneTransitionManager.Instance.StartNetworkingLoadingUI();
+                        Debug.Log($"[DungeonWave] Host restarting dungeon via Runner.LoadScene index={buildIndex}");
+                        runnerOnline.LoadScene(SceneRef.FromIndex(buildIndex));
+                        return;
+                    }
+                    Debug.LogWarning("[DungeonWave] Active scene build index invalid, fallback to local reload path.");
+                }
+                else
+                {
+                    if (SceneTransitionManager.Instance != null)
+                        SceneTransitionManager.Instance.StartNetworkingLoadingUI();
+                    Debug.Log("[DungeonWave] Client waiting host restart via Fusion scene sync.");
+                    return;
+                }
+            }
+        }
+
+        // === OFFLINE/LOCAL fallback: restart by local scene reload ===
         var runner = FindFirstObjectByType<Fusion.NetworkRunner>();
         if (runner != null && runner.IsRunning)
         {
-            Debug.Log("[DungeonWave] Đang tắt NetworkRunner để khởi động lại phòng...");
+            Debug.Log("[DungeonWave] Local restart fallback: shutting down running NetworkRunner.");
             runner.Shutdown(false, Fusion.ShutdownReason.Ok);
         }
-        // =====================================================
 
         string currentScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
         if (SceneTransitionManager.Instance != null)
@@ -2768,6 +3041,118 @@ public class DungeonWaveManager : MonoBehaviour
             9 => ifritExp,
             _ => skeletExp
         };
+    }
+
+    public bool HasWaveStateAuthority()
+    {
+        return IsWaveStateAuthority();
+    }
+
+    public void MirrorApplyHostPhase(DungeonFlowNetworkController.DungeonFlowPhase phase, int wave, float elapsedSeconds, float phaseDurationSeconds)
+    {
+        if (IsWaveStateAuthority())
+            return;
+
+        if (phase == DungeonFlowNetworkController.DungeonFlowPhase.None)
+            return;
+
+        bool phaseChanged = _lastMirroredPhase != phase || _lastMirroredWave != wave;
+        if (phaseChanged)
+        {
+            _lastMirroredPhase = phase;
+            _lastMirroredWave = wave;
+        }
+
+        switch (phase)
+        {
+            case DungeonFlowNetworkController.DungeonFlowPhase.WaitingPeers:
+                isDungeonActive = false;
+                break;
+            case DungeonFlowNetworkController.DungeonFlowPhase.Intro:
+                isDungeonActive = true;
+                currentWave = Mathf.Max(currentWave, wave);
+                if (phaseChanged)
+                    SceneTransitionManager.Instance?.HideLoadingPanelIfAny();
+                MirrorSyncIntroTimeline(elapsedSeconds, phaseDurationSeconds);
+                break;
+            case DungeonFlowNetworkController.DungeonFlowPhase.WaveBanner:
+                isDungeonActive = true;
+                currentWave = wave;
+                if (phaseChanged)
+                    ShowWaveNotification(wave);
+                break;
+            case DungeonFlowNetworkController.DungeonFlowPhase.Countdown:
+            {
+                isDungeonActive = true;
+                currentWave = wave;
+                isCountingDown = true;
+                float remaining = Mathf.Max(0f, phaseDurationSeconds - elapsedSeconds);
+                ShowCountdown(remaining);
+                if (countdownText != null)
+                    countdownText.text = Mathf.Ceil(remaining).ToString();
+                break;
+            }
+            case DungeonFlowNetworkController.DungeonFlowPhase.Combat:
+                isDungeonActive = true;
+                currentWave = wave;
+                isCountingDown = false;
+                HideCountdown();
+                isWaveActive = true;
+                isWaveCompleting = false;
+                break;
+            case DungeonFlowNetworkController.DungeonFlowPhase.BetweenWaves:
+                isDungeonActive = true;
+                isWaveActive = false;
+                break;
+            case DungeonFlowNetworkController.DungeonFlowPhase.Victory:
+                isDungeonActive = false;
+                isDungeonComplete = true;
+                if (phaseChanged)
+                    ShowDungeonComplete();
+                break;
+            case DungeonFlowNetworkController.DungeonFlowPhase.Defeat:
+                isDungeonActive = false;
+                if (phaseChanged)
+                    ShowDungeonFailed();
+                break;
+        }
+    }
+
+    void MirrorSyncIntroTimeline(float elapsedSeconds, float phaseDurationSeconds)
+    {
+        if (preEnterDungeonTimeline == null)
+            return;
+
+        var dir = preEnterDungeonTimeline;
+        double maxDuration = dir.duration > 0d ? dir.duration : (double)phaseDurationSeconds;
+        if (maxDuration <= 0d)
+            return;
+
+        double target = Mathf.Clamp(elapsedSeconds, 0f, (float)maxDuration);
+        if (target >= maxDuration - 0.05d)
+        {
+            if (dir.state == PlayState.Playing)
+            {
+                dir.time = maxDuration;
+                dir.Evaluate();
+                dir.Stop();
+            }
+            return;
+        }
+
+        if (dir.state != PlayState.Playing)
+        {
+            dir.time = target;
+            dir.Evaluate();
+            dir.Play();
+            return;
+        }
+
+        if (Mathf.Abs((float)(dir.time - target)) > 0.25f)
+        {
+            dir.time = target;
+            dir.Evaluate();
+        }
     }
 }
 

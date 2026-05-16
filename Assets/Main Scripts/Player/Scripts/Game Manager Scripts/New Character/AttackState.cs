@@ -19,6 +19,9 @@ public class AttackState : State
     
     private bool waitingForComboTransition;
     private bool mageVfxSpawnedThisHit;
+    private bool attackPressLatched;
+    private bool requireAttackStateChangeForUnlock;
+    private int transitionFromAttackStateHash;
     private int entryTick;
     private int lastIgnoredEntryEdgeTick = int.MinValue;
     
@@ -38,6 +41,7 @@ public class AttackState : State
     // === Smart Soft Lock-On ===
     private readonly Collider[] autoAimColliders = new Collider[20];
     private EnemyDetection enemyDetection;
+    const float clientMageFallbackAttackDuration = 0.8f;
 
     public AttackState(Character _character, StateMachine _stateMachine) : base(_character, _stateMachine)
     {
@@ -73,12 +77,16 @@ public class AttackState : State
         nextAttackBuffered = false;
         bufferedDirection = Vector2.zero;
         
-        // === ĐÃ FIX: Bật khiên bảo vệ ngay từ đòn 1 ===
-        waitingForComboTransition = true; 
-        comboTransitionTimeout = 0.4f; // Cho Animator 0.4s để thoát khỏi trạng thái Locomotion/None
+        // === Combo transition gate ===
+        // Client Mage (IA-only): animator lags behind simulation — do not block VFX/combo on this gate.
+        waitingForComboTransition = !IsClientPredictedMage();
+        comboTransitionTimeout = GetComboTransitionTimeout();
+        requireAttackStateChangeForUnlock = false;
+        transitionFromAttackStateHash = 0;
         // ==============================================
 
         mageVfxSpawnedThisHit = false;
+        attackPressLatched = false;
         isSnappingRotation = false;
 
         character.lastAttackInputTime = character.Runner.SimulationTime;
@@ -137,8 +145,20 @@ public class AttackState : State
             bufferedDirection = movementInput;
         }
 
+        bool attackHeld = character.currentInput.buttons.IsSet(NetworkInputButtons.Attack);
+        if (!attackHeld)
+            attackPressLatched = false;
+
         if (AttackTriggered)
         {
+            if (attackPressLatched)
+            {
+                // Client prediction/resim can replay the same "held click" edge.
+                // Latch prevents one physical click from chaining to the next hit.
+                return;
+            }
+            attackPressLatched = true;
+
             int tickNow = (character != null && character.Runner != null && character.Runner.IsRunning)
                 ? (int)character.Runner.Tick
                 : int.MinValue;
@@ -199,11 +219,23 @@ public class AttackState : State
             || character.HasInputAuthority;
         if (isSnappingRotation && canDriveAttackRotation)
         {
-            character.transform.rotation = Quaternion.Slerp(character.transform.rotation, targetAttackRotation, character.attackRotationSpeed * character.Runner.DeltaTime);
-            if (Quaternion.Angle(character.transform.rotation, targetAttackRotation) < 2f)
+            bool isMage = currentWeapon != null && currentWeapon.weaponType == WeaponType.Mage;
+            float maxDeg = character.attackRotationSpeed * character.Runner.DeltaTime;
+            if (isMage)
             {
-                isSnappingRotation = false;
+                // Mage: RotateTowards ổn định hơn Slerp khi vừa xoay camera vừa đánh — tránh giật hai hệ xoay chồng nhau.
+                character.transform.rotation = Quaternion.RotateTowards(
+                    character.transform.rotation, targetAttackRotation, maxDeg);
             }
+            else
+            {
+                character.transform.rotation = Quaternion.Slerp(
+                    character.transform.rotation, targetAttackRotation, maxDeg);
+            }
+
+            float angle = Quaternion.Angle(character.transform.rotation, targetAttackRotation);
+            if (angle < 2f)
+                isSnappingRotation = false;
         }
 
         float normalizedTime = 0f;
@@ -244,16 +276,37 @@ public class AttackState : State
             }
         }
 
+        bool useClientMageFallbackTiming = ShouldUseClientMageFallbackTiming(clipLength);
+
+        float simNormForFlow = normalizedTime;
+        if (character.Runner != null && character.Runner.IsRunning)
+        {
+            if (clipLength > 0.001f)
+                simNormForFlow = Mathf.Clamp01(timePassed / clipLength);
+            else if (useClientMageFallbackTiming)
+                simNormForFlow = Mathf.Clamp01(timePassed / clientMageFallbackAttackDuration);
+        }
+        float flowNorm = ResolveAttackFlowNorm(weaponLayerIndex, simNormForFlow, normalizedTime);
+
         // 1. MỞ KHÓA THÔNG MINH BẰNG TAG — chỉ tin transition tới state có tag "Attack"
         if (waitingForComboTransition && character.animator != null && weaponLayerIndex >= 0)
         {
+            const float restartNormThreshold = 0.20f;
             if (isInTransition)
             {
                 var nextState = character.animator.GetNextAnimatorStateInfo(weaponLayerIndex);
                 if (nextState.IsTag("Attack"))
                 {
-                    waitingForComboTransition = false;
-                    comboTransitionTimeout = 0f;
+                    bool allowUnlock = !requireAttackStateChangeForUnlock
+                                       || nextState.shortNameHash != transitionFromAttackStateHash
+                                       || nextState.normalizedTime <= restartNormThreshold;
+                    if (allowUnlock)
+                    {
+                        waitingForComboTransition = false;
+                        comboTransitionTimeout = 0f;
+                        requireAttackStateChangeForUnlock = false;
+                        transitionFromAttackStateHash = 0;
+                    }
                 }
             }
             else
@@ -262,8 +315,16 @@ public class AttackState : State
                 var currState = character.animator.GetCurrentAnimatorStateInfo(weaponLayerIndex);
                 if (currState.IsTag("Attack"))
                 {
-                    waitingForComboTransition = false;
-                    comboTransitionTimeout = 0f;
+                    bool allowUnlock = !requireAttackStateChangeForUnlock
+                                       || currState.shortNameHash != transitionFromAttackStateHash
+                                       || currState.normalizedTime <= restartNormThreshold;
+                    if (allowUnlock)
+                    {
+                        waitingForComboTransition = false;
+                        comboTransitionTimeout = 0f;
+                        requireAttackStateChangeForUnlock = false;
+                        transitionFromAttackStateHash = 0;
+                    }
                 }
             }
         }
@@ -271,8 +332,20 @@ public class AttackState : State
         // 2. FAILSAFE độc lập — không nằm trong canChain
         if (waitingForComboTransition && !isInTransition && timePassed >= comboTransitionTimeout)
         {
-            ForceExitState();
-            return;
+            if (useClientMageFallbackTiming)
+            {
+                waitingForComboTransition = false;
+                comboTransitionTimeout = 0f;
+                requireAttackStateChangeForUnlock = false;
+                transitionFromAttackStateHash = 0;
+                character.LogCritMageVfx(
+                    $"AttackState fallback unlock (no Attack tag) hit={hitIndex} t={timePassed:F2} flow={flowNorm:F2}");
+            }
+            else
+            {
+                ForceExitState();
+                return;
+            }
         }
 
         // =========================================================================
@@ -288,18 +361,34 @@ public class AttackState : State
                 {
                     float vfxTargetPercent = Mathf.Clamp01(currentWeapon.hitTimings[hitIndex].vfxTime);
 
-                    // Local input owner: follow Animator timing for visual feel.
-                    // Other peers: follow simulation timing for deterministic networking.
-                    float currentNorm;
+                    // Hybrid timing:
+                    // - Input owner (local visual): follow Animator normalized for what player sees.
+                    // - Non-owner peers: follow simulation timing for deterministic replication.
+                    float simNorm = currentAttackNormalizedTime;
                     if (character.Runner != null && character.Runner.IsRunning)
                     {
+                        if (clipLength > 0.001f)
+                            simNorm = Mathf.Clamp01(timePassed / clipLength);
+                        else if (useClientMageFallbackTiming)
+                            simNorm = Mathf.Clamp01(timePassed / clientMageFallbackAttackDuration);
+                    }
+                    float animNorm = GetWeaponAttackAnimNorm(weaponLayerIndex, currentAttackNormalizedTime);
+                    float currentNorm;
+                    if (IsClientPredictedMage())
+                    {
+                        // Local Mage: prefer visible animator progress, but ignore stale high anim norm
+                        // right after a combo transition (sim just reset near 0).
+                        currentNorm = SelectClientMagePlayableNorm(animNorm, simNorm);
+                    }
+                    else if (character.Runner != null && character.Runner.IsRunning)
+                    {
                         currentNorm = character.HasInputAuthority
-                            ? currentAttackNormalizedTime
-                            : (clipLength > 0.001f ? Mathf.Clamp01(timePassed / clipLength) : currentAttackNormalizedTime);
+                            ? Mathf.Min(animNorm, simNorm)
+                            : simNorm;
                     }
                     else
                     {
-                        currentNorm = currentAttackNormalizedTime;
+                        currentNorm = animNorm;
                     }
                     bool readyForVfx = currentNorm >= vfxTargetPercent;
 
@@ -321,10 +410,14 @@ public class AttackState : State
                                 var mageAtk = character.GetComponentInChildren<MageNormalAttack>(true);
                                 if (mageAtk != null)
                                 {
+                                    character.LogCritMageVfx(
+                                        $"AttackState spawn gate hit={hitIndex} norm={currentNorm:F2} anim={animNorm:F2} sim={simNorm:F2} " +
+                                        $"flow={flowNorm:F2} vfxAt={vfxTargetPercent:F2} yaw={character.transform.eulerAngles.y:F1}");
                                     mageAtk.FireProjectileFSM(hitIndex);
                                     if (character.Runner != null && character.Runner.IsRunning)
                                     {
-                                        if (mageAtk.TryGetPredictedSpawn(hitIndex, out Vector3 origin, out Quaternion rotation))
+                                        if (mageAtk.TryGetLastPredictedSpawn(out Vector3 origin, out Quaternion rotation)
+                                            || mageAtk.TryGetPredictedSpawn(hitIndex, out origin, out rotation))
                                             character.TryBroadcastMageNormalAttackVFX(hitIndex, origin, rotation);
                                     }
                                 }
@@ -334,7 +427,7 @@ public class AttackState : State
                 }
             }
 
-            if (!nextAttackBuffered && normalizedTime >= commitPoint)
+            if (!nextAttackBuffered && flowNorm >= commitPoint)
             {
                 nextAttackBuffered = pressedSinceLastCheck;
                 pressedSinceLastCheck = false;
@@ -355,13 +448,13 @@ public class AttackState : State
                 }
             }
 
-            bool canChain = !isInTransition && normalizedTime >= currentChainPoint;
+            bool canChain = !isInTransition && flowNorm >= currentChainPoint;
             bool canCombo = canChain && !isLastHit;
 
             // ===== RESTART COMBO (hit cuối) =====
             // Nếu đang ở hit cuối và người chơi bấm Attack tại điểm chain,
             // ta restart về hit 1 ngay trong AttackState để tránh kẹt state (do nhánh exit yêu cầu !attack).
-            if (isLastHit && canChain && (nextAttackBuffered || attack))
+            if (isLastHit && canChain && nextAttackBuffered)
             {
                 timePassed = 0f;
                 hitIndex = 0;
@@ -372,8 +465,7 @@ public class AttackState : State
 
                 DetermineAttackRotation(bufferedDirection);
 
-                waitingForComboTransition = true;
-                comboTransitionTimeout = timePassed + 0.4f;
+                BeginComboHitTransition(weaponLayerIndex);
 
                 attack = false;
                 nextAttackBuffered = false;
@@ -387,7 +479,7 @@ public class AttackState : State
             }
 
             // 1. TRIỂN KHAI ĐÒN TIẾP THEO
-            if (canCombo && (nextAttackBuffered || attack))
+            if (canCombo && nextAttackBuffered)
             {
                 timePassed = 0f;
                 hitIndex++;
@@ -398,8 +490,7 @@ public class AttackState : State
 
                 DetermineAttackRotation(bufferedDirection);
 
-                waitingForComboTransition = true;
-                comboTransitionTimeout = timePassed + 0.4f;
+                BeginComboHitTransition(weaponLayerIndex);
 
                 attack = false;
                 nextAttackBuffered = false;
@@ -412,7 +503,7 @@ public class AttackState : State
             // 2. CHỜ THU CHIÊU (HOẶC BỊ KHÓA ĐÒN MỚI)
             else if (canChain)
             {
-                if (!nextAttackBuffered && !attack)
+                if (!nextAttackBuffered)
                 {
                     bool isActuallyNone = false;
                     if (weaponLayerIndex >= 0)
@@ -421,10 +512,10 @@ public class AttackState : State
                         isActuallyNone = (currState.shortNameHash == Animator.StringToHash("None"));
                     }
 
-                    bool canMoveCancel = normalizedTime >= currentMoveCancelPoint;
-                    bool allowExitByNormalizedEnd = !isInTransition && normalizedTime >= 0.95f;
+                    bool canMoveCancel = flowNorm >= currentMoveCancelPoint;
+                    bool allowExitByNormalizedEnd = !isInTransition && flowNorm >= 0.95f;
 
-                    if (movementInput.sqrMagnitude > 0.01f && canMoveCancel)
+                    if (movementInput.sqrMagnitude > 0.01f && canMoveCancel && CanExitAttackEarlyClientMage())
                     {
                         if (weaponLayerIndex >= 0)
                             character.animator.CrossFade("None", 0.1f, weaponLayerIndex);
@@ -433,7 +524,7 @@ public class AttackState : State
                         return;
                     }
 
-                    if (isActuallyNone || allowExitByNormalizedEnd)
+                    if (isActuallyNone || (allowExitByNormalizedEnd && CanExitAttackEarlyClientMage()))
                     {
                         ForceExitState();
                         return;
@@ -553,6 +644,11 @@ public class AttackState : State
             {
                 targetAttackRotation = Quaternion.LookRotation(dir.normalized);
                 isSnappingRotation = true;
+                if (currentWeapon != null && currentWeapon.weaponType == WeaponType.Mage)
+                {
+                    character.LogCritMageVfx(
+                        $"AimSnap enemy={nearest.name} dist={Mathf.Sqrt(minSqrDist):F1} yawTarget={targetAttackRotation.eulerAngles.y:F1}");
+                }
                 return;
             }
         }
@@ -578,12 +674,29 @@ public class AttackState : State
     public override void Exit()
     {
         base.Exit();
+        if (character.Runner != null && character.Runner.IsRunning)
+            character.lastAttackStateExitSimTime = (float)character.Runner.SimulationTime;
         if (hitHandler != null) hitHandler.CancelCurrentHit();
         character.animator.SetFloat("speed", 0f);
         character.ResetTriggerSafe("attack");
         if (character.animator != null)
             character.animator.speed = 1f;
         isSnappingRotation = false; 
+        attackPressLatched = false;
+        requireAttackStateChangeForUnlock = false;
+        transitionFromAttackStateHash = 0;
+    }
+
+    void MarkRequireAttackStateChangeForUnlock(int weaponLayerIndex)
+    {
+        requireAttackStateChangeForUnlock = true;
+        transitionFromAttackStateHash = 0;
+        if (character == null || character.animator == null)
+            return;
+        if (weaponLayerIndex < 0 || weaponLayerIndex >= character.animator.layerCount)
+            return;
+        var curr = character.animator.GetCurrentAnimatorStateInfo(weaponLayerIndex);
+        transitionFromAttackStateHash = curr.shortNameHash;
     }
 
     public int GetCurrentHitIndex() { return hitIndex; }
@@ -599,6 +712,38 @@ public class AttackState : State
             currentWeapon = weaponController.GetCurrentWeapon();
             if (currentWeapon != null && equipment != null)
                 equipment.SyncWeapon(currentWeapon);
+        }
+
+        // Network guard: local Equipment can lag behind replicated NetEquippedWeaponType on clients.
+        // If mismatch happens, force WeaponController to the replicated type before attack logic.
+        if (character != null
+            && character.Object != null
+            && character.Object.IsValid
+            && character.Runner != null
+            && character.Runner.IsRunning)
+        {
+            int netTypeValue = character.NetEquippedWeaponType;
+            if (netTypeValue >= (int)WeaponType.Sword && netTypeValue <= (int)WeaponType.Mage)
+            {
+                WeaponType netType = (WeaponType)netTypeValue;
+                bool mismatch = currentWeapon == null || currentWeapon.weaponType != netType;
+                if (mismatch)
+                {
+                    if (weaponController == null)
+                        weaponController = character.GetComponent<WeaponController>();
+
+                    weaponController?.ApplyNetworkWeaponType(netType);
+
+                    WeaponSO fromController = weaponController != null ? weaponController.GetCurrentWeapon() : null;
+                    if (fromController != null && equipment != null)
+                        equipment.SyncWeapon(fromController);
+
+                    currentWeapon = equipment != null ? equipment.GetCurrentWeapon() : fromController;
+
+                    character.LogCritMageVfx(
+                        $"ResolveWeapon sync mismatch -> net={netType} now={(currentWeapon != null ? currentWeapon.weaponType.ToString() : "null")}");
+                }
+            }
         }
     }
 
@@ -693,5 +838,109 @@ public class AttackState : State
                 }
             }
         }
+    }
+
+    float GetComboTransitionTimeout()
+    {
+        if (IsClientPredictedMage())
+            return 0.12f;
+
+        return 0.4f;
+    }
+
+    bool IsClientPredictedMage()
+    {
+        if (character == null || character.Runner == null || !character.Runner.IsRunning)
+            return false;
+        if (!character.HasInputAuthority || character.HasStateAuthority)
+            return false;
+        return currentWeapon != null && currentWeapon.weaponType == WeaponType.Mage;
+    }
+
+    float GetWeaponAttackAnimNorm(int weaponLayerIndex, float fallbackNorm)
+    {
+        if (weaponLayerIndex < 0 || character.animator == null)
+            return fallbackNorm;
+
+        var curr = character.animator.GetCurrentAnimatorStateInfo(weaponLayerIndex);
+        if (curr.IsTag("Attack"))
+            return curr.normalizedTime;
+
+        if (character.animator.IsInTransition(weaponLayerIndex))
+        {
+            var next = character.animator.GetNextAnimatorStateInfo(weaponLayerIndex);
+            if (next.IsTag("Attack"))
+                return next.normalizedTime;
+        }
+
+        return fallbackNorm;
+    }
+
+    float ResolveAttackFlowNorm(int weaponLayerIndex, float simNormForFlow, float normalizedTime)
+    {
+        if (character.Runner != null && character.Runner.IsRunning && character.HasInputAuthority)
+        {
+            if (IsClientPredictedMage())
+            {
+                float anim = GetWeaponAttackAnimNorm(weaponLayerIndex, normalizedTime);
+                return SelectClientMagePlayableNorm(anim, simNormForFlow);
+            }
+
+            return simNormForFlow;
+        }
+
+        return normalizedTime;
+    }
+
+    float SelectClientMagePlayableNorm(float animNorm, float simNorm)
+    {
+        float anim = Mathf.Clamp01(animNorm);
+        float sim = Mathf.Clamp01(simNorm);
+
+        if (anim <= 0.001f)
+            return sim;
+
+        // Stale-frame guard: after combo trigger, simulation restarts this hit near 0,
+        // but animator may still report previous clip at ~0.7-0.9 for a short window.
+        // In that window use sim to avoid late/jerky VFX and chain decisions.
+        if (sim < 0.18f && anim > 0.60f)
+            return sim;
+
+        return anim;
+    }
+
+    void BeginComboHitTransition(int weaponLayerIndex)
+    {
+        if (IsClientPredictedMage())
+        {
+            waitingForComboTransition = false;
+            comboTransitionTimeout = 0f;
+            requireAttackStateChangeForUnlock = false;
+            transitionFromAttackStateHash = 0;
+            return;
+        }
+
+        waitingForComboTransition = true;
+        comboTransitionTimeout = timePassed + GetComboTransitionTimeout();
+        MarkRequireAttackStateChangeForUnlock(weaponLayerIndex);
+    }
+
+    bool CanExitAttackEarlyClientMage()
+    {
+        if (!IsClientPredictedMage())
+            return true;
+        // Do not cut the visible swing short before local VFX fired.
+        return mageVfxSpawnedThisHit || timePassed >= 0.55f;
+    }
+
+    bool ShouldUseClientMageFallbackTiming(float clipLen)
+    {
+        if (clipLen > 0.001f)
+            return false;
+        if (character == null || character.Runner == null || !character.Runner.IsRunning)
+            return false;
+        if (!character.HasInputAuthority || character.HasStateAuthority)
+            return false;
+        return currentWeapon != null && currentWeapon.weaponType == WeaponType.Mage;
     }
 }

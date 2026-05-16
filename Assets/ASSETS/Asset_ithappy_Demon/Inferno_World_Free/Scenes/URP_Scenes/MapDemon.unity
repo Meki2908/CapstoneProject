@@ -4339,6 +4339,11 @@ MonoBehaviour:
   playerPrefab:
     RawGuidValue: 83badadf57c803d4bb673774b34bb9c2
   spawnPoint: {fileID: 332880108}
+  spawnRadiusAroundPoint: 2.5
+  spawnRingSteps: 3
+  minPlayerSeparation: 1.5
+  ringStepRadius: 1.1
+  verboseLogs: 1
 --- !u!4 &332880108
 Transform:
   m_ObjectHideFlags: 0
@@ -17984,6 +17989,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 895050612079832084, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
+      propertyPath: m_fontSize
+      value: 125
+      objectReference: {fileID: 0}
+    - target: {fileID: 895050612079832084, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
+      propertyPath: m_fontSizeBase
+      value: 125
+      objectReference: {fileID: 0}
     - target: {fileID: 3549649341855738058, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
       propertyPath: mapType
       value: 2
@@ -18000,6 +18013,10 @@ PrefabInstance:
       propertyPath: preEnterDungeonTimeline
       value: 
       objectReference: {fileID: 403211409}
+    - target: {fileID: 3549649341855738058, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
+      propertyPath: dungeonFlowControllerPrefab
+      value: 
+      objectReference: {fileID: 1794255792585064524, guid: 78899f3cc87e95d40a69a9946d554ee8, type: 3}
     - target: {fileID: 4250913773273599965, guid: 6f456081e60cd8147bd4aba124eee2bd, type: 3}
       propertyPath: m_Name
       value: GUI_Dungeon

@@ -335,8 +335,12 @@ public class PlayerHealth : NetworkBehaviour
         // Notify listeners
         OnPlayerDied?.Invoke();
 
+        // Replicate death to all peers so proxies run DieState (pose/anim), not only state authority tick.
+        if (character != null && HasStateAuthority)
+            character.NetworkedState = CharacterStateSync.Die;
+
         // Change to DieState - DieState will handle animation based on currentLocomotionState
-        if (character != null && character.dieState != null)
+        if (character != null && character.dieState != null && character.movementSM != null)
         {
             character.movementSM.ChangeState(character.dieState);
         }
@@ -385,6 +389,14 @@ public class PlayerHealth : NetworkBehaviour
             return;
 
         currentHealth = maxHealth;
+
+        if (character != null && HasStateAuthority)
+        {
+            character.NetworkedState = CharacterStateSync.Standing;
+            if (character.movementSM != null && character.movementSM.currentState == character.dieState)
+                character.movementSM.ChangeState(character.standing);
+        }
+
         OnHealthChanged?.Invoke(currentHealth);
         UpdateHealthText();
     }

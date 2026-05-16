@@ -13,6 +13,39 @@ public class Bow : MonoBehaviour {
     
     // Flag để lazy init - Awake có thể chạy trước khi DungeonManiaPlayerBridge được setup
     private bool hasInitializedBridge = false;
+
+    private bool TryResolveBridgeFromTransform(Transform t, out DungeonManiaPlayerBridge bridge, out Transform owner)
+    {
+        bridge = null;
+        owner = null;
+        if (t == null) return false;
+
+        bridge = t.GetComponent<DungeonManiaPlayerBridge>();
+        if (bridge == null) bridge = t.GetComponentInChildren<DungeonManiaPlayerBridge>(true);
+        if (bridge == null) bridge = t.GetComponentInParent<DungeonManiaPlayerBridge>();
+        if (bridge == null) return false;
+        if (!bridge.IsAlive()) return false;
+
+        owner = bridge.transform;
+        return true;
+    }
+
+    private bool RefreshTargetFromEnemyContext()
+    {
+        EnemyScript enemyScript = GetComponentInParent<EnemyScript>();
+        if (enemyScript == null) return false;
+        if (enemyScript.target == null) return false;
+
+        if (TryResolveBridgeFromTransform(enemyScript.target, out DungeonManiaPlayerBridge targetBridge, out Transform targetOwner))
+        {
+            playerBridge = targetBridge;
+            player = targetOwner;
+            hasInitializedBridge = true;
+            return true;
+        }
+
+        return false;
+    }
     
 	void Awake () {
         // Tìm particle trên object này
@@ -58,52 +91,35 @@ public class Bow : MonoBehaviour {
     /// Trả về true nếu đã tìm thấy bridge.
     /// </summary>
     private bool TrySetupPlayerReference() {
-        if (hasInitializedBridge && playerBridge != null) return true;
-        
-        // ƯU TIÊN tìm player thật bằng tag "Player"
-        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
-        if (playerObj == null) {
-            playerObj = GameObject.Find("player");
-        }
-        
-        if (playerObj != null) {
-            player = playerObj.transform;
-            
-            // Tìm DungeonManiaPlayerBridge trên chính player
-            playerBridge = playerObj.GetComponent<DungeonManiaPlayerBridge>();
-            
-            // Nếu không tìm thấy, thử tìm trên parent
-            if (playerBridge == null && playerObj.transform.parent != null) {
-                playerBridge = playerObj.transform.parent.GetComponent<DungeonManiaPlayerBridge>();
-                if (playerBridge != null) {
-                    player = playerObj.transform.parent;
-                }
-            }
-            
-            // Nếu vẫn không tìm thấy, thử tìm trên toàn bộ hierarchy (GetComponentInParent)
-            if (playerBridge == null) {
-                playerBridge = playerObj.GetComponentInParent<DungeonManiaPlayerBridge>();
-                if (playerBridge != null) {
-                    player = playerBridge.transform;
-                }
-            }
-            
-            // Fallback cuối: FindAnyObjectByType (tìm trong toàn scene)
-            if (playerBridge == null) {
-                playerBridge = Object.FindAnyObjectByType<DungeonManiaPlayerBridge>();
-                if (playerBridge != null) {
-                    player = playerBridge.transform;
-                    Debug.Log($"[Bow] Found DungeonManiaPlayerBridge via FindAnyObjectByType on {playerBridge.gameObject.name}");
-                }
-            }
-            
-            if (playerBridge != null) {
-                hasInitializedBridge = true;
-                Debug.Log($"[Bow] Successfully found DungeonManiaPlayerBridge on {playerBridge.gameObject.name}");
-                return true;
+        if (RefreshTargetFromEnemyContext()) return true;
+        if (hasInitializedBridge && playerBridge != null && playerBridge.IsAlive()) return true;
+
+        // fallback: pick any alive player bridge in scene
+        DungeonManiaPlayerBridge[] bridges = Object.FindObjectsByType<DungeonManiaPlayerBridge>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        float bestSqr = float.MaxValue;
+        DungeonManiaPlayerBridge best = null;
+        Vector3 from = transform.position;
+        for (int i = 0; i < bridges.Length; i++)
+        {
+            var b = bridges[i];
+            if (b == null || !b.IsAlive()) continue;
+            float sqr = (b.transform.position - from).sqrMagnitude;
+            if (sqr < bestSqr)
+            {
+                bestSqr = sqr;
+                best = b;
             }
         }
-        
+
+        if (best != null)
+        {
+            playerBridge = best;
+            player = best.transform;
+            hasInitializedBridge = true;
+            Debug.Log($"[Bow] Fallback bridge target -> {playerBridge.gameObject.name}");
+            return true;
+        }
+
         return false;
     }
     
@@ -113,13 +129,19 @@ public class Bow : MonoBehaviour {
             hasLoggedCollision = true;
         }
         
-        // Lazy init: thử tìm bridge nếu chưa có
-        if (playerBridge == null) {
+        DungeonManiaPlayerBridge hitBridge = null;
+        Transform hitOwner = null;
+        if (go != null)
+            TryResolveBridgeFromTransform(go.transform, out hitBridge, out hitOwner);
+
+        if (hitBridge == null)
+        {
             TrySetupPlayerReference();
+            hitBridge = playerBridge;
         }
-        
-        // Sử dụng bridge để gây damage
-        if (playerBridge != null) {
+
+        // Sử dụng bridge đúng object va chạm để gây damage
+        if (hitBridge != null) {
             // Chuyển đổi Damage struct sang Damage struct của DungeonMania
             Damage bowDamage = new Damage();
             bowDamage.damage = damage.damage;
@@ -129,7 +151,7 @@ public class Bow : MonoBehaviour {
             bowDamage.isBow = damage.isBow;
             bowDamage.isSpell = damage.isSpell;
             bowDamage.spellID = damage.spellID;
-            playerBridge.PlayerDamage(bowDamage, hit);
+            hitBridge.PlayerDamage(bowDamage, hit);
         } else {
             Debug.LogWarning("[Bow] PlayerBridge still not found during collision! Cannot deal damage.");
         }
@@ -140,8 +162,9 @@ public class Bow : MonoBehaviour {
         hit = h;
         hasLoggedCollision = false;
         
-        // Đảm bảo có tham chiếu player
-        if (player == null) TrySetupPlayerReference();
+        // Refresh target every shot, avoid stale dead target cache.
+        if (!TrySetupPlayerReference())
+            player = null;
         
         Debug.Log($"[Bow] DamageBow called: damage={d.damage}, isSkill={isSkill}, ps={ps?.name ?? "NULL"}");
         

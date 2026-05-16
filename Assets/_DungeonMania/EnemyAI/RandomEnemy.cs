@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -26,6 +26,28 @@ public class RandomEnemy : NetworkBehaviour{
     private void OnDisable(){
         EnemyEvent.EnableEvent -= Enable;
         EnemyEvent.DisableEvent -= Disable;
+    }
+
+    public override void Spawned()
+    {
+        // Initial snapshot can already carry NetworkedEnemyIndex without always triggering OnChangedRender.
+        StartCoroutine(CoEnsureVisualSyncAfterSpawn());
+    }
+
+    private IEnumerator CoEnsureVisualSyncAfterSpawn()
+    {
+        float timeout = Time.realtimeSinceStartup + 1.0f;
+        while (Time.realtimeSinceStartup < timeout)
+        {
+            if (NetworkedEnemyIndex >= 0)
+            {
+                ApplyEnemyVisualByNetworkIndex("SpawnedFallback");
+                yield break;
+            }
+            yield return null;
+        }
+
+        Debug.LogWarning($"[RandomEnemy] SpawnedFallback timeout | obj={name} idx={NetworkedEnemyIndex} isServer={Runner?.IsServer} hasSA={HasStateAuthority}");
     }
     public void Enable (){
         if (GamePlayManager.level.levelType == Level.LevelType.arena) {
@@ -253,7 +275,21 @@ public class RandomEnemy : NetworkBehaviour{
     }
     public void OnEnemyIndexChanged()
     {
-        if (NetworkedEnemyIndex < 0 || NetworkedEnemyIndex >= enemys.Length) return;
+        ApplyEnemyVisualByNetworkIndex("OnChangedRender");
+    }
+
+    private void ApplyEnemyVisualByNetworkIndex(string source)
+    {
+        if (enemys == null || enemys.Length == 0)
+        {
+            Debug.LogWarning($"[RandomEnemy] {source} skipped: enemys array empty | obj={name}");
+            return;
+        }
+        if (NetworkedEnemyIndex < 0 || NetworkedEnemyIndex >= enemys.Length)
+        {
+            Debug.LogWarning($"[RandomEnemy] {source} skipped: idx out of range idx={NetworkedEnemyIndex} len={enemys.Length} | obj={name}");
+            return;
+        }
 
         // Tắt hết quái đi cho chắc ăn
         foreach (var enemy in enemys)
@@ -264,13 +300,9 @@ public class RandomEnemy : NetworkBehaviour{
         // Bật đúng con quái mà Server đã chốt
         GameObject activeEnemy = enemys[NetworkedEnemyIndex];
 
-        newPos = SelectEnemyPos.SelectNewPos(childNumber);
-
-        // Kiểm tra nếu vị trí hợp lệ
-        if (newPos == Vector3.zero) {
-            newPos = transform.position;
-        }
-
+        // IMPORTANT (multiplayer): keep active child on the replicated root position.
+        // Using SelectEnemyPos static temp points can diverge per peer.
+        newPos = transform.position;
         activeEnemy.transform.position = newPos;
         activeEnemy.SetActive(true);
 
@@ -285,5 +317,9 @@ public class RandomEnemy : NetworkBehaviour{
             enemyScript.SetSpecificEnemyType(NetworkedEnemyIndex);
             enemyScript.ApplyInspectorValuesManual();
         }
+
+        Debug.Log(
+            $"[RandomEnemy] {source} applied idx={NetworkedEnemyIndex} active={activeEnemy.name} pos={newPos} " +
+            $"obj={name} isServer={Runner?.IsServer} hasSA={HasStateAuthority}");
     }
 }

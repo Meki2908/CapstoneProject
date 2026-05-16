@@ -240,6 +240,7 @@ public class EnemyDetection : NetworkBehaviour
 
     // 2. SỬA 3 BIẾN NÀY THÀNH BIẾN MẠNG
     [Networked] private float _moveTowardTimer { get; set; }
+    private float _nextMageAssistSuppressLogTime;
     [Networked] private float _rotateTimer { get; set; }
     [Networked] private Vector3 _targetRotation { get; set; }
 
@@ -275,6 +276,22 @@ public class EnemyDetection : NetworkBehaviour
         // 2. Xử lý bước tới và xoay (Chỉ chạy khi tiến về phía trước, bỏ qua Resimulation để không bị trừ lố giờ)
         if (Runner.IsForward)
         {
+            bool suppressClientMageAssist = ShouldSuppressClientMageCombatAssist();
+            if (suppressClientMageAssist)
+            {
+                if (Time.unscaledTime >= _nextMageAssistSuppressLogTime)
+                {
+                    _nextMageAssistSuppressLogTime = Time.unscaledTime + 0.6f;
+                    character?.LogCritMageVfx("EnemyDetection suppress client mage assist (rotate+move)");
+                }
+                if (animator != null)
+                    animator.applyRootMotion = false;
+                _rootMotionDeltaPosition = Vector3.zero;
+                _rotateTimer = 0f;
+                _moveTowardTimer = 0f;
+                return;
+            }
+
             // Xử lý xoay mượt theo Tick mạng (Runner.DeltaTime)
             if (_rotateTimer > 0)
             {
@@ -323,9 +340,29 @@ public class EnemyDetection : NetworkBehaviour
 
     #region Combat Movement (Animation Event Controlled)
 
+    bool ShouldSuppressClientMageCombatAssist()
+    {
+        if (Runner == null || !Runner.IsRunning)
+            return false;
+        if (!HasInputAuthority || HasStateAuthority)
+            return false;
+        if (character == null || equipment == null)
+            return false;
+        var weapon = equipment.GetCurrentWeapon();
+        if (weapon == null || weapon.weaponType != WeaponType.Mage)
+            return false;
+        // No target nearby: do not suppress client-side attack flow.
+        if (nearestEnemy == null)
+            return false;
+        return character.attacking != null && character.movementSM.currentState == character.attacking;
+    }
+
     // CÔNG TẮC 1: Xoay thông minh (Có quái thì hút, không quái thì xoay theo phím)
     public void AE_SmartRotate()
     {
+        if (ShouldSuppressClientMageCombatAssist())
+            return;
+
         if (nearestEnemy != null)
         {
             if (animator != null) animator.applyRootMotion = false; 
@@ -365,6 +402,8 @@ public class EnemyDetection : NetworkBehaviour
     public void AE_RotateToMovementInput()
     {
         if (character == null) return;
+        if (ShouldSuppressClientMageCombatAssist())
+            return;
 
         Vector2 movementInput = character.playerInput.actions["Move"].ReadValue<Vector2>();
 

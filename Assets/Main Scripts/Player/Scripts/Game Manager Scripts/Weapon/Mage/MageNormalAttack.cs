@@ -22,10 +22,15 @@ public class MageNormalAttack : MonoBehaviour
     [SerializeField] private float spawnForwardClearance = 0.38f;
     [SerializeField] private float spawnHeightBias = 0.12f;
     [SerializeField] private float ownerIgnoreCollisionSeconds = 0.14f;
+    [Tooltip("Chỉ dùng yaw của nhân vật cho offset spawn (tránh tay/camera làm lệch VFX).")]
+    [SerializeField] private bool spawnOffsetUsesBodyYawOnly = true;
 
     // === Smart target lock (fix "khựng chuỗi" + "đánh xác chết") ===
     private Transform currentLockedTarget;
     private readonly Collider[] hitCollidersCache = new Collider[64]; // NonAlloc buffer
+    private Vector3 _lastPredictedSpawnPos;
+    private Quaternion _lastPredictedSpawnRot = Quaternion.identity;
+    private bool _hasLastPredictedSpawn;
 
     private void Awake()
     {
@@ -56,18 +61,29 @@ public class MageNormalAttack : MonoBehaviour
 
         Transform target = GetOrFindTarget(weapon, comboIndex);
         Transform anchor = ResolveSpawnAnchor();
+        Transform body = character != null ? character.transform : transform;
+        bool useBodyAnchorForClientPrediction = character != null
+            && character.Runner != null
+            && character.Runner.IsRunning
+            && character.HasInputAuthority
+            && !character.HasStateAuthority;
+        if (useBodyAnchorForClientPrediction && body != null)
+            anchor = body;
         HitTiming timing = weapon.hitTimings[comboIndex];
         VfxSpawnRule rule = timing.spawnRule;
 
-        Vector3 baseWorldPos = anchor.position + anchor.TransformDirection(rule.localOffset);
-        Quaternion orientWorld = RotationFromSpawnRule(anchor.rotation, rule);
+        Quaternion bodyYawOnly = Quaternion.Euler(0f, body.eulerAngles.y, 0f);
+        Vector3 offsetWorld = spawnOffsetUsesBodyYawOnly
+            ? bodyYawOnly * rule.localOffset
+            : anchor.TransformDirection(rule.localOffset);
+        Vector3 baseWorldPos = anchor.position + offsetWorld;
 
         Vector3 aimPoint = AimPointForTarget(target);
         Vector3 dir;
         if (target != null)
         {
             dir = aimPoint - baseWorldPos;
-            if (dir.sqrMagnitude < 1e-6f) dir = orientWorld * Vector3.forward;
+            if (dir.sqrMagnitude < 1e-6f) dir = PlanarCharacterForward();
             else dir.Normalize();
         }
         else
@@ -78,7 +94,21 @@ public class MageNormalAttack : MonoBehaviour
         spawnPos = baseWorldPos + dir * spawnForwardClearance;
         spawnPos.y += spawnHeightBias;
         spawnRot = Quaternion.LookRotation(dir, Vector3.up);
+        _lastPredictedSpawnPos = spawnPos;
+        _lastPredictedSpawnRot = spawnRot;
+        _hasLastPredictedSpawn = true;
+
+        character?.LogCritMageVfx(
+            $"PredictSpawn hit={comboIndex} anchor={anchor.name} bodyYaw={body.eulerAngles.y:F1} clientAnchor={useBodyAnchorForClientPrediction} " +
+            $"target={(target != null ? target.name : "none")} pos={spawnPos} dir={dir}");
         return true;
+    }
+
+    public bool TryGetLastPredictedSpawn(out Vector3 spawnPos, out Quaternion spawnRot)
+    {
+        spawnPos = _lastPredictedSpawnPos;
+        spawnRot = _lastPredictedSpawnRot;
+        return _hasLastPredictedSpawn;
     }
 
     public void SpawnVFXDirect(int comboIndex, Vector3 spawnPos, Quaternion spawnRot)
@@ -89,6 +119,7 @@ public class MageNormalAttack : MonoBehaviour
         float scale = 1f;
         if (comboIndex >= 0 && comboIndex < weapon.hitTimings.Length)
             scale = weapon.hitTimings[comboIndex].spawnRule.scale;
+        character?.LogCritMageVfx($"SpawnVFXDirect hit={comboIndex} pos={spawnPos} fwd={spawnRot * Vector3.forward}");
         SpawnProjectileVisual(vfxPrefab, comboIndex, spawnPos, spawnRot, null, scale);
     }
 
@@ -102,18 +133,6 @@ public class MageNormalAttack : MonoBehaviour
         }
         if (character != null) return character.transform;
         return transform;
-    }
-
-    private static Quaternion RotationFromSpawnRule(Quaternion anchorWorld, VfxSpawnRule r)
-    {
-        Quaternion q = anchorWorld;
-        q *= Quaternion.AngleAxis(r.yawOffset, Vector3.up);
-        Vector3 right = q * Vector3.right;
-        q *= Quaternion.AngleAxis(r.pitchOffset, right);
-        Vector3 fwd = q * Vector3.forward;
-        q *= Quaternion.AngleAxis(r.rollOffset, fwd);
-        q *= Quaternion.Euler(r.extraEulerOffset);
-        return q;
     }
 
     private static Vector3 AimPointForTarget(Transform target)
@@ -203,13 +222,14 @@ public class MageNormalAttack : MonoBehaviour
         if (projectileScript != null)
         {
             if (target != null)
-            {
-                var rotateToMouse = vfx.GetComponent<RotateToMouseScript>();
-                if (rotateToMouse == null) rotateToMouse = vfx.AddComponent<RotateToMouseScript>();
-                projectileScript.SetTarget(target.gameObject, rotateToMouse);
-            }
+                projectileScript.SetTarget(target.gameObject, null);
             projectileScript.accuracy = 100f;
+            projectileScript.rotate = false;
         }
+
+        character?.LogCritMageVfx(
+            $"SpawnProjectile hit={comboIndex} prefab={vfxPrefab.name} target={(target != null ? target.name : "none")} " +
+            $"pos={spawnPos} rotFwd={spawnRot * Vector3.forward}");
 
         var particleController = vfx.GetComponent<ParticleSystemController>();
         if (particleController != null)
