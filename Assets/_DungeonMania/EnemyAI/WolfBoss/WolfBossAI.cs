@@ -71,6 +71,12 @@ public class WolfBossAI : NetworkBehaviour
     [Header("=== Debug ===")]
     [SerializeField] private bool showDebugLog = true;
 
+    [Header("=== World Boss HP UI ===")]
+    [Tooltip("Hiện thanh máu boss lớn khi local player đến gần (Map_Chinh world boss).")]
+    [SerializeField] private bool enableWorldBossHealthBar = true;
+    [SerializeField] private float healthBarShowDistance = 26f;
+    [SerializeField] private float healthBarHideDistance = 30f;
+
     // ═══════════════════════════════════════════════════════════════════════════
     //  NETWORKED STATE
     // ═══════════════════════════════════════════════════════════════════════════
@@ -162,6 +168,9 @@ public class WolfBossAI : NetworkBehaviour
     // Ta tự tính bằng cách so sánh vị trí Root giữa các frame.
     private Vector3 _lastFramePos;
     private float   _currentMoveSpeed = 0f; // tốc độ thực tế đang di chuyển (units/s)
+    private TakeDamageTest _bossHpScript;
+    private bool _bossHpVisibleLocal = false;
+    private Transform _localPlayerForHealthBar;
 
     // ═══════════════════════════════════════════════════════════════════════════
     //  UNITY LIFECYCLE (fallback khi không có Fusion)
@@ -182,7 +191,11 @@ public class WolfBossAI : NetworkBehaviour
     private void Update()
     {
         if (!_standaloneMode) return;
-        if (_state == BossState.Dead) return;
+        if (_state == BossState.Dead)
+        {
+            HideLocalBossHealthBar();
+            return;
+        }
 
         RefreshTarget();
         UpdateDistToTarget();
@@ -201,6 +214,7 @@ public class WolfBossAI : NetworkBehaviour
         RunFSM(delta);
         TrackRootVelocity(delta);
         SyncLocomotionAnimation();
+        UpdateBossHealthBarLocal();
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -243,6 +257,7 @@ public class WolfBossAI : NetworkBehaviour
 
     public override void Render()
     {
+        UpdateBossHealthBarLocal();
         if (animator == null || _changeDetector == null) return;
 
         // Tính velocity thực từ độ thay đổi vị trí Root
@@ -280,12 +295,22 @@ public class WolfBossAI : NetworkBehaviour
         // EnemyScript — đảm bảo isBoss = true để CC immunity và damage system
         _enemyScript = GetComponent<EnemyScript>();
         if (_enemyScript == null) _enemyScript = GetComponentInChildren<EnemyScript>();
+        _bossHpScript = GetComponent<TakeDamageTest>();
+        if (_bossHpScript == null) _bossHpScript = GetComponentInChildren<TakeDamageTest>(true);
         if (_enemyScript != null)
         {
             _enemyScript.isBoss = true;
             _baseArmorValue = _enemyScript.armorValue;
             _baseMagicValue = _enemyScript.magicValue;
             Log($"[WolfBossAI] EnemyScript found — isBoss=true, baseArmor={_baseArmorValue}, baseMagic={_baseMagicValue}");
+
+            if (_bossHpScript != null)
+            {
+                _bossHpScript.UseHealthBar = true;
+                if (string.IsNullOrWhiteSpace(_bossHpScript.BossName)
+                    && !string.IsNullOrWhiteSpace(_enemyScript.enemyName))
+                    _bossHpScript.BossName = _enemyScript.enemyName;
+            }
         }
         else
         {
@@ -1162,6 +1187,7 @@ public class WolfBossAI : NetworkBehaviour
 
         _fireFang?.ForceKill();
         _iceFang?.ForceKill();
+        HideLocalBossHealthBar();
 
         // Reset toàn bộ Phase 2 state để Play Mode lần sau khởi đầu sạch
         ResetPhase2State();
@@ -1171,6 +1197,79 @@ public class WolfBossAI : NetworkBehaviour
     {
         // Đảm bảo Phase 2 được reset hoàn toàn khi thoát Play Mode hoặc disable GO
         ResetPhase2State();
+        HideLocalBossHealthBar();
+    }
+
+    private Transform ResolveLocalPlayerForBossHp()
+    {
+        if (Character.LocalCharacter != null)
+            return Character.LocalCharacter.transform;
+
+        if (_localPlayerForHealthBar != null && _localPlayerForHealthBar.gameObject.activeInHierarchy)
+            return _localPlayerForHealthBar;
+
+        var playerGO = GameObject.FindGameObjectWithTag("Player");
+        if (playerGO != null)
+            _localPlayerForHealthBar = playerGO.transform;
+        return _localPlayerForHealthBar;
+    }
+
+    private void UpdateBossHealthBarLocal()
+    {
+        if (!enableWorldBossHealthBar)
+        {
+            HideLocalBossHealthBar();
+            return;
+        }
+
+        if (_bossHpScript == null)
+        {
+            _bossHpScript = GetComponent<TakeDamageTest>();
+            if (_bossHpScript == null) _bossHpScript = GetComponentInChildren<TakeDamageTest>(true);
+            if (_bossHpScript == null) return;
+        }
+
+        if (_state == BossState.Dead || !_bossHpScript.IsAlive() || _bossHpScript.CurrentHealth <= 0f)
+        {
+            HideLocalBossHealthBar();
+            return;
+        }
+
+        Transform localPlayer = ResolveLocalPlayerForBossHp();
+        if (localPlayer == null)
+        {
+            HideLocalBossHealthBar();
+            return;
+        }
+
+        Vector3 delta = localPlayer.position - transform.position;
+        delta.y = 0f;
+        float sqrDist = delta.sqrMagnitude;
+        float showSqr = healthBarShowDistance * healthBarShowDistance;
+        float hideSqr = Mathf.Max(healthBarHideDistance, healthBarShowDistance + 1f);
+        hideSqr *= hideSqr;
+
+        if (!_bossHpVisibleLocal && sqrDist <= showSqr)
+        {
+            BossHealthBarUI.EnsureInstance();
+            if (BossHealthBarUI.Instance != null)
+            {
+                BossHealthBarUI.Instance.ShowBossHealth(_bossHpScript);
+                _bossHpVisibleLocal = true;
+            }
+            return;
+        }
+
+        if (_bossHpVisibleLocal && sqrDist >= hideSqr)
+            HideLocalBossHealthBar();
+    }
+
+    private void HideLocalBossHealthBar()
+    {
+        if (!_bossHpVisibleLocal) return;
+        if (_bossHpScript != null && BossHealthBarUI.Instance != null)
+            BossHealthBarUI.Instance.HideBoss(_bossHpScript);
+        _bossHpVisibleLocal = false;
     }
 
     /// <summary>

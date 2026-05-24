@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using Fusion;
 
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -26,6 +27,7 @@ public class BlacksmithNPC : MonoBehaviour
 
     private bool _canInteract = false;
     private bool _isOpen = false;
+    private bool pausedTimeForBlacksmith = false;
 
     void Awake()
     {
@@ -177,8 +179,10 @@ public class BlacksmithNPC : MonoBehaviour
         // Mở UI
         blacksmithUI.Open();
 
-        // Pause game
-        Time.timeScale = 0f;
+        // Pause game chỉ ở single/local mode.
+        pausedTimeForBlacksmith = ShouldPauseTimeForBlacksmith();
+        if (pausedTimeForBlacksmith)
+            Time.timeScale = 0f;
 
         // Cursor được xử lý bời CursorUIPriority.BeginUiOverlay() ở trên
 
@@ -195,8 +199,10 @@ public class BlacksmithNPC : MonoBehaviour
         // Đóng UI
         if (blacksmithUI != null) blacksmithUI.Close();
 
-        // Resume game
-        Time.timeScale = 1f;
+        // Resume game (chỉ nếu Blacksmith đã pause trước đó)
+        if (pausedTimeForBlacksmith)
+            Time.timeScale = 1f;
+        pausedTimeForBlacksmith = false;
 
         CursorUIPriority.EndUiOverlay();
 
@@ -233,6 +239,7 @@ public class BlacksmithNPC : MonoBehaviour
     void OnTriggerEnter(Collider other)
     {
         if (!other.CompareTag(playerTag)) return;
+        if (!IsLocalPlayerCollider(other)) return;
         _canInteract = true;
         if (!_isOpen && promptCanvas) promptCanvas.SetActive(true);
     }
@@ -240,6 +247,7 @@ public class BlacksmithNPC : MonoBehaviour
     void OnTriggerExit(Collider other)
     {
         if (!other.CompareTag(playerTag)) return;
+        if (!IsLocalPlayerCollider(other)) return;
         _canInteract = false;
         if (promptCanvas) promptCanvas.SetActive(false);
 
@@ -250,10 +258,31 @@ public class BlacksmithNPC : MonoBehaviour
     // ─── Player / Camera Controls ────────────────────────────────
     // (Same pattern as InventoryController)
 
+    private bool ShouldPauseTimeForBlacksmith()
+    {
+        NetworkRunner runner = FindFirstObjectByType<NetworkRunner>();
+        return runner == null || !runner.IsRunning || runner.GameMode == GameMode.Single;
+    }
+
+    private bool IsLocalPlayerCollider(Collider other)
+    {
+        var character = other.GetComponentInParent<Character>();
+        if (character == null)
+            return false;
+
+        if (character == Character.LocalCharacter)
+            return true;
+
+        return character.Object != null && character.Object.IsValid && character.HasInputAuthority;
+    }
+
     void DisablePlayerInput()
     {
 #if ENABLE_INPUT_SYSTEM
-        var playerInput = FindFirstObjectByType<PlayerInput>();
+        var localCharacter = Character.LocalCharacter;
+        var playerInput = localCharacter != null
+            ? (localCharacter.playerInput != null ? localCharacter.playerInput : localCharacter.GetComponent<PlayerInput>())
+            : FindFirstObjectByType<PlayerInput>();
         if (playerInput != null)
         {
             var playerMap = playerInput.actions.FindActionMap("Player", false);
@@ -268,7 +297,10 @@ public class BlacksmithNPC : MonoBehaviour
     void EnablePlayerInput()
     {
 #if ENABLE_INPUT_SYSTEM
-        var playerInput = FindFirstObjectByType<PlayerInput>();
+        var localCharacter = Character.LocalCharacter;
+        var playerInput = localCharacter != null
+            ? (localCharacter.playerInput != null ? localCharacter.playerInput : localCharacter.GetComponent<PlayerInput>())
+            : FindFirstObjectByType<PlayerInput>();
         if (playerInput != null)
         {
             var playerMap = playerInput.actions.FindActionMap("Player", false);

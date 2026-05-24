@@ -2769,7 +2769,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _stateAuthorityChangeErrorCorrectionDelta: 0
   SyncScale: 0
-  SyncParent: 1
+  SyncParent: 0
   _autoAOIOverride: 1
   DisableSharedModeInterpolation: 0
 --- !u!114 &1834968789106887428
@@ -2801,11 +2801,13 @@ MonoBehaviour:
   showDetectionGizmos: 1
   raycastRange: 5
   raycastBufferZone: 0.5
-  damagePerHit: 1
+  damagePerHit: 70
   damageInterval: 2
   enableRaycastDamage: 0
   maxHealth: 5000
   _CurrentHealth: 0
+  _NetIsDead:
+    _value: 0
   isAlive: 1
   useHealthBar: 0
   bossName: Vargr of the Dual Embers
@@ -3024,6 +3026,9 @@ MonoBehaviour:
   faceTargetDotThreshold: 0.97
   faceTargetTimeout: 1.5
   showDebugLog: 0
+  enableWorldBossHealthBar: 1
+  healthBarShowDistance: 26
+  healthBarHideDistance: 30
   _NetworkedHp: 20000
   _NetworkedMaxHp: 35000
   _BossPhase: 0
@@ -3060,6 +3065,7 @@ MonoBehaviour:
   rotationSpeed: 8
   minRangedDistance: 0
   skillWarningDuration: 1.2
+  retargetInterval: 0.45
   isBoss: 1
   enemyType: 0
   specificEnemyType: 0

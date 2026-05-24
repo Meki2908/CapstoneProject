@@ -5,6 +5,16 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using Fusion;
 public enum CharacterStateSync { Standing, Jumping, Crouching, Sprinting, Dash, HardStop, DrawWeapon, SheathWeapon, CombatMove, Attack, GetHit, Die }
+public enum BlacksmithRefineNetResult
+{
+    Success = 0,
+    Fail = 1,
+    MaxLevel = 2,
+    NoEquipment = 3,
+    NoStone = 4,
+    InvalidRequest = 5,
+    SystemError = 6
+}
 public class Character : NetworkBehaviour, IBeforeAllTicks
 {
     [Header("Controls")]
@@ -371,6 +381,9 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
     public static Character LocalCharacter;
     /// <summary>Alias for readability in UI code.</summary>
     public static Character Local => LocalCharacter;
+    /// <summary>Client-side callback fired when a host-authoritative blacksmith refine request is resolved.</summary>
+    public event Action<BlacksmithRefineNetResult, int, int, int> BlacksmithRefineResolved;
+    int _lastBlacksmithRefineRequestTick = int.MinValue;
     // === Dungeon party runtime state (host-authoritative via RPCs) ===
     static int s_dungeonInviteId;
     static bool s_dungeonInviteActive;
@@ -2505,6 +2518,122 @@ public class Character : NetworkBehaviour, IBeforeAllTicks
         {
             EquipmentManager.Instance.OnEquipmentChanged -= OnEquipmentChanged;
         }
+    }
+
+    // ─── Blacksmith (Fusion-authoritative refine) ─────────────────
+
+    /// <summary>
+    /// Request a refine action from InputAuthority to StateAuthority.
+    /// Returns false when this object is not a valid local Fusion player.
+    /// </summary>
+    public bool TryRequestBlacksmithRefine(int equipSlotIndex, int materialItemId)
+    {
+        if (Runner == null || !Runner.IsRunning || Object == null || !Object.IsValid || !HasInputAuthority)
+            return false;
+
+        int tick = (int)Runner.Tick;
+        if (tick == _lastBlacksmithRefineRequestTick)
+        {
+            // Deduplicate accidental double-clicks in the same simulation tick.
+            return false;
+        }
+
+        _lastBlacksmithRefineRequestTick = tick;
+        RPC_RequestBlacksmithRefine(equipSlotIndex, materialItemId);
+        return true;
+    }
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    void RPC_RequestBlacksmithRefine(int equipSlotIndex, int materialItemId)
+    {
+        BlacksmithRefineNetResult netResult = BlacksmithRefineNetResult.InvalidRequest;
+        int oldLevel = 0;
+        int newLevel = 0;
+
+        if (EquipmentManager.Instance == null || InventoryManager.Instance == null || RefinementManager.Instance == null)
+        {
+            netResult = BlacksmithRefineNetResult.SystemError;
+            RPC_BlacksmithRefineResult((int)netResult, equipSlotIndex, oldLevel, newLevel);
+            return;
+        }
+
+        if (equipSlotIndex < 0 || equipSlotIndex >= 4)
+        {
+            netResult = BlacksmithRefineNetResult.InvalidRequest;
+            RPC_BlacksmithRefineResult((int)netResult, equipSlotIndex, oldLevel, newLevel);
+            return;
+        }
+
+        Item equip = EquipmentManager.Instance.GetEquippedItemByIndex(equipSlotIndex);
+        if (equip == null)
+        {
+            netResult = BlacksmithRefineNetResult.NoEquipment;
+            RPC_BlacksmithRefineResult((int)netResult, equipSlotIndex, oldLevel, newLevel);
+            return;
+        }
+
+        oldLevel = EquipmentManager.Instance.GetEnhancementLevel(equipSlotIndex);
+        newLevel = oldLevel;
+
+        if (oldLevel >= EquipmentManager.MAX_ENHANCEMENT_LEVEL)
+        {
+            netResult = BlacksmithRefineNetResult.MaxLevel;
+            RPC_BlacksmithRefineResult((int)netResult, equipSlotIndex, oldLevel, newLevel);
+            return;
+        }
+
+        Item stone = InventoryManager.Instance.GetItemById(materialItemId);
+        if (stone == null || stone.itemType != ItemType.Material || stone.refinementTier <= 0)
+        {
+            netResult = BlacksmithRefineNetResult.NoStone;
+            RPC_BlacksmithRefineResult((int)netResult, equipSlotIndex, oldLevel, newLevel);
+            return;
+        }
+
+        if (InventoryManager.Instance.GetItemAmount(materialItemId) <= 0)
+        {
+            netResult = BlacksmithRefineNetResult.NoStone;
+            RPC_BlacksmithRefineResult((int)netResult, equipSlotIndex, oldLevel, newLevel);
+            return;
+        }
+
+        RefinementResult refineResult = RefinementManager.Instance.TryRefine(equipSlotIndex, stone);
+        newLevel = EquipmentManager.Instance.GetEnhancementLevel(equipSlotIndex);
+
+        switch (refineResult)
+        {
+            case RefinementResult.Success:
+                netResult = BlacksmithRefineNetResult.Success;
+                break;
+            case RefinementResult.Fail:
+                netResult = BlacksmithRefineNetResult.Fail;
+                break;
+            case RefinementResult.MaxLevel:
+                netResult = BlacksmithRefineNetResult.MaxLevel;
+                break;
+            case RefinementResult.NoEquipment:
+                netResult = BlacksmithRefineNetResult.NoEquipment;
+                break;
+            case RefinementResult.NoStone:
+                netResult = BlacksmithRefineNetResult.NoStone;
+                break;
+            case RefinementResult.InvalidSlot:
+            default:
+                netResult = BlacksmithRefineNetResult.InvalidRequest;
+                break;
+        }
+
+        RPC_BlacksmithRefineResult((int)netResult, equipSlotIndex, oldLevel, newLevel);
+    }
+
+    [Rpc(RpcSources.StateAuthority, RpcTargets.InputAuthority)]
+    void RPC_BlacksmithRefineResult(int resultCode, int equipSlotIndex, int oldLevel, int newLevel)
+    {
+        BlacksmithRefineNetResult result = Enum.IsDefined(typeof(BlacksmithRefineNetResult), resultCode)
+            ? (BlacksmithRefineNetResult)resultCode
+            : BlacksmithRefineNetResult.SystemError;
+
+        BlacksmithRefineResolved?.Invoke(result, equipSlotIndex, oldLevel, newLevel);
     }
 
     #region Animation Events - Dash

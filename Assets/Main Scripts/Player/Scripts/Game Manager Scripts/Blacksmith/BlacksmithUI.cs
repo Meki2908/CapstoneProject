@@ -104,6 +104,10 @@ public class BlacksmithUI : MonoBehaviour
     [SerializeField] private Button fusionButton;
     [SerializeField] private TextMeshProUGUI fusionInfoText;
 
+    [Header("Fusion Networking (safe rollout)")]
+    [Tooltip("Enable only after inventory/equipment data is fully moved to per-player Fusion network data.")]
+    [SerializeField] private bool enableFusionAuthoritativeRefine = false;
+
 
 
     // ─── Runtime State ───────────────────────────────────────────
@@ -114,6 +118,17 @@ public class BlacksmithUI : MonoBehaviour
     private int selectedRefineSlot = -1;
     private Item selectedRefineMaterial = null;
     private bool isRefining = false;
+    private Character _refineRpcCharacter;
+    private bool _networkRefineInFlight = false;
+    private bool _networkRefineResultReady = false;
+    private BlacksmithRefineNetResult _networkRefineResult = BlacksmithRefineNetResult.SystemError;
+    private int _networkRefineOldLevel = 0;
+    private int _networkRefineNewLevel = 0;
+    private int _networkRefineSlot = -1;
+    private int _networkRefineMaterialId = -1;
+    private float _networkRefineRequestRealtime = -1f;
+    const float NetworkRefineTimeoutSeconds = 8f;
+    private bool _warnedFusionRefineDisabled = false;
 
     private int selectedEquipmentSlot = -1; // 0-3 for equipment tab
     private Item selectedGem = null;
@@ -290,6 +305,8 @@ public class BlacksmithUI : MonoBehaviour
 
     void OnDestroy()
     {
+        DetachRefineRpcHook();
+
         // ─── Unsubscribe events ──────────────────────────────
         if (InventoryManager.Instance != null)
             InventoryManager.Instance.OnInventoryChanged -= OnInventoryChanged;
@@ -348,6 +365,7 @@ public class BlacksmithUI : MonoBehaviour
     {
         if (_isClosing) return; // Prevent double-invocation loop
         _isClosing = true;
+        ResetPendingNetworkRefine();
 
         if (mainPanel) mainPanel.SetActive(false);
         ClearSelection();
@@ -1576,6 +1594,8 @@ public class BlacksmithUI : MonoBehaviour
 
     void Update()
     {
+        EnsureRefineRpcHook();
+
         // Always apply grid config when UI is open (live tweaking in play mode)
         // if (mainPanel != null && mainPanel.activeSelf)
         //     ApplyGridConfig();
@@ -1992,10 +2012,98 @@ public class BlacksmithUI : MonoBehaviour
 
     // ─── Refinement Execution ─────────────────────────────────────
 
+    void EnsureRefineRpcHook()
+    {
+        Character local = Character.LocalCharacter;
+        if (local == _refineRpcCharacter)
+            return;
+
+        DetachRefineRpcHook();
+
+        _refineRpcCharacter = local;
+        if (_refineRpcCharacter != null)
+            _refineRpcCharacter.BlacksmithRefineResolved += OnNetworkRefineResolved;
+    }
+
+    void DetachRefineRpcHook()
+    {
+        if (_refineRpcCharacter != null)
+            _refineRpcCharacter.BlacksmithRefineResolved -= OnNetworkRefineResolved;
+        _refineRpcCharacter = null;
+    }
+
+    void ResetPendingNetworkRefine()
+    {
+        _networkRefineInFlight = false;
+        _networkRefineResultReady = false;
+        _networkRefineResult = BlacksmithRefineNetResult.SystemError;
+        _networkRefineOldLevel = 0;
+        _networkRefineNewLevel = 0;
+        _networkRefineSlot = -1;
+        _networkRefineMaterialId = -1;
+        _networkRefineRequestRealtime = -1f;
+    }
+
+    bool TryStartNetworkRefineRequest()
+    {
+        if (!enableFusionAuthoritativeRefine)
+        {
+            if (!_warnedFusionRefineDisabled)
+            {
+                _warnedFusionRefineDisabled = true;
+                Debug.LogWarning("[BlacksmithUI] Fusion-authoritative refine is disabled for safe rollout. Using local refine flow.");
+            }
+            return false;
+        }
+
+        EnsureRefineRpcHook();
+        if (_refineRpcCharacter == null || _refineRpcCharacter.Runner == null || !_refineRpcCharacter.Runner.IsRunning)
+            return false;
+        if (!_refineRpcCharacter.HasInputAuthority || _refineRpcCharacter.Object == null || !_refineRpcCharacter.Object.IsValid)
+            return false;
+
+        int materialId = selectedRefineMaterial != null ? selectedRefineMaterial.id : -1;
+        if (materialId < 0 || selectedRefineSlot < 0)
+            return false;
+
+        if (!_refineRpcCharacter.TryRequestBlacksmithRefine(selectedRefineSlot, materialId))
+            return false;
+
+        _networkRefineInFlight = true;
+        _networkRefineResultReady = false;
+        _networkRefineResult = BlacksmithRefineNetResult.SystemError;
+        _networkRefineOldLevel = 0;
+        _networkRefineNewLevel = 0;
+        _networkRefineSlot = selectedRefineSlot;
+        _networkRefineMaterialId = materialId;
+        _networkRefineRequestRealtime = Time.unscaledTime;
+        return true;
+    }
+
+    void OnNetworkRefineResolved(BlacksmithRefineNetResult result, int slotIndex, int oldLevel, int newLevel)
+    {
+        if (!_networkRefineInFlight)
+            return;
+        if (slotIndex != _networkRefineSlot)
+            return;
+
+        _networkRefineResult = result;
+        _networkRefineOldLevel = oldLevel;
+        _networkRefineNewLevel = newLevel;
+        _networkRefineResultReady = true;
+    }
+
     void OnRefineButtonClicked()
     {
         if (isRefining) return;
         if (selectedRefineSlot < 0 || selectedRefineMaterial == null) return;
+
+        if (TryStartNetworkRefineRequest())
+        {
+            StartCoroutine(RefineAnimationCoroutine(false));
+            return;
+        }
+
         if (EquipmentManager.Instance == null || RefinementManager.Instance == null) return;
 
         var equip = EquipmentManager.Instance.GetEquippedItemByIndex(selectedRefineSlot);
@@ -2004,10 +2112,10 @@ public class BlacksmithUI : MonoBehaviour
         int level = EquipmentManager.Instance.GetEnhancementLevel(selectedRefineSlot);
         if (level >= EquipmentManager.MAX_ENHANCEMENT_LEVEL) return;
 
-        StartCoroutine(RefineAnimationCoroutine());
+        StartCoroutine(RefineAnimationCoroutine(true));
     }
 
-    IEnumerator RefineAnimationCoroutine()
+    IEnumerator RefineAnimationCoroutine(bool executeLocalRefine)
     {
         isRefining = true;
         if (refineButton) refineButton.interactable = false;
@@ -2106,10 +2214,69 @@ public class BlacksmithUI : MonoBehaviour
         // Flash everything white for a moment
         yield return new WaitForSecondsRealtime(0.15f);
 
-        int oldLevel = selectedRefineSlot >= 0 && selectedRefineSlot < 4 ? EquipmentManager.Instance.GetEnhancementLevel(selectedRefineSlot) : 0;
+        int oldLevel = selectedRefineSlot >= 0 && selectedRefineSlot < 4 && EquipmentManager.Instance != null
+            ? EquipmentManager.Instance.GetEnhancementLevel(selectedRefineSlot)
+            : 0;
 
-        // Execute refinement
-        RefinementResult result = RefinementManager.Instance.TryRefine(selectedRefineSlot, selectedRefineMaterial);
+        // Execute refinement (offline/local) or wait for host-authoritative Fusion result.
+        RefinementResult result = RefinementResult.InvalidSlot;
+        if (executeLocalRefine)
+        {
+            if (RefinementManager.Instance != null)
+                result = RefinementManager.Instance.TryRefine(selectedRefineSlot, selectedRefineMaterial);
+        }
+        else
+        {
+            float waitDeadline = Time.unscaledTime + NetworkRefineTimeoutSeconds;
+            while (!_networkRefineResultReady && Time.unscaledTime < waitDeadline)
+                yield return null;
+
+            if (!_networkRefineResultReady)
+            {
+                float waited = _networkRefineRequestRealtime >= 0f
+                    ? Time.unscaledTime - _networkRefineRequestRealtime
+                    : NetworkRefineTimeoutSeconds;
+                Debug.LogWarning($"[BlacksmithUI] Fusion refine request timed out after {waited:F2}s; resetting UI state.");
+                if (resultPanel != null && resultText != null)
+                {
+                    resultPanel.SetActive(true);
+                    ConfigureResultText();
+                    resultText.text = "Refine request timed out.\nPlease try again.";
+                    resultText.color = new Color(1f, 0.75f, 0.2f);
+                    StopCoroutine(nameof(HideResultCoroutine));
+                    StartCoroutine(HideResultCoroutine());
+                }
+
+                isRefining = false;
+                if (refineButton != null) refineButton.interactable = true;
+                ResetPendingNetworkRefine();
+                RefreshAll();
+                yield break;
+            }
+
+            oldLevel = _networkRefineOldLevel;
+            switch (_networkRefineResult)
+            {
+                case BlacksmithRefineNetResult.Success:
+                    result = RefinementResult.Success;
+                    break;
+                case BlacksmithRefineNetResult.Fail:
+                    result = RefinementResult.Fail;
+                    break;
+                case BlacksmithRefineNetResult.MaxLevel:
+                    result = RefinementResult.MaxLevel;
+                    break;
+                case BlacksmithRefineNetResult.NoEquipment:
+                    result = RefinementResult.NoEquipment;
+                    break;
+                case BlacksmithRefineNetResult.NoStone:
+                    result = RefinementResult.NoStone;
+                    break;
+                default:
+                    result = RefinementResult.InvalidSlot;
+                    break;
+            }
+        }
 
         // Get equip icon for animation
         RectTransform equipRT = (selectedRefineSlot >= 0 && selectedRefineSlot < refineEquipSlotIcons.Length)
@@ -2220,6 +2387,32 @@ public class BlacksmithUI : MonoBehaviour
                 StartCoroutine(HideResultCoroutine());
             }
         }
+        else
+        {
+            if (resultPanel && resultText)
+            {
+                resultPanel.SetActive(true);
+                ConfigureResultText();
+                switch (result)
+                {
+                    case RefinementResult.MaxLevel:
+                        resultText.text = "Refine canceled.\nEquipment is already MAX level.";
+                        break;
+                    case RefinementResult.NoEquipment:
+                        resultText.text = "Refine canceled.\nNo equipment in selected slot.";
+                        break;
+                    case RefinementResult.NoStone:
+                        resultText.text = "Refine canceled.\nMissing refinement stone.";
+                        break;
+                    default:
+                        resultText.text = "Refine canceled.\nInvalid request or network error.";
+                        break;
+                }
+                resultText.color = new Color(1f, 0.75f, 0.2f);
+                StopCoroutine(nameof(HideResultCoroutine));
+                StartCoroutine(HideResultCoroutine());
+            }
+        }
 
         // Clear material (consumed) and refresh
         if (result == RefinementResult.Success || result == RefinementResult.Fail)
@@ -2233,6 +2426,8 @@ public class BlacksmithUI : MonoBehaviour
         }
 
         isRefining = false;
+        if (!executeLocalRefine)
+            ResetPendingNetworkRefine();
         RefreshAll();
     }
 
