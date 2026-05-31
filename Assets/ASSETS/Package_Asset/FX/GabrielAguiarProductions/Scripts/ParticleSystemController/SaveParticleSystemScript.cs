@@ -25,13 +25,11 @@ namespace GAP_ParticleSystemController
 
 		public static void SaveVFX (GameObject prefabVFX, List<ParticleSystemOriginalSettings> psOriginalSettingsList) {
 #if !UNITY_EDITOR
-            // Runtime: cache in memory only.
-            var k = RuntimeKey(prefabVFX);
-            if (!string.IsNullOrEmpty(k) && psOriginalSettingsList != null)
-                RuntimeCache[k] = psOriginalSettingsList;
+            var cacheKey = RuntimeKey(prefabVFX);
+            if (!string.IsNullOrEmpty(cacheKey) && psOriginalSettingsList != null)
+                RuntimeCache[cacheKey] = psOriginalSettingsList;
             return;
-#endif
-
+#else
 #if UNITY_2018_3_OR_NEWER
              var prefabFolderPath = GetPrefabFolder2018_3 (prefabVFX);
 #else
@@ -41,18 +39,16 @@ namespace GAP_ParticleSystemController
             if (string.IsNullOrEmpty(prefabFolderPath))
             {
                 // Not in PrefabStage (e.g. running in scene). Cache only.
-                var k = RuntimeKey(prefabVFX);
-                if (!string.IsNullOrEmpty(k) && psOriginalSettingsList != null)
-                    RuntimeCache[k] = psOriginalSettingsList;
+                var cacheKey = RuntimeKey(prefabVFX);
+                if (!string.IsNullOrEmpty(cacheKey) && psOriginalSettingsList != null)
+                    RuntimeCache[cacheKey] = psOriginalSettingsList;
                 return;
             }
 
-#if UNITY_EDITOR
 			if (!Directory.Exists (prefabFolderPath + "/OriginalSettings")) {
 				UnityEditor.AssetDatabase.CreateFolder (prefabFolderPath, "OriginalSettings");
 				Debug.Log ("Created folder:  " + prefabFolderPath + "/OriginalSettings");
 			}
-#endif
             BinaryFormatter bf = new BinaryFormatter ();			
 			FileStream stream = new FileStream (prefabFolderPath + "/OriginalSettings/" + prefabVFX.name + ".dat", FileMode.Create);
 
@@ -64,16 +60,16 @@ namespace GAP_ParticleSystemController
 #endif
 
             Debug.Log ("Original Settings of '" + prefabVFX.name + "' saved to: " + prefabFolderPath + "/OriginalSettings");
+#endif
 		}
 
 		public static List<ParticleSystemOriginalSettings> LoadVFX (GameObject prefabVFX) {
 #if !UNITY_EDITOR
-            var k = RuntimeKey(prefabVFX);
-            if (!string.IsNullOrEmpty(k) && RuntimeCache.TryGetValue(k, out var cached))
-                return cached;
+            var cacheKey = RuntimeKey(prefabVFX);
+            if (!string.IsNullOrEmpty(cacheKey) && RuntimeCache.TryGetValue(cacheKey, out var cachedList))
+                return cachedList;
             return null;
-#endif
-
+#else
 #if UNITY_2018_3_OR_NEWER
             var prefabFolderPath = GetPrefabFolder2018_3 (prefabVFX);
 #else
@@ -82,9 +78,9 @@ namespace GAP_ParticleSystemController
 
             if (string.IsNullOrEmpty(prefabFolderPath))
             {
-                var k = RuntimeKey(prefabVFX);
-                if (!string.IsNullOrEmpty(k) && RuntimeCache.TryGetValue(k, out var cached))
-                    return cached;
+                var cacheKey = RuntimeKey(prefabVFX);
+                if (!string.IsNullOrEmpty(cacheKey) && RuntimeCache.TryGetValue(cacheKey, out var cachedList))
+                    return cachedList;
                 return null;
             }
 
@@ -102,14 +98,14 @@ namespace GAP_ParticleSystemController
 				Debug.Log ("No saved VFX data found");
 				return null;
 			}
+#endif
 		}
 
 		public static bool CheckExistingFile (GameObject prefabVFX){
 #if !UNITY_EDITOR
-            var k = RuntimeKey(prefabVFX);
-            return !string.IsNullOrEmpty(k) && RuntimeCache.ContainsKey(k);
-#endif
-
+            var cacheKey = RuntimeKey(prefabVFX);
+            return !string.IsNullOrEmpty(cacheKey) && RuntimeCache.ContainsKey(cacheKey);
+#else
 #if UNITY_2018_3_OR_NEWER
             var prefabFolderPath = GetPrefabFolder2018_3 (prefabVFX);
 #else
@@ -122,6 +118,7 @@ namespace GAP_ParticleSystemController
 					return false;
 			} else
 				return false;
+#endif
 		}
 
 		static string GetPrefabFolder (GameObject prefabVFX){
