@@ -621,4 +621,60 @@ public class EquipmentManager : MonoBehaviour
     /// Number of gem slots per equipment piece
     /// </summary>
     public int GetNumGemSlots() => NUM_GEM_SLOTS;
+
+    /// <summary>
+    /// Replace all equipment slots from Fusion blacksmith snapshot (does not touch inventory).
+    /// </summary>
+    public void ReplaceAllForNetwork(NetEquipEntry[] entries, bool saveToDisk)
+    {
+        if (equipmentSlots == null)
+            InitializeRuntime();
+
+        for (int i = 0; i < NUM_SLOTS; i++)
+        {
+            equipmentSlots.slotItemIds[i] = -1;
+            equipmentSlots.slotRarities[i] = 0;
+            equipmentSlots.equipStatRolls[i] = 1f;
+            equipmentSlots.enhancementLevels[i] = 0;
+        }
+
+        for (int i = 0; i < equipmentSlots.gemSlotIds.Length; i++)
+        {
+            equipmentSlots.gemSlotIds[i] = -1;
+            equipmentSlots.gemRolledValues[i] = 0f;
+        }
+
+        if (entries != null)
+        {
+            for (int slot = 0; slot < NUM_SLOTS && slot < entries.Length; slot++)
+            {
+                var e = entries[slot];
+                if (e.IsEmpty)
+                    continue;
+
+                equipmentSlots.slotItemIds[slot] = e.ItemId;
+                equipmentSlots.slotRarities[slot] = e.Rarity;
+                equipmentSlots.equipStatRolls[slot] = e.StatRoll > 0f ? e.StatRoll : 1f;
+                equipmentSlots.enhancementLevels[slot] = Mathf.Clamp(e.EnhancementLevel, 0, MAX_ENHANCEMENT_LEVEL);
+
+                SetGemFromNetwork(slot, 0, e.GemId0, e.GemRoll0);
+                SetGemFromNetwork(slot, 1, e.GemId1, e.GemRoll1);
+                SetGemFromNetwork(slot, 2, e.GemId2, e.GemRoll2);
+                SetGemFromNetwork(slot, 3, e.GemId3, e.GemRoll3);
+            }
+        }
+
+        if (saveToDisk)
+            Save();
+        OnEquipmentChanged?.Invoke();
+    }
+
+    void SetGemFromNetwork(int equipSlot, int gemSlot, int gemId, float gemRoll)
+    {
+        if (gemId < 0)
+            return;
+        int idx = GemIndex(equipSlot, gemSlot);
+        equipmentSlots.gemSlotIds[idx] = gemId;
+        equipmentSlots.gemRolledValues[idx] = gemRoll;
+    }
 }

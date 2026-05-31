@@ -327,6 +327,52 @@ public class WeaponGemManager : MonoBehaviour
     {
         return wt != WeaponType.None;
     }
+
+    /// <summary>
+    /// Replace all weapon gem slots from Fusion blacksmith snapshot.
+    /// </summary>
+    public void ReplaceAllForNetwork(NetWeaponGemEntry[] entries, bool saveToDisk)
+    {
+        if (weaponSlots == null)
+            InitializeRuntime();
+
+        foreach (WeaponType wt in new[] { WeaponType.Sword, WeaponType.Axe, WeaponType.Mage })
+        {
+            for (int s = 0; s < NUM_SLOTS; s++)
+            {
+                weaponSlots[(int)wt].slotItemIds[s] = -1;
+                weaponSlots[(int)wt].slotRolledValues[s] = 0f;
+            }
+        }
+
+        if (entries != null)
+        {
+            for (int flat = 0; flat < entries.Length && flat < BlacksmithLocalSync.WeaponGemCapacity; flat++)
+            {
+                var e = entries[flat];
+                if (e.IsEmpty)
+                    continue;
+
+                int weaponTypeValue = flat / BlacksmithLocalSync.WeaponGemSlotsPerWeapon;
+                int gemSlot = flat % BlacksmithLocalSync.WeaponGemSlotsPerWeapon;
+                if (weaponTypeValue <= 0 || weaponTypeValue > (int)WeaponType.Mage)
+                    continue;
+
+                var wt = (WeaponType)weaponTypeValue;
+                if (!IsValidWeaponType(wt) || gemSlot < 0 || gemSlot >= NUM_SLOTS)
+                    continue;
+
+                weaponSlots[(int)wt].slotItemIds[gemSlot] = e.GemId;
+                weaponSlots[(int)wt].slotRolledValues[gemSlot] = e.RollValue;
+            }
+        }
+
+        if (saveToDisk)
+            Save();
+
+        foreach (WeaponType wt in new[] { WeaponType.Sword, WeaponType.Axe, WeaponType.Mage })
+            OnGemsChanged?.Invoke(wt);
+    }
 }
 
 

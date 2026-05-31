@@ -104,12 +104,6 @@ public class BlacksmithUI : MonoBehaviour
     [SerializeField] private Button fusionButton;
     [SerializeField] private TextMeshProUGUI fusionInfoText;
 
-    [Header("Fusion Networking (safe rollout)")]
-    [Tooltip("Enable only after inventory/equipment data is fully moved to per-player Fusion network data.")]
-    [SerializeField] private bool enableFusionAuthoritativeRefine = false;
-
-
-
     // ─── Runtime State ───────────────────────────────────────────
     private enum ActiveTab { Weapon, Equipment, Refinement }
     private ActiveTab currentTab = ActiveTab.Weapon;
@@ -118,7 +112,7 @@ public class BlacksmithUI : MonoBehaviour
     private int selectedRefineSlot = -1;
     private Item selectedRefineMaterial = null;
     private bool isRefining = false;
-    private Character _refineRpcCharacter;
+    private Character _blacksmithCharacter;
     private bool _networkRefineInFlight = false;
     private bool _networkRefineResultReady = false;
     private BlacksmithRefineNetResult _networkRefineResult = BlacksmithRefineNetResult.SystemError;
@@ -127,8 +121,24 @@ public class BlacksmithUI : MonoBehaviour
     private int _networkRefineSlot = -1;
     private int _networkRefineMaterialId = -1;
     private float _networkRefineRequestRealtime = -1f;
-    const float NetworkRefineTimeoutSeconds = 8f;
-    private bool _warnedFusionRefineDisabled = false;
+
+    private bool _networkSocketInFlight = false;
+    private bool _networkSocketResultReady = false;
+    private BlacksmithSocketNetResult _networkSocketResult = BlacksmithSocketNetResult.SystemError;
+
+    private bool _networkFuseInFlight = false;
+    private bool _networkFuseResultReady = false;
+    private BlacksmithSimpleNetResult _networkFuseResult = BlacksmithSimpleNetResult.SystemError;
+
+    private bool _networkUnequipInFlight = false;
+    private bool _networkUnequipResultReady = false;
+    private BlacksmithSimpleNetResult _networkUnequipResult = BlacksmithSimpleNetResult.SystemError;
+
+    private bool _networkRemoveGemInFlight = false;
+    private bool _networkRemoveGemResultReady = false;
+    private BlacksmithSimpleNetResult _networkRemoveGemResult = BlacksmithSimpleNetResult.SystemError;
+
+    const float NetworkBlacksmithTimeoutSeconds = 8f;
 
     private int selectedEquipmentSlot = -1; // 0-3 for equipment tab
     private Item selectedGem = null;
@@ -305,7 +315,7 @@ public class BlacksmithUI : MonoBehaviour
 
     void OnDestroy()
     {
-        DetachRefineRpcHook();
+        DetachBlacksmithRpcHook();
 
         // ─── Unsubscribe events ──────────────────────────────
         if (InventoryManager.Instance != null)
@@ -336,6 +346,100 @@ public class BlacksmithUI : MonoBehaviour
             RefreshAll();
     }
 
+    bool IsOnlineBlacksmith()
+    {
+        return _blacksmithCharacter != null
+            && Character.IsOnlineFusionBlacksmith(_blacksmithCharacter.Runner);
+    }
+
+    bool TryGetLocalBlacksmithCharacter(out Character character)
+    {
+        character = Character.LocalCharacter;
+        return character != null
+            && character.Runner != null
+            && character.Runner.IsRunning
+            && character.HasInputAuthority
+            && character.Object != null
+            && character.Object.IsValid;
+    }
+
+    void EnsureBlacksmithRpcHook()
+    {
+        Character local = Character.LocalCharacter;
+        if (local == _blacksmithCharacter)
+            return;
+
+        DetachBlacksmithRpcHook();
+        _blacksmithCharacter = local;
+        if (_blacksmithCharacter == null)
+            return;
+
+        _blacksmithCharacter.BlacksmithRefineResolved += OnNetworkRefineResolved;
+        _blacksmithCharacter.BlacksmithSocketResolved += OnNetworkSocketResolved;
+        _blacksmithCharacter.BlacksmithFuseResolved += OnNetworkFuseResolved;
+        _blacksmithCharacter.BlacksmithUnequipResolved += OnNetworkUnequipResolved;
+        _blacksmithCharacter.BlacksmithRemoveGemResolved += OnNetworkRemoveGemResolved;
+    }
+
+    void DetachBlacksmithRpcHook()
+    {
+        if (_blacksmithCharacter != null)
+        {
+            _blacksmithCharacter.BlacksmithRefineResolved -= OnNetworkRefineResolved;
+            _blacksmithCharacter.BlacksmithSocketResolved -= OnNetworkSocketResolved;
+            _blacksmithCharacter.BlacksmithFuseResolved -= OnNetworkFuseResolved;
+            _blacksmithCharacter.BlacksmithUnequipResolved -= OnNetworkUnequipResolved;
+            _blacksmithCharacter.BlacksmithRemoveGemResolved -= OnNetworkRemoveGemResolved;
+        }
+        _blacksmithCharacter = null;
+    }
+
+    void OnNetworkSocketResolved(BlacksmithSocketNetResult result, int tabCode)
+    {
+        if (!_networkSocketInFlight)
+            return;
+        _networkSocketResult = result;
+        _networkSocketResultReady = true;
+    }
+
+    void OnNetworkFuseResolved(BlacksmithSimpleNetResult result)
+    {
+        if (!_networkFuseInFlight)
+            return;
+        _networkFuseResult = result;
+        _networkFuseResultReady = true;
+    }
+
+    void OnNetworkUnequipResolved(BlacksmithSimpleNetResult result)
+    {
+        if (!_networkUnequipInFlight)
+            return;
+        _networkUnequipResult = result;
+        _networkUnequipResultReady = true;
+    }
+
+    void OnNetworkRemoveGemResolved(BlacksmithSimpleNetResult result)
+    {
+        if (!_networkRemoveGemInFlight)
+            return;
+        _networkRemoveGemResult = result;
+        _networkRemoveGemResultReady = true;
+    }
+
+    SocketResult MapSocketNetResult(BlacksmithSocketNetResult result)
+    {
+        switch (result)
+        {
+            case BlacksmithSocketNetResult.Success: return SocketResult.Success;
+            case BlacksmithSocketNetResult.Fail: return SocketResult.Fail;
+            case BlacksmithSocketNetResult.NoCrystal: return SocketResult.NoCrystal;
+            case BlacksmithSocketNetResult.NoGem: return SocketResult.NoGem;
+            case BlacksmithSocketNetResult.NoTarget: return SocketResult.NoTarget;
+            case BlacksmithSocketNetResult.InvalidSlot: return SocketResult.InvalidSlot;
+            default: return SocketResult.InvalidSlot;
+        }
+    }
+
     void InitializeGemSlots(SocketingSlotUI[] slots, int maxSlots)
     {
         if (slots == null) return;
@@ -352,7 +456,9 @@ public class BlacksmithUI : MonoBehaviour
     public void Open()
     {
         if (mainPanel) mainPanel.SetActive(true);
-        // ApplyGridConfig(); // Removed because it overrides the GridLayoutGroup and causes rebuilds every frame
+        EnsureBlacksmithRpcHook();
+        if (TryGetLocalBlacksmithCharacter(out var localCharacter))
+            localCharacter.EnsureBlacksmithNetworkHydrated();
         // Suppress global tooltip while Blacksmith is open
         if (ItemTooltipManager.Instance != null)
             ItemTooltipManager.Instance.SuppressTooltip = true;
@@ -366,6 +472,10 @@ public class BlacksmithUI : MonoBehaviour
         if (_isClosing) return; // Prevent double-invocation loop
         _isClosing = true;
         ResetPendingNetworkRefine();
+        ResetPendingNetworkSocket();
+        ResetPendingNetworkFuse();
+        ResetPendingNetworkUnequip();
+        ResetPendingNetworkRemoveGem();
 
         if (mainPanel) mainPanel.SetActive(false);
         ClearSelection();
@@ -450,17 +560,26 @@ public class BlacksmithUI : MonoBehaviour
             {
                 pendingUnequipSlot = -1;
                 StopCoroutine(nameof(ResetPendingUnequipCoroutine));
-                EquipmentManager.Instance.RemoveItemByIndex(index);
-                Debug.Log($"[BlacksmithUI] Unequipped {equipped.itemName} from slot {index}");
-
-                if (resultPanel != null && resultText != null)
+                EnsureBlacksmithRpcHook();
+                if (IsOnlineBlacksmith() && TryGetLocalBlacksmithCharacter(out var character)
+                    && character.TryRequestBlacksmithUnequip(index))
                 {
-                    resultPanel.SetActive(true);
-                    ConfigureResultText();
-                    resultText.text = $"Unequipped {equipped.itemName}.\nReturned to inventory.";
-                    resultText.color = new Color(0.2f, 0.9f, 0.3f);
-                    StopCoroutine(nameof(HideResultCoroutine));
-                    StartCoroutine(HideResultCoroutine());
+                    StartCoroutine(UnequipNetworkResultCoroutine(index, equipped.itemName));
+                }
+                else
+                {
+                    EquipmentManager.Instance.RemoveItemByIndex(index);
+                    Debug.Log($"[BlacksmithUI] Unequipped {equipped.itemName} from slot {index}");
+
+                    if (resultPanel != null && resultText != null)
+                    {
+                        resultPanel.SetActive(true);
+                        ConfigureResultText();
+                        resultText.text = $"Unequipped {equipped.itemName}.\nReturned to inventory.";
+                        resultText.color = new Color(0.2f, 0.9f, 0.3f);
+                        StopCoroutine(nameof(HideResultCoroutine));
+                        StartCoroutine(HideResultCoroutine());
+                    }
                 }
             }
             ClearGemAndCrystalSelection();
@@ -504,6 +623,48 @@ public class BlacksmithUI : MonoBehaviour
         RefreshGemSlots();
         RefreshViewports();
         UpdateSuccessRate();
+    }
+
+    IEnumerator UnequipNetworkResultCoroutine(int slotIndex, string itemName)
+    {
+        _networkUnequipInFlight = true;
+        _networkUnequipResultReady = false;
+        _networkUnequipResult = BlacksmithSimpleNetResult.SystemError;
+
+        float deadline = Time.unscaledTime + NetworkBlacksmithTimeoutSeconds;
+        while (!_networkUnequipResultReady && Time.unscaledTime < deadline)
+            yield return null;
+
+        var result = _networkUnequipResult;
+        ResetPendingNetworkUnequip();
+
+        if (result == BlacksmithSimpleNetResult.Success)
+        {
+            Debug.Log($"[BlacksmithUI] Unequipped {itemName} from slot {slotIndex} (online)");
+            if (resultPanel != null && resultText != null)
+            {
+                resultPanel.SetActive(true);
+                ConfigureResultText();
+                resultText.text = $"Unequipped {itemName}.\nReturned to inventory.";
+                resultText.color = new Color(0.2f, 0.9f, 0.3f);
+                StopCoroutine(nameof(HideResultCoroutine));
+                StartCoroutine(HideResultCoroutine());
+            }
+        }
+        else if (resultPanel != null && resultText != null)
+        {
+            resultPanel.SetActive(true);
+            ConfigureResultText();
+            resultText.text = "Unequip failed.\nPlease try again.";
+            resultText.color = new Color(1f, 0.75f, 0.2f);
+            StopCoroutine(nameof(HideResultCoroutine));
+            StartCoroutine(HideResultCoroutine());
+        }
+
+        ClearGemAndCrystalSelection();
+        selectedEquipmentSlot = -1;
+        lastEquipClickIndex = -1;
+        RefreshAll();
     }
 
     IEnumerator ResetPendingUnequipCoroutine()
@@ -573,19 +734,65 @@ public class BlacksmithUI : MonoBehaviour
         if (isWeapon)
         {
             var wc = FindFirstObjectByType<WeaponController>();
-            if (wc != null && WeaponGemManager.Instance != null)
+            if (wc != null)
             {
-                WeaponGemManager.Instance.RemoveGem(wc.GetCurrentWeapon().weaponType, slotIndex);
+                EnsureBlacksmithRpcHook();
+                if (IsOnlineBlacksmith() && TryGetLocalBlacksmithCharacter(out var character)
+                    && character.TryRequestBlacksmithRemoveWeaponGem((int)wc.GetCurrentWeapon().weaponType, slotIndex))
+                {
+                    StartCoroutine(RemoveGemNetworkResultCoroutine(gemInSlot));
+                    return;
+                }
+
+                if (WeaponGemManager.Instance != null)
+                    WeaponGemManager.Instance.RemoveGem(wc.GetCurrentWeapon().weaponType, slotIndex);
             }
         }
         else if (selectedEquipmentSlot >= 0)
         {
+            EnsureBlacksmithRpcHook();
+            if (IsOnlineBlacksmith() && TryGetLocalBlacksmithCharacter(out var character)
+                && character.TryRequestBlacksmithRemoveEquipGem(selectedEquipmentSlot, slotIndex))
+            {
+                StartCoroutine(RemoveGemNetworkResultCoroutine(gemInSlot));
+                return;
+            }
+
             EquipmentManager.Instance?.RemoveGemFromSlot(selectedEquipmentSlot, slotIndex);
         }
 
         // Reset trạng thái và hiện kết quả
         ClearPendingRemoval();
         ShowRemovalSuccess(gemInSlot);
+        RefreshAll();
+    }
+
+    IEnumerator RemoveGemNetworkResultCoroutine(Item gemInSlot)
+    {
+        _networkRemoveGemInFlight = true;
+        _networkRemoveGemResultReady = false;
+        _networkRemoveGemResult = BlacksmithSimpleNetResult.SystemError;
+
+        float deadline = Time.unscaledTime + NetworkBlacksmithTimeoutSeconds;
+        while (!_networkRemoveGemResultReady && Time.unscaledTime < deadline)
+            yield return null;
+
+        var result = _networkRemoveGemResult;
+        ResetPendingNetworkRemoveGem();
+        ClearPendingRemoval();
+
+        if (result == BlacksmithSimpleNetResult.Success)
+            ShowRemovalSuccess(gemInSlot);
+        else if (resultPanel != null && resultText != null)
+        {
+            resultPanel.SetActive(true);
+            ConfigureResultText();
+            resultText.text = "Remove gem failed.\nPlease try again.";
+            resultText.color = new Color(1f, 0.75f, 0.2f);
+            StopCoroutine(nameof(HideResultCoroutine));
+            StartCoroutine(HideResultCoroutine());
+        }
+
         RefreshAll();
     }
 
@@ -760,8 +967,52 @@ public class BlacksmithUI : MonoBehaviour
 
         // ── Perform actual socketing ──
         SocketResult result;
+        EnsureBlacksmithRpcHook();
 
-        if (currentTab == ActiveTab.Weapon)
+        if (IsOnlineBlacksmith() && TryGetLocalBlacksmithCharacter(out var character))
+        {
+            bool requestSent = false;
+            if (currentTab == ActiveTab.Weapon)
+            {
+                var wc = FindFirstObjectByType<WeaponController>();
+                if (wc != null && selectedGem != null && selectedCrystal != null)
+                {
+                    requestSent = character.TryRequestBlacksmithSocketWeapon(
+                        (int)wc.GetCurrentWeapon().weaponType,
+                        selectedGemSlotIndex,
+                        selectedGem.id,
+                        selectedCrystal.id);
+                }
+            }
+            else if (selectedEquipment != null && selectedCrystal != null && selectedEquipmentSlot >= 0)
+            {
+                requestSent = character.TryRequestBlacksmithSocketEquipment(
+                    selectedEquipmentSlot,
+                    selectedEquipment.id,
+                    (int)selectedEquipmentRarity,
+                    selectedCrystal.id);
+            }
+
+            if (requestSent)
+            {
+                _networkSocketInFlight = true;
+                _networkSocketResultReady = false;
+                _networkSocketResult = BlacksmithSocketNetResult.SystemError;
+
+                float deadline = Time.unscaledTime + NetworkBlacksmithTimeoutSeconds;
+                while (!_networkSocketResultReady && Time.unscaledTime < deadline)
+                    yield return null;
+
+                var netResult = _networkSocketResult;
+                ResetPendingNetworkSocket();
+                result = MapSocketNetResult(netResult);
+            }
+            else
+            {
+                result = SocketResult.InvalidSlot;
+            }
+        }
+        else if (currentTab == ActiveTab.Weapon)
         {
             var wc = FindFirstObjectByType<WeaponController>();
             if (wc == null) { if (socketButton) socketButton.interactable = true; yield break; }
@@ -1594,7 +1845,7 @@ public class BlacksmithUI : MonoBehaviour
 
     void Update()
     {
-        EnsureRefineRpcHook();
+        EnsureBlacksmithRpcHook();
 
         // Always apply grid config when UI is open (live tweaking in play mode)
         // if (mainPanel != null && mainPanel.activeSelf)
@@ -2012,26 +2263,6 @@ public class BlacksmithUI : MonoBehaviour
 
     // ─── Refinement Execution ─────────────────────────────────────
 
-    void EnsureRefineRpcHook()
-    {
-        Character local = Character.LocalCharacter;
-        if (local == _refineRpcCharacter)
-            return;
-
-        DetachRefineRpcHook();
-
-        _refineRpcCharacter = local;
-        if (_refineRpcCharacter != null)
-            _refineRpcCharacter.BlacksmithRefineResolved += OnNetworkRefineResolved;
-    }
-
-    void DetachRefineRpcHook()
-    {
-        if (_refineRpcCharacter != null)
-            _refineRpcCharacter.BlacksmithRefineResolved -= OnNetworkRefineResolved;
-        _refineRpcCharacter = null;
-    }
-
     void ResetPendingNetworkRefine()
     {
         _networkRefineInFlight = false;
@@ -2044,29 +2275,48 @@ public class BlacksmithUI : MonoBehaviour
         _networkRefineRequestRealtime = -1f;
     }
 
+    void ResetPendingNetworkSocket()
+    {
+        _networkSocketInFlight = false;
+        _networkSocketResultReady = false;
+        _networkSocketResult = BlacksmithSocketNetResult.SystemError;
+    }
+
+    void ResetPendingNetworkFuse()
+    {
+        _networkFuseInFlight = false;
+        _networkFuseResultReady = false;
+        _networkFuseResult = BlacksmithSimpleNetResult.SystemError;
+    }
+
+    void ResetPendingNetworkUnequip()
+    {
+        _networkUnequipInFlight = false;
+        _networkUnequipResultReady = false;
+        _networkUnequipResult = BlacksmithSimpleNetResult.SystemError;
+    }
+
+    void ResetPendingNetworkRemoveGem()
+    {
+        _networkRemoveGemInFlight = false;
+        _networkRemoveGemResultReady = false;
+        _networkRemoveGemResult = BlacksmithSimpleNetResult.SystemError;
+    }
+
     bool TryStartNetworkRefineRequest()
     {
-        if (!enableFusionAuthoritativeRefine)
-        {
-            if (!_warnedFusionRefineDisabled)
-            {
-                _warnedFusionRefineDisabled = true;
-                Debug.LogWarning("[BlacksmithUI] Fusion-authoritative refine is disabled for safe rollout. Using local refine flow.");
-            }
+        if (!IsOnlineBlacksmith())
             return false;
-        }
 
-        EnsureRefineRpcHook();
-        if (_refineRpcCharacter == null || _refineRpcCharacter.Runner == null || !_refineRpcCharacter.Runner.IsRunning)
-            return false;
-        if (!_refineRpcCharacter.HasInputAuthority || _refineRpcCharacter.Object == null || !_refineRpcCharacter.Object.IsValid)
+        EnsureBlacksmithRpcHook();
+        if (_blacksmithCharacter == null)
             return false;
 
         int materialId = selectedRefineMaterial != null ? selectedRefineMaterial.id : -1;
         if (materialId < 0 || selectedRefineSlot < 0)
             return false;
 
-        if (!_refineRpcCharacter.TryRequestBlacksmithRefine(selectedRefineSlot, materialId))
+        if (!_blacksmithCharacter.TryRequestBlacksmithRefine(selectedRefineSlot, materialId))
             return false;
 
         _networkRefineInFlight = true;
@@ -2227,7 +2477,7 @@ public class BlacksmithUI : MonoBehaviour
         }
         else
         {
-            float waitDeadline = Time.unscaledTime + NetworkRefineTimeoutSeconds;
+            float waitDeadline = Time.unscaledTime + NetworkBlacksmithTimeoutSeconds;
             while (!_networkRefineResultReady && Time.unscaledTime < waitDeadline)
                 yield return null;
 
@@ -2235,7 +2485,7 @@ public class BlacksmithUI : MonoBehaviour
             {
                 float waited = _networkRefineRequestRealtime >= 0f
                     ? Time.unscaledTime - _networkRefineRequestRealtime
-                    : NetworkRefineTimeoutSeconds;
+                    : NetworkBlacksmithTimeoutSeconds;
                 Debug.LogWarning($"[BlacksmithUI] Fusion refine request timed out after {waited:F2}s; resetting UI state.");
                 if (resultPanel != null && resultText != null)
                 {
@@ -2498,11 +2748,39 @@ public class BlacksmithUI : MonoBehaviour
     {
         if (selectedRefineMaterial == null || RefinementManager.Instance == null) return;
 
-        bool success = RefinementManager.Instance.TryFuse(selectedRefineMaterial);
+        EnsureBlacksmithRpcHook();
+        bool success;
+        if (IsOnlineBlacksmith() && TryGetLocalBlacksmithCharacter(out var character)
+            && character.TryRequestBlacksmithFuse(selectedRefineMaterial.id))
+        {
+            _networkFuseInFlight = true;
+            _networkFuseResultReady = false;
+            _networkFuseResult = BlacksmithSimpleNetResult.SystemError;
+            StartCoroutine(FusionNetworkResultCoroutine());
+            return;
+        }
+
+        success = RefinementManager.Instance.TryFuse(selectedRefineMaterial);
+        HandleFusionResult(success);
+    }
+
+    IEnumerator FusionNetworkResultCoroutine()
+    {
+        float deadline = Time.unscaledTime + NetworkBlacksmithTimeoutSeconds;
+        while (!_networkFuseResultReady && Time.unscaledTime < deadline)
+            yield return null;
+
+        bool success = _networkFuseResult == BlacksmithSimpleNetResult.Success;
+        ResetPendingNetworkFuse();
+        HandleFusionResult(success);
+    }
+
+    void HandleFusionResult(bool success)
+    {
         if (success)
         {
-            // Check if still have source stones
-            if (InventoryManager.Instance != null && InventoryManager.Instance.GetItemAmount(selectedRefineMaterial.id) <= 0)
+            if (InventoryManager.Instance != null && selectedRefineMaterial != null
+                && InventoryManager.Instance.GetItemAmount(selectedRefineMaterial.id) <= 0)
                 selectedRefineMaterial = null;
 
             if (resultPanel && resultText)

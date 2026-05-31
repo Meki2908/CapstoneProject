@@ -764,5 +764,43 @@ public class InventoryManager : MonoBehaviour
         Debug.Log("[InventoryManager] Inventory cleared");
     }
 
+    /// <summary>
+    /// Replace entire inventory from Fusion blacksmith snapshot (per-player online sync).
+    /// </summary>
+    public void ReplaceAllForNetwork(IReadOnlyList<NetInvEntry> entries, bool saveToDisk)
+    {
+        inventoryItems.Clear();
+        rolledStats.Clear();
+
+        if (entries != null)
+        {
+            foreach (var entry in entries)
+            {
+                if (entry.IsEmpty)
+                    continue;
+
+                var rarity = (Rarity)entry.Rarity;
+                int key = MakeKey(entry.ItemId, rarity);
+                if (inventoryItems.ContainsKey(key))
+                    inventoryItems[key] += entry.Amount;
+                else
+                    inventoryItems[key] = entry.Amount;
+
+                if (entry.RollValue >= 0f && itemLookup.TryGetValue(entry.ItemId, out var item) && item.HasRandomStats)
+                {
+                    if (!rolledStats.ContainsKey(key))
+                        rolledStats[key] = new List<float>();
+                    for (int i = 0; i < entry.Amount; i++)
+                        rolledStats[key].Add(entry.RollValue);
+                }
+            }
+        }
+
+        if (saveToDisk)
+            SaveInventory();
+        RefreshInventoryUI();
+        OnInventoryChanged?.Invoke();
+    }
+
     #endregion
 }
