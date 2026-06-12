@@ -15,11 +15,11 @@ Người chơi khám phá bản đồ trung tâm `Map_Chinh`, nhận nhiệm v�
 * **Hệ thống Boss & AI:** Spawn Boss theo wave, AI quái vật (patrol/chase/attack), kỹ năng đặc biệt của Mage (Shield), và triển khai network cho Boss (Photon Fusion).
 ![Boss spawn](demo/Demon.gif)
 * **Hệ thống Thợ rèn (Blacksmith UI):** Nâng cấp vũ khí (Refinement) và gắn ngọc (Socketing) thông qua NPC Blacksmith trong World.
-![Black Smith](demo/UI_Blacksmith.gif)
+![Black Smith](demo/Blacksmith.gif)
 * **Combat & Game Feel:** FSM nhân vật, 3 hệ vũ khí (Kiếm / Rìu / Trượng), Smart Soft Lock-on, hệ thống skill và auto-aim tối ưu hiệu năng.
-![Sword Ultimate](demo/Ultimate_cutscene.gif)
+![Sword Ultimate](demo/Ultimate.gif)
 * **Đồ họa & Hiệu ứng:** Phong cách Steampunk / Medieval Fantasy, custom shader (`PortalPlaneClipLit`), VFX chiến đấu và UI được tối ưu trên URP.
-![UI Menu](demo/UI_Menu.gif)
+![UI Menu](demo/Menu.gif)
 * **Hệ thống phụ trợ:** Item drop orb, màn hình loading có fake progress khi chuyển cảnh network, nhạc nền động theo trạng thái Boss, minimap và save/load.
 
 ## III. Thành viên thực hiện (Group 9)
