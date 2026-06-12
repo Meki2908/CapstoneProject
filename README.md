@@ -13,17 +13,17 @@ Người chơi khám phá bản đồ trung tâm `Map_Chinh`, nhận nhiệm v�
 
 * **Hệ thống Dungeon:** Bản đồ hầm ngục được thiết kế theo luồng tiến trình rõ ràng — từ Hub World qua Portal UI, wave combat, đến màn hình phần thưởng và quay về map chính (chi tiết xem tại [`dungeon_flow_diagram_1775151528357.png`](dungeon_flow_diagram_1775151528357.png)).
 * **Hệ thống Boss & AI:** Spawn Boss theo wave, AI quái vật (patrol/chase/attack), kỹ năng đặc biệt của Mage (Shield), và triển khai network cho Boss (Photon Fusion).
-* **Hệ thống Thợ rèn (Blacksmith UI):** Nâng cấp vũ khí (Refinement) và gắn ngọc (Socketing) thông qua NPC Blacksmith trong Hub World.
-* **Combat & Game Feel:** FSM nhân vật, 3 hệ vũ khí (Kiếm / Rìu / Mage), Smart Soft Lock-on, hệ thống skill và auto-aim tối ưu hiệu năng.
+* **Hệ thống Thợ rèn (Blacksmith UI):** Nâng cấp vũ khí (Refinement) và gắn ngọc (Socketing) thông qua NPC Blacksmith trong World.
+* **Combat & Game Feel:** FSM nhân vật, 3 hệ vũ khí (Kiếm / Rìu / Trượng), Smart Soft Lock-on, hệ thống skill và auto-aim tối ưu hiệu năng.
 * **Đồ họa & Hiệu ứng:** Phong cách Steampunk / Medieval Fantasy, custom shader (`PortalPlaneClipLit`), VFX chiến đấu và UI được tối ưu trên URP.
 * **Hệ thống phụ trợ:** Item drop orb, màn hình loading có fake progress khi chuyển cảnh network, nhạc nền động theo trạng thái Boss, minimap và save/load.
 
 ## 👥 Thành viên thực hiện (Group 9)
 
-* **Phan Thành Nam** — Programmer / Technical Art (Gameplay, Shader, UI Blacksmith)
-* **Tô Vũ Kiệt** — Programmer (Enemy AI, Boss, Network)
-* **Phạm Trí Hiển** — Game Designer / Level Design (Dungeon flow, Quest, Balance)
-* **Nông Hoàng Nam** — Artist / Environment (World map, UI & VFX assets)
+* **Phan Thành Nam** — World building (Map, NPC, Quests, World BGM)
+* **Tô Vũ Kiệt** — Programmer (Player's states, Inventory and items, Network, Cutscene, Abilities system, HP, Dungeons's BGM, Player's sfx)
+* **Phạm Trí Hiển** — UI Design / Enemies logic (Menu design, Enemies AI, UI Black Smith, UI sfx)
+* **Nông Hoàng Nam** — Dungeon / Rewards (Dungeon building, Items drop, waves management, Enemies sfx)
 
 ## 🛠️ Công nghệ sử dụng
 
