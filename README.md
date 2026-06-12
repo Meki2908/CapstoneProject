@@ -13,13 +13,13 @@ Người chơi khám phá bản đồ trung tâm `Map_Chinh`, nhận nhiệm v�
 
 * **Hệ thống Dungeon:** Bản đồ hầm ngục được thiết kế theo luồng tiến trình rõ ràng từ Hub World qua Portal UI, wave combat, đến màn hình phần thưởng và quay về map chính (chi tiết xem tại [`dungeon_flow_diagram_1775151528357.png`](dungeon_flow_diagram_1775151528357.png)).
 * **Hệ thống Boss & AI:** Spawn Boss theo wave, AI quái vật (patrol/chase/attack), kỹ năng đặc biệt của Mage (Shield), và triển khai network cho Boss (Photon Fusion).
-![Boss spawn](demo/boss_spawn.gif)
+![Boss spawn](demo/Demon.gif)
 * **Hệ thống Thợ rèn (Blacksmith UI):** Nâng cấp vũ khí (Refinement) và gắn ngọc (Socketing) thông qua NPC Blacksmith trong World.
-![Black Smith](demo/blacksmith.gif)
+![Black Smith](demo/UI_Blacksmith.gif)
 * **Combat & Game Feel:** FSM nhân vật, 3 hệ vũ khí (Kiếm / Rìu / Trượng), Smart Soft Lock-on, hệ thống skill và auto-aim tối ưu hiệu năng.
-![Sword Ultimate](demo/sword_ultimate.gif)
+![Sword Ultimate](demo/Ultimate_cutscene.gif)
 * **Đồ họa & Hiệu ứng:** Phong cách Steampunk / Medieval Fantasy, custom shader (`PortalPlaneClipLit`), VFX chiến đấu và UI được tối ưu trên URP.
-![UI Menu](demo/ui_menu.gif)
+![UI Menu](demo/UI_Menu.gif)
 * **Hệ thống phụ trợ:** Item drop orb, màn hình loading có fake progress khi chuyển cảnh network, nhạc nền động theo trạng thái Boss, minimap và save/load.
 
 ## III. Thành viên thực hiện (Group 9)
