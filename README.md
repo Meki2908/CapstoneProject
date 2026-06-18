@@ -1,7 +1,7 @@
 # Tên dự án: Eryndor
 
 Khóa luận tốt nghiệp / Đồ án Capstone - Group 9  
-**VTC Academy** — Lớp K24GD-01
+**VTC Academy** — Lớp K24GD-01.
 Original - Nhánh main; Bản rework với Fusion - Nhánh ToiUu_Game_v1
 
 ## I. Giới thiệu tổng quan
